@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Callable
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank
+from yonder import Soundbank, Node
 from yonder.node_types import MusicSwitchContainer
 from yonder.hash import calc_hash, lookup_name
 from yonder.util import logger
@@ -21,6 +21,7 @@ from .create_state_path_dialog import create_state_path_dialog
 
 def new_boss_track_dialog(
     bnk: Soundbank,
+    on_boss_track_created: Callable[[str, list[Node]], None],
     *,
     title: str = "New Boss BGM",
     tag: str = None,
@@ -166,7 +167,10 @@ def new_boss_track_dialog(
 
         # TODO transition rules
         loop_info = [(li[0], li[1]) for li in bgm_loop_infos]
-        create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info)
+        nodes = create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info)
+        if on_boss_track_created:
+            on_boss_track_created(bgm_enemy_type, nodes)
+
         show_message("Yay!", color=style.blue)
         dpg.set_item_label(f"{tag}_button_okay", "Again?")
 

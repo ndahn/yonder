@@ -216,6 +216,25 @@ class MusicTrack(WwiseNode):
         self["playlist"].append(item)
         self["playlist_item_count"] = len(self["playlist"])
 
+    # TODO clip items
+    # {
+    #     "clip_index": 0,
+    #     "auto_type": "FadeIn",
+    #     "graph_point_count": 2,
+    #     "graph_points": [
+    #         {
+    #         "from": 0.0,
+    #         "to": 0.0,
+    #         "interpolation": "Sine"
+    #         },
+    #         {
+    #         "from": 0.20927228,
+    #         "to": 1.0,
+    #         "interpolation": "Constant"
+    #         }
+    #     ]
+    #     }
+
     def clear_sources(self) -> None:
         """Disassociates all audio sources from this track."""
         self["sources"] = []

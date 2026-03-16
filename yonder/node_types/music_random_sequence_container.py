@@ -87,6 +87,8 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
         playlist_item_id: int,
         segment_id: int | Node,
         weight: int = 50000,
+        use_weight: bool = False,
+        shuffle: bool = False,
         avoid_repeat: int = 0,
         ers_type: int = 0,
         parent: int = 0,
@@ -101,6 +103,8 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
             Segment node ID.
         weight : int, default=50000
             Relative weight for random selection.
+        use_weight : bool, default=False
+            Whether to use weight when shuffling. Always True for the first playlist item.
         avoid_repeat : int, default=0
             Number of recent items to avoid repeating.
         ers_type : int, default=0
@@ -114,6 +118,13 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
 
             segment_id = segment_id.id
 
+        if len(self.playlist_items) == 0:
+            if parent > 0:
+                raise ValueError("parent cannot be set for first playlist item")
+            if ers_type == 4294967295:
+                raise ValueError("ers_type cannot be 'inherit' for first playlist item")
+            use_weight = True
+
         new_item = {
             "segment_id": segment_id,
             "playlist_item_id": playlist_item_id,
@@ -124,8 +135,8 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
             "loop_max": 0,
             "weight": weight,
             "avoid_repeat_count": avoid_repeat,
-            "use_weight": 0,
-            "shuffle": 0,
+            "use_weight": 1 if use_weight else 0,
+            "shuffle": 1 if shuffle else 0,
         }
 
         if parent > 0:

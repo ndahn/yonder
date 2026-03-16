@@ -49,12 +49,12 @@ from yonder.gui.dialogs.new_boss_track_dialog import new_boss_track_dialog
 from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 
 
-# TODO update MusicRandomSequenceContainer for boss bgm
 # TODO boss bgm: transition rules
 # TODO pin nodes
+# TODO attenuation curve editor
+# TODO music track clip editor
 # TODO new ambience track
 # TODO graph visualization
-# TODO attenuation curve editor
 # TODO setup RTPCs
 
 
@@ -1122,6 +1122,7 @@ class BanksOfYonder:
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
             logger.info(f"Added new sound {play_evt.lookup_name()} ({play_evt.id})")
             self.regenerate()
+            self.jump_to(play_evt)
 
         create_simple_sound_dialog(self.bnk, on_sound_created, tag=tag)
 
@@ -1135,12 +1136,13 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_boss_track_created(nodes: list[Node]) -> None:
+        def on_boss_track_created(bgm_enemy_type: str, nodes: list[Node]) -> None:
             logger.info(
-                f"Added new boss track {nodes[0].lookup_name()} ({nodes[0].id})"
+                f"Added new boss track for {bgm_enemy_type}, branch starting at {nodes[0]}"
             )
+            self.jump_to(nodes[0])
 
-        new_boss_track_dialog(self.bnk, tag=tag)
+        new_boss_track_dialog(self.bnk, on_boss_track_created, tag=tag)
 
         dpg.split_frame()
         center_window(tag)

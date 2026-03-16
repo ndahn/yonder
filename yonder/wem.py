@@ -134,12 +134,15 @@ def set_volume(wav: Path, volume: float, *, out_file: Path = None) -> Path:
 
 
 def create_prefetch_snippet(
-    wav: Path, length: float = 1.0, *, out_file: Path = None
+    wav: Path, length: float = 0.2, *, out_file: Path = None
 ) -> Path:
+    if not out_file:
+        out_file = wav.parent / f"{wav.stem}_snippet.wav"
+
     audio: AudioSegment = AudioSegment.from_file(str(wav))
-    audio = audio[: length * 1000]
-    audio.export(str(out_file or wav), format="wav")
-    return Path(out_file or wav)
+    audio = audio[:int(length * 1000)]
+    audio.export(str(out_file), format="wav")
+    return Path(out_file)
 
 
 def trim_silence(

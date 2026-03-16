@@ -2,6 +2,7 @@ from typing import Any, Callable
 from collections import deque
 from pathlib import Path
 from docstring_parser import parse as doc_parse
+import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
@@ -23,7 +24,8 @@ from yonder.node_types import (
     WwiseNode,
 )
 from yonder.util import logger
-from yonder.wem import wav2wem
+from yonder.enums import SourceType
+from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from .paragraphs import add_paragraphs
@@ -202,6 +204,52 @@ def get_sound_path(bnk: Soundbank, source: dict) -> Path:
         return wem
 
     return None
+
+
+def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceType):
+    def copy_wems() -> None:
+        if source_type == "Embedded":
+            target = bnk.bnk_dir / wem.name
+            if target.is_file():
+                target.unlink()
+            shutil.copy(wem, target)
+        
+        elif source_type in ("Streaming", "PrefetchStreaming"):
+            target = bnk.bnk_dir.parent / wem / f"{wem.stem[:2]}" / wem.name
+            if target.is_file():
+                target.unlink()
+            shutil.copy(wem, target)
+
+            if source_type == "PrefetchStreaming":
+                wwise = get_config().locate_wwise()
+                snippet = create_prefetch_snippet(wav)
+                wem_snippet = wav2wem(wwise, snippet, out_dir=bnk.bnk_dir)[0]
+                logger.info(f"Placed prefetch snippet in {wem_snippet}")
+
+        else:
+            raise ValueError(f"Unknown source_type {source_type}")
+
+        logger.info(f"Copied {wem.name} to {target}")
+        dpg.delete_item(dialog)
+
+    with dpg.window(
+        label="Copy?",
+        modal=True,
+        no_saved_settings=True,
+        autosize=True,
+        on_close=lambda: dpg.delete_item(dialog),
+    ) as dialog:
+        dpg.add_text(f"Copy WEMs to soundbank {bnk.name}?")
+        dpg.add_separator()
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label="Yes",
+                callback=copy_wems,
+            )
+            dpg.add_button(
+                label="No",
+                callback=lambda: dpg.delete_item(dialog),
+            )
 
 
 def _create_type_specific_attributes(
@@ -473,7 +521,7 @@ def _create_attributes_music_segment(
         if track.sources[0]["source_type"] == "Embedded":
             path = track.get_source_path(bnk, 0)
         else:
-            path = get_config().find_external_sounds(track.sources[0]["source_id"], bnk)
+            path = get_sound_path(bnk, track.sources[0])
 
         edit_looppoints_dialog(
             path,
@@ -527,18 +575,19 @@ def _create_attributes_music_track(
     def on_source_changed(
         sender: str, filepath: Path, info: tuple[int, MusicTrack]
     ) -> None:
-        # TODO check if inside soundbank, offer to copy
-        # TODO if prefetch streaming create snippet
         if filepath.name.endswith(".wav"):
             wwise = get_config().locate_wwise()
             wem_path = wav2wem(wwise, filepath)[0]
         else:
             wem_path = filepath
 
+        copy_wems_dialog(bnk, wem_path, source["source_type"])
+
         index, track = info
         source_details = track.sources[index]["media_information"]
         source_details["source_id"] = int(wem_path.stem)
         source_details["in_memory_media_size"] = wem_path.stat().st_size
+
         dpg.set_value(sender, wem_path.stem)
         on_node_changed(tag, track, user_data)
 
@@ -551,6 +600,13 @@ def _create_attributes_music_track(
         loop_start, loop_end, loop_enabled = loop_info
         segment.set_marker(MusicSegment.loop_start_id, loop_start)
         segment.set_marker(MusicSegment.loop_end_id, loop_end)
+
+    def set_begin_trim(sender: str, trim: float, idx: int) -> None:
+        node.playlist[idx]["begin_trim"] = trim
+        node.playlist[idx]["play_at"] = -trim
+
+    def set_end_trim(sender: str, trim: float, idx: int) -> None:
+        node.playlist[idx]["end_trim"] = trim
 
     segment: MusicSegment = bnk.get(node.parent)
     markers_enabled = bool(isinstance(segment, MusicSegment))
@@ -571,11 +627,10 @@ def _create_attributes_music_track(
     # Not sure why music tracks can have several sources or what to do
     # with loop info if that happens, but so far I didn't se that
     for i, source in enumerate(node.sources):
-        source_id = source["media_information"]["source_id"]
         if source["source_type"] == "Embedded":
             path = node.get_source_path(bnk, i)
         else:
-            path = next(get_config().find_external_sounds(source_id, bnk), None)
+            path = get_sound_path(bnk, source)
 
         add_wav_player(
             path,
@@ -585,6 +640,24 @@ def _create_attributes_music_track(
             loop_start=loop_start,
             loop_end=loop_end,
             user_data=(i, node),
+        )
+
+        # Begin / end trim
+        dpg.add_input_float(
+            label="begin_trim",
+            default_value=node.playlist[i]["begin_trim"],
+            min_value=0.0,
+            min_clamped=True,
+            callback=set_begin_trim,
+            user_data=i,
+        )
+        dpg.add_input_float(
+            label="end_trim",
+            default_value=node.playlist[i]["end_trim"],
+            min_value=0.0,
+            min_clamped=True,
+            callback=set_end_trim,
+            user_data=i,
         )
 
     dpg.add_spacer(height=3)
@@ -607,13 +680,13 @@ def _create_attributes_sound(
     properties.pop("source_id")
 
     def on_filepath_selected(sender: str, filepath: Path, sound: Sound) -> None:
-        # TODO check if inside soundbank, offer to copy
-        # TODO if prefetch streaming create snippet
         if filepath.name.endswith(".wav"):
             wwise = get_config().locate_wwise()
             wem_path = wav2wem(wwise, filepath)[0]
         else:
             wem_path = filepath
+
+        copy_wems_dialog(bnk, wem_path, sound.source_type)
 
         sound.source_id = int(wem_path.stem)
         sound.media_size = wem_path.stat().st_size
@@ -623,7 +696,7 @@ def _create_attributes_sound(
     if node.source_type == "Embedded":
         path = node.get_source_path(bnk)
     else:
-        path = next(get_config().find_external_sounds(node.source_id, bnk), None)
+        path = get_sound_path(bnk, node.source_id)
 
     add_wav_player(path, on_file_changed=on_filepath_selected)
 

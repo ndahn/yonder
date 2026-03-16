@@ -190,7 +190,7 @@ def create_boss_bgm(
         phase_seg.set_marker("LoopCheck", track_duration_ms - 3000)
         phase_seg.set_marker(MusicSegment.loop_end_id, loop_end * 1000)
 
-        # Add the segment to the music container's playlist
+        # Add the segment to the music container's playlist. First item always uses weight?
         item_key = phase_mrs.add_playlist_item(bnk.new_id(), 0, avoid_repeat=1)
         phase_mrs.add_playlist_item(
             bnk.new_id(), phase_seg.id, parent=item_key, ers_type=4294967295
