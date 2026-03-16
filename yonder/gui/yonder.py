@@ -50,11 +50,10 @@ from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 
 
 # TODO boss bgm: transition rules
-# TODO pin nodes
 # TODO attenuation curve editor
 # TODO music track clip editor
 # TODO new ambience track
-# TODO graph visualization
+# TODO event graph visualization
 # TODO setup RTPCs
 
 
