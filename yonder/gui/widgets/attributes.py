@@ -425,6 +425,8 @@ def _create_attributes_music_segment(
     parent: str = 0,
     user_data: Any = None,
 ) -> None:
+    from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
+    
     def on_marker_renamed(
         sender: str, new_name: tuple[int, str], marker_id: int
     ) -> None:
@@ -461,6 +463,45 @@ def _create_attributes_music_segment(
         node.markers.clear()
         node.markers.extend(markers)
         on_node_changed(tag, node, user_data)
+
+    def edit_markers_on_track() -> None:
+        track: MusicTrack = bnk[int(dpg.get_value(f"{tag}_child_tracks"))]
+        if not track.sources:
+            logger.warning(f"{track} has no sources")
+            return
+
+        if track.sources[0]["source_type"] == "Embedded":
+            path = track.get_source_path(bnk, 0)
+        else:
+            path = get_config().find_external_sounds(track.sources[0]["source_id"], bnk)
+
+        edit_looppoints_dialog(
+            path,
+            node.get_marker(MusicSegment.loop_start_id, 0.0),
+            node.get_marker(MusicSegment.loop_end_id, 1.0),
+            on_loop_changed,
+        )
+
+    def on_loop_changed(sender: str, loop_info: tuple[float, float, bool], user_data: Any) -> None:
+        loop_start, loop_end, loop_enabled = loop_info
+        node.set_marker(MusicSegment.loop_start_id, loop_start)
+        node.set_marker(MusicSegment.loop_end_id, loop_end)
+        # TODO not sure how to enable/disable looping
+        logger.warning("Don't know yet how to enable/disable looping")
+
+    tracks = [cid for cid in node.children if isinstance(bnk.get(cid), MusicTrack)]
+    if tracks:
+        with dpg.group(horizontal=True):
+            dpg.add_combo(
+                [str(t) for t in tracks],
+                tag=f"{tag}_child_tracks",
+            )
+            dpg.add_button(
+                label="Edit on Track",
+                callback=edit_markers_on_track,
+            )
+    else:
+        dpg.add_text("Segment has no tracks", color=style.yellow)
 
     add_widget_table(
         node.markers,
@@ -514,6 +555,19 @@ def _create_attributes_music_track(
     segment: MusicSegment = bnk.get(node.parent)
     markers_enabled = bool(isinstance(segment, MusicSegment))
 
+    if markers_enabled:
+        loop_start = segment.get_marker(MusicSegment.loop_start_id)
+        loop_end = segment.get_marker(MusicSegment.loop_end_id)
+    else:
+        loop_start = 0.0
+        loop_end = 1.0
+
+    if len(node.sources) > 1:
+        dpg.add_text(
+            "Track has multiple sources, might not be handled correctly",
+            color=style.yellow,
+        )
+
     # Not sure why music tracks can have several sources or what to do
     # with loop info if that happens, but so far I didn't se that
     for i, source in enumerate(node.sources):
@@ -528,6 +582,8 @@ def _create_attributes_music_track(
             on_file_changed=on_source_changed,
             loop_markers_enabled=markers_enabled,
             on_loop_changed=on_loop_changed,
+            loop_start=loop_start,
+            loop_end=loop_end,
             user_data=(i, node),
         )
 
@@ -568,7 +624,7 @@ def _create_attributes_sound(
         path = node.get_source_path(bnk)
     else:
         path = next(get_config().find_external_sounds(node.source_id, bnk), None)
-    
+
     add_wav_player(path, on_file_changed=on_filepath_selected)
 
     dpg.add_spacer(height=3)

@@ -57,20 +57,8 @@ class MusicTrack(WwiseNode):
         end_trim: float = 0.0,
         parent: int | Node = None,
     ) -> "MusicTrack":
-        wem_id = int(wem.stem)
-        meta = get_wem_metadata(wem)
-        size = meta["in_memory_size"]
-
         track = cls.new(nid, parent=parent)
-
-        track.add_source(wem_id, size, source_type)
-        track.add_playlist_item(
-            wem_id,
-            meta["duration"] * 1000,  # ms
-            begin_trim=begin_trim,
-            end_trim=end_trim,
-        )
-
+        track.add_source_full_from_file(wem, source_type, begin_trim, end_trim)
         return track
 
     @property
@@ -146,6 +134,19 @@ class MusicTrack(WwiseNode):
             List of playlist item dictionaries.
         """
         return self["playlist"]
+
+    def add_source_from_file_full(self, wem: Path, source_type: SourceType, begin_trim: float = 0.0, end_trim: float = 0.0) -> None:
+        wem_id = int(wem.stem)
+        meta = get_wem_metadata(wem)
+        size = meta["in_memory_size"]
+
+        self.add_source(wem_id, size, source_type)
+        self.add_playlist_item(
+            wem_id,
+            meta["duration"] * 1000,  # ms
+            begin_trim=begin_trim,
+            end_trim=end_trim,
+        )
 
     def add_source(
         self,

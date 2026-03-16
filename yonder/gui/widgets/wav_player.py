@@ -21,11 +21,17 @@ def add_wav_player(
     allow_change_file: bool = True,
     show_filepath: bool = False,
     on_file_changed: Callable[[str, Path, Any], None] = None,
+    user_markers_enabled: bool = False,
     user_markers: list[tuple[str, float, tuple[int, int, int]]] = None,
     on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
     loop_markers_enabled: bool = False,
     on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
+    loop_start: float = 0.0,
+    loop_end: float = 1.0,
+    edit_markers_inplace: bool = True,
     max_points: int = 5000,
+    width: int = -1,
+    height: int = 100,
     tag: str = 0,
     parent: str = 0,
     user_data: Any = None,
@@ -136,25 +142,44 @@ def add_wav_player(
     def get_loop_state() -> tuple[float, float, bool]:
         start = dpg.get_value(f"{tag}_loop_start")
         end = dpg.get_value(f"{tag}_loop_end")
-        active = dpg.get_value(f"{tag}_loop_enabled")
+
+        if dpg.does_item_exist(f"{tag}_loop_enabled"):
+            active = dpg.get_value(f"{tag}_loop_enabled")
+        else:
+            active = True
+
         return (start, end, active)
+
+    def on_looppoint_edit(
+        sender: str, new_loop_info: tuple[float, float, bool], user_data: Any
+    ) -> None:
+        loop_start, loop_end, enabled = new_loop_info
+        dpg.set_value(f"{tag}_loop_start", loop_start)
+        dpg.set_value(f"{tag}_loop_end", loop_end)
+
+        if dpg.does_item_exist(f"{tag}_loop_enabled"):
+            dpg.set_value(f"{tag}_loop_enabled")
+
+        update_loop_widgets()
 
     def set_loop_marker_pos(sender: str, pos: float, loop_marker: str) -> None:
         dpg.set_value(f"{tag}_{loop_marker}", pos)
         if on_loop_changed:
             on_loop_changed(tag, get_loop_state(), user_data)
 
-    def on_loop_marker_moved() -> None:
+    def update_loop_widgets() -> None:
         loop_start, loop_end, active = get_loop_state()
 
         # Loop start must be before loop end and vv
         loop_start = max(0.0, min(loop_start, loop_end))
         dpg.set_value(f"{tag}_loop_start", loop_start)
-        dpg.set_value(f"{tag}_loop_start_value", loop_start)
+        if dpg.does_item_exist(f"{tag}_loop_start_value"):
+            dpg.set_value(f"{tag}_loop_start_value", loop_start)
 
         dur = player.duration if player else np.finfo(np.float32).max
         loop_end = min(dur, max(loop_end, loop_start))
-        dpg.set_value(f"{tag}_loop_end_value", loop_end)
+        if dpg.does_item_exist(f"{tag}_loop_end_value"):
+            dpg.set_value(f"{tag}_loop_end_value", loop_end)
 
         if on_loop_changed:
             on_loop_changed(tag, (loop_start, loop_end, active), user_data)
@@ -176,6 +201,12 @@ def add_wav_player(
         dpg.set_value(f"{tag}_marker_{marker}_value", pos)
         if on_user_marker_changed:
             on_user_marker_changed(tag, (marker, pos), user_data)
+
+    def open_edit_markers_dialog() -> None:
+        from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
+
+        loop_start, loop_end, _ = get_loop_state()
+        edit_looppoints_dialog(audio, loop_start, loop_end, on_looppoint_edit)
 
     def minmax_envelope(
         signal: np.ndarray, time: np.ndarray, n_buckets: int
@@ -241,31 +272,34 @@ def add_wav_player(
             )
             dpg.bind_item_theme(f"{tag}_channel_{i}", colors[i])
 
-        if loop_markers_enabled:
-            loop_start, loop_end, _ = get_loop_state()
-            loop_start = min(loop_start, duration * 0.05)
-            loop_end = min(loop_end, duration * 0.95)
+        if edit_markers_inplace:
+            if loop_markers_enabled:
+                loop_start, loop_end, _ = get_loop_state()
+                loop_start = min(loop_start, duration * 0.05)
+                loop_end = min(loop_end, duration * 0.95)
 
-            dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
-            dpg.set_value(f"{tag}_loop_start", loop_start)
-            dpg.configure_item(
-                f"{tag}_loop_start_value", default_value=loop_start, max_value=duration
-            )
-            dpg.set_value(f"{tag}_loop_end", loop_end)
-            dpg.configure_item(
-                f"{tag}_loop_end_value", default_value=loop_end, max_value=duration
-            )
-
-        if user_markers:
-            for marker, _, _ in user_markers:
-                mpos = dpg.get_value(f"{tag}_marker_{marker}")
-                mpos = min(mpos, duration)
-                dpg.set_value(f"{tag}_marker_{marker}", mpos)
+                dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
+                dpg.set_value(f"{tag}_loop_start", loop_start)
                 dpg.configure_item(
-                    f"{tag}_marker_{marker}_value",
-                    default_value=mpos,
+                    f"{tag}_loop_start_value",
+                    default_value=loop_start,
                     max_value=duration,
                 )
+                dpg.set_value(f"{tag}_loop_end", loop_end)
+                dpg.configure_item(
+                    f"{tag}_loop_end_value", default_value=loop_end, max_value=duration
+                )
+
+            if user_markers_enabled:
+                for marker, _, _ in user_markers:
+                    mpos = dpg.get_value(f"{tag}_marker_{marker}")
+                    mpos = min(mpos, duration)
+                    dpg.set_value(f"{tag}_marker_{marker}", mpos)
+                    dpg.configure_item(
+                        f"{tag}_marker_{marker}_value",
+                        default_value=mpos,
+                        max_value=duration,
+                    )
 
         dpg.set_axis_limits_constraints(f"{tag}_axis_x", 0.0, duration)
         dpg.fit_axis_data(f"{tag}_axis_x")
@@ -288,8 +322,8 @@ def add_wav_player(
                     dpg.add_text(label)
 
         with dpg.plot(
-            height=100,
-            width=-1,
+            width=width,
+            height=height,
             no_title=True,
             no_menus=True,
             no_mouse_pos=True,
@@ -328,25 +362,28 @@ def add_wav_player(
                 dpg.add_drag_line(
                     label="loop_start",
                     color=style.green,
-                    default_value=1.0,
+                    default_value=loop_start,
                     tag=f"{tag}_loop_start",
-                    callback=on_loop_marker_moved,
+                    callback=update_loop_widgets,
+                    no_inputs=not edit_markers_inplace,
                 )
                 dpg.add_drag_line(
                     label="loop_end",
                     color=style.light_green,
-                    default_value=np.finfo(np.float32).max,
+                    default_value=loop_end,
                     tag=f"{tag}_loop_end",
-                    callback=on_loop_marker_moved,
+                    callback=update_loop_widgets,
+                    no_inputs=not edit_markers_inplace,
                 )
 
             # User markers
-            if user_markers:
+            if user_markers_enabled:
                 for marker, pos, color in user_markers:
                     dpg.add_drag_line(
                         label=marker,
                         color=color,
                         default_value=pos,
+                        no_inputs=not edit_markers_inplace,
                         tag=f"{tag}_marker_{marker}",
                         callback=on_user_marker_moved,
                     )
@@ -358,23 +395,32 @@ def add_wav_player(
                 callback=on_play_pause,
             )
 
-            if loop_markers_enabled or user_markers:
+            if loop_markers_enabled or user_markers_enabled:
                 dpg.add_text("|")
-                dpg.add_button(
-                    label="Markers",
-                    callback=lambda s, a, u: dpg.show_item(f"{tag}_markers_popup"),
-                )
-                if loop_markers_enabled:
-                    dpg.add_checkbox(
-                        label="Loop",
-                        default_value=True,
-                        tag=f"{tag}_loop_enabled",
-                        callback=on_loop_marker_moved,
+                if edit_markers_inplace:
+                    dpg.add_button(
+                        label="Markers",
+                        callback=lambda s, a, u: dpg.show_item(f"{tag}_markers_popup"),
                     )
-                    dpg.add_checkbox(
-                        label="Test",
-                        default_value=True,
-                        tag=f"{tag}_loop_test",
+                    if loop_markers_enabled:
+                        dpg.add_checkbox(
+                            label="Loop",
+                            default_value=True,
+                            tag=f"{tag}_loop_enabled",
+                            callback=update_loop_widgets,
+                        )
+                        dpg.add_checkbox(
+                            label="Test",
+                            default_value=True,
+                            tag=f"{tag}_loop_test",
+                        )
+                    if user_markers_enabled:
+                        # TODO add something to add new user markers here
+                        pass
+                else:
+                    dpg.add_button(
+                        label="Markers",
+                        callback=open_edit_markers_dialog,
                     )
 
             dpg.add_text("|")
@@ -421,5 +467,5 @@ def add_wav_player(
 
     if initial_file:
         regenerate()
-    
+
     return tag

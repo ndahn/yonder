@@ -115,7 +115,7 @@ def create_boss_bgm(
     master: MusicSwitchContainer,
     state_path: str | list[str | int],
     tracks: list[Path] | Path,
-    track_markers: list[tuple[float, float, float]] = None,
+    track_markers: list[tuple[float, float]] = None,
     add_nobattle_state: bool = True,
     *,
     default_transition: tuple[Fade, Fade] = None,
@@ -179,7 +179,7 @@ def create_boss_bgm(
         phase_seg.duration = track_duration_ms
 
         # Add markers for looping
-        if track_markers and track_markers[i]:
+        if track_markers and len(track_markers) > i and track_markers[i]:
             loop_start, loop_end = track_markers[i]
         else:
             loop_start = 0.0

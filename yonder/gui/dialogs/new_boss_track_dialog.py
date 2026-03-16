@@ -10,14 +10,19 @@ from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
-from yonder.gui.widgets import add_node_widget, add_paragraphs, add_player_table
+from yonder.gui.widgets import (
+    add_node_widget,
+    add_paragraphs,
+    add_player_table,
+    add_transition_matrix,
+)
 from .create_state_path_dialog import create_state_path_dialog
 
 
 def new_boss_track_dialog(
     bnk: Soundbank,
     *,
-    title: str = "New Event",
+    title: str = "New Boss BGM",
     tag: str = None,
 ) -> str:
     if not tag:
@@ -30,6 +35,7 @@ def new_boss_track_dialog(
     bgm_enemy_type_idx: int = -1
     current_state_path: list[str] = []
     bgm_tracks: list[Path] = []
+    bgm_loop_infos: list[tuple[float, float, bool]] = []
 
     def get_music_switch_containers(filt: str) -> list[MusicSwitchContainer]:
         if not bnk:
@@ -109,6 +115,12 @@ def new_boss_track_dialog(
         nonlocal bgm_tracks
         bgm_tracks = paths
 
+    def update_loop_infos(
+        sender: str, new_loop_infos: list[tuple[float, float, bool]], user_data: Any
+    ) -> None:
+        nonlocal bgm_loop_infos
+        bgm_loop_infos = new_loop_infos
+
     def show_message(
         msg: str = None, color: tuple[int, int, int, int] = style.red
     ) -> None:
@@ -143,16 +155,18 @@ def new_boss_track_dialog(
 
         show_message()
 
-        wavs = [(i, f) for i, f in enumerate(bgm_tracks) if f.name.endswith(".wav")]
-        if wavs:
-            logger.info(f"Converting {len(wavs)} wave files to wem")
+        waves = {f.stem: i for i, f in enumerate(bgm_tracks) if f.name.endswith(".wav")}
+        if waves:
+            logger.info(f"Converting {len(waves)} wave files to wem")
             wwise = get_config().locate_wwise()
-            out_dir = wav2wem(wwise, [w[1] for w in wavs])
-            for i, w in wavs:
-                bgm_tracks[i] = out_dir / f"{w.stem}.wem"
+            converted_wavs = wav2wem(wwise, waves)
+            for wem in converted_wavs:
+                idx = waves[wem.stem]
+                bgm_tracks[idx] = wem
 
-        # TODO loop markers, transition rules
-        create_boss_bgm(bnk, msc, current_state_path, bgm_tracks)
+        # TODO transition rules
+        loop_info = [(li[0], li[1]) for li in bgm_loop_infos]
+        create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info)
         show_message("Yay!", color=style.blue)
         dpg.set_item_label(f"{tag}_button_okay", "Again?")
 
@@ -200,10 +214,12 @@ def new_boss_track_dialog(
             callback=edit_state_path,
         )
 
+        # TODO edit markers dialog
         w = add_player_table(
             [],
             on_bgm_tracks_changed,
             get_row_label=lambda i: f"Heatup {i}" if i > 0 else "Normal",
+            on_loop_changed=update_loop_infos,
         )
         with dpg.tooltip(w):
             dpg.add_text(

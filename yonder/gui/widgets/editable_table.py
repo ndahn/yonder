@@ -13,10 +13,11 @@ def add_widget_table(
     initial_values: list[_T],
     new_item: Callable[[], _T | tuple[_T]],
     create_row: Callable[[_T, int], None],
-    on_items_changed: Callable[[str, list[_T], Any], None],
     *,
-    add_item_label: str = "+",
+    on_add: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
+    on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     label: str = None,
+    add_item_label: str = "+",
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -32,9 +33,10 @@ def add_widget_table(
         add_footer()
 
     def on_remove_clicked(sender: int, app_data: Any, idx: int) -> None:
-        current_values.pop(idx)
+        prev = current_values.pop(idx)
+        if on_remove:
+            on_remove(tag, (idx, prev, current_values), user_data)
         refresh()
-        on_items_changed(tag, list(current_values), user_data)
 
     def on_add_clicked() -> None:
         result = new_item()
@@ -44,9 +46,11 @@ def add_widget_table(
         if not isinstance(result, list):
             result = [result]
 
+        pos = len(current_values)
         current_values.extend(result)
+        if on_add:
+            on_add(tag, (pos, result, current_values), user_data)
         refresh()
-        on_items_changed(tag, list(current_values), user_data)
 
     def add_row(val: _T, idx: int) -> None:
         with dpg.table_row(parent=tag):
@@ -61,19 +65,20 @@ def add_widget_table(
     if label:
         dpg.add_text(label)
 
-    with dpg.table(
-        header_row=False,
-        policy=dpg.mvTable_SizingFixedFit,
-        borders_outerH=True,
-        borders_outerV=True,
-        tag=tag,
-    ):
-        dpg.add_table_column(
-            label="Value", width_stretch=True, init_width_or_weight=100
-        )
-        dpg.add_table_column(label="")
+    with dpg.child_window(border=False, autosize_x=True, auto_resize_y=True):
+        with dpg.table(
+            header_row=False,
+            policy=dpg.mvTable_SizingFixedFit,
+            borders_outerH=True,
+            borders_outerV=True,
+            tag=tag,
+        ):
+            dpg.add_table_column(
+                label="Value", width_stretch=True, init_width_or_weight=100
+            )
+            dpg.add_table_column(label="")
 
-        refresh()
+            refresh()
 
     return tag
 
@@ -88,6 +93,9 @@ def add_filepaths_table(
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
+    if not tag:
+        tag = dpg.generate_uuid()
+
     def add_item() -> Path:
         if folders:
             res = choose_folder(title=label)
@@ -108,13 +116,14 @@ def add_filepaths_table(
             readonly=True,
             width=-1,
         )
-        return (txt, )
+        return (txt,)
 
     return add_widget_table(
         initial_paths,
         add_item,
         create_row,
-        on_value_changed,
+        on_add=lambda s, a, u: on_value_changed(tag, a[2], u),
+        on_remove=lambda s, a, u: on_value_changed(tag, a[2], u),
         add_item_label="+ Add Paths" if folders else "+ Add Files",
         label=label,
         tag=tag,
@@ -124,18 +133,24 @@ def add_filepaths_table(
 
 def add_player_table(
     initial_tracks: list[Path] = None,
-    on_items_changed: Callable[[str, list[Path], Any], None] = None,
+    on_filepaths_changed: Callable[[str, list[Path], Any], None] = None,
     *,
     label: str = "Tracks",
     add_item_label: str = "+ Add Track",
     get_row_label: Callable[[int], str] = None,
+    on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
+    if not tag:
+        tag = dpg.generate_uuid()
+
     from yonder.gui.dialogs.file_dialog import open_file_dialog
     from .wav_player import add_wav_player
 
     tracks: list[Path] = list(initial_tracks) if initial_tracks else []
+    loop_info: list[tuple[float, float, bool]] = []
+
     if not get_row_label:
         get_row_label = lambda i: f"Track #{i}"
 
@@ -147,14 +162,61 @@ def add_player_table(
         if ret:
             return Path(ret)
 
-    def create_row(path: Path, idx: int) -> None:
-        add_wav_player(
-            path,
-            label=get_row_label(idx),
-            on_file_changed=on_path_changed,
-            show_filepath=True,
+    def edit_loop_markers(sender: str, app_data: Any, idx: int) -> None:
+        from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
+
+        loop_start, loop_end, _ = loop_info[idx]
+        edit_looppoints_dialog(
+            tracks[idx],
+            loop_start,
+            loop_end,
+            on_looppoints_changed,
             user_data=idx,
         )
+
+    def on_looppoints_changed(
+        sender: str, new_loop_info: tuple[float, float, bool], idx: int
+    ) -> None:
+        loop_info[idx] = new_loop_info
+        on_loop_changed(tag, loop_info, user_data)
+
+    def on_track_added(
+        sender: str, info: tuple[int, list[Path], list[Path]], cb_user_data: Any
+    ) -> None:
+        nonlocal tracks
+
+        pos, new_items, all_items = info
+        tracks = all_items
+        for _ in range(len(new_items)):
+            loop_info.insert(pos, (0.0, 1.0, True))
+
+        on_filepaths_changed(sender, all_items, user_data)
+
+    def on_track_removed(
+        sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
+    ) -> None:
+        pos, _, all_items = info
+        tracks.pop(pos)
+        loop_info.pop(pos)
+        on_filepaths_changed(sender, all_items, user_data)
+
+    def create_row(path: Path, idx: int) -> None:
+        with dpg.group(horizontal=True):
+            add_wav_player(
+                path,
+                label=get_row_label(idx),
+                on_file_changed=on_path_changed,
+                loop_markers_enabled=True,
+                edit_markers_inplace=False,
+                show_filepath=True,
+                user_data=idx,
+            )
+            if on_loop_changed:
+                dpg.add_button(
+                    label="L",
+                    callback=edit_loop_markers,
+                    user_data=idx,
+                )
 
     def on_path_changed(sender: str, new_path: Path, idx: int) -> None:
         tracks[idx] = new_path
@@ -163,10 +225,9 @@ def add_player_table(
         [],
         add_sound,
         create_row,
-        on_items_changed=on_items_changed,
+        on_add=on_track_added,
+        on_remove=on_track_removed,
         add_item_label=add_item_label,
         label=label,
         tag=tag,
-        user_data=user_data,
     )
-

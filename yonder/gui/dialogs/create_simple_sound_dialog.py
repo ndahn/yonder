@@ -85,11 +85,12 @@ def create_simple_sound_dialog(
 
         waves = {f.stem: i for i, f in enumerate(soundfiles) if f.name.endswith(".wav")}
         if waves:
+            logger.info(f"Converting {len(waves)} wave files to wem")
             wwise = get_config().locate_wwise()
             converted_wavs = wav2wem(wwise, waves)
-            for wav in converted_wavs:
-                idx = waves[wav.stem]
-                soundfiles[idx] = wav
+            for wem in converted_wavs:
+                idx = waves[wem.stem]
+                soundfiles[idx] = wem
 
         show_message()
         avoid_repeats = dpg.get_value(f"{tag}_avoid_repeats")
@@ -158,7 +159,7 @@ def create_simple_sound_dialog(
             on_soundfiles_changed,
             label="Sounds",
             add_item_label="+ Add Sound",
-            get_row_label=lambda i: f"source_id #{i}",
+            get_row_label=lambda i: f"source #{i}",
         )
 
         dpg.add_separator()
