@@ -186,6 +186,12 @@ class BanksOfYonder:
                     callback=self._open_new_wwise_event_dialog,
                 )
 
+            dpg.add_separator()
+            
+            dpg.add_menu_item(
+                label="Settings",
+                callback=self._open_settings_dialog,
+            )
             with dpg.menu(label="Tools"):
                 dpg.add_menu_item(
                     label="Calc Hash",
@@ -204,11 +210,6 @@ class BanksOfYonder:
                     callback=self._open_convert_wavs_dialog,
                 )
 
-            dpg.add_separator()
-            dpg.add_menu_item(
-                label="Settings",
-                callback=self._open_settings_dialog,
-            )
 
             dpg.add_separator()
             with dpg.menu(label="Help"):

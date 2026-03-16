@@ -218,28 +218,24 @@ def new_boss_track_dialog(
             callback=edit_state_path,
         )
 
-        # TODO edit markers dialog
-        w = add_player_table(
+        add_player_table(
             [],
             on_bgm_tracks_changed,
             get_row_label=lambda i: f"Heatup {i}" if i > 0 else "Normal",
             on_loop_changed=update_loop_infos,
         )
-        with dpg.tooltip(w):
-            dpg.add_text(
-                "First track is the regular BGM, each subsequent track will be used for 'heatup' phases. Vanilla bosses have up to 3 phases controlled by the BossBattleState switch (None, HU1, HU2, ...).",
-                wrap=330,
-                color=style.light_blue,
-            )
 
         dpg.add_separator()
         dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
 
         add_paragraphs(
             """\
-            - Boss tracks need to be added to cs_smain.
-            - If multiple MusicSwitchContainers are available, find the one where all other bosses are handled. 
-            - Without a dll you can only use one of the reserved BgmEnemyType values. Otherwise, add your custom strings to the BgmBossChrIdConv param in smithbox.
+            - Boss tracks need to be added to cs_smain
+            - First track is the regular BGM, subsequent tracks will be used for 'heatup' phases 
+            - Heatup phases are controlled by BossBattleState (None, HU1, HU2, ...)
+            - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
+            - BgmEnemyType values can be changed in the BgmBossChrIdConv param in smithbox
+            - Without a dll adding additional BgmEnemyType rows will have no effect
 """,
             color=style.light_blue,
         )

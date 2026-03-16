@@ -162,18 +162,6 @@ def add_player_table(
         if ret:
             return Path(ret)
 
-    def edit_loop_markers(sender: str, app_data: Any, idx: int) -> None:
-        from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
-
-        loop_start, loop_end, _ = loop_info[idx]
-        edit_looppoints_dialog(
-            tracks[idx],
-            loop_start,
-            loop_end,
-            on_looppoints_changed,
-            user_data=idx,
-        )
-
     def on_looppoints_changed(
         sender: str, new_loop_info: tuple[float, float, bool], idx: int
     ) -> None:
@@ -206,17 +194,12 @@ def add_player_table(
                 path,
                 label=get_row_label(idx),
                 on_file_changed=on_path_changed,
-                loop_markers_enabled=True,
+                loop_markers_enabled=bool(on_loop_changed),
                 edit_markers_inplace=False,
+                on_loop_changed=on_looppoints_changed,
                 show_filepath=True,
                 user_data=idx,
             )
-            if on_loop_changed:
-                dpg.add_button(
-                    label="L",
-                    callback=edit_loop_markers,
-                    user_data=idx,
-                )
 
     def on_path_changed(sender: str, new_path: Path, idx: int) -> None:
         tracks[idx] = new_path
