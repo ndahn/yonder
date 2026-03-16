@@ -94,16 +94,18 @@ class MusicSegment(ContainerMixin, WwiseNode):
         name : str, default=""
             Optional marker name.
         """
-        name = ""
-        if isinstance(marker_id, str):
-            name = marker_id
-            marker_id = calc_hash(marker_id)
+        marker = self.get_marker(marker_id)
 
-        for m in self.markers:
-            if m["id"] == marker_id:
-                m["position"] = position
-                break
+        if marker:
+            marker["position"] = position
         else:
+            name = ""
+            if isinstance(marker_id, str):
+                name = marker_id
+                marker_id = calc_hash(marker_id)
+            else:
+                name = self.lookup_name(marker_id, "")
+            
             marker = {
                 "id": marker_id,
                 "position": position,
@@ -116,6 +118,16 @@ class MusicSegment(ContainerMixin, WwiseNode):
         # Not sure if it's required, but just in case keep markers sorted by position
         self["markers"].sort(key=lambda m: m["position"])
         return marker_id
+
+    def get_marker(self, marker_id: str | int) -> dict:
+        if isinstance(marker_id, str):
+            marker_id = calc_hash(marker_id)
+
+        for m in self.markers:
+            if m["id"] == marker_id:
+                return m
+
+        return None
 
     def remove_marker(self, marker_id: str | int) -> bool:
         """Removes a timing marker from the segment.

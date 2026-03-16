@@ -10,7 +10,7 @@ from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
-from yonder.gui.widgets import add_filepaths_table, add_node_widget, add_paragraphs
+from yonder.gui.widgets import add_node_widget, add_paragraphs, add_player_table
 from .create_state_path_dialog import create_state_path_dialog
 
 
@@ -105,12 +105,9 @@ def new_boss_track_dialog(
         dpg.set_value(f"{tag}_bgm_enemy_type", state_path[bgm_enemy_type_idx])
         show_message()
 
-    def on_phase_tracks_changed(
-        sender: str, tracks: list[Path], user_data: Any
-    ) -> None:
+    def on_bgm_tracks_changed(sender: str, paths: list[Path], user_data: Any) -> None:
         nonlocal bgm_tracks
-        bgm_tracks = tracks
-        show_message()
+        bgm_tracks = paths
 
     def show_message(
         msg: str = None, color: tuple[int, int, int, int] = style.red
@@ -203,10 +200,10 @@ def new_boss_track_dialog(
             callback=edit_state_path,
         )
 
-        w = add_filepaths_table(
+        w = add_player_table(
             [],
-            on_phase_tracks_changed,
-            filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
+            on_bgm_tracks_changed,
+            get_row_label=lambda i: f"Heatup {i}" if i > 0 else "Normal",
         )
         with dpg.tooltip(w):
             dpg.add_text(
@@ -229,4 +226,6 @@ def new_boss_track_dialog(
         dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label="Bring the heat!", callback=on_okay, tag=f"{tag}_button_okay")
+            dpg.add_button(
+                label="Bring the heat!", callback=on_okay, tag=f"{tag}_button_okay"
+            )

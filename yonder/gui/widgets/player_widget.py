@@ -10,12 +10,17 @@ from yonder.gui.config import get_config
 from yonder.wem import wem2wav
 from yonder.player import WavPlayer
 from yonder.gui import style
-from yonder.gui.helpers import tmp_dir
+from yonder.gui.helpers import tmp_dir, shorten_path
+from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 
 def add_wav_player(
-    get_audio_path: Callable[[], Path],
+    initial_file: Path,
     *,
+    label: str = "",
+    allow_change_file: bool = True,
+    show_filepath: bool = False,
+    on_file_changed: Callable[[str, Path, Any], None] = None,
     user_markers: list[tuple[str, float, tuple[int, int, int]]] = None,
     on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
     loop_markers_enabled: bool = False,
@@ -28,12 +33,38 @@ def add_wav_player(
     if not tag:
         tag = dpg.generate_uuid()
 
-    last_path: Path = None
+    if not allow_change_file and not initial_file:
+        raise ValueError("allow_change_path is False and no initial_file provided")
+
+    audio: Path = initial_file
     player: WavPlayer = None
 
-    def get_wav_path() -> Path:
-        audio = get_audio_path()
+    def select_file() -> None:
+        nonlocal audio, player
 
+        ret = open_file_dialog(
+            title="Select Audio File",
+            default_file=str(audio) if audio else None,
+            filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
+        )
+        if ret:
+            path = Path(ret).resolve()
+            if path == audio:
+                return
+
+            if on_file_changed:
+                on_file_changed(tag, Path(ret), user_data)
+
+            if player:
+                player.stop()
+                player = None
+
+            audio = path
+            path_str = shorten_path(path, 40) if show_filepath else path.stem
+            dpg.set_value(f"{tag}_filepath", path_str)
+            regenerate()
+
+    def get_wav_path() -> Path:
         if audio is None or not audio.is_file():
             logger.error(f"Audio {audio} does not exist")
             return None
@@ -53,28 +84,17 @@ def add_wav_player(
             logger.error(f"Audio must be a wav or wem file ({audio})")
             return None
 
-    def create_player(wav: Path) -> WavPlayer:
-        if wav:
-            player = WavPlayer(str(wav))
-            return player
-
     def on_play_pause() -> None:
-        nonlocal player, last_path
-        audio = get_wav_path()
-
-        if player and last_path != audio:
-            # Audio changed
-            player.stop()
-            player = None
+        nonlocal player, audio
 
         if not player:
-            player = create_player(audio)
-            if not player:
+            wav = get_wav_path()
+            if not wav:
                 return
 
+            player = WavPlayer(str(wav))
             dpg.set_value(f"{tag}_progress", 0.0)
-            last_path = audio
-            regenerate(audio)
+            regenerate()
 
         if player.playing:
             player.pause()
@@ -185,9 +205,10 @@ def add_wav_player(
 
         return t_out, y_out
 
-    def regenerate(audio: Path) -> None:
+    def regenerate() -> None:
         dpg.delete_item(f"{tag}_axis_y", children_only=True)
 
+        audio = get_wav_path()
         with wave.open(str(audio), "r") as f:
             n_channels = f.getnchannels()
             framerate = f.getframerate()
@@ -220,19 +241,20 @@ def add_wav_player(
             )
             dpg.bind_item_theme(f"{tag}_channel_{i}", colors[i])
 
-        loop_start, loop_end, _ = get_loop_state()
-        loop_start = min(loop_start, duration * 0.05)
-        loop_end = min(loop_end, duration * 0.95)
+        if loop_markers_enabled:
+            loop_start, loop_end, _ = get_loop_state()
+            loop_start = min(loop_start, duration * 0.05)
+            loop_end = min(loop_end, duration * 0.95)
 
-        dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
-        dpg.set_value(f"{tag}_loop_start", loop_start)
-        dpg.configure_item(
-            f"{tag}_loop_start_value", default_value=loop_start, max_value=duration
-        )
-        dpg.set_value(f"{tag}_loop_end", loop_end)
-        dpg.configure_item(
-            f"{tag}_loop_end_value", default_value=loop_end, max_value=duration
-        )
+            dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
+            dpg.set_value(f"{tag}_loop_start", loop_start)
+            dpg.configure_item(
+                f"{tag}_loop_start_value", default_value=loop_start, max_value=duration
+            )
+            dpg.set_value(f"{tag}_loop_end", loop_end)
+            dpg.configure_item(
+                f"{tag}_loop_end_value", default_value=loop_end, max_value=duration
+            )
 
         if user_markers:
             for marker, _, _ in user_markers:
@@ -249,14 +271,29 @@ def add_wav_player(
         dpg.fit_axis_data(f"{tag}_axis_x")
         dpg.fit_axis_data(f"{tag}_axis_y")
 
-    with dpg.group():
+    with dpg.group(tag=tag):
+        if allow_change_file:
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(
+                    default_value=str(initial_file) if initial_file else "",
+                    enabled=False,
+                    readonly=True,
+                    tag=f"{tag}_filepath",
+                )
+                dpg.add_button(
+                    label="Browse",
+                    callback=select_file,
+                )
+                if label:
+                    dpg.add_text(label)
+
         with dpg.plot(
             height=100,
             width=-1,
             no_title=True,
             no_menus=True,
             no_mouse_pos=True,
-            tag=tag,
+            tag=f"{tag}_plot",
             parent=parent,
         ):
             dpg.add_plot_axis(
@@ -287,20 +324,21 @@ def add_wav_player(
             )
 
             # Loop markers
-            dpg.add_drag_line(
-                label="loop_start",
-                color=style.green,
-                default_value=1.0,
-                tag=f"{tag}_loop_start",
-                callback=on_loop_marker_moved,
-            )
-            dpg.add_drag_line(
-                label="loop_end",
-                color=style.light_green,
-                default_value=np.finfo(np.float32).max,
-                tag=f"{tag}_loop_end",
-                callback=on_loop_marker_moved,
-            )
+            if loop_markers_enabled:
+                dpg.add_drag_line(
+                    label="loop_start",
+                    color=style.green,
+                    default_value=1.0,
+                    tag=f"{tag}_loop_start",
+                    callback=on_loop_marker_moved,
+                )
+                dpg.add_drag_line(
+                    label="loop_end",
+                    color=style.light_green,
+                    default_value=np.finfo(np.float32).max,
+                    tag=f"{tag}_loop_end",
+                    callback=on_loop_marker_moved,
+                )
 
             # User markers
             if user_markers:
@@ -381,5 +419,7 @@ def add_wav_player(
                         tag=f"{tag}_marker_{marker}_value",
                     )
 
-    regenerate(get_wav_path())
+    if initial_file:
+        regenerate()
+    
     return tag

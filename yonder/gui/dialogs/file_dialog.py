@@ -125,6 +125,7 @@ def save_file_dialog(
     return ret
 
 
+# TODO doesn't work on linux
 def choose_folder(title: str = "Select folder", start_dir: str = None) -> str:
     """
     Open a folder selection dialog using the modern Windows IFileOpenDialog COM

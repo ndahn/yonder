@@ -23,6 +23,7 @@ from yonder.node_types import (
     WwiseNode,
 )
 from yonder.util import logger
+from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
 from .paragraphs import add_paragraphs
@@ -31,6 +32,8 @@ from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .player_widget import add_wav_player
 from .transition_matrix import add_transition_matrix
+from .editable_table import add_widget_table
+from .hash_widget import add_hash_widget
 
 
 def create_attribute_widgets(
@@ -46,12 +49,15 @@ def create_attribute_widgets(
     if not tag:
         tag = dpg.generate_uuid()
 
-    def update_node_name(sender: str, new_name: str, user_data: Any) -> None:
-        if not new_name:
-            return
+    def update_node_hash(
+        sender: str, new_name: tuple[int, str], user_data: Any
+    ) -> None:
+        nid, name = new_name
 
-        node.name = new_name
-        dpg.set_value(f"{tag}_attr_hash", str(node.id))
+        if name:
+            node.name = name
+        else:
+            node.id = nid
 
     def on_node_properties_changed(
         sender: str, new_props: dict[str, float], node: WwiseNode
@@ -78,19 +84,12 @@ def create_attribute_widgets(
                 with dpg.tooltip(dpg.last_item()):
                     add_paragraphs(node.__class__.__doc__)
 
-            if not isinstance(node, WwiseNode):
-                dpg.add_input_text(
-                    label="Name",
-                    default_value=node.lookup_name("<?>"),
-                    callback=update_node_name,
-                )
-
-            dpg.add_input_text(
-                label="Hash",
-                default_value=str(node.id),
-                readonly=True,
-                enabled=False,
-                tag=f"{tag}_attr_hash",
+            add_hash_widget(
+                node.id,
+                update_node_hash,
+                allow_edit_hash=False,
+                allow_edit_name=False,
+                tag=f"{tag}_hash",
             )
 
             dpg.add_spacer(height=3)
@@ -426,8 +425,51 @@ def _create_attributes_music_segment(
     parent: str = 0,
     user_data: Any = None,
 ) -> None:
-    # TODO add a table here
-    dpg.add_text("Edit markers on the MusicTrack for now", color=style.yellow)
+    def on_marker_renamed(
+        sender: str, new_name: tuple[int, str], marker_id: int
+    ) -> None:
+        mid, name = new_name
+        pos = node.get_marker(marker_id)["position"]
+        node.remove_marker(marker_id)
+        node.set_marker(name or mid, pos)
+        on_node_changed(tag, node, user_data)
+
+    def on_marker_moved(sender: str, new_pos: float, marker_id: int) -> None:
+        node.set_marker(marker_id, new_pos)
+        on_node_changed(tag, node, user_data)
+
+    def new_marker() -> dict:
+        mid = node.set_marker(f"m{len(node.markers)}", 0.0)
+        return node.get_marker(mid)
+
+    def create_row(marker: dict, idx: int) -> None:
+        add_hash_widget(
+            marker["id"],
+            on_marker_renamed,
+            initial_string=marker["string"],
+            user_data=marker["id"],
+        )
+        dpg.add_input_float(
+            default_value=marker["position"],
+            min_value=0.0,
+            min_clamped=True,
+            callback=on_marker_moved,
+            user_data=marker["id"],
+        )
+
+    def on_markers_changed(sender: str, markers: list[dict], cb_user_data: Any) -> None:
+        node.markers.clear()
+        node.markers.extend(markers)
+        on_node_changed(tag, node, user_data)
+
+    add_widget_table(
+        node.markers,
+        new_marker,
+        create_row,
+        on_markers_changed,
+        add_item_label="+ Add Marker",
+        label="Markers",
+    )
 
 
 def _create_attributes_music_track(
@@ -441,11 +483,17 @@ def _create_attributes_music_track(
     segment: str = 0,
     user_data: Any = None,
 ) -> None:
-    def on_wem_selected(
-        sender: str, wem_path: Path, info: tuple[int, MusicTrack]
+    def on_source_changed(
+        sender: str, filepath: Path, info: tuple[int, MusicTrack]
     ) -> None:
         # TODO check if inside soundbank, offer to copy
         # TODO if prefetch streaming create snippet
+        if filepath.name.endswith(".wav"):
+            wwise = get_config().locate_wwise()
+            wem_path = wav2wem(wwise, filepath)[0]
+        else:
+            wem_path = filepath
+
         index, track = info
         source_details = track.sources[index]["media_information"]
         source_details["source_id"] = int(wem_path.stem)
@@ -469,18 +517,15 @@ def _create_attributes_music_track(
     # Not sure why music tracks can have several sources or what to do
     # with loop info if that happens, but so far I didn't se that
     for i, source in enumerate(node.sources):
-        add_generic_widget(
-            Path,
-            f"source_id #{i}",
-            on_wem_selected,
-            default=str(source["media_information"]["source_id"]),
-            filetypes={"WEMs (.wem)": "*.wem"},
-            readonly=True,
-            user_data=(i, node),
-        )
+        source_id = source["media_information"]["source_id"]
+        if source["source_type"] == "Embedded":
+            path = node.get_source_path(bnk, i)
+        else:
+            path = next(get_config().find_external_sounds(source_id, bnk), None)
 
         add_wav_player(
-            lambda idx=i: get_sound_path(bnk, node.sources[idx]),
+            path,
+            on_file_changed=on_source_changed,
             loop_markers_enabled=markers_enabled,
             on_loop_changed=on_loop_changed,
             user_data=(i, node),
@@ -505,24 +550,26 @@ def _create_attributes_sound(
     properties.pop("media_size")
     properties.pop("source_id")
 
-    def on_wem_selected(sender: str, wem_path: Path, sound: Sound) -> None:
+    def on_filepath_selected(sender: str, filepath: Path, sound: Sound) -> None:
         # TODO check if inside soundbank, offer to copy
         # TODO if prefetch streaming create snippet
+        if filepath.name.endswith(".wav"):
+            wwise = get_config().locate_wwise()
+            wem_path = wav2wem(wwise, filepath)[0]
+        else:
+            wem_path = filepath
+
         sound.source_id = int(wem_path.stem)
         sound.media_size = wem_path.stat().st_size
         dpg.set_value(sender, wem_path.stem)
         on_node_changed(tag, sound, user_data)
 
-    add_generic_widget(
-        Path,
-        "source_id",
-        on_wem_selected,
-        default=str(node.source_id),
-        filetypes={"WEMs (.wem)": "*.wem"},
-        readonly=True,
-        user_data=node,
-    )
-    add_wav_player(lambda: get_sound_path(bnk, node.source_info))
+    if node.source_type == "Embedded":
+        path = node.get_source_path(bnk)
+    else:
+        path = next(get_config().find_external_sounds(node.source_id, bnk), None)
+    
+    add_wav_player(path, on_file_changed=on_filepath_selected)
 
     dpg.add_spacer(height=3)
     dpg.add_separator()

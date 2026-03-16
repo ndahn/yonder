@@ -11,9 +11,9 @@ _T = TypeVar("_T")
 
 def add_widget_table(
     initial_values: list[_T],
-    new_item: Callable[[], _T],
-    add_row_widgets: Callable[[_T], tuple[str, ...]],
-    on_value_changed: Callable[[str, list[_T], Any], None],
+    new_item: Callable[[], _T | tuple[_T]],
+    create_row: Callable[[_T, int], None],
+    on_items_changed: Callable[[str, list[_T], Any], None],
     *,
     add_item_label: str = "+",
     label: str = None,
@@ -24,20 +24,17 @@ def add_widget_table(
         tag = dpg.generate_uuid()
 
     current_values: list[_T] = list(initial_values)
-    row_widgets: list[tuple[int, int]] = []
 
     def refresh() -> None:
         dpg.delete_item(tag, children_only=True, slot=1)
-        for val in current_values:
-            add_row(val)
+        for i, val in enumerate(current_values):
+            add_row(val, i)
         add_footer()
 
-    def on_remove_clicked(sender: int) -> None:
-        idx = next(i for i, ids in enumerate(row_widgets) if sender in ids)
+    def on_remove_clicked(sender: int, app_data: Any, idx: int) -> None:
         current_values.pop(idx)
-        row_widgets.pop(idx)
         refresh()
-        on_value_changed(tag, list(current_values), user_data)
+        on_items_changed(tag, list(current_values), user_data)
 
     def on_add_clicked() -> None:
         result = new_item()
@@ -49,13 +46,12 @@ def add_widget_table(
 
         current_values.extend(result)
         refresh()
-        on_value_changed(tag, list(current_values), user_data)
+        on_items_changed(tag, list(current_values), user_data)
 
-    def add_row(val: _T) -> None:
+    def add_row(val: _T, idx: int) -> None:
         with dpg.table_row(parent=tag):
-            widget_ids = add_row_widgets(val)
-            remove_id = dpg.add_button(label="-", callback=on_remove_clicked)
-            row_widgets.append(tuple(widget_ids) + (remove_id,))
+            create_row(val, idx)
+            dpg.add_button(label="-", callback=on_remove_clicked, user_data=idx)
 
     def add_footer() -> None:
         with dpg.table_row(parent=tag):
@@ -99,11 +95,13 @@ def add_filepaths_table(
             res = open_multiple_dialog(title=label, filetypes=filetypes)
 
         if res:
+            if isinstance(res, list):
+                return [Path(p) for p in res]
             return Path(res)
 
         return None
 
-    def add_row_widgets(path: Path):
+    def create_row(path: Path, idx: int):
         txt = dpg.add_input_text(
             default_value=shorten_path(path, maxlen=40),
             enabled=False,
@@ -115,38 +113,60 @@ def add_filepaths_table(
     return add_widget_table(
         initial_paths,
         add_item,
+        create_row,
         on_value_changed,
         add_item_label="+ Add Paths" if folders else "+ Add Files",
-        add_row_widgets=add_row_widgets,
         label=label,
         tag=tag,
         user_data=user_data,
     )
 
 
-def add_floats_table(
-    initial_values: list[tuple[str, float]],
-    on_value_changed: Callable[[str, list[tuple[str, float]], Any], None],
+def add_player_table(
+    initial_tracks: list[Path] = None,
+    on_items_changed: Callable[[str, list[Path], Any], None] = None,
     *,
-    label: str = "Files",
+    label: str = "Tracks",
+    add_item_label: str = "+ Add Track",
+    get_row_label: Callable[[int], str] = None,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
-    def add_item() -> tuple[str, float]:
-        return ("<new>", 0.0)
+    from yonder.gui.dialogs.file_dialog import open_file_dialog
+    from .player_widget import add_wav_player
 
-    def add_row_widgets(item: tuple[str, float]) -> tuple[str, ...]:
-        label = dpg.add_input_text(default_value=item[0])
-        value = dpg.add_input_float(default_value=item[1], width=-1)
-        return (label, value)
+    tracks: list[Path] = list(initial_tracks) if initial_tracks else []
+    if not get_row_label:
+        get_row_label = lambda i: f"Track #{i}"
+
+    def add_sound() -> Path:
+        ret = open_file_dialog(
+            title="Select Audio",
+            filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
+        )
+        if ret:
+            return Path(ret)
+
+    def create_row(path: Path, idx: int) -> None:
+        add_wav_player(
+            path,
+            label=get_row_label(idx),
+            on_file_changed=on_path_changed,
+            show_filepath=True,
+            user_data=idx,
+        )
+
+    def on_path_changed(sender: str, new_path: Path, idx: int) -> None:
+        tracks[idx] = new_path
 
     return add_widget_table(
-        initial_values,
-        add_item,
-        on_value_changed,
-        add_item_label="+ Add Value",
-        add_row_widgets=add_row_widgets,
+        [],
+        add_sound,
+        create_row,
+        on_items_changed=on_items_changed,
+        add_item_label=add_item_label,
         label=label,
         tag=tag,
         user_data=user_data,
     )
+

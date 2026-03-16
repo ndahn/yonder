@@ -182,7 +182,7 @@ def wav2wem(
     out_dir: Path = None,
     conversion: Literal["PCM", "Vorbis Quality High"] = "Vorbis Quality High",
     keep_proj_dir: bool = False,
-) -> Path:
+) -> list[Path]:
     if isinstance(waves, Path):
         waves = [waves]
 
@@ -245,7 +245,7 @@ def wav2wem(
     if not keep_proj_dir:
         shutil.rmtree(wproj_path)
 
-    return Path(out_dir)
+    return [out_dir / f"{f.stem}.wem" for f in waves]
 
 
 def wem2wav(

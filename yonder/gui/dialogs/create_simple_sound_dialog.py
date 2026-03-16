@@ -7,11 +7,13 @@ from yonder.convenience import create_simple_sound
 from yonder.node_types import Event, ActorMixer
 from yonder.enums import property_defaults
 from yonder.util import logger
+from yonder.wem import wav2wem
 from yonder.gui import style
+from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     add_properties_table,
-    add_filepaths_table,
     add_node_widget,
+    add_player_table,
 )
 
 
@@ -31,7 +33,7 @@ def create_simple_sound_dialog(
     properties: dict[str, float] = {
         "Volume": property_defaults["Volume"],
     }
-    wem_paths: list[Path] = []
+    soundfiles: list[Path] = []
 
     def update_name_and_id(sender: str, new_name: str, user_data: Any) -> None:
         if not new_name:
@@ -50,9 +52,9 @@ def create_simple_sound_dialog(
         properties.clear()
         properties.update(new_properties)
 
-    def on_wems_changed(sender: str, paths: list[Path], user_data: Any) -> None:
-        wem_paths.clear()
-        wem_paths.extend(paths)
+    def on_soundfiles_changed(sender: str, paths: list[Path], user_data: Any) -> None:
+        soundfiles.clear()
+        soundfiles.extend(paths)
 
     def show_message(msg: str, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:
@@ -77,9 +79,17 @@ def create_simple_sound_dialog(
             show_message("ActorMixer not specified")
             return
 
-        if not wem_paths:
+        if not soundfiles:
             show_message("No sounds specified")
             return
+
+        waves = {f.stem: i for i, f in enumerate(soundfiles) if f.name.endswith(".wav")}
+        if waves:
+            wwise = get_config().locate_wwise()
+            converted_wavs = wav2wem(wwise, waves)
+            for wav in converted_wavs:
+                idx = waves[wav.stem]
+                soundfiles[idx] = wav
 
         show_message()
         avoid_repeats = dpg.get_value(f"{tag}_avoid_repeats")
@@ -87,13 +97,13 @@ def create_simple_sound_dialog(
         (play_evt, stop_evt), _, _ = create_simple_sound(
             bnk,
             name,
-            wem_paths,
+            soundfiles,
             amx,
             avoid_repeats=avoid_repeats,
             properties=properties,
         )
 
-        logger.info(f"Created new sound {name} with {len(wem_paths)} sounds")
+        logger.info(f"Created new sound {name} with {len(soundfiles)} sounds")
 
         callback(play_evt, stop_evt)
         show_message("Yay!", color=style.blue)
@@ -143,11 +153,12 @@ def create_simple_sound_dialog(
 
         # WEMs
         dpg.add_spacer(height=5)
-        add_filepaths_table(
-            wem_paths,
-            on_wems_changed,
-            label="WEMs",
-            filetypes={"Wwise Audio (.wem)": "*.wem"},
+        add_player_table(
+            soundfiles,
+            on_soundfiles_changed,
+            label="Sounds",
+            add_item_label="+ Add Sound",
+            get_row_label=lambda i: f"source_id #{i}",
         )
 
         dpg.add_separator()
