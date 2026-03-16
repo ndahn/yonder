@@ -49,14 +49,13 @@ from yonder.gui.dialogs.new_boss_track_dialog import new_boss_track_dialog
 from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 
 
-# TODO boss bgm: loop markers, transition rules
-# TODO jump to
+# TODO update MusicRandomSequenceContainer for boss bgm
+# TODO boss bgm: transition rules
 # TODO pin nodes
-# TODO better player
 # TODO new ambience track
 # TODO graph visualization
 # TODO attenuation curve editor
-# TODO setup RTCPs
+# TODO setup RTPCs
 
 
 class BanksOfYonder:
@@ -732,8 +731,8 @@ class BanksOfYonder:
         self._regenerate_events_list()
         self._regenerate_globals_list()
 
-        # TODO reveal node in item list
-        # self.select_node(self._selected_node)
+        if self._selected_node:
+            self.jump_to(self._selected_node)
 
     def _regenerate_events_list(self) -> None:
         dpg.delete_item(f"{self.tag}_events_table", children_only=True, slot=1)
@@ -1053,7 +1052,6 @@ class BanksOfYonder:
             raise ValueError("Failed to parse json") from e
 
         self._selected_node.update(data)
-        # TODO keep selected open
         self.regenerate()
 
     def node_reset_json(self) -> None:
