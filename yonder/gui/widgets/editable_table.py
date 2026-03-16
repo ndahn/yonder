@@ -133,7 +133,7 @@ def add_player_table(
     user_data: Any = None,
 ) -> str:
     from yonder.gui.dialogs.file_dialog import open_file_dialog
-    from .player_widget import add_wav_player
+    from .wav_player import add_wav_player
 
     tracks: list[Path] = list(initial_tracks) if initial_tracks else []
     if not get_row_label:

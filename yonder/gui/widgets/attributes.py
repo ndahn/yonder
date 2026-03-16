@@ -30,7 +30,7 @@ from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
-from .player_widget import add_wav_player
+from .wav_player import add_wav_player
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table
 from .hash_widget import add_hash_widget

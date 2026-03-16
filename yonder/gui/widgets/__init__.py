@@ -6,7 +6,7 @@ from .hash_widget import add_hash_widget
 from .loading_indicator import loading_indicator
 from .node_widget import add_node_widget
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
-from .player_widget import add_wav_player
+from .wav_player import add_wav_player
 from .properties_table import add_properties_table
 from .table_tree_nodes import (
     table_tree_node,
