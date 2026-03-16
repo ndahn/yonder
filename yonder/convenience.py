@@ -31,7 +31,6 @@ def create_simple_sound(
     actor_mixer: int | Node,
     avoid_repeats: bool = False,
     properties: dict[str, float] = None,
-    quiet: bool = False,
 ) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[Sound]]:
     """Create a new sound structure with one or more sounds in a RandomSequenceContainer controlled by a start and stop event.
 
@@ -105,7 +104,7 @@ def create_simple_sound(
 
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
     for w in wems:
-        bnk.add_wem(w)
+        bnk.add_wem(w, "Embedded")
 
     return ((play, stop), rsc, sounds)
 

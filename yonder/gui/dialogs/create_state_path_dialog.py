@@ -41,7 +41,7 @@ def create_state_path_dialog(
     def get_nodes(filt: str) -> Iterable[Node]:
         yield from bnk.query(filt)
 
-    def show_message(msg: str, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return

@@ -43,7 +43,7 @@ def add_hash_widget(
                 decimal=True,
                 readonly=not allow_edit_hash,
                 enabled=allow_edit_hash,
-                width=width / 2 if width > 0 else 100,
+                width=width / 2 if width not in (0, -1) else 100,
                 callback=on_hash_update,
                 tag=f"{tag}_hash",
             )
@@ -52,7 +52,7 @@ def add_hash_widget(
                 label="Hash",
                 readonly=not allow_edit_name,
                 enabled=allow_edit_name,
-                width=width / 2 if width > 0 else -1,
+                width=width / 2 if width not in (0, -1) else -50,
                 callback=on_string_update,
                 tag=f"{tag}_string",
             )

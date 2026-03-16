@@ -25,7 +25,7 @@ def edit_looppoints_dialog(
         nonlocal loop_info
         loop_info = new_loop_info
 
-    def show_message(msg: str, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return

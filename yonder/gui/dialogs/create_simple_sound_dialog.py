@@ -42,6 +42,12 @@ def create_simple_sound_dialog(
         h = calc_hash(new_name)
         dpg.set_value(f"{tag}_hash", str(h))
 
+    def get_amx_details(node: ActorMixer) -> list[str]:
+        return [
+            f"parent: {node.parent}",
+            f"children: {len(node.children)}",
+        ]
+
     def on_amx_selected(sender: str, amx: ActorMixer, user_data: Any) -> None:
         if amx:
             dpg.set_value(f"{tag}_actor_mixer", amx.id)
@@ -56,7 +62,7 @@ def create_simple_sound_dialog(
         soundfiles.clear()
         soundfiles.extend(paths)
 
-    def show_message(msg: str, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return
@@ -72,6 +78,10 @@ def create_simple_sound_dialog(
         name = dpg.get_value(f"{tag}_name")
         if not name:
             show_message("Name not specified")
+            return
+
+        if f"Play_{name}" in bnk or f"Stop_{name}" in bnk:
+            show_message("An event with this name already exists")
             return
 
         amx = int(dpg.get_value(f"{tag}_actor_mixer"))
@@ -139,6 +149,8 @@ def create_simple_sound_dialog(
             "ActorMixer",
             on_amx_selected,
             node_type=ActorMixer,
+            get_node_details=get_amx_details,
+            tag=f"{tag}_actor_mixer",
         )
 
         # Avoid repeats

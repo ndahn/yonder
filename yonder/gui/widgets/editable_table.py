@@ -174,7 +174,7 @@ def add_player_table(
         nonlocal tracks
 
         pos, new_items, all_items = info
-        tracks = all_items
+        tracks[:] = all_items[:]
         for _ in range(len(new_items)):
             loop_info.insert(pos, (0.0, 1.0, True))
 

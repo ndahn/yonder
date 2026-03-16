@@ -26,7 +26,7 @@ def settings_dialog(
     def on_hashdicts_changed(sender: str, paths: list[Path], user_data: Any) -> None:
         config.hash_dicts = [str(p) for p in paths]
 
-    def show_message(msg: str, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return

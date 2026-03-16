@@ -117,29 +117,45 @@ class Soundbank:
 
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
         if source_type == "Embedded":
-            shutil.copy(wem, self.bnk_dir)
-            return self.bnk_dir / f"{wem.stem}.wem"
+            target = self.bnk_dir / f"{wem.stem}.wem"
+            if wem.samefile(target):
+                return target
+
+            if target.is_file():
+                target.unlink()
+            
+            shutil.copy(wem, target)
+            return target
 
         elif source_type == "Streaming":
             streaming_dir = self.bnk_dir.parent / "wem" / wem.stem[:2]
             streaming_dir.mkdir(parents=True, exist_ok=True)
 
-            target_file = streaming_dir / f"{wem.stem}.wem"
-            if not target_file.is_file():
-                shutil.copy(wem, streaming_dir)
+            target = streaming_dir / f"{wem.stem}.wem"
+            if wem.samefile(target):
+                return target
+                
+            if target.is_file():
+                target.unlink()
 
-            return target_file
+            shutil.copy(wem, streaming_dir)
+            return target
 
         elif source_type == "PrefetchStreaming":
+            # TODO create snippet
             # Sounds in cs_smain are all <= 20kB
             if wem.stat().st_size > 20000:
                 raise ValueError("Wem is too large for a prefetch snippet")
 
-            target_file = self.bnk_dir / f"{wem.stem}.wem"
-            if not target_file.is_file():
-                shutil.copy(wem, self.bnk_dir)
+            target = self.bnk_dir / f"{wem.stem}.wem"
+            if wem.samefile(target):
+                return target
+            
+            if target.is_file():
+                target.unlink()
 
-            return target_file
+            shutil.copy(wem, self.bnk_dir)
+            return target
 
         else:
             raise ValueError(f"Unknown source type {source_type}")
@@ -273,6 +289,23 @@ class Soundbank:
                     node[path] = 0
 
         self._regenerate_index_table()
+
+    def find_orphans(self) -> list[Node]:
+        g = self.get_full_tree()
+        
+        forbidden_types = {
+            "ActorMixer",
+            "Attenuation",
+            "Bus",
+            "EffectCustom",
+            "Event",
+        }
+
+        return [
+            self[nid]
+            for nid, tp in g.nodes.data("type")
+            if tp not in forbidden_types and g.in_degree(nid) == 0
+        ]
 
     def delete_orphans(self, cascade: bool = True) -> None:
         g = self.get_full_tree()
@@ -437,6 +470,7 @@ class Soundbank:
         # TODO cache nodes by type
         # TODO cache full graph
         events = list(self.query("type=Event"))
+
         g = self.get_full_tree()
         for evt in events:
             desc = nx.descendants(g, evt.id)

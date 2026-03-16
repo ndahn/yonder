@@ -23,7 +23,7 @@ class Node:
             template_txt = resource_data("templates/" + name + ".json")
             cls._templates[name] = json.loads(template_txt)
 
-        return cls._templates[name]
+        return copy.deepcopy(cls._templates[name])
 
     @classmethod
     def wrap(cls, node_dict: dict, *args, **kwargs):

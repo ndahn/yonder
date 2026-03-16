@@ -149,6 +149,12 @@ class BanksOfYonder:
             dpg.add_separator()
             with dpg.menu(label="Bank", tag=f"{self.tag}_menu_bank"):
                 dpg.add_menu_item(
+                    label="Pin Orphans", 
+                    callback=self.pin_lost_objects
+                )
+                
+                dpg.add_separator()
+                dpg.add_menu_item(
                     label="Solve HIRC",
                     callback=self._bank_solve_hirc,
                 )
@@ -156,6 +162,8 @@ class BanksOfYonder:
                     label="Verify",
                     callback=self._bank_verify,
                 )
+
+                dpg.add_separator()
                 with dpg.menu(label="Advanced"):
                     dpg.add_menu_item(
                         label="Delete unused wems",
@@ -187,11 +195,7 @@ class BanksOfYonder:
                 )
 
             dpg.add_separator()
-            
-            dpg.add_menu_item(
-                label="Settings",
-                callback=self._open_settings_dialog,
-            )
+
             with dpg.menu(label="Tools"):
                 dpg.add_menu_item(
                     label="Calc Hash",
@@ -210,9 +214,8 @@ class BanksOfYonder:
                     callback=self._open_convert_wavs_dialog,
                 )
 
-
             dpg.add_separator()
-            with dpg.menu(label="Help"):
+            with dpg.menu(label="Yonder"):
                 with dpg.menu(label="dearpygui"):
                     dpg.add_menu_item(
                         label="About", callback=lambda: dpg.show_tool(dpg.mvTool_About)
@@ -245,6 +248,10 @@ class BanksOfYonder:
                         callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
                     )
                 dpg.add_menu_item(
+                    label="Settings",
+                    callback=self._open_settings_dialog,
+                )
+                dpg.add_menu_item(
                     label="About",
                     callback=self._open_about_dialog,
                 )
@@ -276,45 +283,61 @@ class BanksOfYonder:
                 width=300,
                 resizable_x=True,
                 autosize_y=True,
+                border=False,
                 tag=f"{tag}_events_window",
             ):
-                with dpg.tab_bar():
-                    with dpg.tab(label="Events"):
-                        dpg.add_input_text(
-                            hint="Search on enter",
-                            width=-1,
-                            on_enter=True,
-                            callback=self._regenerate_events_list,
-                            tag=f"{tag}_events_filter",
-                        )
-                        dpg.add_text("Showing 0 events", tag=f"{tag}_events_count")
-                        with dpg.table(
-                            no_host_extendX=True,
-                            resizable=True,
-                            borders_innerV=True,
-                            policy=dpg.mvTable_SizingFixedFit,
-                            header_row=False,
-                            tag=f"{tag}_events_table",
-                        ):
-                            dpg.add_table_column(label="Node", width_stretch=True)
-                    with dpg.tab(label="Globals"):
-                        dpg.add_input_text(
-                            hint="Search on enter",
-                            width=-1,
-                            on_enter=True,
-                            callback=self._regenerate_globals_list,
-                            tag=f"{tag}_globals_filter",
-                        )
-                        dpg.add_text("Showing 0 globals", tag=f"{tag}_globals_count")
-                        with dpg.table(
-                            no_host_extendX=True,
-                            resizable=True,
-                            borders_innerV=True,
-                            policy=dpg.mvTable_SizingFixedFit,
-                            header_row=False,
-                            tag=f"{tag}_globals_table",
-                        ):
-                            dpg.add_table_column(label="Node", width_stretch=True)
+                with dpg.child_window(border=True, resizable_y=True, height=500):
+                    with dpg.tab_bar():
+                        with dpg.tab(label="Events"):
+                            dpg.add_input_text(
+                                hint="Search on enter",
+                                width=-1,
+                                on_enter=True,
+                                callback=self._regenerate_events_list,
+                                tag=f"{tag}_events_filter",
+                            )
+                            dpg.add_text("Showing 0 events", tag=f"{tag}_events_count")
+                            with dpg.table(
+                                no_host_extendX=True,
+                                resizable=True,
+                                borders_innerV=True,
+                                policy=dpg.mvTable_SizingFixedFit,
+                                header_row=False,
+                                tag=f"{tag}_events_table",
+                            ):
+                                dpg.add_table_column(label="Node", width_stretch=True)
+                        with dpg.tab(label="Globals"):
+                            dpg.add_input_text(
+                                hint="Search on enter",
+                                width=-1,
+                                on_enter=True,
+                                callback=self._regenerate_globals_list,
+                                tag=f"{tag}_globals_filter",
+                            )
+                            dpg.add_text(
+                                "Showing 0 globals", tag=f"{tag}_globals_count"
+                            )
+                            with dpg.table(
+                                no_host_extendX=True,
+                                resizable=True,
+                                borders_innerV=True,
+                                policy=dpg.mvTable_SizingFixedFit,
+                                header_row=False,
+                                tag=f"{tag}_globals_table",
+                            ):
+                                dpg.add_table_column(label="Node", width_stretch=True)
+                with dpg.child_window(autosize_y=True, border=True):
+                    dpg.add_text("Pinned Nodes")
+                    dpg.add_separator()
+                    with dpg.table(
+                        no_host_extendX=True,
+                        header_row=False,
+                        resizable=True,
+                        policy=dpg.mvTable_SizingFixedFit,
+                        scrollY=True,
+                        tag=f"{self.tag}_pinned_objects_table",
+                    ) as self.pinned_objects_table:
+                        dpg.add_table_column(label="Pinned Nodes", width_stretch=True)
 
             dpg.add_child_window(
                 width=400,
@@ -388,6 +411,7 @@ class BanksOfYonder:
                 callback=self.node_new_child,
                 tag=f"{tag}_context_new_child",
             )
+            # TODO create action dialog
             with dpg.menu(label="Add action", tag=f"{tag}_context_add_action"):
                 dpg.add_menu_item(
                     label="Play",
@@ -418,6 +442,11 @@ class BanksOfYonder:
             dpg.add_separator()
 
             dpg.add_menu_item(
+                label="Pin",
+                callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
+                tag=f"{tag}_context_pin",
+            )
+            dpg.add_menu_item(
                 label="Cut",
                 callback=self.node_cut,
                 tag=f"{tag}_context_cut",
@@ -441,6 +470,14 @@ class BanksOfYonder:
                 label="Delete",
                 callback=self.node_delete,
                 tag=f"{tag}_context_delete",
+            )
+
+        with dpg.item_handler_registry(tag=f"{self.tag}_pin_registry"):
+            dpg.add_item_clicked_handler(
+                button=dpg.mvMouseButton_Left, callback=self.on_pin_selected
+            )
+            dpg.add_item_clicked_handler(
+                button=dpg.mvMouseButton_Right, callback=self.open_pin_menu
             )
 
     def _on_key_press(self, sender, key: int) -> None:
@@ -533,6 +570,101 @@ class BanksOfYonder:
                     parent=f"{self.tag}_menu_recent_files",
                     show=False,
                 )
+
+    def get_pinned_objects(self) -> list[str]:
+        ret = []
+
+        for row in dpg.get_item_children(f"{self.tag}_pinned_objects_table", slot=1):
+            ret.append(dpg.get_item_user_data(row))
+
+        return ret
+
+    def add_pinned_object(self, node: int | Node) -> None:
+        if node is None:
+            return
+        
+        if not isinstance(node, Node):
+            node = self.bnk[node]
+
+        if dpg.does_item_exist(f"{self.tag}_pin_{node}"):
+            # Already pinned
+            return
+
+        def on_select(sender: str):
+            # No selection
+            dpg.set_value(sender, False)
+
+        with dpg.table_row(
+            # For some reason self.pinned_objects_table doesn't work?
+            parent=f"{self.tag}_pinned_objects_table",
+            tag=f"{self.tag}_pin_{node}",
+            user_data=node.id,
+        ):
+            dpg.add_selectable(
+                label=str(node),
+                span_columns=True,
+                callback=on_select,
+                user_data=node.id,
+            )
+            dpg.bind_item_handler_registry(dpg.last_item(), f"{self.tag}_pin_registry")
+
+    def remove_pinned_object(self, node: int | Node) -> None:
+        if isinstance(node, Node):
+            node = node.id
+
+        for row in dpg.get_item_children(f"{self.tag}_pinned_objects_table", slot=1):
+            if dpg.get_item_user_data(row) == node:
+                dpg.delete_item(row)
+                break
+
+    def remove_all_pinned_objects(self) -> None:
+        dpg.delete_item(f"{self.tag}_pinned_objects_table", children_only=True, slot=1)
+
+    def pin_lost_objects(self) -> None:
+        for node in self.bnk.find_orphans():
+            self.add_pinned_object(node)
+
+    def on_pin_selected(self, sender: str, app_data: str, user_data: Any) -> None:
+        _, selectable = app_data
+        node_id = dpg.get_item_user_data(selectable)
+        node = self.bnk.get(node_id)
+        if not node:
+            logger.error(f"Node {node_id} no longer exists")
+            return
+
+        # Select, but don't jump
+        self.select_node(node)
+
+    def open_pin_menu(self, sender: str, app_data: str, user_data: Any) -> None:
+        _, selectable = app_data
+        node_id = dpg.get_item_user_data(selectable)
+
+        # Pin context menu
+        with dpg.window(
+            popup=True,
+            min_size=(100, 20),
+            no_title_bar=True,
+            no_resize=True,
+            no_move=True,
+            no_saved_settings=True,
+            autosize=True,
+        ) as popup:
+            dpg.add_selectable(
+                label="Unpin",
+                callback=lambda s, a, u: self.remove_pinned_object(u),
+                user_data=node_id,
+            )
+            dpg.add_selectable(
+                label="Unpin All",
+                callback=self.remove_all_pinned_objects,
+            )
+            dpg.add_selectable(
+                label="Jump To",
+                callback=lambda s, a, u: self.jump_to_event_node(u),
+                user_data=node_id,
+            )
+
+        dpg.set_item_pos(popup, dpg.get_mouse_pos(local=False))
 
     def show_notification(
         self, msg: str, color: tuple[int, int, int, int] = style.red
@@ -645,6 +777,7 @@ class BanksOfYonder:
         logger.info(f"Loading soundbank {path}")
         loading = loading_indicator("Loading soundbank...")
         try:
+            self.remove_all_pinned_objects()
             dpg.set_value(f"{self.tag}_events_filter", "")
             dpg.set_value(f"{self.tag}_globals_filter", "")
 
@@ -733,7 +866,7 @@ class BanksOfYonder:
         self._regenerate_globals_list()
 
         if self._selected_node:
-            self.jump_to(self._selected_node)
+            self.jump_to_event_node(self._selected_node)
 
     def _regenerate_events_list(self) -> None:
         dpg.delete_item(f"{self.tag}_events_table", children_only=True, slot=1)
@@ -875,28 +1008,34 @@ class BanksOfYonder:
                 self.bnk,
                 node,
                 lambda s, a, u: self.update_json_panel(),
-                lambda s, a, u: self.jump_to(a),
+                lambda s, a, u: self.jump_to_event_node(a),
                 tag=f"{self.tag}_attributes_",
                 parent=f"{self.tag}_attributes",
             )
 
-    def jump_to(self, node: int | Node) -> None:
-        for evt, sub in self.bnk.find_event_subgraphs_for(node):
-            if not self._selected_node or self._selected_node.id in sub:
-                break
+    def jump_to_event_node(self, node: int | Node) -> None:
+        if isinstance(node, int):
+            node_id = node
+            node = self.bnk[node_id]
         else:
-            logger.error(f"Could not find an event subgraph containing node {node}")
-            return
+            node_id = node.id
 
-        node_id = node.id if isinstance(node, Node) else node
-        path = nx.shortest_path(sub, evt.id, node_id)
+        if not isinstance(node.cast(), Event):
+            for evt, sub in self.bnk.find_event_subgraphs_for(node):
+                if not self._selected_node or self._selected_node.id in sub:
+                    break
+            else:
+                logger.error(f"Could not find an event subgraph containing node {node}")
+                return
 
-        for n in path:
-            if n == node_id:
-                break
+            path = nx.shortest_path(sub, evt.id, node_id)
 
-            row = f"{self.tag}_node_{n}"
-            set_foldable_row_status(row, True)
+            for n in path:
+                if n == node_id:
+                    break
+
+                row = f"{self.tag}_node_{n}"
+                set_foldable_row_status(row, True)
 
         self.select_node(node)
         self._scroll_to_item(f"{self.tag}_events_table", node)
@@ -904,7 +1043,7 @@ class BanksOfYonder:
     def _scroll_to_item(self, table: str, node: int | Node) -> None:
         node_id = node.id if isinstance(node, Node) else node
         num_visible = 0
-        
+
         for row in dpg.get_item_children(table, slot=1):
             if not is_row_visible(table, row):
                 continue
@@ -1122,8 +1261,10 @@ class BanksOfYonder:
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
             logger.info(f"Added new sound {play_evt.lookup_name()} ({play_evt.id})")
+            self.add_pinned_object(play_evt)
+            self.add_pinned_object(stop_evt)
             self.regenerate()
-            self.jump_to(play_evt)
+            self.jump_to_event_node(play_evt)
 
         create_simple_sound_dialog(self.bnk, on_sound_created, tag=tag)
 
@@ -1141,7 +1282,8 @@ class BanksOfYonder:
             logger.info(
                 f"Added new boss track for {bgm_enemy_type}, branch starting at {nodes[0]}"
             )
-            self.jump_to(nodes[0])
+            self.add_pinned_object(nodes[0])
+            self.jump_to_event_node(nodes[0])
 
         new_boss_track_dialog(self.bnk, on_boss_track_created, tag=tag)
 
