@@ -91,6 +91,7 @@ def create_attribute_widgets(
                 update_node_hash,
                 allow_edit_hash=False,
                 allow_edit_name=False,
+                width=-200,
                 tag=f"{tag}_hash",
             )
 
@@ -476,16 +477,28 @@ def _create_attributes_music_segment(
     from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
     
     def on_marker_renamed(
-        sender: str, new_name: tuple[int, str], marker_id: int
+        sender: str, new_name: tuple[int, str], info: tuple[int, int]
     ) -> None:
+        idx, _ = info
         mid, name = new_name
-        pos = node.get_marker(marker_id)["position"]
-        node.remove_marker(marker_id)
+        pos = node.markers[idx]["position"]
+        node.markers.pop(idx)
         node.set_marker(name or mid, pos)
         on_node_changed(tag, node, user_data)
 
-    def on_marker_moved(sender: str, new_pos: float, marker_id: int) -> None:
-        node.set_marker(marker_id, new_pos)
+    def on_marker_moved(sender: str, new_pos: float, info: tuple[int, int]) -> None:
+        _, mid = info
+        node.set_marker(mid, new_pos)
+        on_node_changed(tag, node, user_data)
+
+    def on_marker_added(sender: str, info: tuple[int, list[dict], list[dict]], cb_user_data: Any) -> None:
+        marker = info[1][0]
+        node.set_marker(marker["id"], marker["position"])
+        on_node_changed(tag, node, user_data)
+
+    def on_marker_removed(sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any) -> None:
+        marker = info[1]
+        node.remove_marker(marker["id"])
         on_node_changed(tag, node, user_data)
 
     def new_marker() -> dict:
@@ -493,24 +506,23 @@ def _create_attributes_music_segment(
         return node.get_marker(mid)
 
     def create_row(marker: dict, idx: int) -> None:
-        add_hash_widget(
-            marker["id"],
-            on_marker_renamed,
-            initial_string=marker["string"],
-            user_data=marker["id"],
-        )
-        dpg.add_input_float(
-            default_value=marker["position"],
-            min_value=0.0,
-            min_clamped=True,
-            callback=on_marker_moved,
-            user_data=marker["id"],
-        )
-
-    def on_markers_changed(sender: str, markers: list[dict], cb_user_data: Any) -> None:
-        node.markers.clear()
-        node.markers.extend(markers)
-        on_node_changed(tag, node, user_data)
+        with dpg.group(horizontal=True):
+            add_hash_widget(
+                marker["id"],
+                on_marker_renamed,
+                initial_string=marker["string"],
+                width=200,
+                hash_label=None,
+                user_data=(idx, marker["id"]),
+            )
+            dpg.add_input_float(
+                default_value=marker["position"],
+                min_value=0.0,
+                min_clamped=True,
+                callback=on_marker_moved,
+                user_data=(idx, marker["id"]),
+                width=-1,
+            )
 
     def edit_markers_on_track() -> None:
         track: MusicTrack = bnk[int(dpg.get_value(f"{tag}_child_tracks"))]
@@ -555,7 +567,8 @@ def _create_attributes_music_segment(
         node.markers,
         new_marker,
         create_row,
-        on_markers_changed,
+        on_add=on_marker_added,
+        on_remove=on_marker_removed,
         add_item_label="+ Add Marker",
         label="Markers",
     )

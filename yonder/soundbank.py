@@ -400,7 +400,7 @@ class Soundbank:
                 wem = node["bank_source_data/media_information/source_id"]
                 g.nodes[node_id]["wems"] = [wem]
             elif node_type == "MusicTrack":
-                wems = [src["source_id"] for src in node["sources"]]
+                wems = [src["media_information"]["source_id"] for src in node["sources"]]
                 g.nodes[node_id]["wems"] = wems
 
             for _, cid in node.resolve_path("**/children/items:*", []):

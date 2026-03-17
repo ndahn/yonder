@@ -2,6 +2,7 @@ from .attributes import create_attribute_widgets
 from .editable_table import add_widget_table, add_filepaths_table, add_player_table
 from .flags_widget import add_flag_checkboxes
 from .generic_input_widget import add_generic_widget
+from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
 from .loading_indicator import loading_indicator
 from .node_widget import add_node_widget

@@ -187,6 +187,7 @@ def set_foldable_row_status(row: str, expanded: bool) -> None:
         return
 
     if desc.is_lazy:
+        expanded = not expanded
         dpg.set_item_label(desc.button, "-" if expanded else "+")
         _on_lazy_node_clicked(row, expanded, desc)
     else:

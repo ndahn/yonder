@@ -28,6 +28,7 @@ from yonder.gui.widgets import (
     set_foldable_row_status,
     get_foldable_row_descriptor,
     is_row_visible,
+    add_graph_widget,
 )
 from yonder.gui import style
 from yonder.gui.style import themes
@@ -437,6 +438,12 @@ class BanksOfYonder:
                     callback=self.node_add_action_reset_bus_volume,
                     tag=f"{tag}_context_add_action_reset_bus",
                 )
+
+            dpg.add_menu_item(
+                label="Show Graph",
+                callback=self._open_node_graph,
+                tag=f"{tag}_context_show_graph",
+            )
 
             dpg.add_separator()
 
@@ -962,8 +969,10 @@ class BanksOfYonder:
 
         if isinstance(node, Event):
             dpg.show_item(f"{self.tag}_context_add_action")
+            dpg.show_item(f"{self.tag}_context_show_graph")
         else:
             dpg.hide_item(f"{self.tag}_context_add_action")
+            dpg.hide_item(f"{self.tag}_context_show_graph")
 
         dpg.set_item_pos(f"{self.tag}_context_menu", dpg.get_mouse_pos())
         dpg.show_item(f"{self.tag}_context_menu")
@@ -1035,6 +1044,8 @@ class BanksOfYonder:
 
                 row = f"{self.tag}_node_{n}"
                 set_foldable_row_status(row, True)
+
+            dpg.split_frame()
 
         self.select_node(node)
         self._scroll_to_item(f"{self.tag}_events_table", node)
@@ -1233,6 +1244,28 @@ class BanksOfYonder:
 
         dpg.split_frame()
         center_window(tag)
+
+    def _open_node_graph(self) -> None:
+        evt: Event = self._selected_node
+        if not evt:
+            return
+
+        tag = f"{self.tag}_node_graph_{evt.id}"
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        def on_graph_node_click(sender: str, node: int | Node, user_data: Any) -> None:
+            self.jump_to_event_node(node)
+
+        with dpg.window(
+            label=f"{evt}",
+            width=400,
+            height=400,
+            on_close=lambda: dpg.delete_item(window),
+        ) as window:
+            add_graph_widget(self.bnk, evt, on_graph_node_click, width=-1, height=-1)
 
     def _open_new_wwise_event_dialog(self) -> None:
         tag = f"{self.tag}_new_wwise_event_dialog"

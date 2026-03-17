@@ -12,6 +12,8 @@ def add_hash_widget(
     horizontal: bool = True,
     allow_edit_hash: bool = True,
     allow_edit_name: bool = True,
+    string_label: str = "String",
+    hash_label: str = "Hash",
     width: int = -1,
     tag: str = 0,
     user_data: Any = None,
@@ -36,23 +38,31 @@ def add_hash_widget(
         if on_hash_changed:
             on_hash_changed(tag, (h, label), user_data)
 
+
     if horizontal:
+        if width not in (0, -1):
+            string_w = abs(width) / 2
+            hash_w = width / 2
+        else:
+            string_w = 100
+            hash_w = -1
+
         with dpg.group(horizontal=True, tag=tag):
             dpg.add_input_text(
                 default_value=str(default_value),
                 decimal=True,
                 readonly=not allow_edit_hash,
                 enabled=allow_edit_hash,
-                width=width / 2 if width not in (0, -1) else 100,
+                width=string_w,
                 callback=on_hash_update,
                 tag=f"{tag}_hash",
             )
             dpg.add_input_text(
                 default_value=lookup_name(default_value, initial_string),
-                label="Hash",
+                label=hash_label or "",
                 readonly=not allow_edit_name,
                 enabled=allow_edit_name,
-                width=width / 2 if width not in (0, -1) else -50,
+                width=hash_w,
                 callback=on_string_update,
                 tag=f"{tag}_string",
             )
@@ -60,7 +70,7 @@ def add_hash_widget(
         with dpg.group(tag=tag):
             dpg.add_input_text(
                 default_value=lookup_name(default_value, initial_string),
-                label="String",
+                label=string_label or "",
                 readonly=not allow_edit_name,
                 enabled=allow_edit_name,
                 width=width,
@@ -70,7 +80,7 @@ def add_hash_widget(
             dpg.add_input_text(
                 default_value=str(default_value),
                 decimal=True,
-                label="Hash",
+                label=hash_label or "",
                 readonly=not allow_edit_hash,
                 enabled=allow_edit_hash,
                 width=width,

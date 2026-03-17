@@ -14,7 +14,7 @@ def add_widget_table(
     new_item: Callable[[], _T | tuple[_T]],
     create_row: Callable[[_T, int], None],
     *,
-    on_add: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
+    on_add: Callable[[str, tuple[int, list[_T], list[_T]], Any], None] = None,
     on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     label: str = None,
     add_item_label: str = "+",
@@ -79,6 +79,8 @@ def add_widget_table(
             dpg.add_table_column(label="")
 
             refresh()
+
+        dpg.add_spacer(height=3)
 
     return tag
 
