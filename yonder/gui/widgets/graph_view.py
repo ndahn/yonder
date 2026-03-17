@@ -35,7 +35,7 @@ def add_graph_widget(
     # TODO layout needs some improvement for layers with multiple nodes
     def make_layout(g: nx.DiGraph) -> dict[int, tuple[int, int, str]]:
         offset = 0
-        layer_separation = 20 if horizontal else 15
+        layer_separation = 40 if horizontal else 25
         layout: dict[int, tuple[int, int, str]] = {}
 
         for generation, layer in enumerate(nx.topological_generations(g)):
@@ -64,7 +64,11 @@ def add_graph_widget(
         # NOTE this will crash if breakpoints are set anywhere in here!
         nonlocal current_highlight
 
-        if not dpg.is_item_hovered(f"{tag}_canvas"):
+        # Save some cpu cycles when no updates are needed
+        if not (
+            dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
+            or dpg.is_item_hovered(dpg.get_item_parent(f"{tag}_canvas"))
+        ):
             return
 
         current_highlight = 0
@@ -99,7 +103,7 @@ def add_graph_widget(
                 (sx, sy),
                 (mx, my),
                 (dx, dy),
-                color=style.purple,
+                color=style.purple.but(a=127),
                 tag=f"{tag}_edge_{src}_{dst}",
             )
 
@@ -156,7 +160,8 @@ def add_graph_widget(
 
         dpg.delete_item(f"{tag}_canvas_yaxis", children_only=True, slot=1)
 
-        # TODO limit number of nodes
+        # TODO could limit the number of nodes, but worst case there are some glitches.
+        # Even then the user will quickly realize that a deeper node will be more useful
         g = bnk.get_subtree(root, children_only)
         layout = make_layout(g)
         _, x, y, w, h, _ = map(list, list(zip(*layout.values())))
@@ -182,6 +187,7 @@ def add_graph_widget(
             return
 
         if not dpg.does_item_exist(f"{tag}_canvas"):
+            # Assume this widget has been destroyed
             dpg.delete_item(handler_reg)
             return
 
@@ -201,7 +207,7 @@ def add_graph_widget(
     ):
         dpg.add_plot_axis(
             dpg.mvXAxis,
-            #no_gridlines=True,
+            # no_gridlines=True,
             no_highlight=True,
             no_label=True,
             no_tick_labels=True,
@@ -210,7 +216,7 @@ def add_graph_widget(
         )
         dpg.add_plot_axis(
             dpg.mvYAxis,
-            #no_gridlines=True,
+            # no_gridlines=True,
             no_highlight=True,
             no_label=True,
             no_tick_labels=True,
@@ -219,7 +225,6 @@ def add_graph_widget(
             tag=f"{tag}_canvas_yaxis",
         )
 
-    # TODO reuse or clean up when no longer needed
     with dpg.handler_registry() as handler_reg:
         dpg.add_mouse_click_handler(callback=on_mouse_click)
 

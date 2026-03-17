@@ -239,11 +239,36 @@ def add_wav_player(
     def regenerate() -> None:
         dpg.delete_item(f"{tag}_axis_y", children_only=True)
 
-        audio = get_wav_path()
-        with wave.open(str(audio), "r") as f:
-            n_channels = f.getnchannels()
-            framerate = f.getframerate()
-            frames = np.frombuffer(f.readframes(-1), dtype=np.int16)
+        try:
+            filepath = get_wav_path()
+            if not filepath or not filepath.is_file():
+                raise FileNotFoundError()
+
+            with wave.open(str(filepath), "r") as f:
+                n_channels = f.getnchannels()
+                framerate = f.getframerate()
+                frames = np.frombuffer(f.readframes(-1), dtype=np.int16)
+        except FileNotFoundError:
+            logger.error(f"Audio {audio} not found")
+            dpg.hide_item(f"{tag}_plot_group")
+            dpg.configure_item(
+                f"{tag}_audio_error",
+                default_value=f"Audio {audio.name} not found",
+                show=True,
+            )
+            return
+        except Exception as e:
+            logger.error(f"Error reading file: {e}")
+            dpg.hide_item(f"{tag}_plot_group")
+            dpg.configure_item(
+                f"{tag}_audio_error",
+                default_value=str(e),
+                show=True,
+            )
+            return
+
+        dpg.show_item(f"{tag}_plot_group")
+        dpg.hide_item(f"{tag}_audio_error")
 
         # Deinterleave channels in one reshape — no Python loop
         # frames is [L, R, L, R, ...] → shape (n_frames, n_channels)
@@ -306,10 +331,14 @@ def add_wav_player(
         dpg.fit_axis_data(f"{tag}_axis_y")
 
     with dpg.group(tag=tag):
+        dpg.add_text(
+            "Audio not found", color=style.yellow, show=False, tag=f"{tag}_audio_error"
+        )
+
         if allow_change_file:
             with dpg.group(horizontal=True):
                 dpg.add_input_text(
-                    default_value=str(initial_file) if initial_file else "",
+                    default_value=shorten_path(initial_file) if initial_file else "",
                     enabled=False,
                     readonly=True,
                     tag=f"{tag}_filepath",
@@ -321,149 +350,152 @@ def add_wav_player(
                 if label:
                     dpg.add_text(label)
 
-        with dpg.plot(
-            width=width,
-            height=height,
-            no_title=True,
-            no_menus=True,
-            no_mouse_pos=True,
-            tag=f"{tag}_plot",
-            parent=parent,
-        ):
-            dpg.add_plot_axis(
-                dpg.mvXAxis,
-                label="x",
-                no_label=True,
-                no_highlight=True,
-                tag=f"{tag}_axis_x",
-            )
-            dpg.add_plot_axis(
-                dpg.mvYAxis,
-                label="y",
-                no_label=True,
-                no_highlight=True,
-                no_tick_labels=True,
-                no_tick_marks=True,
-                auto_fit=True,
-                tag=f"{tag}_axis_y",
-            )
-
-            # Playback marker
-            dpg.add_drag_line(
-                show_label=False,
-                thickness=2,
-                color=style.red,
-                callback=on_progress_update,
-                tag=f"{tag}_progress",
-            )
-
-            # Loop markers
-            if loop_markers_enabled:
-                dpg.add_drag_line(
-                    label="loop_start",
-                    color=style.green,
-                    default_value=loop_start,
-                    tag=f"{tag}_loop_start",
-                    callback=update_loop_widgets,
-                    no_inputs=not edit_markers_inplace,
+        with dpg.group(tag=f"{tag}_plot_group"):
+            with dpg.plot(
+                width=width,
+                height=height,
+                no_title=True,
+                no_menus=True,
+                no_mouse_pos=True,
+                tag=f"{tag}_plot",
+                parent=parent,
+            ):
+                dpg.add_plot_axis(
+                    dpg.mvXAxis,
+                    label="x",
+                    no_label=True,
+                    no_highlight=True,
+                    tag=f"{tag}_axis_x",
                 )
-                dpg.add_drag_line(
-                    label="loop_end",
-                    color=style.light_green,
-                    default_value=loop_end,
-                    tag=f"{tag}_loop_end",
-                    callback=update_loop_widgets,
-                    no_inputs=not edit_markers_inplace,
+                dpg.add_plot_axis(
+                    dpg.mvYAxis,
+                    label="y",
+                    no_label=True,
+                    no_highlight=True,
+                    no_tick_labels=True,
+                    no_tick_marks=True,
+                    auto_fit=True,
+                    tag=f"{tag}_axis_y",
                 )
 
-            # User markers
-            if user_markers_enabled:
-                for marker, pos, color in user_markers:
+                # Playback marker
+                dpg.add_drag_line(
+                    show_label=False,
+                    thickness=2,
+                    color=style.red,
+                    callback=on_progress_update,
+                    tag=f"{tag}_progress",
+                )
+
+                # Loop markers
+                if loop_markers_enabled:
                     dpg.add_drag_line(
-                        label=marker,
-                        color=color,
-                        default_value=pos,
+                        label="loop_start",
+                        color=style.green,
+                        default_value=loop_start,
+                        tag=f"{tag}_loop_start",
+                        callback=update_loop_widgets,
                         no_inputs=not edit_markers_inplace,
-                        tag=f"{tag}_marker_{marker}",
-                        callback=on_user_marker_moved,
+                    )
+                    dpg.add_drag_line(
+                        label="loop_end",
+                        color=style.light_green,
+                        default_value=loop_end,
+                        tag=f"{tag}_loop_end",
+                        callback=update_loop_widgets,
+                        no_inputs=not edit_markers_inplace,
                     )
 
-        with dpg.group(horizontal=True):
-            dpg.add_button(
-                arrow=True,
-                direction=dpg.mvDir_Right,
-                callback=on_play_pause,
-            )
+                # User markers
+                if user_markers_enabled:
+                    for marker, pos, color in user_markers:
+                        dpg.add_drag_line(
+                            label=marker,
+                            color=color,
+                            default_value=pos,
+                            no_inputs=not edit_markers_inplace,
+                            tag=f"{tag}_marker_{marker}",
+                            callback=on_user_marker_moved,
+                        )
 
-            if loop_markers_enabled or user_markers_enabled:
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    arrow=True,
+                    direction=dpg.mvDir_Right,
+                    callback=on_play_pause,
+                )
+
+                if loop_markers_enabled or user_markers_enabled:
+                    dpg.add_text("|")
+                    if edit_markers_inplace:
+                        dpg.add_button(
+                            label="Markers",
+                            callback=lambda s, a, u: dpg.show_item(
+                                f"{tag}_markers_popup"
+                            ),
+                        )
+                        if loop_markers_enabled:
+                            dpg.add_checkbox(
+                                label="Loop",
+                                default_value=True,
+                                tag=f"{tag}_loop_enabled",
+                                callback=update_loop_widgets,
+                            )
+                            dpg.add_checkbox(
+                                label="Test",
+                                default_value=True,
+                                tag=f"{tag}_loop_test",
+                            )
+                        if user_markers_enabled:
+                            # TODO add something to add new user markers here
+                            pass
+                    else:
+                        dpg.add_button(
+                            label="Markers",
+                            callback=open_edit_markers_dialog,
+                        )
+
                 dpg.add_text("|")
-                if edit_markers_inplace:
-                    dpg.add_button(
-                        label="Markers",
-                        callback=lambda s, a, u: dpg.show_item(f"{tag}_markers_popup"),
-                    )
-                    if loop_markers_enabled:
-                        dpg.add_checkbox(
-                            label="Loop",
-                            default_value=True,
-                            tag=f"{tag}_loop_enabled",
-                            callback=update_loop_widgets,
-                        )
-                        dpg.add_checkbox(
-                            label="Test",
-                            default_value=True,
-                            tag=f"{tag}_loop_test",
-                        )
-                    if user_markers_enabled:
-                        # TODO add something to add new user markers here
-                        pass
-                else:
-                    dpg.add_button(
-                        label="Markers",
-                        callback=open_edit_markers_dialog,
-                    )
+                dpg.add_text("0.000 / 0.000", tag=f"{tag}_progress_value")
 
-            dpg.add_text("|")
-            dpg.add_text("0.000 / 0.000", tag=f"{tag}_progress_value")
-
-        with dpg.window(
-            popup=True,
-            no_move=True,
-            no_title_bar=True,
-            no_resize=True,
-            tag=f"{tag}_markers_popup",
-            show=False,
-        ):
-            if loop_markers_enabled:
-                dpg.add_input_float(
-                    label="loop_start",
-                    default_value=1.0,
-                    width=100,
-                    callback=set_loop_marker_pos,
-                    user_data="loop_start",
-                    tag=f"{tag}_loop_start_value",
-                )
-                dpg.add_input_float(
-                    label="loop_end",
-                    default_value=1.0,
-                    width=100,
-                    callback=set_loop_marker_pos,
-                    user_data="loop_end",
-                    tag=f"{tag}_loop_end_value",
-                )
-                if user_markers:
-                    dpg.add_separator()
-
+    with dpg.window(
+        popup=True,
+        no_move=True,
+        no_title_bar=True,
+        no_resize=True,
+        tag=f"{tag}_markers_popup",
+        show=False,
+    ):
+        if loop_markers_enabled:
+            dpg.add_input_float(
+                label="loop_start",
+                default_value=1.0,
+                width=100,
+                callback=set_loop_marker_pos,
+                user_data="loop_start",
+                tag=f"{tag}_loop_start_value",
+            )
+            dpg.add_input_float(
+                label="loop_end",
+                default_value=1.0,
+                width=100,
+                callback=set_loop_marker_pos,
+                user_data="loop_end",
+                tag=f"{tag}_loop_end_value",
+            )
             if user_markers:
-                for marker, pos, _ in user_markers:
-                    dpg.add_input_float(
-                        label=marker,
-                        default_value=pos,
-                        width=100,
-                        callback=set_user_marker_pos,
-                        user_data=marker,
-                        tag=f"{tag}_marker_{marker}_value",
-                    )
+                dpg.add_separator()
+
+        if user_markers:
+            for marker, pos, _ in user_markers:
+                dpg.add_input_float(
+                    label=marker,
+                    default_value=pos,
+                    width=100,
+                    callback=set_user_marker_pos,
+                    user_data=marker,
+                    tag=f"{tag}_marker_{marker}_value",
+                )
 
     if initial_file:
         regenerate()
