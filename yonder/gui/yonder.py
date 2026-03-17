@@ -1257,7 +1257,8 @@ class BanksOfYonder:
             return
 
         def on_graph_node_click(sender: str, node: int | Node, user_data: Any) -> None:
-            self.jump_to_event_node(node)
+            if node in self.bnk:
+                self.jump_to_event_node(node)
 
         with dpg.window(
             label=f"{evt}",

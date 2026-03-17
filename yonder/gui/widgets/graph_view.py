@@ -31,9 +31,10 @@ def add_graph_widget(
             return str(nid)
         return f"({nid})"
 
+    # TODO layout needs some improvement for layers with multiple nodes
     def make_layout(g: nx.DiGraph) -> dict[int, tuple[int, int, str]]:
         offset = 0
-        layer_separation = 50 if horizontal else 30
+        layer_separation = 20 if horizontal else 15
         layout: dict[int, tuple[int, int, str]] = {}
 
         for layer in nx.topological_generations(g):
@@ -47,9 +48,9 @@ def add_graph_widget(
 
                 if horizontal:
                     px = offset + layer_separation
-                    py = idx * (txt_h + 5)
+                    py = (idx - len(layer) / 2) * (txt_h + 5)
                 else:
-                    px = idx * (txt_w + 5)
+                    px = (idx - len(layer) / 2) * (txt_w + 5)
                     py = offset + layer_separation
 
                 layout[nid] = (px, py, txt_w, txt_h, label)
@@ -151,6 +152,7 @@ def add_graph_widget(
 
         dpg.delete_item(f"{tag}_canvas_yaxis", children_only=True, slot=1)
 
+        # TODO limit number of nodes
         g = bnk.get_subtree(root)
         layout = make_layout(g)
         x, y, w, h, _ = map(list, list(zip(*layout.values())))

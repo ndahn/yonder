@@ -385,12 +385,15 @@ class Soundbank:
             if node_id in g:
                 continue
 
-            idx = self._id2index[node_id]
+            idx = self._id2index.get(node_id)
+            if idx is None:
+                g.add_node(node_id, type="(external)")
+                g.add_edge(parent_id, node_id)
+                continue
+
             node = self._hirc[idx]
             node_type = node.type
-            node_params = node.body
-
-            g.add_node(node_id, index=idx, type=node_type, body=node_params)
+            g.add_node(node_id, type=node_type)
 
             if parent_id is not None:
                 g.add_edge(parent_id, node_id)
@@ -403,15 +406,7 @@ class Soundbank:
                 wems = [src["media_information"]["source_id"] for src in node["sources"]]
                 g.nodes[node_id]["wems"] = wems
 
-            for _, cid in node.resolve_path("**/children/items:*", []):
-                todo.append((cid, node_id))
-
-            ext_id = node.get("external_id", None)
-            if ext_id:
-                todo.append((ext_id, node_id))
-
-            for _, act_id in node.resolve_path("actions:*", []):
-                todo.append((act_id, node_id))
+            todo.extend((ref[1], node_id) for ref in node.get_references())
 
         return g
 
