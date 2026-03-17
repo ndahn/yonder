@@ -12,8 +12,6 @@ While Yonder comes as a standalone app, it heavily relies on several other tools
 - [vgmstream](https://github.com/vgmstream/vgmstream/releases): for converting .wem audio files to .wav
 - [wwise](https://www.audiokinetic.com/en/download): for converting .wav files to .wem
 
----
-
 ## What can you do?
 Yonder provides a comfortable way to make low- and medium-level edits. This includes:
 
@@ -26,11 +24,7 @@ Yonder provides a comfortable way to make low- and medium-level edits. This incl
 - mass convert .wav files to .wem
 - etc.
 
----
-
 It is by no means as feature rich and exhaustive as wwise (and I don't think it will ever get there), but it makes a tedious and error prone task a lot more comfortable. 
-
----
 
 ## A Brief Lesson on Soundbanks
 That really depends on what you want to do, so instead I'll give you a brief introduction on how soundbanks are structured. The most basic thing to do, of course, is opening a soundbank. For Elden Ring and co. you can find the soundbanks inside the game's `sd/` folder. Use [Nuxe](https://github.com/JKAnderson/Nuxe/releases) to unpack your game if you haven't done so already.
@@ -62,8 +56,6 @@ As mentioned before, Wwise is extremly powerful and has A LOT of features I am n
 ### Using your Modified Soundbank
 Once you're happy with your edits you can save them. Yonder always works on the `soundbank.json` file you get from `rewwise`, so you'll have to repack it. To do so, simply click *File -> Repack* or F4. Be patient, this process can take several minutes, especially when editing a large soundbank like `cs_main`. Once packed you can simply place it in your mod like any other mod file. Make sure however that you're using [ModEngine3](https://github.com/garyttierney/me3/releases) - ME2 won't load modded soundbanks (*).
 
----
-
 ## Future Work
 Yonder will probably never become my main project, so updates will be slow and irregular. There are a couple of things you may see in the future:
 
@@ -73,8 +65,6 @@ Yonder will probably never become my main project, so updates will be slow and i
 - setup RTPCs
 
 If you have a particular feature in mind it's best to create an issue here on Github. If that seems too much, feel free to contact me on the ?ServerName? discord @Managarm.
-
----
 
 # Hall of Fame
 This app would not have been possible without the invaluable help and support from *Raster* and *Vswarte*. A huge shoutout also goes to *Themyys* for his very helpful guide which got me into this mess, as well as *Shion* and others who did a lot of research I could build upon. 
