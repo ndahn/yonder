@@ -12,6 +12,7 @@ def add_graph_widget(
     root: Node,
     on_node_selected: Callable[[str, int | Node, Any], None] = None,
     *,
+    children_only: bool = True,
     horizontal: bool = True,
     width: int = 400,
     height: int = 400,
@@ -37,7 +38,7 @@ def add_graph_widget(
         layer_separation = 20 if horizontal else 15
         layout: dict[int, tuple[int, int, str]] = {}
 
-        for layer in nx.topological_generations(g):
+        for generation, layer in enumerate(nx.topological_generations(g)):
             labels = dict(sorted((nid, get_label(nid)) for nid in layer))
             max_len = max(len(v) for v in labels.values())
             txt_w, txt_h = estimate_drawn_text_size(max_len, font_size=12)
@@ -53,25 +54,28 @@ def add_graph_widget(
                     px = (idx - len(layer) / 2) * (txt_w + 5)
                     py = offset + layer_separation
 
-                layout[nid] = (px, py, txt_w, txt_h, label)
+                layout[nid] = (generation, px, py, txt_w, txt_h, label)
 
             offset += txt_w if horizontal else txt_h
 
         return layout
 
-    def callback(sender: str, app_data: list, node_indices: dict[int, int]) -> None:
+    def render_graph(sender: str, app_data: list, node_indices: dict[int, int]) -> None:
         # NOTE this will crash if breakpoints are set anywhere in here!
         nonlocal current_highlight
 
+        if not dpg.is_item_hovered(f"{tag}_canvas"):
+            return
+
         current_highlight = 0
 
-        _helper_data = app_data[0]
+        dpg_data = app_data[0]
         transformed_x = app_data[1]
         transformed_y = app_data[2]
         # transformed_w = app_data[3]
         # transformed_h = app_data[4]
-        mouse_x = _helper_data["MouseX_PixelSpace"]
-        mouse_y = _helper_data["MouseY_PixelSpace"]
+        mouse_x = dpg_data["MouseX_PixelSpace"]
+        mouse_y = dpg_data["MouseY_PixelSpace"]
 
         dpg.delete_item(sender, children_only=True, slot=2)
         dpg.push_container_stack(sender)
@@ -114,7 +118,7 @@ def add_graph_widget(
             pw, ph = estimate_drawn_text_size(len(label), font_size=12)
 
             # Node label
-            offset_y = 40 if i % 2 == 0 else -25
+            offset_y = 40
             dpg.draw_polyline(
                 [(px, py), (px + 20, py + offset_y), (px + 100, py + offset_y)],
                 color=style.white,
@@ -153,9 +157,9 @@ def add_graph_widget(
         dpg.delete_item(f"{tag}_canvas_yaxis", children_only=True, slot=1)
 
         # TODO limit number of nodes
-        g = bnk.get_subtree(root)
+        g = bnk.get_subtree(root, children_only)
         layout = make_layout(g)
-        x, y, w, h, _ = map(list, list(zip(*layout.values())))
+        _, x, y, w, h, _ = map(list, list(zip(*layout.values())))
         node_indices = {nid: idx for idx, nid in enumerate(layout.keys())}
 
         with dpg.custom_series(
@@ -163,7 +167,7 @@ def add_graph_widget(
             y,
             2,
             # TODO pass w and h once https://github.com/hoffstadt/DearPyGui/pull/2616 is merged
-            callback=callback,
+            callback=render_graph,
             tooltip=False,
             user_data=node_indices,
             parent=f"{tag}_canvas_yaxis",
@@ -187,10 +191,17 @@ def add_graph_widget(
         if current_highlight > 0:
             on_node_selected(tag, current_highlight, user_data)
 
-    with dpg.plot(width=width, height=height, tag=f"{tag}_canvas"):
+    with dpg.plot(
+        no_box_select=True,
+        no_mouse_pos=True,
+        no_menus=True,
+        width=width,
+        height=height,
+        tag=f"{tag}_canvas",
+    ):
         dpg.add_plot_axis(
             dpg.mvXAxis,
-            no_gridlines=True,
+            #no_gridlines=True,
             no_highlight=True,
             no_label=True,
             no_tick_labels=True,
@@ -199,7 +210,7 @@ def add_graph_widget(
         )
         dpg.add_plot_axis(
             dpg.mvYAxis,
-            no_gridlines=True,
+            #no_gridlines=True,
             no_highlight=True,
             no_label=True,
             no_tick_labels=True,

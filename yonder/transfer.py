@@ -8,7 +8,7 @@ def extract_structure(bnk: Soundbank, entrypoint) -> list[Node]:
     nodes = []
 
     # Collect the hierarchy responsible for playing the sound(s)
-    action_tree = bnk.get_subtree(entrypoint)
+    action_tree = bnk.get_subtree(entrypoint, False)
     nodes.extend(bnk[n] for n in action_tree.nodes)
 
     # Go upwards through the parents chain and see what needs to be transferred
@@ -48,7 +48,7 @@ def copy_node_structure(
     entrypoint: Node,
 ) -> list[tuple[int, str]]:
     # Collect the hierarchy responsible for playing the sound(s)
-    action_tree = src_bnk.get_subtree(entrypoint)
+    action_tree = src_bnk.get_subtree(entrypoint, False)
     tree_str = format_hierarchy(src_bnk, action_tree)
     logger.info(f"Hierarchy for node {entrypoint}:\n{tree_str}\n")
 

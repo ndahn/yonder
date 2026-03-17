@@ -370,7 +370,7 @@ class Soundbank:
 
         return g
 
-    def get_subtree(self, entrypoint: int | Node) -> nx.DiGraph:
+    def get_subtree(self, entrypoint: int | Node, children_only: bool = True) -> nx.DiGraph:
         """Collects all descendant nodes from the specified entrypoint in a graph."""
         if isinstance(entrypoint, int):
             entrypoint = self[entrypoint]
@@ -406,7 +406,13 @@ class Soundbank:
                 wems = [src["media_information"]["source_id"] for src in node["sources"]]
                 g.nodes[node_id]["wems"] = wems
 
-            todo.extend((ref[1], node_id) for ref in node.get_references())
+            if children_only:
+                if node.type in ("Event", "Action"):
+                    todo.extend((ref, node_id) for _, ref in node.get_references())
+                elif hasattr(node, "children"):
+                    todo.extend((cid, node_id) for cid in node.children)
+            else:
+                todo.extend((ref, node_id) for _, ref in node.get_references())
 
         return g
 

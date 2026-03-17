@@ -969,10 +969,8 @@ class BanksOfYonder:
 
         if isinstance(node, Event):
             dpg.show_item(f"{self.tag}_context_add_action")
-            dpg.show_item(f"{self.tag}_context_show_graph")
         else:
             dpg.hide_item(f"{self.tag}_context_add_action")
-            dpg.hide_item(f"{self.tag}_context_show_graph")
 
         dpg.set_item_pos(f"{self.tag}_context_menu", dpg.get_mouse_pos())
         dpg.show_item(f"{self.tag}_context_menu")
@@ -1047,6 +1045,7 @@ class BanksOfYonder:
 
             dpg.split_frame()
 
+        # TODO switch to globals tab if not an event node descendant
         self.select_node(node)
         self._scroll_to_item(f"{self.tag}_events_table", node)
 
@@ -1246,11 +1245,11 @@ class BanksOfYonder:
         center_window(tag)
 
     def _open_node_graph(self) -> None:
-        evt: Event = self._selected_node
-        if not evt:
+        node = self._selected_node
+        if not node:
             return
 
-        tag = f"{self.tag}_node_graph_{evt.id}"
+        tag = f"{self.tag}_node_graph_{node.id}"
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)
             dpg.focus_item(tag)
@@ -1261,12 +1260,12 @@ class BanksOfYonder:
                 self.jump_to_event_node(node)
 
         with dpg.window(
-            label=f"{evt}",
+            label=f"{node}",
             width=400,
             height=400,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
-            add_graph_widget(self.bnk, evt, on_graph_node_click, width=-1, height=-1)
+            add_graph_widget(self.bnk, node, on_graph_node_click, width=-1, height=-1)
 
     def _open_new_wwise_event_dialog(self) -> None:
         tag = f"{self.tag}_new_wwise_event_dialog"
