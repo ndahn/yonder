@@ -615,18 +615,18 @@ def _create_attributes_music_track(
         segment.set_marker(MusicSegment.loop_end_id, loop_end)
 
     def set_begin_trim(sender: str, trim: float, idx: int) -> None:
-        node.playlist[idx]["begin_trim"] = trim
+        node.playlist[idx]["begin_trim_offset"] = trim
         node.playlist[idx]["play_at"] = -trim
 
     def set_end_trim(sender: str, trim: float, idx: int) -> None:
-        node.playlist[idx]["end_trim"] = trim
+        node.playlist[idx]["end_trim_offset"] = trim
 
     segment: MusicSegment = bnk.get(node.parent)
     markers_enabled = bool(isinstance(segment, MusicSegment))
 
     if markers_enabled:
-        loop_start = segment.get_marker(MusicSegment.loop_start_id)
-        loop_end = segment.get_marker(MusicSegment.loop_end_id)
+        loop_start = segment.get_marker(MusicSegment.loop_start_id)["position"]
+        loop_end = segment.get_marker(MusicSegment.loop_end_id)["position"]
     else:
         loop_start = 0.0
         loop_end = 1.0
@@ -658,7 +658,7 @@ def _create_attributes_music_track(
         # Begin / end trim
         dpg.add_input_float(
             label="begin_trim",
-            default_value=node.playlist[i]["begin_trim"],
+            default_value=node.playlist[i]["begin_trim_offset"],
             min_value=0.0,
             min_clamped=True,
             callback=set_begin_trim,
@@ -666,7 +666,7 @@ def _create_attributes_music_track(
         )
         dpg.add_input_float(
             label="end_trim",
-            default_value=node.playlist[i]["end_trim"],
+            default_value=node.playlist[i]["end_trim_offset"],
             min_value=0.0,
             min_clamped=True,
             callback=set_end_trim,

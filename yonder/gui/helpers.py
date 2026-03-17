@@ -10,7 +10,7 @@ url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{
 
 tmp_dir = tempfile.TemporaryDirectory(prefix="yonder_")
 atexit.register(tmp_dir.cleanup)
-logger.info(f"Temporary files will be stored in {tmp_dir}")
+logger.info(f"Temporary files will be stored in {tmp_dir.name}")
 
 
 def estimate_drawn_text_size(
