@@ -35,7 +35,7 @@ def add_graph_widget(
     # TODO layout needs some improvement for layers with multiple nodes
     def make_layout(g: nx.DiGraph) -> dict[int, tuple[int, int, str]]:
         offset = 0
-        layer_separation = 40 if horizontal else 25
+        layer_separation = 40 if horizontal else 30
         layout: dict[int, tuple[int, int, str]] = {}
 
         for generation, layer in enumerate(nx.topological_generations(g)):
@@ -198,7 +198,6 @@ def add_graph_widget(
             on_node_selected(tag, current_highlight, user_data)
 
     with dpg.plot(
-        no_box_select=True,
         no_mouse_pos=True,
         no_menus=True,
         width=width,
@@ -213,6 +212,7 @@ def add_graph_widget(
             no_tick_labels=True,
             no_tick_marks=True,
             no_menus=True,
+            tag=f"{tag}_canvas_xaxis",
         )
         dpg.add_plot_axis(
             dpg.mvYAxis,

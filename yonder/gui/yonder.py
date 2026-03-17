@@ -54,7 +54,6 @@ from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 # TODO attenuation curve editor
 # TODO music track clip editor
 # TODO new ambience track
-# TODO event graph visualization
 # TODO setup RTPCs
 
 
