@@ -38,6 +38,8 @@ That really depends on what you want to do, so instead I'll give you a brief int
 ### Names & Hashes
 When you open a soundbank, you will be presented with a tree view on the left, where ideally each node would have both a name and a unique ID - however, most nodes won't. This is a quirk of wwise: no node is ever referenced by it's name, they always use the [FNV-1 32bit hash](http://isthe.com/chongo/tech/comp/fnv/#FNV-1). As it is very difficult/time consuming to reverse a hash, we only know the proper names where we could somehow capture them from the game. In all other cases, Yonder will simply show `<?>` followed by the hash/ID,
 
+Yonder already comes with a list of known names (based on the one used in `rewwise`). If you want to provide additional lists you can add them in the *Settings* menu. 
+
 ### Sound Structures
 Everytime the game wants to play (or stop) a sound, let's say from an animation event, it will do so by asking wwise to activate an `Event`. These events have unique identifiers, e.g. `Play_s123456789` and will trigger one or more `Action`s. The most commonly used actions will activate or deactivate a sound structure, but there are also others that can e.g. change a state variable or mute a bus.
 
@@ -45,10 +47,20 @@ Sound structures are (usually) small tree graphs that control various aspects of
 
 The top of these structures is what's typically activated/deactivated by an event action. However, these structures are also parented to a hierarchy of `ActorMixer` objects which manage how multiple structures behave when played in parallel. 
 
+### Streamed Sounds
+Soundbanks use (*afaik*) 3 kinds of audio sources: embedded, streamed, and prefetch-streamed. Most sounds, especially short ones, will be embedded. However, soundbanks have a size limit of around 89MB, so larger sounds like music tracks will typically be stored inside the soundbank.
+
+- Embedded sounds are packed with the soundbank.
+- Streamed sounds are placed outside the soundbank in a `wem` folder next to it.
+- Prefetch-streamed sounds are placed outside the soundbank like streamed sounds. In addition, a very short snippet (the first 100 - 200ms) will be placed inside the soundbank so that it can be played immediately. This is often used for tightly timed sounds, like voice lines or some music tracks.
+
 ### Low-Level Edits
 As you explore a soundbank you will probably find that some feature you want to edit is not exposed as a widget. In these cases you can always edit the *json* on the right by hand, then hit apply. There is no undo-function right now, but as long as you don't switch to another node you can hit *reset* to return the node to its previous state.
 
 As mentioned before, Wwise is extremly powerful and has A LOT of features I am not even aware of. If you encounter something you find interesting, try searching for it in their [library](https://www.audiokinetic.com/en/public-library/) first. 
+
+### Using your Modified Soundbank
+Once you're happy with your edits you can save them. Yonder always works on the `soundbank.json` file you get from `rewwise`, so you'll have to repack it. To do so, simply click *File -> Repack* or F4. Be patient, this process can take several minutes, especially when editing a large soundbank like `cs_main`. Once packed you can simply place it in your mod like any other mod file. Make sure however that you're using [ModEngine3](https://github.com/garyttierney/me3/releases) - ME2 won't load modded soundbanks (*).
 
 ---
 

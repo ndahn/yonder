@@ -39,7 +39,7 @@ def add_graph_widget(
         layout: dict[int, tuple[int, int, str]] = {}
 
         for generation, layer in enumerate(nx.topological_generations(g)):
-            labels = dict(sorted((nid, get_label(nid)) for nid in layer))
+            labels = dict((nid, get_label(nid)) for nid in layer)
             max_len = max(len(v) for v in labels.values())
             txt_w, txt_h = estimate_drawn_text_size(max_len, font_size=12)
 
