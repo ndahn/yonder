@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, get_args
 from collections import deque
 from pathlib import Path
 from docstring_parser import parse as doc_parse
@@ -24,12 +24,13 @@ from yonder.node_types import (
     WwiseNode,
 )
 from yonder.util import logger
-from yonder.enums import SourceType
+from yonder.enums import SourceType, ScalingType
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget
+from .interpolation_curve import add_interpolation_curve, InterpolationPoint
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .wav_player import add_wav_player
@@ -120,8 +121,7 @@ def create_attribute_widgets(
                     properties,
                     on_node_changed,
                     on_node_selected,
-                    tag=tag,
-                    parent=parent,
+                    base_tag=tag,
                     user_data=user_data,
                 )
             except Exception as e:
@@ -219,7 +219,7 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
             if target.is_file():
                 target.unlink()
             shutil.copy(wem, target)
-        
+
         elif source_type in ("Streaming", "PrefetchStreaming"):
             target = bnk.bnk_dir.parent / wem / f"{wem.stem[:2]}" / wem.name
             if target.is_file():
@@ -265,8 +265,7 @@ def _create_type_specific_attributes(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     if isinstance(node, Action):
@@ -274,7 +273,15 @@ def _create_type_specific_attributes(
     elif isinstance(node, ActorMixer):
         pass
     elif isinstance(node, Attenuation):
-        pass
+        _create_attributes_attenuation(
+            bnk,
+            node,
+            properties,
+            on_node_changed,
+            on_node_selected,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
     elif isinstance(node, Bus):
         pass
     elif isinstance(node, Event):
@@ -288,8 +295,7 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            parent=parent,
+            base_tag=base_tag,
             user_data=user_data,
         )
     elif isinstance(node, MusicSegment):
@@ -299,8 +305,7 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            parent=parent,
+            base_tag=base_tag,
             user_data=user_data,
         )
     elif isinstance(node, MusicSwitchContainer):
@@ -310,8 +315,7 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            parent=parent,
+            base_tag=base_tag,
             user_data=user_data,
         )
     elif isinstance(node, MusicTrack):
@@ -321,8 +325,7 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            segment=parent,
+            base_tag=base_tag,
             user_data=user_data,
         )
     elif isinstance(node, RandomSequenceContainer):
@@ -334,8 +337,7 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            parent=parent,
+            base_tag=base_tag,
             user_data=user_data,
         )
     elif isinstance(node, SwitchContainer):
@@ -345,9 +347,113 @@ def _create_type_specific_attributes(
             properties,
             on_node_changed,
             on_node_selected,
-            tag=tag,
-            parent=parent,
+            base_tag=base_tag,
             user_data=user_data,
+        )
+
+
+def _create_attributes_attenuation(
+    bnk: Soundbank,
+    node: Attenuation,
+    properties: dict[str, property],
+    on_node_changed: Callable[[str, Node, Any], None],
+    on_node_selected: Callable[[str, Node, Any], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    def on_scaling_changed(sender: str, scaling: str, curve_idx: int) -> None:
+        node.curves[curve_idx]["curve_scaling"] = str
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_curve_changed(
+        sender: str, points: list[InterpolationPoint], curve_idx: int
+    ) -> None:
+        node.curves[curve_idx]["points"] = [
+            {"from": p.x, "to": p.y, "interpolation": p.interp} for p in points
+        ]
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_curve_param_changed(sender: str, curve_idx: int, param_idx: int) -> None:
+        node.set_curve_for_parameter(param_idx, curve_idx)
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_add_curve(
+        sender: str, info: tuple[int, list[dict], list[dict]], c_user_data: Any
+    ) -> None:
+        node.curves.clear()
+        node.curves.extend(info[2])
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_remove_curve(
+        sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any
+    ) -> None:
+        node.curves.clear()
+        node.curves.extend(info[2])
+
+        max_curve_idx = len(info[2]) - 1
+        for param_idx, curve_idx in enumerate(node.curves_to_use):
+            if curve_idx > max_curve_idx:
+                node.curves_to_use[param_idx] = max_curve_idx
+                dpg.set_value(f"{base_tag}_curve_param_{param_idx}", max_curve_idx)
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def add_curve() -> dict:
+        return node.add_curve("None")
+
+    def create_row(curve: dict, idx: int):
+        points = [
+            InterpolationPoint(p["from"], p["to"], p["interpolation"])
+            for p in curve["points"]
+        ]
+
+        with dpg.tree_node(label=f"Curve #{idx}"):
+            with dpg.group(horizontal=True):
+                dpg.add_combo(
+                    get_args(ScalingType),
+                    default_value=curve["curve_scaling"],
+                    label="Scaling Type",
+                    callback=on_scaling_changed,
+                    user_data=idx,
+                )
+            add_interpolation_curve(points, on_curve_changed, user_data=idx)
+
+    with dpg.group():
+        dpg.add_text("Curves to use")
+        for i, (param, curve) in enumerate(
+            zip(node.curve_parameters, node.curves_to_use)
+        ):
+            with dpg.group(horizontal=True):
+                dpg.add_input_int(
+                    default_value=curve,
+                    label=param,
+                    min_value=-1,
+                    min_clamped=True,
+                    max_value=len(node.curves),
+                    max_clamped=True,
+                    callback=on_curve_param_changed,
+                    user_data=i,
+                    tag=f"{base_tag}_curve_param_{i}",
+                )
+
+        dpg.add_spacer(height=5)
+        add_widget_table(
+            node.curves,
+            add_curve,
+            create_row,
+            on_add=on_add_curve,
+            on_remove=on_remove_curve,
+            add_item_label="+ Add Curve",
         )
 
 
@@ -358,15 +464,15 @@ def _create_attributes_music_random_sequence_container(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    add_transition_matrix(bnk, node, None)
+    with dpg.group():
+        add_transition_matrix(bnk, node, None, user_data=user_data)
 
-    dpg.add_spacer(height=3)
-    dpg.add_separator()
-    dpg.add_spacer(height=3)
+        dpg.add_spacer(height=3)
+        dpg.add_separator()
+        dpg.add_spacer(height=3)
 
 
 def _create_attributes_music_switch_container(
@@ -376,8 +482,7 @@ def _create_attributes_music_switch_container(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     from yonder.gui.dialogs.create_state_path_dialog import create_state_path_dialog
@@ -393,7 +498,7 @@ def _create_attributes_music_switch_container(
     ) -> None:
         node.add_branch(state_path, path_node_id)
         # Regenerate
-        on_node_selected(tag, node, user_data)
+        on_node_selected(base_tag, node, user_data)
 
     def open_context_menu(sender: str, app_data: Any, info: tuple[str, Any]) -> None:
         item, user_data = info
@@ -448,24 +553,25 @@ def _create_attributes_music_switch_container(
                 for child in tree_node["children"]:
                     delve(child, level + 1)
 
-    with dpg.tree_node(label="Decision Tree", default_open=True):
-        for child in node.decision_tree["children"]:
-            delve(child, 0)
+    with dpg.group():
+        with dpg.tree_node(label="Decision Tree", default_open=True):
+            for child in node.decision_tree["children"]:
+                delve(child, 0)
 
-    dpg.add_spacer(height=3)
-    dpg.add_button(
-        label="Add State Path",
-        callback=lambda: create_state_path_dialog(
-            bnk, node, on_state_path_created, raw=True
-        ),
-    )
+        dpg.add_spacer(height=3)
+        dpg.add_button(
+            label="Add State Path",
+            callback=lambda: create_state_path_dialog(
+                bnk, node, on_state_path_created, raw=True
+            ),
+        )
 
-    dpg.add_spacer(height=3)
-    add_transition_matrix(bnk, node, None)
+        dpg.add_spacer(height=3)
+        add_transition_matrix(bnk, node, None)
 
-    dpg.add_spacer(height=3)
-    dpg.add_separator()
-    dpg.add_spacer(height=3)
+        dpg.add_spacer(height=3)
+        dpg.add_separator()
+        dpg.add_spacer(height=3)
 
 
 def _create_attributes_music_segment(
@@ -475,12 +581,11 @@ def _create_attributes_music_segment(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
-    
+
     def on_marker_renamed(
         sender: str, new_name: tuple[int, str], info: tuple[int, int]
     ) -> None:
@@ -489,22 +594,26 @@ def _create_attributes_music_segment(
         pos = node.markers[idx]["position"]
         node.markers.pop(idx)
         node.set_marker(name or mid, pos)
-        on_node_changed(tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def on_marker_moved(sender: str, new_pos: float, info: tuple[int, int]) -> None:
         _, mid = info
         node.set_marker(mid, new_pos)
-        on_node_changed(tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
-    def on_marker_added(sender: str, info: tuple[int, list[dict], list[dict]], cb_user_data: Any) -> None:
+    def on_marker_added(
+        sender: str, info: tuple[int, list[dict], list[dict]], cb_user_data: Any
+    ) -> None:
         marker = info[1][0]
         node.set_marker(marker["id"], marker["position"])
-        on_node_changed(tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
-    def on_marker_removed(sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any) -> None:
+    def on_marker_removed(
+        sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any
+    ) -> None:
         marker = info[1]
         node.remove_marker(marker["id"])
-        on_node_changed(tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def new_marker() -> dict:
         mid = node.set_marker(f"m{len(node.markers)}", 0.0)
@@ -530,7 +639,7 @@ def _create_attributes_music_segment(
             )
 
     def edit_markers_on_track() -> None:
-        track: MusicTrack = bnk[int(dpg.get_value(f"{tag}_child_tracks"))]
+        track: MusicTrack = bnk[int(dpg.get_value(f"{base_tag}_child_tracks"))]
         if not track.sources:
             logger.warning(f"{track} has no sources")
             return
@@ -547,7 +656,9 @@ def _create_attributes_music_segment(
             on_loop_changed,
         )
 
-    def on_loop_changed(sender: str, loop_info: tuple[float, float, bool], user_data: Any) -> None:
+    def on_loop_changed(
+        sender: str, loop_info: tuple[float, float, bool], user_data: Any
+    ) -> None:
         loop_start, loop_end, loop_enabled = loop_info
         node.set_marker(MusicSegment.loop_start_id, loop_start)
         node.set_marker(MusicSegment.loop_end_id, loop_end)
@@ -559,7 +670,7 @@ def _create_attributes_music_segment(
         with dpg.group(horizontal=True):
             dpg.add_combo(
                 [str(t) for t in tracks],
-                tag=f"{tag}_child_tracks",
+                tag=f"{base_tag}_child_tracks",
             )
             dpg.add_button(
                 label="Edit on Track",
@@ -576,6 +687,7 @@ def _create_attributes_music_segment(
         on_remove=on_marker_removed,
         add_item_label="+ Add Marker",
         label="Markers",
+        tag=base_tag,
     )
 
 
@@ -586,9 +698,9 @@ def _create_attributes_music_track(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    segment: str = 0,
+    parent: str = 0,
     user_data: Any = None,
+    base_tag: str = 0,
 ) -> None:
     def on_source_changed(
         sender: str, filepath: Path, info: tuple[int, MusicTrack]
@@ -607,7 +719,7 @@ def _create_attributes_music_track(
         source_details["in_memory_media_size"] = wem_path.stat().st_size
 
         dpg.set_value(sender, wem_path.stem)
-        on_node_changed(tag, track, user_data)
+        on_node_changed(base_tag, track, user_data)
 
     def on_loop_changed(
         sender: str,
@@ -644,43 +756,44 @@ def _create_attributes_music_track(
 
     # Not sure why music tracks can have several sources or what to do
     # with loop info if that happens, but so far I didn't se that
-    for i, source in enumerate(node.sources):
-        if source["source_type"] == "Embedded":
-            path = node.get_source_path(bnk, i)
-        else:
-            path = get_sound_path(bnk, source)
+    with dpg.group():
+        for i, source in enumerate(node.sources):
+            if source["source_type"] == "Embedded":
+                path = node.get_source_path(bnk, i)
+            else:
+                path = get_sound_path(bnk, source)
 
-        add_wav_player(
-            path,
-            on_file_changed=on_source_changed,
-            loop_markers_enabled=markers_enabled,
-            on_loop_changed=on_loop_changed,
-            loop_start=loop_start,
-            loop_end=loop_end,
-            user_data=(i, node),
-        )
+            add_wav_player(
+                path,
+                on_file_changed=on_source_changed,
+                loop_markers_enabled=markers_enabled,
+                on_loop_changed=on_loop_changed,
+                loop_start=loop_start,
+                loop_end=loop_end,
+                user_data=(i, node),
+            )
 
-        # Begin / end trim
-        dpg.add_input_float(
-            label="begin_trim",
-            default_value=node.playlist[i]["begin_trim_offset"],
-            min_value=0.0,
-            min_clamped=True,
-            callback=set_begin_trim,
-            user_data=i,
-        )
-        dpg.add_input_float(
-            label="end_trim",
-            default_value=node.playlist[i]["end_trim_offset"],
-            min_value=0.0,
-            min_clamped=True,
-            callback=set_end_trim,
-            user_data=i,
-        )
+            # Begin / end trim
+            dpg.add_input_float(
+                label="begin_trim",
+                default_value=node.playlist[i]["begin_trim_offset"],
+                min_value=0.0,
+                min_clamped=True,
+                callback=set_begin_trim,
+                user_data=i,
+            )
+            dpg.add_input_float(
+                label="end_trim",
+                default_value=node.playlist[i]["end_trim_offset"],
+                min_value=0.0,
+                min_clamped=True,
+                callback=set_end_trim,
+                user_data=i,
+            )
 
-    dpg.add_spacer(height=3)
-    dpg.add_separator()
-    dpg.add_spacer(height=3)
+        dpg.add_spacer(height=3)
+        dpg.add_separator()
+        dpg.add_spacer(height=3)
 
 
 def _create_attributes_sound(
@@ -690,8 +803,7 @@ def _create_attributes_sound(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     properties.pop("media_size")
@@ -709,18 +821,19 @@ def _create_attributes_sound(
         sound.source_id = int(wem_path.stem)
         sound.media_size = wem_path.stat().st_size
         dpg.set_value(sender, wem_path.stem)
-        on_node_changed(tag, sound, user_data)
+        on_node_changed(base_tag, sound, user_data)
 
     if node.source_type == "Embedded":
         path = node.get_source_path(bnk)
     else:
         path = get_sound_path(bnk, node.source_id)
 
-    add_wav_player(path, on_file_changed=on_filepath_selected)
+    with dpg.group():
+        add_wav_player(path, on_file_changed=on_filepath_selected)
 
-    dpg.add_spacer(height=3)
-    dpg.add_separator()
-    dpg.add_spacer(height=3)
+        dpg.add_spacer(height=3)
+        dpg.add_separator()
+        dpg.add_spacer(height=3)
 
 
 def _create_attributes_switch_container(
@@ -730,41 +843,41 @@ def _create_attributes_switch_container(
     on_node_changed: Callable[[str, Node, Any], None],
     on_node_selected: Callable[[str, Node, Any], None],
     *,
-    tag: str = 0,
-    parent: str = 0,
+    base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     def on_show_empty_switches(sender: str, show: bool, node: SwitchContainer) -> None:
         for switch, nodes in node.switch_mappings.items():
             dpg.configure_item(
-                f"{tag}_node_{node.id}_switch_{switch}",
+                f"{base_tag}_node_{node.id}_switch_{switch}",
                 show=show or bool(nodes),
             )
 
-    dpg.add_checkbox(
-        label="Show empty switches",
-        callback=on_show_empty_switches,
-        default_value=False,
-        user_data=node,
-    )
+    with dpg.group():
+        dpg.add_checkbox(
+            label="Show empty switches",
+            callback=on_show_empty_switches,
+            default_value=False,
+            user_data=node,
+        )
 
-    with dpg.tree_node(label="Switches"):
-        for switch, nodes in node.switch_mappings.items():
-            label = f"{len(nodes)} - {lookup_name(switch, '?')} ({switch})"
-            with dpg.tree_node(
-                label=label,
-                show=bool(nodes),
-                tag=f"{tag}_node_{node.id}_switch_{switch}",
-            ):
-                for nid in nodes:
-                    switch_node = bnk.get(nid)
-                    if switch_node:
-                        add_node_link(
-                            switch_node, on_node_selected, user_data=user_data
-                        )
-                    else:
-                        dpg.add_text(f"(ext) {nid}")
+        with dpg.tree_node(label="Switches"):
+            for switch, nodes in node.switch_mappings.items():
+                label = f"{len(nodes)} - {lookup_name(switch, '?')} ({switch})"
+                with dpg.tree_node(
+                    label=label,
+                    show=bool(nodes),
+                    tag=f"{base_tag}_node_{node.id}_switch_{switch}",
+                ):
+                    for nid in nodes:
+                        switch_node = bnk.get(nid)
+                        if switch_node:
+                            add_node_link(
+                                switch_node, on_node_selected, user_data=user_data
+                            )
+                        else:
+                            dpg.add_text(f"(ext) {nid}")
 
-    dpg.add_spacer(height=3)
-    dpg.add_separator()
-    dpg.add_spacer(height=3)
+        dpg.add_spacer(height=3)
+        dpg.add_separator()
+        dpg.add_spacer(height=3)

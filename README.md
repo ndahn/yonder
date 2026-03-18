@@ -64,12 +64,11 @@ To get started, I suggest you take a look at the code in [convenience.py](yonder
 ## Future Work
 Yonder will probably never become my main project, so updates will be slow and irregular. There are a couple of things you may see in the future:
 
-- attenuation curve editor
 - music track clip editor
 - create new ambience tracks
 - setup RTPCs
 
-If you have a particular feature in mind it's best to create an issue here on Github. If that seems too much, feel free to contact me on the [?ServerName?](https://discord.gg/wzMynmW) discord *@Managarm*.
+If you have an earthshattering need for a particular feature in mind, it's best to create an issue here on Github. If that seems just slightly too much in the face of certain doom, feel free to contact me on the [?ServerName?](https://discord.gg/wzMynmW) discord *@Managarm*.
 
 # Hall of Fame
 This app would not have been possible without the invaluable help and support from **Raster** and **Vswarte**. A huge shoutout also goes to **Themyys** for his very helpful guide which got me into this mess, as well as **Shion** and others who did a lot of research I could build upon. 

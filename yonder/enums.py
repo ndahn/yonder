@@ -38,17 +38,17 @@ RtpcType: TypeAlias = Literal["GameParameter"]
 AccumulationType: TypeAlias = Literal["Additive"]
 ScalingType: TypeAlias = Literal["DB", "Linear", "None"]
 CurveType: TypeAlias = Literal[
+    "Constant",
     "Linear",
+    "SCurve",
+    "InvSCurve",
     "Log1",
     "Log2",
     "Log3",
-    "SCurve",
-    "InvSCurve",
     "Exp1",
     "Exp2",
     "Exp3",
-    "Sin",
-    "Constant",
+    "Sine",
 ]
 SyncType: TypeAlias = Literal["Immediate", "NextGrid", "NextBar", "ExitCue"]
 SourceType: TypeAlias = Literal["Embedded", "Streaming", "PrefetchStreaming"]

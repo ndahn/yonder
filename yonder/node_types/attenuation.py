@@ -11,6 +11,16 @@ class Attenuation(RtpcMixin, Node):
     """
     base_params_path = ""
 
+    curve_parameters: list[str] = [
+        "Volume1",
+        "LPF",
+        "Volume2",
+        "HPF",
+        "Spread",
+        "Focus",
+        "(unused)",
+    ]
+
 
     @classmethod
     def new(cls, nid: int) -> "Attenuation":
@@ -105,15 +115,42 @@ class Attenuation(RtpcMixin, Node):
 
     @property
     def curves_to_use(self) -> list[int]:
-        """Mapping of curve slots to active curves for different audio properties.
-
+        """Get or set which curves are active for each parameter type.
+        
+        This is a mapping array where each index corresponds to a parameter:
+        - Index 0: Volume curve 1
+        - Index 1: LPF (Low-Pass Filter)
+        - Index 2: Volume curve 2
+        - Index 3: HPF (High-Pass Filter)  
+        - Index 4: Spread
+        - Index 5: Focus
+        - Index 6: (unused, typically -1)
+        
+        The value at each index is the curve index to use, or -1 if unused.
+        
         Returns
         -------
         list[int]
-            Array mapping curve slots to curve indices (-1 = unused).
+            Array mapping parameter slots to curve indices (-1 = unused).
         """
         return self["curves_to_use"]
-
+    
+    def set_curve_for_parameter(self, param_index: int, curve_index: int) -> None:
+        """Assign a curve to a specific parameter type.
+        
+        Parameters
+        ----------
+        param_index : int
+            Parameter index (0=Volume1, 1=LPF, 2=Volume2, 3=HPF, 4=Spread, 5=Focus).
+        curve_index : int
+            Curve index to use, or -1 to disable.
+        """
+        curves_to_use = self["curves_to_use"]
+        if param_index < 0 or param_index >= len(curves_to_use):
+            raise IndexError(f"Parameter index {param_index} out of range")
+        
+        curves_to_use[param_index] = curve_index
+ 
     def add_curve(self, curve_scaling: ScalingType = "DB") -> dict:
         """Creates a new distance-based curve for controlling audio properties.
 

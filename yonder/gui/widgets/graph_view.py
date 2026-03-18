@@ -60,26 +60,26 @@ def add_graph_widget(
 
         return layout
 
-    def render_graph(sender: str, app_data: list, node_indices: dict[int, int]) -> None:
+    def render_graph(sender: str, series_data: list, node_indices: dict[int, int]) -> None:
         # NOTE this will crash if breakpoints are set anywhere in here!
         nonlocal current_highlight
 
         # Save some cpu cycles when no updates are needed
         if not (
             dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
-            or dpg.is_item_hovered(dpg.get_item_parent(f"{tag}_canvas"))
+            or dpg.is_item_hovered(dpg.get_item_parent(tag))
         ):
             return
 
         current_highlight = 0
 
-        dpg_data = app_data[0]
-        transformed_x = app_data[1]
-        transformed_y = app_data[2]
+        helper_data = series_data[0]
+        transformed_x = series_data[1]
+        transformed_y = series_data[2]
         # transformed_w = app_data[3]
         # transformed_h = app_data[4]
-        mouse_x = dpg_data["MouseX_PixelSpace"]
-        mouse_y = dpg_data["MouseY_PixelSpace"]
+        mouse_x = helper_data["MouseX_PixelSpace"]
+        mouse_y = helper_data["MouseY_PixelSpace"]
 
         dpg.delete_item(sender, children_only=True, slot=2)
         dpg.push_container_stack(sender)
@@ -153,12 +153,14 @@ def add_graph_widget(
                     color=style.white,
                 )
                 dpg.configure_item(sender, tooltip=True)
-                dpg.set_value(f"{tag}_canvas_tooltip", f"{label} ({nid})")
+                dpg.set_value(f"{tag}_tooltip", f"{label} ({nid})")
+        
+        dpg.pop_container_stack()
 
     def regenerate() -> None:
         nonlocal layout, g
 
-        dpg.delete_item(f"{tag}_canvas_yaxis", children_only=True, slot=1)
+        dpg.delete_item(f"{tag}_yaxis", children_only=True, slot=1)
 
         # TODO could limit the number of nodes, but worst case there are some glitches.
         # Even then the user will quickly realize that a deeper node will be more useful
@@ -175,23 +177,23 @@ def add_graph_widget(
             callback=render_graph,
             tooltip=False,
             user_data=node_indices,
-            parent=f"{tag}_canvas_yaxis",
+            parent=f"{tag}_yaxis",
         ):
-            dpg.add_text("", tag=f"{tag}_canvas_tooltip")
+            dpg.add_text("", tag=f"{tag}_tooltip")
 
         dpg.split_frame()
-        dpg.fit_axis_data(f"{tag}_canvas_yaxis")
+        dpg.fit_axis_data(f"{tag}_yaxis")
 
     def on_mouse_click() -> None:
         if not on_node_selected:
             return
 
-        if not dpg.does_item_exist(f"{tag}_canvas"):
+        if not dpg.does_item_exist(tag):
             # Assume this widget has been destroyed
             dpg.delete_item(handler_reg)
             return
 
-        if not dpg.is_item_hovered(f"{tag}_canvas"):
+        if not dpg.is_item_hovered(tag):
             return
 
         if current_highlight > 0:
@@ -202,7 +204,7 @@ def add_graph_widget(
         no_menus=True,
         width=width,
         height=height,
-        tag=f"{tag}_canvas",
+        tag=tag,
     ):
         dpg.add_plot_axis(
             dpg.mvXAxis,
@@ -212,7 +214,7 @@ def add_graph_widget(
             no_tick_labels=True,
             no_tick_marks=True,
             no_menus=True,
-            tag=f"{tag}_canvas_xaxis",
+            tag=f"{tag}_xaxis",
         )
         dpg.add_plot_axis(
             dpg.mvYAxis,
@@ -222,10 +224,11 @@ def add_graph_widget(
             no_tick_labels=True,
             no_tick_marks=True,
             no_menus=True,
-            tag=f"{tag}_canvas_yaxis",
+            tag=f"{tag}_yaxis",
         )
 
     with dpg.handler_registry() as handler_reg:
         dpg.add_mouse_click_handler(callback=on_mouse_click)
 
     regenerate()
+    return tag
