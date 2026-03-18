@@ -27,6 +27,7 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         else:
             wem_id = int(wem.stem)
 
+        # FIXME need to handle streamed and prefetch-streamed sounds
         target_path = bnk.bnk_dir / f"{wem_id}.wem"
         shutil.copy(wem, target_path)
 

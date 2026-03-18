@@ -113,17 +113,22 @@ def create_attribute_widgets(
                 todo.extend(c.__bases__)
 
             # This may remove or add properties that are handled differently
-            _create_type_specific_attributes(
-                bnk,
-                node,
-                properties,
-                on_node_changed,
-                on_node_selected,
-                tag=tag,
-                parent=parent,
-                user_data=user_data,
-            )
+            try:
+                _create_type_specific_attributes(
+                    bnk,
+                    node,
+                    properties,
+                    on_node_changed,
+                    on_node_selected,
+                    tag=tag,
+                    parent=parent,
+                    user_data=user_data,
+                )
+            except Exception as e:
+                logger.error(f"Error creating node widgets: {e}", exc_info=e)
+                dpg.add_text("Error creating node widgets, check logs", color=style.red)
 
+            # TODO should be deliberate about each node
             for name, prop in properties.items():
                 value_type = prop.fget.__annotations__["return"]
                 value = prop.fget(node)

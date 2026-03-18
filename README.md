@@ -54,7 +54,12 @@ As you explore a soundbank you will probably find that some feature you want to 
 As mentioned before, Wwise is extremly powerful and has A LOT of features I am not even aware of. If you encounter something you find interesting, try searching for it in their [library](https://www.audiokinetic.com/en/public-library/) first. 
 
 ### Using your Modified Soundbank
-Once you're happy with your edits you can save them. Yonder always works on the `soundbank.json` file you get from `rewwise`, so you'll have to repack it. To do so, simply click *File -> Repack* or F4. Be patient, this process can take several minutes, especially when editing a large soundbank like `cs_main`. Once packed you can simply place it in your mod like any other mod file. Make sure however that you're using [ModEngine3](https://github.com/garyttierney/me3/releases) - ME2 won't load modded soundbanks (*).
+Once you're happy with your edits you can save them. Yonder always works on the `soundbank.json` file you get from `rewwise`, so you'll have to repack it. To do so, simply click *File -> Repack* or F4. Be patient, this process can take several minutes, especially when editing a large soundbank like `cs_main`. It is easy to screw up a soundbank, especially when manually editing the json, so *watch out for errors on the terminal!* Once packed you can simply place it in your mod like any other mod file. Make sure however that you're using [ModEngine3](https://github.com/garyttierney/me3/releases) - ME2 won't load modded soundbanks (*).
+
+## Building your own Tools
+Yonder was originally written as a library providing classes and functions to make working with soundbanks more convenient. The GUI stuf was only added later, and I might at some point separate the two in a cleaner way. Still, if you want to use it to develop your own tools, just get the package and ignore the `gui` submodule. You also need the `resources` folder for node generation, hash lookups, etc.
+
+To get started, I suggest you take a look at the code in [convenience.py](yonder/convenience.py) which will cover a lot of the functionality. The most central code parts can be found in the [soundbank.py](yonder/soundbank.py), [node.py](yonder/node.py), and [wem.py](yonder/wem.py) units. I did not add proper documentation (yet), so if you need help, feel free to reach out.
 
 ## Future Work
 Yonder will probably never become my main project, so updates will be slow and irregular. There are a couple of things you may see in the future:
@@ -64,9 +69,9 @@ Yonder will probably never become my main project, so updates will be slow and i
 - create new ambience tracks
 - setup RTPCs
 
-If you have a particular feature in mind it's best to create an issue here on Github. If that seems too much, feel free to contact me on the ?ServerName? discord @Managarm.
+If you have a particular feature in mind it's best to create an issue here on Github. If that seems too much, feel free to contact me on the [?ServerName?](https://discord.gg/wzMynmW) discord *@Managarm*.
 
 # Hall of Fame
-This app would not have been possible without the invaluable help and support from *Raster* and *Vswarte*. A huge shoutout also goes to *Themyys* for his very helpful guide which got me into this mess, as well as *Shion* and others who did a lot of research I could build upon. 
+This app would not have been possible without the invaluable help and support from **Raster** and **Vswarte**. A huge shoutout also goes to **Themyys** for his very helpful guide which got me into this mess, as well as **Shion** and others who did a lot of research I could build upon. 
 
 Thanks! ~
