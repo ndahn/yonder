@@ -1,21 +1,10 @@
 from typing import Any, Callable, get_args
-from dataclasses import dataclass
 from dearpygui import dearpygui as dpg
 
 from yonder.enums import CurveType
+from yonder.datatypes import GraphPoint, GraphCurve
 from yonder.gui import style
 from .draw_curve import draw_curve
-
-
-@dataclass(slots=True)
-class InterpolationPoint:
-    x: float
-    y: float
-    interp: CurveType = "Linear"
-
-    @property
-    def coords(self) -> tuple[float, float]:
-        return (self.x, self.y)
 
 
 interpolation_colors: dict[CurveType, style.Color] = {
@@ -34,8 +23,8 @@ interpolation_colors: dict[CurveType, style.Color] = {
 
 
 def add_interpolation_curve(
-    initial_curve: list[InterpolationPoint],
-    on_curve_changed: Callable[[str, list[InterpolationPoint], Any], None] = None,
+    initial_curve: GraphCurve,
+    on_curve_changed: Callable[[str, list[GraphPoint], Any], None] = None,
     *,
     tag: str = None,
     user_data: Any = None,
@@ -45,13 +34,14 @@ def add_interpolation_curve(
 
     if not initial_curve:
         initial_curve = [
-            InterpolationPoint(0.0, 0.0, "Linear"),
-            InterpolationPoint(100.0, 100.0, "Linear"),
+            GraphPoint(0.0, 0.0, "Linear"),
+            GraphPoint(100.0, 100.0, "Linear"),
         ]
 
-    curve: list[InterpolationPoint] = list(initial_curve)
+    curve: GraphCurve = initial_curve.copy()
     interpolations: list[CurveType] = []
     dirty: bool = True
+    drag_points: list[int] = []
     hovered: int = -1
     selected: int = 0
 
@@ -61,8 +51,7 @@ def add_interpolation_curve(
         p.x = x
         p.y = y
 
-        x, y = list(zip(*[p.coords for p in curve]))
-        dpg.configure_item(f"{tag}_series", x=x, y=y)
+        dpg.configure_item(f"{tag}_series", x=list(curve.x), y=list(curve.y))
         on_point_selected(point_idx)
 
         if on_curve_changed:
@@ -111,7 +100,7 @@ def add_interpolation_curve(
 
         x = (p0[0] + p1[0]) / 2
         y = (p1[0] + p1[1]) / 2
-        curve.insert(selected + 1, InterpolationPoint(x, y, "Linear"))
+        curve.insert(selected + 1, GraphPoint(x, y, "Linear"))
 
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
@@ -142,9 +131,7 @@ def add_interpolation_curve(
         dpg.set_value(f"{tag}_point_x", p.x)
         dpg.set_value(f"{tag}_point_y", p.y)
 
-    def render_curve(
-        sender: str, series_data: list[dict], user_data: Any
-    ) -> None:
+    def render_curve(sender: str, series_data: list[dict], user_data: Any) -> None:
         nonlocal hovered, dirty
 
         # Save some cpu cycles when no updates are needed
@@ -169,7 +156,9 @@ def add_interpolation_curve(
 
         # Draw a constant line to the first point
         first = (transformed_x[0], transformed_y[0])
-        draw_curve((first[0] - 10**9, first[1]), first, "Linear", color=style.light_grey)
+        draw_curve(
+            (first[0] - 10**9, first[1]), first, "Linear", color=style.light_grey
+        )
 
         last = (transformed_x[-1], transformed_y[-1])
         draw_curve(last, None, "Constant", color=style.light_grey)
@@ -196,6 +185,10 @@ def add_interpolation_curve(
         nonlocal dirty, interpolations
 
         dpg.delete_item(f"{tag}_yaxis", children_only=True, slot=1)
+        for dp in drag_points:
+            dpg.delete_item(dp)
+
+        drag_points.clear()
         dirty = True
 
         x, y, interpolations = map(list, zip(*[(p.x, p.y, p.interp) for p in curve]))
@@ -212,7 +205,7 @@ def add_interpolation_curve(
         for i, p in enumerate(curve):
             # Point marker
             color = interpolation_colors.get(p.interp, style.white)
-            dpg.add_drag_point(
+            dp = dpg.add_drag_point(
                 label=f"p{i} ({p.interp})",
                 default_value=(p.x, p.y),
                 color=color,
@@ -221,9 +214,7 @@ def add_interpolation_curve(
                 parent=f"{tag}_canvas",
                 user_data=i,
             )
-        
-        dpg.split_frame()
-        dpg.fit_axis_data(f"{tag}_yaxis")
+            drag_points.append(dp)
 
     def on_mouse_click() -> None:
         if not dpg.does_item_exist(tag):
@@ -291,4 +282,7 @@ def add_interpolation_curve(
         dpg.add_mouse_click_handler(callback=on_mouse_click)
 
     regenerate()
+    dpg.split_frame()
+    dpg.fit_axis_data(f"{tag}_yaxis")
+    
     return tag

@@ -338,7 +338,7 @@ class BanksOfYonder:
                         dpg.add_table_column(label="Pinned Nodes", width_stretch=True)
 
             dpg.add_child_window(
-                width=400,
+                width=600,
                 resizable_x=True,
                 autosize_y=True,
                 border=True,

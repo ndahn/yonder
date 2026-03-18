@@ -24,18 +24,18 @@ from yonder.node_types import (
     WwiseNode,
 )
 from yonder.util import logger
-from yonder.enums import SourceType, ScalingType
+from yonder.datatypes import GraphPoint, GraphCurve
+from yonder.enums import SourceType, ScalingType, ClipType
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget
-from .interpolation_curve import add_interpolation_curve, InterpolationPoint
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .wav_player import add_wav_player
 from .transition_matrix import add_transition_matrix
-from .editable_table import add_widget_table
+from .editable_table import add_widget_table, add_curves_table
 from .hash_widget import add_hash_widget
 
 
@@ -362,18 +362,12 @@ def _create_attributes_attenuation(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    def on_scaling_changed(sender: str, scaling: str, curve_idx: int) -> None:
-        node.curves[curve_idx]["curve_scaling"] = str
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
-
-    def on_curve_changed(
-        sender: str, points: list[InterpolationPoint], curve_idx: int
+    def on_curves_changed(
+        sender: str, curves: list[GraphCurve], curve_idx: int
     ) -> None:
-        node.curves[curve_idx]["points"] = [
-            {"from": p.x, "to": p.y, "interpolation": p.interp} for p in points
-        ]
+        node.curves.clear()
+        for curve in curves:
+            node.add_curve(curve.curve_type, curve)
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
@@ -384,55 +378,12 @@ def _create_attributes_attenuation(
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
-    def on_add_curve(
-        sender: str, info: tuple[int, list[dict], list[dict]], c_user_data: Any
-    ) -> None:
-        node.curves.clear()
-        node.curves.extend(info[2])
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
-
-    def on_remove_curve(
-        sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any
-    ) -> None:
-        node.curves.clear()
-        node.curves.extend(info[2])
-
-        max_curve_idx = len(info[2]) - 1
-        for param_idx, curve_idx in enumerate(node.curves_to_use):
-            if curve_idx > max_curve_idx:
-                node.curves_to_use[param_idx] = max_curve_idx
-                dpg.set_value(f"{base_tag}_curve_param_{param_idx}", max_curve_idx)
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
-
-    def add_curve() -> dict:
-        return node.add_curve("None")
-
-    def create_row(curve: dict, idx: int):
-        points = [
-            InterpolationPoint(p["from"], p["to"], p["interpolation"])
-            for p in curve["points"]
-        ]
-
-        with dpg.tree_node(label=f"Curve #{idx}"):
-            with dpg.group(horizontal=True):
-                dpg.add_combo(
-                    get_args(ScalingType),
-                    default_value=curve["curve_scaling"],
-                    label="Scaling Type",
-                    callback=on_scaling_changed,
-                    user_data=idx,
-                )
-            add_interpolation_curve(points, on_curve_changed, user_data=idx)
-
     with dpg.group():
         dpg.add_text("Curves to use")
         for i, (param, curve) in enumerate(
             zip(node.curve_parameters, node.curves_to_use)
         ):
+            # TODO show warning about curves_to_use if curves are removed?
             with dpg.group(horizontal=True):
                 dpg.add_input_int(
                     default_value=curve,
@@ -447,13 +398,14 @@ def _create_attributes_attenuation(
                 )
 
         dpg.add_spacer(height=5)
-        add_widget_table(
-            node.curves,
-            add_curve,
-            create_row,
-            on_add=on_add_curve,
-            on_remove=on_remove_curve,
-            add_item_label="+ Add Curve",
+        add_curves_table(
+            [
+                GraphCurve.from_wwise(curve["curve_scaling"], curve["points"])
+                for curve in node.curves
+            ],
+            get_args(ScalingType),
+            on_curves_changed,
+            curve_type_label="Scaling Type",
         )
 
 
@@ -617,7 +569,7 @@ def _create_attributes_music_segment(
 
     def new_marker() -> dict:
         mid = node.set_marker(f"m{len(node.markers)}", 0.0)
-        return node.get_marker(mid)
+        return [node.get_marker(mid)]
 
     def create_row(marker: dict, idx: int) -> None:
         with dpg.group(horizontal=True):
@@ -702,9 +654,7 @@ def _create_attributes_music_track(
     user_data: Any = None,
     base_tag: str = 0,
 ) -> None:
-    def on_source_changed(
-        sender: str, filepath: Path, info: tuple[int, MusicTrack]
-    ) -> None:
+    def on_source_changed(sender: str, filepath: Path, source_index: int) -> None:
         if filepath.name.endswith(".wav"):
             wwise = get_config().locate_wwise()
             wem_path = wav2wem(wwise, filepath)[0]
@@ -713,30 +663,39 @@ def _create_attributes_music_track(
 
         copy_wems_dialog(bnk, wem_path, source["source_type"])
 
-        index, track = info
-        source_details = track.sources[index]["media_information"]
+        source_details = node.sources[source_index]["media_information"]
         source_details["source_id"] = int(wem_path.stem)
         source_details["in_memory_media_size"] = wem_path.stat().st_size
 
         dpg.set_value(sender, wem_path.stem)
-        on_node_changed(base_tag, track, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def on_loop_changed(
         sender: str,
         loop_info: tuple[float, float, bool],
-        user_data: Any,
+        cb_user_data: Any,
     ) -> None:
         # TODO not sure where to enable or disable looping
         loop_start, loop_end, loop_enabled = loop_info
         segment.set_marker(MusicSegment.loop_start_id, loop_start)
         segment.set_marker(MusicSegment.loop_end_id, loop_end)
+        on_node_changed(base_tag, node, user_data)
 
     def set_begin_trim(sender: str, trim: float, idx: int) -> None:
         node.playlist[idx]["begin_trim_offset"] = trim
         node.playlist[idx]["play_at"] = -trim
+        on_node_changed(base_tag, node, user_data)
 
     def set_end_trim(sender: str, trim: float, idx: int) -> None:
         node.playlist[idx]["end_trim_offset"] = trim
+        on_node_changed(base_tag, node, user_data)
+
+    def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:
+        node.clear_clips()
+        for curve in curves:
+            node.add_clip(curve.curve_type, curve)
+
+        on_node_changed(base_tag, node, user_data)
 
     segment: MusicSegment = bnk.get(node.parent)
     markers_enabled = bool(isinstance(segment, MusicSegment))
@@ -770,7 +729,7 @@ def _create_attributes_music_track(
                 on_loop_changed=on_loop_changed,
                 loop_start=loop_start,
                 loop_end=loop_end,
-                user_data=(i, node),
+                user_data=i,
             )
 
             # Begin / end trim
@@ -790,6 +749,17 @@ def _create_attributes_music_track(
                 callback=set_end_trim,
                 user_data=i,
             )
+
+        add_curves_table(
+            [
+                GraphCurve.from_wwise(clip["auto_type"], clip["graph_points"])
+                for clip in node.clips
+            ],
+            get_args(ClipType),
+            on_clips_changed,
+            label="Clips",
+            add_item_label="+ Add Clip",
+        )
 
         dpg.add_spacer(height=3)
         dpg.add_separator()

@@ -2,6 +2,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from yonder import Soundbank, Node
+from yonder.datatypes import GraphPoint
 from yonder.node_types import (
     Event,
     Action,
@@ -125,6 +126,7 @@ def create_boss_bgm(
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
     def apply_fades(rule: dict, src_fade: Fade, dst_fade: Fade) -> None:
+        # TODO create a proper transition rule type
         src_rule = rule["source_transition_rule"]
         src_rule["transition_time"] = src_fade.duration
         src_rule["fade_offset"] = src_fade.offset
@@ -173,6 +175,13 @@ def create_boss_bgm(
         # Setup the segment and music track
         phase_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrs)
         phase_track = MusicTrack.new_from_wem(bnk.new_id(), bgm, parent=phase_seg)
+        
+        # Pronounced fade in for the track
+        phase_track.add_clip(
+            "FadeIn", [GraphPoint(0.0, 0.0, "Sine"), GraphPoint(0.2, 1.0, "Constant")]
+        )
+        
+        # Add to segment
         track_duration_ms = phase_track.playlist[0]["source_duration"]
         phase_seg.add_child(phase_track)
         phase_seg.duration = track_duration_ms

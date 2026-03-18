@@ -20,7 +20,7 @@ def dpg_init():
 if __name__ == "__main__":
     dpg.create_context()
     dpg_init()
-    dpg.create_viewport(title="Banks of Yonder", width=1100, height=700)
+    dpg.create_viewport(title="Banks of Yonder", width=1300, height=800)
 
     with dpg.window() as main_window:
         app = BanksOfYonder()

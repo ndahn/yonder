@@ -1,4 +1,7 @@
+from typing import Iterable
+
 from yonder.node import Node
+from yonder.datatypes import GraphPoint
 from yonder.enums import ScalingType, CurveType
 from yonder.util import logger
 from .mixins import RtpcMixin
@@ -9,6 +12,7 @@ class Attenuation(RtpcMixin, Node):
 
     Controls how sound volume, low-pass filter, high-pass filter, and spread change over distance. Also manages cone-based directional attenuation for focused sound sources.
     """
+
     base_params_path = ""
 
     curve_parameters: list[str] = [
@@ -20,7 +24,6 @@ class Attenuation(RtpcMixin, Node):
         "Focus",
         "(unused)",
     ]
-
 
     @classmethod
     def new(cls, nid: int) -> "Attenuation":
@@ -116,28 +119,28 @@ class Attenuation(RtpcMixin, Node):
     @property
     def curves_to_use(self) -> list[int]:
         """Get or set which curves are active for each parameter type.
-        
+
         This is a mapping array where each index corresponds to a parameter:
         - Index 0: Volume curve 1
         - Index 1: LPF (Low-Pass Filter)
         - Index 2: Volume curve 2
-        - Index 3: HPF (High-Pass Filter)  
+        - Index 3: HPF (High-Pass Filter)
         - Index 4: Spread
         - Index 5: Focus
         - Index 6: (unused, typically -1)
-        
+
         The value at each index is the curve index to use, or -1 if unused.
-        
+
         Returns
         -------
         list[int]
             Array mapping parameter slots to curve indices (-1 = unused).
         """
         return self["curves_to_use"]
-    
+
     def set_curve_for_parameter(self, param_index: int, curve_index: int) -> None:
         """Assign a curve to a specific parameter type.
-        
+
         Parameters
         ----------
         param_index : int
@@ -148,10 +151,14 @@ class Attenuation(RtpcMixin, Node):
         curves_to_use = self["curves_to_use"]
         if param_index < 0 or param_index >= len(curves_to_use):
             raise IndexError(f"Parameter index {param_index} out of range")
-        
+
         curves_to_use[param_index] = curve_index
- 
-    def add_curve(self, curve_scaling: ScalingType = "DB") -> dict:
+
+    def add_curve(
+        self,
+        curve_scaling: ScalingType,
+        points: Iterable[GraphPoint],
+    ) -> dict:
         """Creates a new distance-based curve for controlling audio properties.
 
         Parameters
@@ -164,7 +171,11 @@ class Attenuation(RtpcMixin, Node):
         dict
             The newly created curve dictionary.
         """
-        curve = {"curve_scaling": curve_scaling, "point_count": 0, "points": []}
+        curve = {
+            "curve_scaling": curve_scaling,
+            "point_count": len(points),
+            "points": [p.to_wwise() for p in points],
+        }
         self["curves"].append(curve)
         self["curve_count"] = len(self["curves"])
         return curve

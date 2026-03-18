@@ -5,7 +5,7 @@ from .flags_widget import add_flag_checkboxes
 from .generic_input_widget import add_generic_widget
 from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
-from .interpolation_curve import add_interpolation_curve, InterpolationPoint
+from .interpolation_curve import add_interpolation_curve, GraphPoint
 from .loading_indicator import loading_indicator
 from .node_widget import add_node_widget
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height

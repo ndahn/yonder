@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from pathlib import Path
 
 from yonder.node import Node
-from yonder.enums import SourceType
+from yonder.datatypes import GraphPoint
+from yonder.enums import SourceType, ClipType
 from yonder.util import logger
 from yonder.wem import get_wem_metadata
 from .wwise_node import WwiseNode
@@ -124,17 +125,6 @@ class MusicTrack(WwiseNode):
 
         return bnk.bnk_dir / f"{src}.wem"
 
-    @property
-    def playlist(self) -> list[dict]:
-        """Timing and playback configuration for sources on the timeline.
-
-        Returns
-        -------
-        list[dict]
-            List of playlist item dictionaries.
-        """
-        return self["playlist"]
-
     def add_source_from_file_full(self, wem: Path, source_type: SourceType, begin_trim: float = 0.0, end_trim: float = 0.0) -> None:
         wem_id = int(wem.stem)
         meta = get_wem_metadata(wem)
@@ -182,6 +172,22 @@ class MusicTrack(WwiseNode):
         self["sources"].append(source)
         self["source_count"] = len(self["sources"])
 
+    def clear_sources(self) -> None:
+        """Disassociates all audio sources from this track."""
+        self["sources"] = []
+        self["source_count"] = 0
+
+    @property
+    def playlist(self) -> list[dict]:
+        """Timing and playback configuration for sources on the timeline.
+
+        Returns
+        -------
+        list[dict]
+            List of playlist item dictionaries.
+        """
+        return self["playlist"]
+
     def add_playlist_item(
         self,
         source_id: int,
@@ -216,34 +222,43 @@ class MusicTrack(WwiseNode):
         self["playlist"].append(item)
         self["playlist_item_count"] = len(self["playlist"])
 
-    # TODO clip items
-    # {
-    #     "clip_index": 0,
-    #     "auto_type": "FadeIn",
-    #     "graph_point_count": 2,
-    #     "graph_points": [
-    #         {
-    #         "from": 0.0,
-    #         "to": 0.0,
-    #         "interpolation": "Sine"
-    #         },
-    #         {
-    #         "from": 0.20927228,
-    #         "to": 1.0,
-    #         "interpolation": "Constant"
-    #         }
-    #     ]
-    #     }
-
-    def clear_sources(self) -> None:
-        """Disassociates all audio sources from this track."""
-        self["sources"] = []
-        self["source_count"] = 0
-
     def clear_playlist(self) -> None:
         """Clears the track timeline, removing all scheduled playback items."""
         self["playlist"] = []
         self["playlist_item_count"] = 0
+
+    @property
+    def clips(self) -> list[dict]:
+        return self["clip_items"]
+
+    def add_clip(
+        self,
+        clip_type: ClipType,
+        points: Iterable[GraphPoint],
+    ) -> dict:
+        clip = {
+            "clip_index": len(self.clips),
+            "auto_type": clip_type,
+            "graph_points_count": len(points),
+            "graph_points": [
+                {
+                    "from": p.x,
+                    "to": p.y,
+                    "interpolation": p.interp,
+                }
+                for p in points
+            ]
+        }
+
+        clips = self.clips
+        clips.append(clip)
+        self["clip_item_count"] = len(clips)
+
+        return clip
+
+    def clear_clips(self) -> None:
+        self["clip_items"] = []
+        self["clip_item_count"] = 0
 
     def get_references(self) -> list[tuple[str, int]]:
         refs = super().get_references()

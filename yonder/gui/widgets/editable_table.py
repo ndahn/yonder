@@ -2,6 +2,7 @@ from typing import Any, Callable, TypeVar
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
+from yonder.datatypes import GraphPoint, GraphCurve
 from yonder.gui.helpers import shorten_path
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
 
@@ -42,9 +43,6 @@ def add_widget_table(
         result = new_item()
         if not result:
             return
-
-        if not isinstance(result, list):
-            result = [result]
 
         pos = len(current_values)
         current_values.extend(result)
@@ -107,7 +105,7 @@ def add_filepaths_table(
         if res:
             if isinstance(res, list):
                 return [Path(p) for p in res]
-            return Path(res)
+            return [Path(res)]
 
         return None
 
@@ -156,13 +154,15 @@ def add_player_table(
     if not get_row_label:
         get_row_label = lambda i: f"Track #{i}"
 
-    def add_sound() -> Path:
+    def new_sound() -> Path:
         ret = open_file_dialog(
             title="Select Audio",
             filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
         )
         if ret:
-            return Path(ret)
+            return [Path(ret)]
+
+        return None
 
     def on_looppoints_changed(
         sender: str, new_loop_info: tuple[float, float, bool], idx: int
@@ -208,7 +208,7 @@ def add_player_table(
 
     return add_widget_table(
         [],
-        add_sound,
+        new_sound,
         create_row,
         on_add=on_track_added,
         on_remove=on_track_removed,
@@ -216,3 +216,87 @@ def add_player_table(
         label=label,
         tag=tag,
     )
+
+
+def add_curves_table(
+    initial_curves: list[GraphCurve],
+    curve_types: list[str],
+    on_curves_changed: Callable[[str, list[GraphCurve], Any], None] = None,
+    *,
+    label: str = "Curves",
+    add_item_label: str = "+ Add Curve",
+    curve_type_label: str = "Type",
+    tag: str | int = 0,
+    user_data: Any = None,
+) -> str:
+    from .interpolation_curve import add_interpolation_curve
+
+    if not tag:
+        tag = dpg.generate_uuid()
+
+    curves: list[GraphCurve] = list(initial_curves if initial_curves else [])
+
+    def on_curve_type_changed(sender: str, curve_type: str, curve_idx: int) -> None:
+        curves[curve_idx] = GraphCurve(curve_type, curves[curve_idx])
+
+        if on_curves_changed:
+            on_curves_changed(tag, curves, user_data)
+
+    def on_curve_changed(sender: str, curve: GraphCurve, curve_idx: int) -> None:
+        curves[curve_idx] = curve
+
+        if on_curves_changed:
+            on_curves_changed(tag, curves, user_data)
+
+    def on_add_curve(
+        sender: str,
+        info: tuple[int, list[GraphCurve], list[GraphCurve]],
+        cb_user_data: Any,
+    ) -> None:
+        curves.clear()
+        curves.extend(info[2])
+
+        if on_curves_changed:
+            on_curves_changed(tag, curves, user_data)
+
+    def on_remove_curve(
+        sender: str,
+        info: tuple[int, GraphCurve, list[GraphCurve]],
+        cb_user_data: Any,
+    ) -> None:
+        curves.clear()
+        curves.extend(info[2])
+
+        if on_curves_changed:
+            on_curves_changed(tag, curves, user_data)
+
+    def new_curve() -> GraphCurve:
+        return [GraphCurve(curve_types[0], [GraphPoint(0.0, 0.0), GraphPoint(1.0, 1.0)])]
+
+    def create_row(curve: GraphCurve, idx: int):
+        with dpg.tree_node(label=f"Curve #{idx}"):
+            with dpg.group(horizontal=True):
+                dpg.add_combo(
+                    curve_types,
+                    default_value=curve.curve_type,
+                    label=curve_type_label,
+                    callback=on_curve_type_changed,
+                    user_data=idx,
+                )
+            add_interpolation_curve(curve, on_curve_changed, user_data=idx)
+
+    with dpg.group(tag=tag):
+        if label:
+            dpg.add_text(label)
+
+        add_widget_table(
+            curves,
+            new_curve,
+            create_row,
+            on_add=on_add_curve,
+            on_remove=on_remove_curve,
+            add_item_label=add_item_label,
+            tag=tag,
+        )
+
+    return tag

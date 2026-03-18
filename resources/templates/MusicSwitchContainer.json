@@ -119,7 +119,7 @@
               "transition_time": 500,
               "fade_curve": "Linear",
               "fade_offet": 500,
-              "sync_type": "Immediate",
+              "sync_type": "ExitMarker",
               "clue_filter_hash": 0,
               "play_post_exit": 0
             },

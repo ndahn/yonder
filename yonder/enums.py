@@ -50,6 +50,7 @@ CurveType: TypeAlias = Literal[
     "Exp3",
     "Sine",
 ]
+ClipType: TypeAlias = Literal["FadeIn", "FadeOut", "Volume", "HPF", "LPF"]
 SyncType: TypeAlias = Literal["Immediate", "NextGrid", "NextBar", "ExitCue"]
 SourceType: TypeAlias = Literal["Embedded", "Streaming", "PrefetchStreaming"]
 PluginType: TypeAlias = Literal["VORBIS", "PCM"]
