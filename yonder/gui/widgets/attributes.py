@@ -363,8 +363,11 @@ def _create_attributes_attenuation(
     user_data: Any = None,
 ) -> None:
     def on_curves_changed(
-        sender: str, curves: list[GraphCurve], curve_idx: int
+        sender: str, curves: list[GraphCurve], cb_user_data: Any
     ) -> None:
+        if len(curves) < len(node.curves):
+            logger.warning("Don't forget to update the parameter curve indices!")
+
         node.curves.clear()
         for curve in curves:
             node.add_curve(curve.curve_type, curve)
@@ -383,7 +386,6 @@ def _create_attributes_attenuation(
         for i, (param, curve) in enumerate(
             zip(node.curve_parameters, node.curves_to_use)
         ):
-            # TODO show warning about curves_to_use if curves are removed?
             with dpg.group(horizontal=True):
                 dpg.add_input_int(
                     default_value=curve,
