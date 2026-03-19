@@ -605,8 +605,8 @@ def _create_attributes_music_segment(
 
         edit_looppoints_dialog(
             path,
-            node.get_marker(MusicSegment.loop_start_id, 0.0),
-            node.get_marker(MusicSegment.loop_end_id, 1.0),
+            node.get_marker(MusicSegment.loop_start_id, 1.0),
+            node.get_marker(MusicSegment.loop_end_id, -1.0),
             on_loop_changed,
         )
 
@@ -706,8 +706,8 @@ def _create_attributes_music_track(
         loop_start = segment.get_marker(MusicSegment.loop_start_id)["position"]
         loop_end = segment.get_marker(MusicSegment.loop_end_id)["position"]
     else:
-        loop_start = 0.0
-        loop_end = 1.0
+        loop_start = 1.0
+        loop_end = -1.0
 
     if len(node.sources) > 1:
         dpg.add_text(

@@ -26,8 +26,8 @@ def add_wav_player(
     on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
     loop_markers_enabled: bool = False,
     on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
-    loop_start: float = 0.0,
-    loop_end: float = 1.0,
+    loop_start: float = 1.0,
+    loop_end: float = -1.0,
     edit_markers_inplace: bool = True,
     max_points: int = 5000,
     width: int = -1,
@@ -131,8 +131,12 @@ def add_wav_player(
             player.seek(pos)
 
         # Only repeat the part around the loop point for testing
-        if dpg.get_value(f"{tag}_loop_test") and pos >= loop_start + 2:
-            pos = loop_end - 2.0
+        if (
+            dpg.get_value(f"{tag}_loop_test")
+            and pos >= loop_start + 3
+            and pos < loop_end - 3
+        ):
+            pos = loop_end - 3.0
             player.seek(pos)
 
         dpg.set_value(f"{tag}_progress", pos)
@@ -281,6 +285,9 @@ def add_wav_player(
         factors = [1, -1]
         colors = [style.themes.plot_blue, style.themes.plot_red]
 
+        # Numerical progress display
+        dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
+
         # If there are multiple channels we only want the first two (usually FL and FR)
         for i in range(min(n_channels, 2)):
             signal = samples[:, i].astype(np.float32)
@@ -297,29 +304,39 @@ def add_wav_player(
             )
             dpg.bind_item_theme(f"{tag}_channel_{i}", colors[i])
 
-        if edit_markers_inplace:
-            if loop_markers_enabled:
-                loop_start, loop_end, _ = get_loop_state()
-                loop_start = min(loop_start, duration * 0.05)
-                loop_end = min(loop_end, duration * 0.95)
+        if loop_markers_enabled:
+            loop_start, loop_end, _ = get_loop_state()
 
-                dpg.set_value(f"{tag}_progress_value", f"0.000 / {duration:.3f}")
-                dpg.set_value(f"{tag}_loop_start", loop_start)
+            if loop_start < 0:
+                loop_start = max(0.0, duration + loop_start)
+            else:
+                loop_start = min(loop_start, duration)
+
+            if loop_end < 0:
+                loop_end = max((0.0, loop_start, duration + loop_end))
+            else:
+                loop_end = min(loop_end, duration)
+
+            dpg.set_value(f"{tag}_loop_start", loop_start)
+            dpg.set_value(f"{tag}_loop_end", loop_end)
+
+            if edit_markers_inplace:
                 dpg.configure_item(
                     f"{tag}_loop_start_value",
                     default_value=loop_start,
                     max_value=duration,
                 )
-                dpg.set_value(f"{tag}_loop_end", loop_end)
                 dpg.configure_item(
                     f"{tag}_loop_end_value", default_value=loop_end, max_value=duration
                 )
 
-            if user_markers_enabled:
-                for marker, _, _ in user_markers:
-                    mpos = dpg.get_value(f"{tag}_marker_{marker}")
-                    mpos = min(mpos, duration)
-                    dpg.set_value(f"{tag}_marker_{marker}", mpos)
+        if user_markers_enabled:
+            for marker, _, _ in user_markers:
+                mpos = dpg.get_value(f"{tag}_marker_{marker}")
+                mpos = max(0.0, min(mpos, duration))
+                dpg.set_value(f"{tag}_marker_{marker}", mpos)
+
+                if edit_markers_inplace:
                     dpg.configure_item(
                         f"{tag}_marker_{marker}_value",
                         default_value=mpos,
@@ -443,7 +460,7 @@ def add_wav_player(
                             )
                             dpg.add_checkbox(
                                 label="Test",
-                                default_value=True,
+                                default_value=False,
                                 tag=f"{tag}_loop_test",
                             )
                         if user_markers_enabled:

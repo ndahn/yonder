@@ -272,17 +272,17 @@ def wem2wav(
                 out_files.append(None)
                 continue
 
-            out_file = str(out_dir / (wem.stem + ".wav"))
+            target = out_dir / (wem.stem + ".wav")
             subprocess.check_call(
                 [
                     str(vgmstream_exe),
                     "-i",  # ignore looping
                     "-o",
-                    out_file,
+                    str(target),
                     str(wem),
                 ]
             )
-            out_files.append(out_file)
+            out_files.append(target)
         except subprocess.CalledProcessError as e:
             logger.error(f"Conversion failed ({e.returncode}):\n{e.output}")
             out_files.append(None)
