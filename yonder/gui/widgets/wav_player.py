@@ -131,13 +131,13 @@ def add_wav_player(
             player.seek(pos)
 
         # Only repeat the part around the loop point for testing
-        if (
-            dpg.get_value(f"{tag}_loop_test")
-            and pos >= loop_start + 3
-            and pos < loop_end - 3
-        ):
-            pos = loop_end - 3.0
-            player.seek(pos)
+        if dpg.get_value(f"{tag}_loop_test"):
+            if pos < loop_start:
+                pos = loop_start
+                player.seek(pos)
+            elif pos >= loop_start + 3 and pos < loop_end - 3:
+                pos = loop_end - 3.0
+                player.seek(pos)
 
         dpg.set_value(f"{tag}_progress", pos)
         dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
