@@ -156,14 +156,15 @@ def new_boss_track_dialog(
 
         show_message()
 
-        waves = {f.stem: i for i, f in enumerate(bgm_tracks) if f.name.endswith(".wav")}
+        waves = [f for f in bgm_tracks if f.name.endswith(".wav")]
         if waves:
             logger.info(f"Converting {len(waves)} wave files to wem")
             wwise = get_config().locate_wwise()
             converted_wavs = wav2wem(wwise, waves)
             for wem in converted_wavs:
-                idx = waves[wem.stem]
-                bgm_tracks[idx] = wem
+                for idx, f in enumerate(bgm_tracks):
+                    if f.stem == wem.stem:
+                        bgm_tracks[idx] = wem
 
         # TODO transition rules
         loop_info = [(li[0], li[1]) for li in bgm_loop_infos]

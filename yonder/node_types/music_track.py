@@ -3,7 +3,7 @@ from pathlib import Path
 
 from yonder.node import Node
 from yonder.datatypes import GraphPoint
-from yonder.enums import SourceType, ClipType
+from yonder.enums import SourceType, ClipType, PluginType
 from yonder.util import logger
 from yonder.wem import get_wem_metadata
 from .wwise_node import WwiseNode
@@ -59,7 +59,7 @@ class MusicTrack(WwiseNode):
         parent: int | Node = None,
     ) -> "MusicTrack":
         track = cls.new(nid, parent=parent)
-        track.add_source_full_from_file(wem, source_type, begin_trim, end_trim)
+        track.add_source_from_file_full(wem, source_type, begin_trim=begin_trim, end_trim=end_trim)
         return track
 
     @property
@@ -125,15 +125,43 @@ class MusicTrack(WwiseNode):
 
         return bnk.bnk_dir / f"{src}.wem"
 
-    def add_source_from_file_full(self, wem: Path, source_type: SourceType, begin_trim: float = 0.0, end_trim: float = 0.0) -> None:
+    def add_source_from_file_full(
+        self,
+        wem: Path,
+        source_type: SourceType,
+        plugin: PluginType = "VORBIS",
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+    ) -> None:
         wem_id = int(wem.stem)
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
+        duration = meta["duration"]
 
-        self.add_source(wem_id, size, source_type)
-        self.add_playlist_item(
+        self.add_source_full(
             wem_id,
-            meta["duration"] * 1000,  # ms
+            size,
+            duration,
+            source_type=source_type,
+            plugin=plugin,
+            begin_trim=begin_trim,
+            end_trim=end_trim,
+        )
+
+    def add_source_full(
+        self,
+        source_id: int,
+        media_size: int,
+        duration: float,
+        source_type: SourceType = "Embedded",
+        plugin: PluginType = "VORBIS",
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+    ) -> None:
+        self.add_source(source_id, media_size, source_type, plugin=plugin)
+        self.add_playlist_item(
+            source_id,
+            duration * 1000,  # ms
             begin_trim=begin_trim,
             end_trim=end_trim,
         )
@@ -143,7 +171,7 @@ class MusicTrack(WwiseNode):
         source_id: int,
         media_size: int,
         source_type: SourceType = "Embedded",
-        plugin: str = "VORBIS",
+        plugin: PluginType = "VORBIS",
     ) -> None:
         """Associates an audio file with this track.
 
@@ -247,7 +275,7 @@ class MusicTrack(WwiseNode):
                     "interpolation": p.interp,
                 }
                 for p in points
-            ]
+            ],
         }
 
         clips = self.clips
@@ -272,5 +300,5 @@ class MusicTrack(WwiseNode):
                     source["media_information"]["source_id"],
                 )
             )
-            
+
         return refs

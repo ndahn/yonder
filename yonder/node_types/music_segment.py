@@ -1,5 +1,5 @@
 from yonder.node import Node
-from yonder.hash import calc_hash
+from yonder.hash import calc_hash, lookup_name
 from yonder.util import PathDict, logger
 from .wwise_node import WwiseNode
 from .mixins import ContainerMixin
@@ -104,7 +104,7 @@ class MusicSegment(ContainerMixin, WwiseNode):
                 name = marker_id
                 marker_id = calc_hash(marker_id)
             else:
-                name = self.lookup_name(marker_id, "")
+                name = lookup_name(marker_id, "")
             
             marker = {
                 "id": marker_id,
