@@ -95,7 +95,7 @@ class Config:
                 global_hash_dict.update(load_lookup_table(path))
 
     def find_external_sounds(self, source_id: int, bnk: "Soundbank" = None) -> Generator[Path, None, None]:
-        bnkdirs = list(self.bankdirs)
+        bnkdirs = [Path(p) for p in self.bankdirs]
         if bnk:
             # Soundbanks unpacked in the game folder
             bnkdirs.insert(0, bnk.bnk_dir.parent)
