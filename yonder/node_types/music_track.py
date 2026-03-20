@@ -267,7 +267,7 @@ class MusicTrack(WwiseNode):
         clip = {
             "clip_index": len(self.clips),
             "auto_type": clip_type,
-            "graph_points_count": len(points),
+            "graph_point_count": len(points),
             "graph_points": [
                 {
                     "from": p.x,

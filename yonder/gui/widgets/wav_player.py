@@ -28,7 +28,7 @@ def add_wav_player(
     on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
     loop_start: float = 1.0,
     loop_end: float = -1.0,
-    edit_markers_inplace: bool = True,
+    edit_markers_inplace: bool = False,
     max_points: int = 5000,
     width: int = -1,
     height: int = 100,

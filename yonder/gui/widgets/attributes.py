@@ -641,7 +641,6 @@ def _create_attributes_music_segment(
         on_remove=on_marker_removed,
         add_item_label="+ Add Marker",
         label="Markers",
-        tag=base_tag,
     )
 
 
@@ -679,8 +678,8 @@ def _create_attributes_music_track(
     ) -> None:
         # TODO not sure where to enable or disable looping
         loop_start, loop_end, loop_enabled = loop_info
-        segment.set_marker(MusicSegment.loop_start_id, loop_start)
-        segment.set_marker(MusicSegment.loop_end_id, loop_end)
+        segment.set_marker(MusicSegment.loop_start_id, loop_start * 1000.0)
+        segment.set_marker(MusicSegment.loop_end_id, loop_end * 1000.0)
         on_node_changed(base_tag, node, user_data)
 
     def set_begin_trim(sender: str, trim: float, idx: int) -> None:
@@ -703,8 +702,8 @@ def _create_attributes_music_track(
     markers_enabled = bool(isinstance(segment, MusicSegment))
 
     if markers_enabled:
-        loop_start = segment.get_marker(MusicSegment.loop_start_id)["position"]
-        loop_end = segment.get_marker(MusicSegment.loop_end_id)["position"]
+        loop_start = segment.get_marker(MusicSegment.loop_start_id)["position"] / 1000.0
+        loop_end = segment.get_marker(MusicSegment.loop_end_id)["position"] / 1000.0
     else:
         loop_start = 1.0
         loop_end = -1.0
@@ -728,6 +727,7 @@ def _create_attributes_music_track(
                 path,
                 on_file_changed=on_source_changed,
                 loop_markers_enabled=markers_enabled,
+                edit_markers_inplace=False,
                 on_loop_changed=on_loop_changed,
                 loop_start=loop_start,
                 loop_end=loop_end,

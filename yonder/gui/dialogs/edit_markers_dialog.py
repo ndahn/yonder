@@ -56,6 +56,7 @@ def edit_looppoints_dialog(
         add_wav_player(
             sound,
             allow_change_file=False,
+            edit_markers_inplace=True,
             loop_markers_enabled=True,
             loop_start=loop_start,
             loop_end=loop_end,

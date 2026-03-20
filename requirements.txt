@@ -11,3 +11,4 @@ rapidfuzz
 numpy
 sounddevice
 pyyaml
+tqdm

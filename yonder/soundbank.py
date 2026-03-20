@@ -132,7 +132,7 @@ class Soundbank:
             streaming_dir.mkdir(parents=True, exist_ok=True)
 
             target = streaming_dir / f"{wem.stem}.wem"
-            if wem.samefile(target):
+            if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
                 
             if target.is_file():
@@ -148,7 +148,7 @@ class Soundbank:
                 raise ValueError("Wem is too large for a prefetch snippet")
 
             target = self.bnk_dir / f"{wem.stem}.wem"
-            if wem.samefile(target):
+            if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
             
             if target.is_file():

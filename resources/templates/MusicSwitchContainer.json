@@ -153,7 +153,7 @@
           }
         ]
       },
-      "continue_playback": 0,
+      "continue_playback": 1,
       "tree_depth": 0,
       "arguments": [],
       "group_types": [],
