@@ -14,7 +14,7 @@ from yonder.node_types import (
     MusicTrack,
 )
 from yonder.hash import lookup_name
-from yonder.enums import CurveType
+from yonder.enums import CurveType, SyncType
 from yonder.util import logger
 
 
@@ -125,12 +125,13 @@ def create_boss_bgm(
 ) -> list[Node]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
-    def apply_fades(rule: dict, src_fade: Fade, dst_fade: Fade) -> None:
+    def apply_fades(rule: dict, src_fade: Fade, dst_fade: Fade, sync_type: SyncType) -> None:
         # TODO create a proper transition rule type
         src_rule = rule["source_transition_rule"]
         src_rule["transition_time"] = src_fade.duration
         src_rule["fade_offset"] = src_fade.offset
         src_rule["fade_curve"] = src_fade.curve
+        src_rule["sync_type"] = sync_type
 
         dst_rule = rule["destination_transition_rule"]
         dst_rule["transition_time"] = dst_fade.duration
@@ -207,9 +208,9 @@ def create_boss_bgm(
         # Setup transition rules when repeating song
         if repeat_transitions and repeat_transitions[i]:
             if i == 0:
-                apply_fades(phase_mrs.transition_rules[0], *repeat_transitions[i])
+                apply_fades(phase_mrs.transition_rules[0], *repeat_transitions[i], "ExitMarker")
             else:
-                rule = phase_mrs.add_transition_rule(phase_seg.id, phase_seg.id)
+                rule = phase_mrs.add_transition_rule(phase_seg.id, phase_seg.id, "ExitMarker")
                 apply_fades(rule, *repeat_transitions[i])
 
         # Add this phase to the boss' music manager
@@ -229,7 +230,7 @@ def create_boss_bgm(
     # Setup phase transition rules
     if default_transition:
         rule = boss_msc.transition_rules[0]
-        apply_fades(rule, *default_transition)
+        apply_fades(rule, *default_transition, "Immediate")
 
     if phase_transitions:
         # the "any" phase will use the default transition
@@ -239,7 +240,7 @@ def create_boss_bgm(
                     phase_masters[i].id,
                     phase_masters[i + 1].id,
                 )
-                apply_fades(rule, *phase_transitions[i])
+                apply_fades(rule, *phase_transitions[i], "Immediate")
 
     if self_transitions:
         # the "any" phase will use the default transition
@@ -249,7 +250,7 @@ def create_boss_bgm(
                     phase_masters[i].id,
                     phase_masters[i].id,
                 )
-                apply_fades(rule, *self_transitions[i])
+                apply_fades(rule, *self_transitions[i], "Immediate")
 
     # Add new bgm decision branch to master
     master_state_keys: list[int] = MusicSwitchContainer.parse_state_path(state_path)

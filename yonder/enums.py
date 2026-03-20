@@ -51,7 +51,7 @@ CurveType: TypeAlias = Literal[
     "Sine",
 ]
 ClipType: TypeAlias = Literal["FadeIn", "FadeOut", "Volume", "HPF", "LPF"]
-SyncType: TypeAlias = Literal["Immediate", "NextGrid", "NextBar", "ExitCue"]
+SyncType: TypeAlias = Literal["Immediate", "ExitMarker", "NextUserMarker"]
 SourceType: TypeAlias = Literal["Embedded", "Streaming", "PrefetchStreaming"]
 PluginType: TypeAlias = Literal["VORBIS", "PCM"]
 VirtualQueueBehavior: TypeAlias = Literal[

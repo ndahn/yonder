@@ -3,7 +3,7 @@ from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder.node_types import MusicSwitchContainer, MusicRandomSequenceContainer
-from yonder.enums import CurveType
+from yonder.enums import CurveType, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style
 
@@ -138,6 +138,13 @@ def edit_transition_dialog(
             default_value=src_rule.get("fade_curve", "Linear"),
             tag=f"{tag}_src_fade_curve",
             callback=lambda s, a, u: src_rule.update({"fade_curve": a}),
+        )
+        dpg.add_combo(
+            label="Sync Type",
+            items=get_args(SyncType),
+            default_value=src_rule.get("sync_type", "Immediate"),
+            tag=f"{tag}_sync_type",
+            callback=lambda s, a, u: src_rule.update({"sync_type": a}),
         )
 
         dpg.add_spacer(height=10)

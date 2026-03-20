@@ -34,6 +34,7 @@ from yonder.gui import style
 from yonder.gui.style import themes
 from yonder.gui.localization import Localization, English
 from yonder.gui.dialogs.about_dialog import about_dialog
+from yonder.gui.dialogs.choice_dialog import choice_dialog
 from yonder.gui.dialogs.create_node_dialog import create_node_dialog
 from yonder.gui.dialogs.new_wwise_event_dialog import new_wwise_event_dialog
 from yonder.gui.dialogs.file_dialog import (
@@ -516,43 +517,26 @@ class BanksOfYonder:
         dpg.delete_item(f"{self.tag}_menu_recent_files", slot=1, children_only=True)
         # dpg.split_frame()
 
+        def load_file_choice(sender: str, choice: str, user_data: Any) -> None:
+            if choice == "Save":
+                self._save_soundbank()
+                self._load_soundbank(path)
+            elif choice == "Save as":
+                if self._save_soundbank_as():
+                    self._load_soundbank(path)
+            elif choice == "Just do it":
+                self._load_soundbank(path)
+
         def load_file(sender: str, app_data: Any, path: Path) -> None:
             if self.bnk:
                 # A soundbank is loaded, save before exiting?
-
-                def save_and_load():
-                    dpg.delete_item(dialog)
-                    self._save_soundbank()
-                    self._load_soundbank(path)
-
-                def save_as_and_load():
-                    dpg.delete_item(dialog)
-                    if self._save_soundbank_as():
-                        self._load_soundbank(path)
-
-                def just_load():
-                    dpg.delete_item(dialog)
-                    self._load_soundbank(path)
-
-                with dpg.window(
-                    label="Continue?",
-                    modal=True,
-                    no_saved_settings=True,
-                    on_close=lambda: dpg.delete_item(dialog),
-                ) as dialog:
-                    dpg.add_text("Save current soundbank first?")
-
-                    dpg.add_separator()
-                    dpg.add_spacer(height=5)
-
-                    with dpg.group(horizontal=True):
-                        dpg.add_button(label="Save", callback=save_and_load)
-                        dpg.add_button(label="Save as", callback=save_as_and_load)
-                        dpg.add_text("|")
-                        dpg.add_button(label="Just do it", callback=just_load)
-
-                dpg.split_frame()
-                center_window(dialog)
+                choice_dialog(
+                    f"Save soundbank f{self.bnk.name} first?",
+                    ["Save", "Save as", "|", "Just do it"],
+                    load_file_choice,
+                    title="Continue?",
+                )
+                return
             else:
                 self._load_soundbank(path)
 
@@ -770,6 +754,18 @@ class BanksOfYonder:
             return
 
         if path.name.endswith(".bnk"):
+            bnk_json = path.parent / path.stem / "soundbank.json"
+            if bnk_json.is_file():
+                # Soundbank was already unpacked, ask if we should open the json instead
+                choice_dialog(
+                    f"Soundbank {path.stem} was already unpacked. Open the json instead?",
+                    ["Open json", "Unpack again"],
+                    lambda s, a, u: self._load_soundbank(u),
+                    user_data=bnk_json,
+                    title="Bnk or json?"
+                )
+                return
+
             logger.info(f"Unpacking soundbank {path}")
             loading = loading_indicator("Unpacking...")
             try:
