@@ -199,10 +199,12 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
         source_transition_time: int = 0,
         source_fade_offset: int = 0,
         source_fade_curve: CurveType = "Linear",
+        source_play_post_exit: bool = False,
         sync_type: SyncType = "Immediate",
         dest_transition_time: int = 0,
         dest_fade_offset: int = 0,
         dest_fade_curve: CurveType = "Linear",
+        dest_play_pre_entry: bool = False,
         transition_segment: int | Node = 0,
     ) -> None:
         """Add a transition rule between segments.
@@ -247,7 +249,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
                 "fade_offet": source_fade_offset,
                 "sync_type": sync_type,
                 "clue_filter_hash": 0,
-                "play_post_exit": 0,
+                "play_post_exit": 1 if source_play_post_exit else 0,
             },
             "destination_transition_rule": {
                 "transition_time": dest_transition_time,
@@ -257,7 +259,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
                 "jump_to_id": 0,
                 "jump_to_type": 0,
                 "entry_type": 0,
-                "play_pre_entry": 0,
+                "play_pre_entry": 1 if dest_play_pre_entry else 0,
                 "destination_match_source_cue_name": 0,
             },
             "alloc_trans_object_flag": 0,

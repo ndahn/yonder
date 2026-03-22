@@ -174,8 +174,8 @@ def create_boss_bgm(
     phase_masters: list[MusicRandomSequenceContainer] = []
 
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
-        phase_mrs = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
-        phase_masters.append(phase_mrs)
+        phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
+        phase_masters.append(phase_mrsc)
 
         has_intro = False
         if play_preloop_intro and play_preloop_intro[i]:
@@ -186,7 +186,7 @@ def create_boss_bgm(
                 if main_loop_start <= 1000:
                     logger.warning(f"Extremly short intro for phase {i}")
 
-                intro_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrs)
+                intro_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrsc)
                 intro_track = MusicTrack.new_from_wem(
                     bnk.new_id(), bgm, parent=intro_seg
                 )
@@ -206,10 +206,10 @@ def create_boss_bgm(
                 intro_track.set_trims(0.0, main_loop_start - 1000)
 
                 # Needs a root playlist item first
-                mrs_playlist_root = phase_mrs.add_playlist_item(
+                mrs_playlist_root = phase_mrsc.add_playlist_item(
                     bnk.new_id(), 0, avoid_repeat=1, ers_type=0
                 )
-                phase_mrs.add_playlist_item(
+                phase_mrsc.add_playlist_item(
                     bnk.new_id(), intro_seg.id, parent=mrs_playlist_root
                 )
             else:
@@ -218,7 +218,7 @@ def create_boss_bgm(
                 )
 
         # Setup the segment and music track
-        phase_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrs)
+        phase_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrsc)
         phase_track = MusicTrack.new_from_wem(bnk.new_id(), bgm, parent=phase_seg)
 
         # Pronounced fade in for the track
@@ -233,7 +233,8 @@ def create_boss_bgm(
 
         # Intro to main track transition rule
         if has_intro:
-            phase_mrs.add_transition_rule(
+            phase_mrsc.transition_rules[0]["source_transition_rule"]["play_post_exit"] = 0
+            phase_mrsc.add_transition_rule(
                 intro_seg.id,
                 phase_seg.id,
                 source_transition_time=1500,
@@ -243,6 +244,7 @@ def create_boss_bgm(
                 dest_transition_time=500,
                 dest_fade_offset=-500,
                 dest_fade_curve="Linear",
+                dest_play_pre_entry=True,
             )
 
         # Add markers for looping
@@ -259,14 +261,14 @@ def create_boss_bgm(
         phase_track.set_trims(loop_start - 1000, loop_end + 1000, 0)
 
         # Add the segment to the music container's playlist
-        if not phase_mrs.playlist_items:
-            mrs_playlist_root = phase_mrs.add_playlist_item(
+        if not phase_mrsc.playlist_items:
+            mrs_playlist_root = phase_mrsc.add_playlist_item(
                 bnk.new_id(), 0, avoid_repeat=1, ers_type=0
             )
         else:
-            mrs_playlist_root = phase_mrs.playlist_items[0]["playlist_item_id"]
+            mrs_playlist_root = phase_mrsc.playlist_items[0]["playlist_item_id"]
 
-        phase_mrs.add_playlist_item(
+        phase_mrsc.add_playlist_item(
             bnk.new_id(), phase_seg.id, parent=mrs_playlist_root
         )
 
@@ -274,19 +276,19 @@ def create_boss_bgm(
         if repeat_transitions and repeat_transitions[i]:
             if i == 0:
                 apply_fades(
-                    phase_mrs.transition_rules[0], *repeat_transitions[i], "ExitMarker"
+                    phase_mrsc.transition_rules[0], *repeat_transitions[i], "ExitMarker"
                 )
             else:
-                rule = phase_mrs.add_transition_rule(
+                rule = phase_mrsc.add_transition_rule(
                     phase_seg.id, phase_seg.id, "ExitMarker"
                 )
-                apply_fades(rule, *repeat_transitions[i])
+                apply_fades(rule, *repeat_transitions[i], "ExitMarker")
 
         # Add this phase to the boss music manager
-        boss_msc.add_branch([phase], phase_mrs.id)
+        boss_msc.add_branch([phase], phase_mrsc.id)
 
         # Collect the nodes we added
-        children.append(phase_mrs)
+        children.append(phase_mrsc)
         if has_intro:
             children.extend((intro_seg, intro_track))
         children.extend((phase_seg, phase_track))
