@@ -291,13 +291,13 @@ def add_transition_matrix(
                         else:
                             dest_label = f"({len(destinations)})"
 
-                        trans_seg = rule["transition_object"]["segment_id"]
+                        sync_type = rule["sync_type"]
 
                         with dpg.tooltip(btn):
                             dpg.add_text(f"Rule #{rule_idx}")
                             dpg.add_text(f"{source_label} -> {dest_label}")
                             dpg.add_text(f"Total transition time: {total_time}ms")
-                            dpg.add_text(f"Transition segment: {trans_seg}")
+                            dpg.add_text(f"Sync type: {sync_type}")
 
         dpg.pop_container_stack()
 

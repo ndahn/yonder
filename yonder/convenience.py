@@ -206,7 +206,7 @@ def create_boss_bgm(
 
                 # Needs a root playlist item first
                 mrs_playlist_root = phase_mrs.add_playlist_item(
-                    bnk.new_id(), 0, avoid_repeat=1
+                    bnk.new_id(), 0, avoid_repeat=1, ers_type=0
                 )
                 phase_mrs.add_playlist_item(
                     bnk.new_id(), intro_seg.id, parent=mrs_playlist_root
@@ -260,7 +260,7 @@ def create_boss_bgm(
         # Add the segment to the music container's playlist
         if not phase_mrs.playlist_items:
             mrs_playlist_root = phase_mrs.add_playlist_item(
-                bnk.new_id(), 0, avoid_repeat=1
+                bnk.new_id(), 0, avoid_repeat=1, ers_type=0
             )
         else:
             mrs_playlist_root = phase_mrs.playlist_items[0]["playlist_item_id"]

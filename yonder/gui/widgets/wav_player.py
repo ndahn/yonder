@@ -21,8 +21,8 @@ def add_wav_player(
     show_filepath: bool = False,
     on_file_changed: Callable[[str, Path, Any], None] = None,
     loop_markers_enabled: bool = False,
-    loop_start: float = 1.0,
-    loop_end: float = -1.0,
+    loop_start: float = 0.0,
+    loop_end: float = 0.0,
     on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
     trim_enabled: bool = False,
     begin_trim: float = 0.0,
@@ -158,7 +158,7 @@ def add_wav_player(
     def on_progress_moved(sender: str) -> None:
         pos = dpg.get_value(sender)
         dpg.set_value(f"{tag}_progress_axis", pos)
-        
+
         if player:
             dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
             player.seek(pos)
