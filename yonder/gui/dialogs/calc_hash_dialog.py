@@ -17,9 +17,8 @@ def calc_hash_dialog(
 
     with dpg.window(
         label=title,
-        width=400,
-        height=400,
-        autosize=True,
+        width=320,
+        height=130,
         no_saved_settings=True,
         tag=tag,
         on_close=lambda: dpg.delete_item(window),

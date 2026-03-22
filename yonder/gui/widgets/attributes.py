@@ -92,7 +92,7 @@ def create_attribute_widgets(
                 update_node_hash,
                 allow_edit_hash=False,
                 allow_edit_name=False,
-                width=-200,
+                width=-300,
                 tag=f"{tag}_hash",
             )
 
@@ -685,6 +685,7 @@ def _create_attributes_music_track(
     def set_begin_trim(sender: str, trim: float, idx: int) -> None:
         node.playlist[idx]["begin_trim_offset"] = trim
         node.playlist[idx]["play_at"] = -trim
+        # TODO update player's initial playback pos?
         on_node_changed(base_tag, node, user_data)
 
     def set_end_trim(sender: str, trim: float, idx: int) -> None:

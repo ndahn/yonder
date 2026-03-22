@@ -2,6 +2,7 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name
+from yonder.gui.helpers import estimate_drawn_text_size
 
 
 def add_hash_widget(
@@ -38,6 +39,10 @@ def add_hash_widget(
         if on_hash_changed:
             on_hash_changed(tag, (h, label), user_data)
 
+    if not string_label:
+        string_label = ""
+    if not hash_label:
+        hash_label = ""
 
     if horizontal:
         if width not in (0, -1):
@@ -45,7 +50,7 @@ def add_hash_widget(
             hash_w = width / 2
         else:
             string_w = 100
-            hash_w = -1
+            hash_w = 100
 
         with dpg.group(horizontal=True, tag=tag):
             dpg.add_input_text(
@@ -67,7 +72,11 @@ def add_hash_widget(
                 tag=f"{tag}_string",
             )
     else:
-        with dpg.group(tag=tag):
+        if width == -1:
+            txt_w, _ = estimate_drawn_text_size(max(len(string_label), len(hash_label)))
+            width = 300 - txt_w
+
+        with dpg.group(tag=tag, width=width):
             dpg.add_input_text(
                 default_value=lookup_name(default_value, initial_string),
                 label=string_label or "",

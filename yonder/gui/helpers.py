@@ -16,7 +16,7 @@ logger.info(f"Temporary files will be stored in {tmp_dir.name}")
 def estimate_drawn_text_size(
     textlen: int,
     num_lines: int = 1,
-    font_size: int = 10,
+    font_size: int = 12,
     scale: float = 1.0,
     margin: int = 5,
 ) -> tuple[int, int]:

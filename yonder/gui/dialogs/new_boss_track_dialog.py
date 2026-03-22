@@ -219,6 +219,15 @@ def new_boss_track_dialog(
             callback=edit_state_path,
         )
 
+        # TODO hook up
+        dpg.add_checkbox(
+            label="Play intro",
+            default_value=False,
+            tag=f"{tag}_intro_enabled",
+        )
+        with dpg.tooltip(dpg.last_item()):
+            add_paragraphs("Enable if the first part of each track should play before going into the loop. Otherwise, the tracks will begin playback at the loop start.")
+
         add_player_table(
             [],
             on_bgm_tracks_changed,
