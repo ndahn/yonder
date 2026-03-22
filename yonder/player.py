@@ -92,3 +92,19 @@ class WavPlayer:
     @property
     def playing(self) -> bool:
         return self._playing
+
+    @property
+    def num_channels(self) -> int:
+        return self._params.nchannels
+
+    @property
+    def frames(self) -> np.ndarray:
+        return self._audio
+
+    @property
+    def num_frames(self) -> int:
+        return self._params.nframes
+
+    @property
+    def framerate(self) -> int:
+        return self._params.framerate

@@ -538,7 +538,7 @@ def _create_attributes_music_segment(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    from yonder.gui.dialogs.edit_markers_dialog import edit_looppoints_dialog
+    from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
 
     def on_marker_renamed(
         sender: str, new_name: tuple[int, str], info: tuple[int, int]
@@ -603,7 +603,7 @@ def _create_attributes_music_segment(
         else:
             path = get_sound_path(bnk, track.sources[0])
 
-        edit_looppoints_dialog(
+        edit_markers_dialog(
             path,
             node.get_marker(MusicSegment.loop_start_id, 1.0),
             node.get_marker(MusicSegment.loop_end_id, -1.0),
@@ -682,14 +682,10 @@ def _create_attributes_music_track(
         segment.set_marker(MusicSegment.loop_end_id, loop_end * 1000.0)
         on_node_changed(base_tag, node, user_data)
 
-    def set_begin_trim(sender: str, trim: float, idx: int) -> None:
-        node.playlist[idx]["begin_trim_offset"] = trim
-        node.playlist[idx]["play_at"] = -trim
-        # TODO update player's initial playback pos?
-        on_node_changed(base_tag, node, user_data)
-
-    def set_end_trim(sender: str, trim: float, idx: int) -> None:
-        node.playlist[idx]["end_trim_offset"] = trim
+    def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
+        node.playlist[idx]["begin_trim_offset"] = trims[0] * 1000.0
+        node.playlist[idx]["play_at"] = -trims[0] * 1000.0
+        node.playlist[idx]["end_trim_offset"] = trims[1] * 1000.0
         on_node_changed(base_tag, node, user_data)
 
     def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:
@@ -732,24 +728,10 @@ def _create_attributes_music_track(
                 on_loop_changed=on_loop_changed,
                 loop_start=loop_start,
                 loop_end=loop_end,
-                user_data=i,
-            )
-
-            # Begin / end trim
-            dpg.add_input_float(
-                label="begin_trim",
-                default_value=node.playlist[i]["begin_trim_offset"],
-                min_value=0.0,
-                min_clamped=True,
-                callback=set_begin_trim,
-                user_data=i,
-            )
-            dpg.add_input_float(
-                label="end_trim",
-                default_value=node.playlist[i]["end_trim_offset"],
-                min_value=0.0,
-                min_clamped=True,
-                callback=set_end_trim,
+                trim_enabled=True,
+                begin_trim=node.playlist[i]["begin_trim_offset"] / 1000.0,
+                end_trim=node.playlist[i]["end_trim_offset"] / 1000.0,
+                on_trim_marker_changed=set_trims,
                 user_data=i,
             )
 
