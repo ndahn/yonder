@@ -162,6 +162,7 @@ def create_boss_bgm(
     boss_msc = MusicSwitchContainer.new(
         bnk.new_id(), ["BossBattleState"], parent=master
     )
+    boss_msc.set_property("Priority", 80.0)
 
     # Default and heatup tracks
     boss_phases = ["*"]

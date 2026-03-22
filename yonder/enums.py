@@ -57,9 +57,24 @@ PluginType: TypeAlias = Literal["VORBIS", "PCM"]
 VirtualQueueBehavior: TypeAlias = Literal[
     "Resume", "PlayFromElapsedTime", "PlayFromBeginning"
 ]
+Property: TypeAlias = Literal[
+    "Volume",
+    "PriorityDistanceOffset",
+    "UserAuxSendVolume0",
+    "UserAuxSendVolume1",
+    "UserAuxSendVolume2",
+    "UserAuxSendVolume3",
+    "GameAuxSendVolume",
+    "CenterPCT",
+    "AttenuationID",
+    "Priority",
+    "LPF",
+    "HPF",
+    "Pitch",
+]
 
 
-property_defaults = {
+property_defaults: dict[Property, float] = {
     "Volume": -3.0,
     "PriorityDistanceOffset": -49.0,
     "UserAuxSendVolume0": -96.0,

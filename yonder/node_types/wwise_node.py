@@ -1,5 +1,5 @@
 from yonder.node import Node, NodeLike
-from yonder.enums import VirtualQueueBehavior
+from yonder.enums import VirtualQueueBehavior, Property
 from yonder.util import logger, PathDict
 from .mixins import RtpcMixin, StateChunkMixin
 
@@ -36,12 +36,12 @@ class WwiseNode(RtpcMixin, StateChunkMixin, Node):
         self.base_params["direct_parent_id"] = value
     
     @property
-    def properties(self) -> dict[str, float]:
+    def properties(self) -> dict[Property, float]:
         """Initial property values.
 
         Returns
         -------
-        dict[str, float]
+        dict[Property, float]
             Dict of property initial values.
         """
         node_properties = self[f"{self.base_params_path}/node_initial_params/prop_initial_values"]
@@ -58,12 +58,12 @@ class WwiseNode(RtpcMixin, StateChunkMixin, Node):
 
         return properties
 
-    def get_property(self, prop_name: str, default: float = None) -> float:
+    def get_property(self, prop_name: Property, default: float = None) -> float:
         """Get a property value by name.
 
         Parameters
         ----------
-        prop_name : str
+        prop_name : Property
             Property name (e.g., 'Volume', 'Pitch', 'LPF', 'HPF').
         default : float, optional
             Default value if property not found.
@@ -75,14 +75,14 @@ class WwiseNode(RtpcMixin, StateChunkMixin, Node):
         """
         return self.properties.get(prop_name, default)
 
-    def set_property(self, prop_name: str, value: float) -> None:
+    def set_property(self, prop_name: Property, value: float) -> None:
         """Set a property value by name.
 
         If the property already exists, updates it. Otherwise, adds it.
 
         Parameters
         ----------
-        prop_name : str
+        prop_name : Property
             Property name (e.g., 'Volume', 'Pitch', 'LPF', 'HPF').
         value : float
             Property value to set.
@@ -97,12 +97,12 @@ class WwiseNode(RtpcMixin, StateChunkMixin, Node):
         # Property doesn't exist, add it
         node_properties.append({prop_name: value})
 
-    def remove_property(self, prop_name: str) -> bool:
+    def remove_property(self, prop_name: Property) -> bool:
         """Remove a property by name.
 
         Parameters
         ----------
-        prop_name : str
+        prop_name : Property
             Property name to remove.
 
         Returns
