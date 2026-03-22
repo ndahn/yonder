@@ -1,6 +1,6 @@
 from yonder.node import Node
 from yonder.util import logger, PathDict
-from yonder.enums import CurveType
+from yonder.enums import CurveType, SyncType
 from .wwise_node import WwiseNode
 from .mixins import ContainerMixin
 
@@ -90,7 +90,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
         use_weight: bool = False,
         shuffle: bool = False,
         avoid_repeat: int = 0,
-        ers_type: int = 0,
+        ers_type: int = 4294967295,
         parent: int = 0,
     ) -> int:
         """Associates a segment with this playlist for random/sequential playback. A playlist is actually a flattened tree structure where children inherit settings from their parents. Use the parent parameter to associate child items to their parents.
@@ -199,6 +199,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
         source_transition_time: int = 0,
         source_fade_offset: int = 0,
         source_fade_curve: CurveType = "Linear",
+        sync_type: SyncType = "Immediate",
         dest_transition_time: int = 0,
         dest_fade_offset: int = 0,
         dest_fade_curve: CurveType = "Linear",
@@ -218,6 +219,8 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
             Delay in ms before the source starts fading out.
         source_fade_curve : str, default="Linear"
             Source fade out curve type.
+        sync_type : SyncType, default="Immediate"
+            Marker sync type.
         dest_transition_time : int, default=0
             Destination fade out time in ms.
         dest_fade_offset : int, default=0
@@ -242,7 +245,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
                 "transition_time": source_transition_time,
                 "fade_curve": source_fade_curve,
                 "fade_offet": source_fade_offset,
-                "sync_type": "Immediate",
+                "sync_type": sync_type,
                 "clue_filter_hash": 0,
                 "play_post_exit": 0,
             },

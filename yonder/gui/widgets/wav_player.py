@@ -25,13 +25,13 @@ def add_wav_player(
     loop_start: float = 1.0,
     loop_end: float = -1.0,
     on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
-    user_markers_enabled: bool = False,
-    user_markers: list[tuple[str, float, tuple[int, int, int]]] = None,
-    on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
     trim_enabled: bool = False,
     begin_trim: float = 0.0,
     end_trim: float = 0.0,
     on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
+    user_markers_enabled: bool = False,
+    user_markers: list[tuple[str, float, tuple[int, int, int]]] = None,
+    on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
     edit_markers_inplace: bool = False,
     max_points: int = 5000,
     width: int = -1,
@@ -159,10 +159,19 @@ def add_wav_player(
             return
 
         pos = player.position
+        trims = get_trims()
         loop_start, loop_end, loop_active = get_loop_state()
-        if loop_active and pos >= loop_end:
-            pos = loop_start
-            player.seek(pos)
+        
+        if loop_active:
+            # A bit of a weird interaction between loop points and trims, 
+            # but seems to always use the inner ones
+            if trim_enabled:
+                loop_start = max(loop_start, trims[0])
+                loop_end = min(loop_end, player.duration - trims[1])
+
+            if pos >= loop_end:
+                pos = loop_start
+                player.seek(pos)
 
         # Only repeat the part around the loop point for testing
         if dpg.get_value(f"{tag}_loop_test"):
@@ -172,13 +181,12 @@ def add_wav_player(
             elif pos >= loop_start + 3 and pos < loop_end - 3:
                 pos = loop_end - 3.0
                 player.seek(pos)
-        # Ignore trimming when in loop testing mode
+        # Use trimming only when not in loop testing mode
         elif trim_enabled:
-            begin_trim, end_trim = get_trims()
-            if pos < begin_trim:
-                player.seek(begin_trim)
-            elif pos >= player.duration + end_trim:
-                player.seek(begin_trim)
+            if pos < trims[0]:
+                player.seek(trims[0])
+            elif pos >= player.duration + trims[1]:
+                player.seek(trims[0])
 
         dpg.set_value(f"{tag}_progress", pos)
         dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
@@ -224,28 +232,6 @@ def add_wav_player(
 
         if on_loop_changed:
             on_loop_changed(tag, get_loop_state(), user_data)
-
-    # USER MARKERS
-
-    def set_user_marker_pos(sender: str, pos: float, marker: str) -> None:
-        dpg.set_value(f"{tag}_marker_{marker}", pos)
-        if on_user_marker_changed:
-            on_user_marker_changed(tag, (marker, pos), user_data)
-
-    def update_user_marker_widget(marker: str) -> None:
-        marker_drag = f"{tag}_marker_{marker}"
-        pos = dpg.get_value(marker_drag)
-        pos = get_valid_pos(pos)
-
-        dpg.set_value(marker_drag, pos)
-        dpg.set_value(f"{tag}_marker_{marker}_value", pos)
-        dpg.set_value(f"{tag}_marker_{marker}_axis", pos)
-
-    def on_user_marker_moved(marker: str) -> None:
-        update_user_marker_widget(marker)
-
-        if on_user_marker_changed:
-            on_user_marker_changed(tag, (marker, pos), user_data)
 
     # TRIMS
 
@@ -296,7 +282,29 @@ def add_wav_player(
         if on_trim_marker_changed:
             on_trim_marker_changed(tag, get_trims(), user_data)
 
-    # MARKER DIALOG
+    # USER MARKERS
+
+    def set_user_marker_pos(sender: str, pos: float, marker: str) -> None:
+        dpg.set_value(f"{tag}_marker_{marker}", pos)
+        if on_user_marker_changed:
+            on_user_marker_changed(tag, (marker, pos), user_data)
+
+    def update_user_marker_widget(marker: str) -> None:
+        marker_drag = f"{tag}_marker_{marker}"
+        pos = dpg.get_value(marker_drag)
+        pos = get_valid_pos(pos)
+
+        dpg.set_value(marker_drag, pos)
+        dpg.set_value(f"{tag}_marker_{marker}_value", pos)
+        dpg.set_value(f"{tag}_marker_{marker}_axis", pos)
+
+    def on_user_marker_moved(marker: str) -> None:
+        update_user_marker_widget(marker)
+
+        if on_user_marker_changed:
+            on_user_marker_changed(tag, (marker, pos), user_data)
+
+    # EDIT DIALOG
 
     def on_loop_marker_edit(
         sender: str, new_loop_info: tuple[float, float, bool], user_data: Any
@@ -306,19 +314,19 @@ def add_wav_player(
         dpg.set_value(f"{tag}_loop_end", loop_end)
         on_loop_marker_moved()
 
-    def on_user_marker_edit(
-        sender: str, marker: tuple[str, float], user_data: Any
-    ) -> None:
-        name, pos = marker
-        dpg.set_value(f"{tag}_marker_{name}", pos)
-        on_user_marker_moved(name)
-
     def on_trim_marker_edit(
         sender: str, trims: tuple[float, float], user_data: Any
     ) -> None:
         dpg.set_value(f"{tag}_begin_trim", (-1000, -1, trims[0], 1))
         dpg.set_value(f"{tag}_end_trim", (trims[1], -1, 1000, 1))
         on_trim_marker_moved()
+
+    def on_user_marker_edit(
+        sender: str, marker: tuple[str, float], user_data: Any
+    ) -> None:
+        name, pos = marker
+        dpg.set_value(f"{tag}_marker_{name}", pos)
+        on_user_marker_moved(name)
 
     def open_edit_markers_dialog() -> None:
         from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
@@ -332,13 +340,13 @@ def add_wav_player(
             loop_start=loop_start,
             loop_end=loop_end,
             on_loop_changed=on_loop_marker_edit,
-            user_markers_enabled=user_markers_enabled,
-            user_markers=user_markers,
-            on_user_marker_changed=on_user_marker_edit,
             trim_enabled=trim_enabled,
             begin_trim=begin_trim,
             end_trim=end_trim,
             on_trim_marker_changed=on_trim_marker_edit,
+            user_markers_enabled=user_markers_enabled,
+            user_markers=user_markers,
+            on_user_marker_changed=on_user_marker_edit,
         )
 
     # RENDERING
@@ -445,8 +453,8 @@ def add_wav_player(
             "Audio not found", color=style.yellow, show=False, tag=f"{tag}_audio_error"
         )
 
-        if allow_change_file:
-            with dpg.group(horizontal=True):
+        with dpg.group(horizontal=True):
+            if allow_change_file:
                 dpg.add_input_text(
                     default_value=shorten_path(initial_file) if initial_file else "",
                     enabled=False,
@@ -457,8 +465,11 @@ def add_wav_player(
                     label="Browse",
                     callback=select_file,
                 )
-                if label:
-                    dpg.add_text(label)
+            
+            if label:
+                dpg.add_text(label, color=style.pink.mix(style.white))
+
+            dpg.add_spacer(height=2)
 
         with dpg.group(tag=f"{tag}_plot_group", parent=parent):
             # We want the markers to be at the top, but placing them on e.g. x-axis 2 will make 
@@ -578,25 +589,7 @@ def add_wav_player(
                             tag=f"{tag}_loop_end_axis",
                         )
 
-                    # User markers
-                    if user_markers_enabled:
-                        for i, (marker, pos, color) in enumerate(user_markers):
-                            dpg.add_drag_line(
-                                label=marker,
-                                color=color,
-                                default_value=pos,
-                                no_inputs=not edit_markers_inplace,
-                                callback=on_user_marker_moved,
-                                tag=f"{tag}_marker_{marker}",
-                            )
-                            dpg.add_axis_tag(
-                                label=f"m{i}",
-                                default_value=pos,
-                                color=color,
-                                parent=f"{tag}_marker_axis",
-                                tag=f"{tag}_marker{marker}_axis",
-                            )
-
+                    # Trimming
                     if trim_enabled:
                         dpg.add_drag_rect(
                             label="begin_trim",
@@ -626,6 +619,25 @@ def add_wav_player(
                             parent=f"{tag}_marker_axis",
                             tag=f"{tag}_end_trim_axis",
                         )
+
+                    # User markers
+                    if user_markers_enabled:
+                        for i, (marker, pos, color) in enumerate(user_markers):
+                            dpg.add_drag_line(
+                                label=marker,
+                                color=color,
+                                default_value=pos,
+                                no_inputs=not edit_markers_inplace,
+                                callback=on_user_marker_moved,
+                                tag=f"{tag}_marker_{marker}",
+                            )
+                            dpg.add_axis_tag(
+                                label=f"m{i}",
+                                default_value=pos,
+                                color=color,
+                                parent=f"{tag}_marker_axis",
+                                tag=f"{tag}_marker{marker}_axis",
+                            )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
@@ -691,23 +703,8 @@ def add_wav_player(
                 tag=f"{tag}_loop_end_value",
             )
 
-        if user_markers_enabled:
-            if loop_markers_enabled:
-                dpg.add_separator()
-
-            # TODO Make this a widget table instead
-            for marker, pos, _ in user_markers:
-                dpg.add_input_float(
-                    label=marker,
-                    default_value=pos,
-                    width=130,
-                    callback=set_user_marker_pos,
-                    user_data=marker,
-                    tag=f"{tag}_marker_{marker}_value",
-                )
-
         if trim_enabled:
-            if loop_markers_enabled or user_markers_enabled:
+            if loop_markers_enabled:
                 dpg.add_separator()
 
             dpg.add_input_float(
@@ -730,6 +727,21 @@ def add_wav_player(
                 user_data="end_trim",
                 tag=f"{tag}_end_trim_value",
             )
+
+        if user_markers_enabled:
+            if loop_markers_enabled or trim_enabled:
+                dpg.add_separator()
+
+            # TODO Make this a widget table instead
+            for marker, pos, _ in user_markers:
+                dpg.add_input_float(
+                    label=marker,
+                    default_value=pos,
+                    width=130,
+                    callback=set_user_marker_pos,
+                    user_data=marker,
+                    tag=f"{tag}_marker_{marker}_value",
+                )
 
     if initial_file:
         regenerate()

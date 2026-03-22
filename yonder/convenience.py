@@ -115,9 +115,10 @@ def create_boss_bgm(
     master: MusicSwitchContainer,
     state_path: str | list[str | int],
     tracks: list[Path] | Path,
-    track_markers: list[tuple[float, float]] = None,
-    add_nobattle_state: bool = True,
+    loop_markers: list[tuple[float, float]] = None,
+    play_preloop_intro: list[bool] = None,
     *,
+    add_nobattle_state: bool = True,
     default_transition: tuple[Fade, Fade] = None,
     phase_transitions: list[tuple[Fade, Fade]] = None,
     self_transitions: list[tuple[Fade, Fade]] = None,
@@ -125,7 +126,9 @@ def create_boss_bgm(
 ) -> list[Node]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
-    def apply_fades(rule: dict, src_fade: Fade, dst_fade: Fade, sync_type: SyncType) -> None:
+    def apply_fades(
+        rule: dict, src_fade: Fade, dst_fade: Fade, sync_type: SyncType
+    ) -> None:
         # TODO create a proper transition rule type
         src_rule = rule["source_transition_rule"]
         src_rule["transition_time"] = src_fade.duration
@@ -173,55 +176,119 @@ def create_boss_bgm(
         phase_mrs = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
         phase_masters.append(phase_mrs)
 
+        has_intro = False
+        if play_preloop_intro and play_preloop_intro[i]:
+            if loop_markers and loop_markers[i] is not None:
+                has_intro = True
+
+                main_loop_start = loop_markers[i][0]
+                if main_loop_start <= 1000:
+                    logger.warning(f"Extremly short intro for phase {i}")
+
+                intro_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrs)
+                intro_track = MusicTrack.new_from_wem(
+                    bnk.new_id(), bgm, parent=intro_seg
+                )
+
+                # Pronounced fade-in
+                intro_track.add_clip(
+                    "FadeIn",
+                    [GraphPoint(0.0, 0.0, "Sine"), GraphPoint(0.3, 1.0, "Constant")],
+                )
+
+                intro_seg.add_child(intro_track)
+                intro_seg.duration = intro_track.duration(0)
+
+                # Trim track to loop_markers marker
+                intro_seg.set_marker(MusicSegment.loop_start_id, 0.0)
+                intro_seg.set_marker(MusicSegment.loop_end_id, main_loop_start)
+                intro_track.set_trims(0.0, main_loop_start - 1000)
+
+                # Needs a root playlist item first
+                mrs_playlist_root = phase_mrs.add_playlist_item(
+                    bnk.new_id(), 0, avoid_repeat=1
+                )
+                phase_mrs.add_playlist_item(
+                    bnk.new_id(), intro_seg.id, parent=mrs_playlist_root
+                )
+            else:
+                logger.warning(
+                    f"Phase {i} has play_intro enabled, but no loop_markers were provided"
+                )
+
         # Setup the segment and music track
         phase_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrs)
         phase_track = MusicTrack.new_from_wem(bnk.new_id(), bgm, parent=phase_seg)
-        
+
         # Pronounced fade in for the track
         phase_track.add_clip(
-            "FadeIn", [GraphPoint(0.0, 0.0, "Sine"), GraphPoint(0.2, 1.0, "Constant")]
+            "FadeIn", [GraphPoint(0.0, 0.0, "Sine"), GraphPoint(0.3, 1.0, "Constant")]
         )
-        
+
         # Add to segment
-        track_duration_ms = phase_track.playlist[0]["source_duration"]
+        track_duration_ms = phase_track.duration(0)
         phase_seg.add_child(phase_track)
         phase_seg.duration = track_duration_ms
 
+        # Intro to main track transition rule
+        if has_intro:
+            phase_mrs.add_transition_rule(
+                intro_seg.id,
+                phase_seg.id,
+                source_transition_time=1500,
+                source_fade_offset=1500,
+                source_fade_curve="Log1",
+                sync_type="ExitMarker",
+                dest_transition_time=500,
+                dest_fade_offset=-500,
+                dest_fade_curve="Linear",
+            )
+
         # Add markers for looping
-        if track_markers and len(track_markers) > i and track_markers[i]:
-            loop_start, loop_end = track_markers[i]
+        if loop_markers and len(loop_markers) > i and loop_markers[i]:
+            loop_start, loop_end = loop_markers[i]
         else:
             loop_start = 0.0
-            loop_end = track_duration_ms / 1000
+            loop_end = track_duration_ms
 
-        phase_seg.set_marker(MusicSegment.loop_start_id, loop_start * 1000)
+        phase_seg.set_marker(MusicSegment.loop_start_id, loop_start)
         # According to Shion this is probably just for testing
-        phase_seg.set_marker("LoopCheck", track_duration_ms - 3000)
-        phase_seg.set_marker(MusicSegment.loop_end_id, loop_end * 1000)
+        phase_seg.set_marker("LoopCheck", loop_end - 3000)
+        phase_seg.set_marker(MusicSegment.loop_end_id, loop_end)
+        phase_track.set_trims(loop_start - 1000, loop_end + 1000, 0)
 
-        # Add the segment to the music container's playlist. First item always uses weight?
-        item_key = phase_mrs.add_playlist_item(bnk.new_id(), 0, avoid_repeat=1)
+        # Add the segment to the music container's playlist
+        if not phase_mrs.playlist_items:
+            mrs_playlist_root = phase_mrs.add_playlist_item(
+                bnk.new_id(), 0, avoid_repeat=1
+            )
+        else:
+            mrs_playlist_root = phase_mrs.playlist_items[0]["playlist_item_id"]
+
         phase_mrs.add_playlist_item(
-            bnk.new_id(), phase_seg.id, parent=item_key, ers_type=4294967295
+            bnk.new_id(), phase_seg.id, parent=mrs_playlist_root
         )
 
         # Setup transition rules when repeating song
         if repeat_transitions and repeat_transitions[i]:
             if i == 0:
-                apply_fades(phase_mrs.transition_rules[0], *repeat_transitions[i], "ExitMarker")
+                apply_fades(
+                    phase_mrs.transition_rules[0], *repeat_transitions[i], "ExitMarker"
+                )
             else:
-                rule = phase_mrs.add_transition_rule(phase_seg.id, phase_seg.id, "ExitMarker")
+                rule = phase_mrs.add_transition_rule(
+                    phase_seg.id, phase_seg.id, "ExitMarker"
+                )
                 apply_fades(rule, *repeat_transitions[i])
 
-        # Add this phase to the boss' music manager
+        # Add this phase to the boss music manager
         boss_msc.add_branch([phase], phase_mrs.id)
-        children.extend(
-            [
-                phase_mrs,
-                phase_seg,
-                phase_track,
-            ]
-        )
+
+        # Collect the nodes we added
+        children.append(phase_mrs)
+        if has_intro:
+            children.extend((intro_seg, intro_track))
+        children.extend((phase_seg, phase_track))
 
     # To disable the boss music, presumably not used by bosses you can't run away from
     if add_nobattle_state:

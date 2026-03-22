@@ -135,13 +135,13 @@ def set_volume(wav: Path, volume: float, *, out_file: Path = None) -> Path:
 
 
 def create_prefetch_snippet(
-    wav: Path, length: float = 0.2, *, out_file: Path = None
+    wav: Path, length: float = 200, *, out_file: Path = None
 ) -> Path:
     if not out_file:
         out_file = wav.parent / f"{wav.stem}_snippet.wav"
 
     audio: AudioSegment = AudioSegment.from_file(str(wav))
-    audio = audio[:int(length * 1000)]
+    audio = audio[:int(length)]
     audio.export(str(out_file), format="wav")
     return Path(out_file)
 
@@ -150,8 +150,8 @@ def trim_silence(
     wav: Path,
     threshold: float = None,
     *,
-    min_silence_length: float = 0.5,
-    start_end_tolerance: float = 0.5,
+    min_silence_length: float = 500,
+    start_end_tolerance: float = 500,
     out_file: Path = None,
 ) -> Path:
     audio: AudioSegment = AudioSegment.from_file(str(wav))
@@ -168,11 +168,11 @@ def trim_silence(
     end = len(audio)
 
     # A quiet section close to the beginning
-    if quiets and quiets[0][0] <= start_end_tolerance * 1000:
+    if quiets and quiets[0][0] <= start_end_tolerance:
         start = quiets[0][1]
 
     # A quiet section close to the end
-    if len(quiets) > 1 and quiets[-1][1] >= len(audio) - start_end_tolerance * 1000:
+    if len(quiets) > 1 and quiets[-1][1] >= len(audio) - start_end_tolerance:
         end = quiets[-1][0]
 
     audio = audio[start:end]

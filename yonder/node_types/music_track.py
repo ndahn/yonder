@@ -59,7 +59,9 @@ class MusicTrack(WwiseNode):
         parent: int | Node = None,
     ) -> "MusicTrack":
         track = cls.new(nid, parent=parent)
-        track.add_source_from_file_full(wem, source_type, begin_trim=begin_trim, end_trim=end_trim)
+        track.add_source_from_file_full(
+            wem, source_type, begin_trim=begin_trim, end_trim=end_trim
+        )
         return track
 
     @property
@@ -141,7 +143,7 @@ class MusicTrack(WwiseNode):
         self.add_source_full(
             wem_id,
             size,
-            duration,
+            duration * 1000,
             source_type=source_type,
             plugin=plugin,
             begin_trim=begin_trim,
@@ -161,7 +163,7 @@ class MusicTrack(WwiseNode):
         self.add_source(source_id, media_size, source_type, plugin=plugin)
         self.add_playlist_item(
             source_id,
-            duration * 1000,  # ms
+            duration,  # ms
             begin_trim=begin_trim,
             end_trim=end_trim,
         )
@@ -249,6 +251,20 @@ class MusicTrack(WwiseNode):
         }
         self["playlist"].append(item)
         self["playlist_item_count"] = len(self["playlist"])
+
+    def duration(self, idx: int = 0) -> float:
+        return self.playlist[idx]["source_duration"]
+
+    def get_trims(self, idx: int = 0) -> tuple[float, float]:
+        return (
+            self.playlist[idx]["begin_trim_offset"],
+            self.playlist[idx]["end_trim_offset"],
+        )
+
+    def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
+        self.playlist[idx]["begin_trim_offset"] = begin_trim
+        self.playlist[idx]["play_at"] = -begin_trim
+        self.playlist[idx]["end_trim_offset"] = -abs(end_trim)
 
     def clear_playlist(self) -> None:
         """Clears the track timeline, removing all scheduled playback items."""

@@ -58,9 +58,9 @@ def create_simple_sound_dialog(
         properties.clear()
         properties.update(new_properties)
 
-    def on_soundfiles_changed(sender: str, paths: list[Path], user_data: Any) -> None:
+    def on_soundfiles_changed(sender: str, data: tuple[list[Path], ...], user_data: Any) -> None:
         soundfiles.clear()
-        soundfiles.extend(paths)
+        soundfiles.extend(data[0])
 
     def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
         if not msg:

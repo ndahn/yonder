@@ -683,9 +683,7 @@ def _create_attributes_music_track(
         on_node_changed(base_tag, node, user_data)
 
     def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
-        node.playlist[idx]["begin_trim_offset"] = trims[0] * 1000.0
-        node.playlist[idx]["play_at"] = -trims[0] * 1000.0
-        node.playlist[idx]["end_trim_offset"] = trims[1] * 1000.0
+        node.set_trims(trims[0] * 1000, trims[1] * 1000, idx)
         on_node_changed(base_tag, node, user_data)
 
     def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:

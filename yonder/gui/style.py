@@ -70,7 +70,7 @@ class Color(tuple):
         return Color(r, g, b, a)
 
     def brightness(self, brightness: int) -> "Color":
-        h, s, _ = colorsys.rgb_to_hsv(self.as_floats()[:3])
+        h, s, _ = colorsys.rgb_to_hsv(*self.as_floats()[:3])
         r, g, b = colorsys.hsv_to_rgb(h, s, brightness / 255)
         return Color.from_floats(r, g, b, self.a / 255)
 

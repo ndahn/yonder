@@ -37,6 +37,11 @@ def new_boss_track_dialog(
     current_state_path: list[str] = []
     bgm_tracks: list[Path] = []
     bgm_loop_infos: list[tuple[float, float, bool]] = []
+    bgm_trim_infos: list[tuple[float, float]] = []
+    play_intro_enabled: list[bool] = []
+
+    def get_phase_label(phase: int) -> str:
+        return f"Heatup {phase}" if phase > 0 else "Normal"
 
     def get_music_switch_containers(filt: str) -> list[MusicSwitchContainer]:
         if not bnk:
@@ -112,15 +117,59 @@ def new_boss_track_dialog(
         dpg.set_value(f"{tag}_bgm_enemy_type", state_path[bgm_enemy_type_idx])
         show_message()
 
-    def on_bgm_tracks_changed(sender: str, paths: list[Path], user_data: Any) -> None:
-        nonlocal bgm_tracks
-        bgm_tracks = paths
+    def on_bgm_tracks_changed(sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any) -> None:
+        nonlocal bgm_tracks, bgm_loop_infos, bgm_trim_infos
+        bgm_tracks = data[0]
+        bgm_loop_infos = data[1]
+        bgm_trim_infos = data[2]
+
+        if len(bgm_tracks) < len(play_intro_enabled):
+            play_intro_enabled[:] = play_intro_enabled[:len(bgm_tracks)]
+        elif len(bgm_tracks) > len(play_intro_enabled):
+            play_intro_enabled.extend([False] * (len(bgm_tracks) - len(play_intro_enabled)))
+
+        regenerate_per_track_widgets()
 
     def update_loop_infos(
-        sender: str, new_loop_infos: list[tuple[float, float, bool]], user_data: Any
+        sender: str, data: tuple[int, tuple[float, float, bool]], user_data: Any
     ) -> None:
-        nonlocal bgm_loop_infos
-        bgm_loop_infos = new_loop_infos
+        idx, loop_info = data
+        bgm_loop_infos[idx] = loop_info
+
+    def update_trim_infos(
+        sender: str, data: tuple[int, tuple[float, float]], user_data: Any
+    ) -> None:
+        idx, trim = data
+        bgm_trim_infos[idx] = trim
+
+    def update_play_intro(sender: str, enabled: bool, idx: int) -> None:
+        play_intro_enabled[idx] = enabled
+
+    def regenerate_per_track_widgets() -> None:
+        dpg.delete_item(f"{tag}_per_track_settings", children_only=True, slot=0)
+        dpg.delete_item(f"{tag}_per_track_settings", children_only=True, slot=1)
+
+        dpg.push_container_stack(f"{tag}_per_track_settings")
+
+        dpg.add_table_column(width_fixed=True)
+        for i, _ in enumerate(bgm_tracks):
+            dpg.add_table_column(
+                label=get_phase_label(i),
+                angled_header=True,
+                width_fixed=True,
+            )
+
+        with dpg.table_row():
+            dpg.add_text("Play intro before loop_start")
+            for i, _ in enumerate(bgm_tracks):
+                dpg.add_checkbox(
+                    default_value=play_intro_enabled[i],
+                    callback=update_play_intro,
+                    tag=f"{tag}_play_intro_{i}",
+                    user_data=i,
+                )
+
+        dpg.pop_container_stack()
 
     def show_message(
         msg: str = None, color: tuple[int, int, int, int] = style.red
@@ -167,8 +216,8 @@ def new_boss_track_dialog(
                         bgm_tracks[idx] = wem
 
         # TODO transition rules
-        loop_info = [(li[0], li[1]) for li in bgm_loop_infos]
-        nodes = create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info)
+        loop_info = [(li[0] * 1000, li[1] * 1000) for li in bgm_loop_infos]
+        nodes = create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info, play_intro_enabled)
         if on_boss_track_created:
             on_boss_track_created(bgm_enemy_type, nodes)
 
@@ -219,21 +268,15 @@ def new_boss_track_dialog(
             callback=edit_state_path,
         )
 
-        # TODO hook up
-        dpg.add_checkbox(
-            label="Play intro",
-            default_value=False,
-            tag=f"{tag}_intro_enabled",
-        )
-        with dpg.tooltip(dpg.last_item()):
-            add_paragraphs("Enable if the first part of each track should play before going into the loop. Otherwise, the tracks will begin playback at the loop start.")
-
         add_player_table(
             [],
             on_bgm_tracks_changed,
-            get_row_label=lambda i: f"Heatup {i}" if i > 0 else "Normal",
+            get_row_label=get_phase_label,
             on_loop_changed=update_loop_infos,
+            on_trim_changed=update_trim_infos,
         )
+
+        dpg.add_table(tag=f"{tag}_per_track_settings")
 
         dpg.add_separator()
         dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
@@ -241,11 +284,10 @@ def new_boss_track_dialog(
         add_paragraphs(
             """\
             - Boss tracks need to be added to cs_smain
-            - First track is the regular BGM, subsequent tracks will be used for 'heatup' phases 
-            - Heatup phases are controlled by BossBattleState (None, HU1, HU2, ...)
+            - First track is the regular BGM, subsequent tracks will be used for 'heatup' phases
             - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
-            - BgmEnemyType values can be changed in the BgmBossChrIdConv param in smithbox
-            - Without a dll adding additional BgmEnemyType rows will have no effect
+            - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
+            - BgmBossChrIdConv strings cannot be changed and must be 6-digit
 """,
             color=style.light_blue,
         )

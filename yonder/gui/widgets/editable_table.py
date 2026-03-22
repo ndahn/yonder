@@ -133,12 +133,31 @@ def add_filepaths_table(
 
 def add_player_table(
     initial_tracks: list[Path] = None,
-    on_filepaths_changed: Callable[[str, list[Path], Any], None] = None,
+    on_filepaths_changed: Callable[
+        [
+            str,
+            tuple[
+                list[Path],  # filepaths
+                list[tuple[float, float, bool]],  # loop info
+                list[tuple[float, float]],  # trims
+                list[tuple[str, float]],  # user markers
+            ],
+            Any,
+        ],
+        None,
+    ] = None,
     *,
     label: str = "Tracks",
     add_item_label: str = "+ Add Track",
     get_row_label: Callable[[int], str] = None,
-    on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
+    on_loop_changed: Callable[
+        [str, tuple[int, tuple[float, float, bool]], Any], None
+    ] = None,
+    on_trim_changed: Callable[[str, tuple[int, tuple[float, float]], Any], None] = None,
+    on_user_marker_changed: Callable[
+        [str, tuple[int, tuple[str, float]], Any], None
+    ] = None,
+    initial_user_markers: list[tuple[str, float]] = None,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -150,6 +169,8 @@ def add_player_table(
 
     tracks: list[Path] = list(initial_tracks) if initial_tracks else []
     loop_info: list[tuple[float, float, bool]] = []
+    user_markers: list[list[tuple[str, float]]] = []
+    trims: list[tuple[float, float]] = []
 
     if not get_row_label:
         get_row_label = lambda i: f"Track #{i}"
@@ -164,11 +185,26 @@ def add_player_table(
 
         return None
 
-    def on_looppoints_changed(
+    def on_loop_edit(
         sender: str, new_loop_info: tuple[float, float, bool], idx: int
     ) -> None:
         loop_info[idx] = new_loop_info
-        on_loop_changed(tag, loop_info, user_data)
+        on_loop_changed(tag, (idx, new_loop_info), user_data)
+
+    def on_trim_edit(sender: str, new_trim_info: tuple[float, float], idx: int) -> None:
+        trims[idx] = new_trim_info
+        on_trim_changed(tag, (idx, new_trim_info), user_data)
+
+    def on_user_marker_edit(
+        sender: str, new_marker_info: tuple[str, float], idx: int
+    ) -> None:
+        markers = user_markers[idx]
+        for i, m in enumerate(markers):
+            if m[0] == new_marker_info[0]:
+                markers[i] = new_marker_info
+                break
+
+        on_user_marker_changed(tag, (idx, markers), user_data)
 
     def on_track_added(
         sender: str, info: tuple[int, list[Path], list[Path]], cb_user_data: Any
@@ -177,34 +213,49 @@ def add_player_table(
 
         pos, new_items, all_items = info
         tracks[:] = all_items[:]
+        
         for _ in range(len(new_items)):
             loop_info.insert(pos, (0.0, 1.0, True))
+            user_markers.insert(pos, list(initial_user_markers or []))
+            trims.insert(pos, (0.0, 0.0))
 
-        on_filepaths_changed(sender, all_items, user_data)
+        data = (all_items, loop_info, trims, user_markers)
+        on_filepaths_changed(sender, data, user_data)
 
     def on_track_removed(
         sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         pos, _, all_items = info
         tracks.pop(pos)
+
         loop_info.pop(pos)
-        on_filepaths_changed(sender, all_items, user_data)
+        user_markers.pop(pos)
+        trims.pop(pos)
+        
+        data = (all_items, loop_info, trims, user_markers)
+        on_filepaths_changed(sender, data, user_data)
 
     def create_row(path: Path, idx: int) -> None:
         with dpg.group(horizontal=True):
             add_wav_player(
                 path,
-                label=get_row_label(idx),
+                label=f" <{get_row_label(idx)}>",
                 on_file_changed=on_path_changed,
                 loop_markers_enabled=bool(on_loop_changed),
-                edit_markers_inplace=False,
-                on_loop_changed=on_looppoints_changed,
+                on_loop_changed=on_loop_edit,
+                trim_enabled=bool(on_trim_changed),
+                on_trim_marker_changed=on_trim_edit,
+                user_markers_enabled=bool(on_user_marker_changed),
+                user_markers=list(initial_user_markers or []),
+                on_user_marker_changed=on_user_marker_edit,
                 show_filepath=True,
                 user_data=idx,
             )
 
     def on_path_changed(sender: str, new_path: Path, idx: int) -> None:
         tracks[idx] = new_path
+        data = (tracks, loop_info, trims, user_markers)
+        on_filepaths_changed(sender, data, user_data)
 
     return add_widget_table(
         [],
@@ -271,7 +322,9 @@ def add_curves_table(
             on_curves_changed(tag, curves, user_data)
 
     def new_curve() -> GraphCurve:
-        return [GraphCurve(curve_types[0], [GraphPoint(0.0, 0.0), GraphPoint(1.0, 1.0)])]
+        return [
+            GraphCurve(curve_types[0], [GraphPoint(0.0, 0.0), GraphPoint(1.0, 1.0)])
+        ]
 
     def create_row(curve: GraphCurve, idx: int):
         with dpg.tree_node(label=f"Curve #{idx}"):
