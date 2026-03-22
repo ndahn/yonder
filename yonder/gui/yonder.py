@@ -52,7 +52,6 @@ from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 
 
 # TODO boss bgm: transition rules
-# TODO music track clip editor
 # TODO new ambience track
 # TODO setup RTPCs
 

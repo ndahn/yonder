@@ -1,5 +1,5 @@
 __author__ = "Nikolas Dahn"
-__version__ = "0.3.4"
+__version__ = "0.4.0"
 
 from .node import Node
 from .soundbank import Soundbank
