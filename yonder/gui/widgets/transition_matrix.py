@@ -291,7 +291,7 @@ def add_transition_matrix(
                         else:
                             dest_label = f"({len(destinations)})"
 
-                        sync_type = rule["sync_type"]
+                        sync_type = rule["source_transition_rule"]["sync_type"]
 
                         with dpg.tooltip(btn):
                             dpg.add_text(f"Rule #{rule_idx}")
