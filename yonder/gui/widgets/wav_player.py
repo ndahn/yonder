@@ -117,7 +117,10 @@ def add_wav_player(
         player = WavPlayer(str(wav))
         # Will be set on first call to on_play_pause
         player.seek(player.duration)
-        dpg.set_value(f"{tag}_progress", get_trims()[0])
+
+        initial_pos = get_trims()[0]
+        dpg.set_value(f"{tag}_progress", initial_pos)
+        dpg.set_value(f"{tag}_progress_axis", initial_pos)
 
     def on_play_pause() -> None:
         nonlocal player
@@ -133,6 +136,7 @@ def add_wav_player(
                 if trim_enabled:
                     pos = get_valid_pos(get_trims()[0])
                     dpg.set_value(f"{tag}_progress", pos)
+                    dpg.set_value(f"{tag}_progress_axis", pos)
                 else:
                     pos = 0.0
 
@@ -178,6 +182,7 @@ def add_wav_player(
 
         dpg.set_value(f"{tag}_progress", pos)
         dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
+        dpg.set_value(f"{tag}_progress_axis", pos)
         dpg.set_frame_callback(dpg.get_frame_count() + 2, progress_update)
 
     # LOOP MARKERS
@@ -301,12 +306,16 @@ def add_wav_player(
         dpg.set_value(f"{tag}_loop_end", loop_end)
         on_loop_marker_moved()
 
-    def on_user_marker_edit(sender: str, marker: tuple[str, float], user_data: Any) -> None:
+    def on_user_marker_edit(
+        sender: str, marker: tuple[str, float], user_data: Any
+    ) -> None:
         name, pos = marker
         dpg.set_value(f"{tag}_marker_{name}", pos)
         on_user_marker_moved(name)
 
-    def on_trim_marker_edit(sender: str, trims: tuple[float, float], user_data: Any) -> None:
+    def on_trim_marker_edit(
+        sender: str, trims: tuple[float, float], user_data: Any
+    ) -> None:
         dpg.set_value(f"{tag}_begin_trim", (-1000, -1, trims[0], 1))
         dpg.set_value(f"{tag}_end_trim", (trims[1], -1, 1000, 1))
         on_trim_marker_moved()
@@ -410,9 +419,10 @@ def add_wav_player(
                 t_env.tolist(),
                 y_env.tolist(),
                 shaded=True,
+                no_clip=True,
                 tag=f"{tag}_channel_{i}",
                 label=f"Ch{i}",
-                parent=f"{tag}_yaxis",
+                parent=f"{tag}_xaxis",
             )
             dpg.bind_item_theme(f"{tag}_channel_{i}", colors[i])
 
@@ -450,129 +460,172 @@ def add_wav_player(
                 if label:
                     dpg.add_text(label)
 
-        with dpg.group(tag=f"{tag}_plot_group"):
-            with dpg.plot(
+        with dpg.group(tag=f"{tag}_plot_group", parent=parent):
+            # We want the markers to be at the top, but placing them on e.g. x-axis 2 will make 
+            # their position independent from x-axis 1 where the plot is. So we make two plots,
+            # one for the markers with no visible plot area, and one for the series itself, then
+            # link their x-axis.
+            with dpg.subplots(
+                2,
+                1,
+                link_all_x=True,
+                link_all_y=True,
+                row_ratios=[0.0001, 1],
                 width=width,
                 height=height,
-                no_title=True,
+                no_resize=True,
                 no_menus=True,
-                no_mouse_pos=True,
-                tag=f"{tag}_plot",
-                parent=parent,
+                no_title=True,
             ):
-                dpg.add_plot_axis(
-                    dpg.mvXAxis,
-                    label="x",
-                    no_label=True,
-                    no_highlight=True,
-                    tag=f"{tag}_xaxis",
-                )
-                dpg.add_plot_axis(
-                    dpg.mvYAxis,
-                    label="y",
-                    no_label=True,
-                    no_highlight=True,
-                    no_tick_labels=True,
-                    no_tick_marks=True,
-                    auto_fit=True,
-                    tag=f"{tag}_yaxis",
-                )
+                with dpg.plot(
+                    no_title=True,
+                    no_menus=True,
+                    no_mouse_pos=True,
+                    no_inputs=True,
+                    no_frame=True,
+                    height=1,
+                ):
+                    dpg.add_plot_axis(
+                        dpg.mvXAxis,
+                        label="markers",
+                        opposite=True,
+                        no_label=True,
+                        no_highlight=True,
+                        no_tick_labels=True,
+                        no_tick_marks=True,
+                        no_initial_fit=True,
+                        tag=f"{tag}_marker_axis",
+                    )
+                    dpg.add_plot_axis(
+                        dpg.mvYAxis,
+                        show=False,
+                        no_label=True,
+                        no_highlight=True,
+                        no_tick_labels=True,
+                        no_tick_marks=True,
+                    )
 
-                # Playback marker
-                dpg.add_drag_line(
-                    show_label=False,
-                    thickness=2,
-                    color=style.light_blue,
-                    callback=on_progress_update,
-                    tag=f"{tag}_progress",
-                )
+                with dpg.plot(
+                    no_title=True,
+                    no_menus=True,
+                    no_mouse_pos=True,
+                    tag=f"{tag}_plot",
+                ):
+                    dpg.add_plot_axis(
+                        dpg.mvXAxis,
+                        label="amp",
+                        no_label=True,
+                        no_highlight=True,
+                        tag=f"{tag}_xaxis",
+                    )
+                    dpg.add_plot_axis(
+                        dpg.mvYAxis,
+                        label="time",
+                        no_label=True,
+                        no_highlight=True,
+                        no_tick_labels=True,
+                        no_tick_marks=True,
+                        auto_fit=True,
+                        tag=f"{tag}_yaxis",
+                    )
 
-                # Loop markers
-                if loop_markers_enabled:
+                    # Playback marker
                     dpg.add_drag_line(
-                        label="loop_start",
-                        color=style.green,
-                        default_value=loop_start,
-                        callback=on_loop_marker_moved,
-                        no_inputs=not edit_markers_inplace,
-                        tag=f"{tag}_loop_start",
+                        show_label=False,
+                        thickness=2,
+                        color=style.light_blue,
+                        callback=on_progress_update,
+                        tag=f"{tag}_progress",
                     )
                     dpg.add_axis_tag(
-                        label="L0",
+                        label=" ",
                         default_value=loop_start,
-                        color=style.green,
-                        show=edit_markers_inplace,
-                        parent=f"{tag}_xaxis",
-                        tag=f"{tag}_loop_start_axis",
-                    )
-                    dpg.add_drag_line(
-                        label="loop_end",
-                        color=style.green,
-                        default_value=loop_end,
-                        callback=on_loop_marker_moved,
-                        no_inputs=not edit_markers_inplace,
-                        tag=f"{tag}_loop_end",
-                    )
-                    dpg.add_axis_tag(
-                        label="L1",
-                        default_value=loop_end,
-                        color=style.green,
-                        show=edit_markers_inplace,
-                        parent=f"{tag}_xaxis",
-                        tag=f"{tag}_loop_end_axis",
+                        color=style.light_blue,
+                        parent=f"{tag}_marker_axis",
+                        tag=f"{tag}_progress_axis",
                     )
 
-                # User markers
-                if user_markers_enabled:
-                    for i, (marker, pos, color) in enumerate(user_markers):
+                    # Loop markers
+                    if loop_markers_enabled:
                         dpg.add_drag_line(
-                            label=marker,
-                            color=color,
-                            default_value=pos,
+                            label="loop_start",
+                            color=style.green,
+                            default_value=loop_start,
+                            callback=on_loop_marker_moved,
                             no_inputs=not edit_markers_inplace,
-                            callback=on_user_marker_moved,
-                            tag=f"{tag}_marker_{marker}",
+                            tag=f"{tag}_loop_start",
                         )
                         dpg.add_axis_tag(
-                            label=f"m{i}",
-                            default_value=pos,
-                            color=color,
-                            show=edit_markers_inplace,
-                            parent=f"{tag}_xaxis",
-                            tag=f"{tag}_marker{marker}_axis",
+                            label="L0",
+                            default_value=loop_start,
+                            color=style.green,
+                            parent=f"{tag}_marker_axis",
+                            tag=f"{tag}_loop_start_axis",
+                        )
+                        dpg.add_drag_line(
+                            label="loop_end",
+                            color=style.green,
+                            default_value=loop_end,
+                            callback=on_loop_marker_moved,
+                            no_inputs=not edit_markers_inplace,
+                            tag=f"{tag}_loop_end",
+                        )
+                        dpg.add_axis_tag(
+                            label="L1",
+                            default_value=loop_end,
+                            color=style.green,
+                            parent=f"{tag}_marker_axis",
+                            tag=f"{tag}_loop_end_axis",
                         )
 
-                if trim_enabled:
-                    dpg.add_drag_rect(
-                        label="begin_trim",
-                        color=style.red,
-                        no_fit=True,
-                        no_inputs=not edit_markers_inplace,
-                        callback=on_trim_marker_moved,
-                        tag=f"{tag}_begin_trim",
-                    )
-                    dpg.add_axis_tag(
-                        label="T0",
-                        color=style.red,
-                        show=edit_markers_inplace,
-                        parent=f"{tag}_xaxis",
-                        tag=f"{tag}_begin_trim_axis",
-                    )
-                    dpg.add_drag_rect(
-                        label="end_trim",
-                        color=style.red,
-                        no_fit=True,
-                        no_inputs=not edit_markers_inplace,
-                        callback=on_trim_marker_moved,
-                        tag=f"{tag}_end_trim",
-                    )
-                    dpg.add_axis_tag(
-                        label="T1",
-                        color=style.red,
-                        show=edit_markers_inplace,
-                        parent=f"{tag}_xaxis",
-                        tag=f"{tag}_end_trim_axis",
-                    )
+                    # User markers
+                    if user_markers_enabled:
+                        for i, (marker, pos, color) in enumerate(user_markers):
+                            dpg.add_drag_line(
+                                label=marker,
+                                color=color,
+                                default_value=pos,
+                                no_inputs=not edit_markers_inplace,
+                                callback=on_user_marker_moved,
+                                tag=f"{tag}_marker_{marker}",
+                            )
+                            dpg.add_axis_tag(
+                                label=f"m{i}",
+                                default_value=pos,
+                                color=color,
+                                parent=f"{tag}_marker_axis",
+                                tag=f"{tag}_marker{marker}_axis",
+                            )
+
+                    if trim_enabled:
+                        dpg.add_drag_rect(
+                            label="begin_trim",
+                            color=style.red,
+                            no_fit=True,
+                            no_inputs=not edit_markers_inplace,
+                            callback=on_trim_marker_moved,
+                            tag=f"{tag}_begin_trim",
+                        )
+                        dpg.add_axis_tag(
+                            label="T0",
+                            color=style.red,
+                            parent=f"{tag}_marker_axis",
+                            tag=f"{tag}_begin_trim_axis",
+                        )
+                        dpg.add_drag_rect(
+                            label="end_trim",
+                            color=style.red,
+                            no_fit=True,
+                            no_inputs=not edit_markers_inplace,
+                            callback=on_trim_marker_moved,
+                            tag=f"{tag}_end_trim",
+                        )
+                        dpg.add_axis_tag(
+                            label="T1",
+                            color=style.red,
+                            parent=f"{tag}_marker_axis",
+                            tag=f"{tag}_end_trim_axis",
+                        )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
@@ -596,10 +649,18 @@ def add_wav_player(
 
                 if loop_markers_enabled or user_markers_enabled or trim_enabled:
                     dpg.add_text("|")
-                    dpg.add_button(
-                        label="Markers",
-                        callback=lambda s, a, u: dpg.show_item(f"{tag}_markers_popup"),
-                    )
+                    if edit_markers_inplace:
+                        dpg.add_button(
+                            label="Markers",
+                            callback=lambda s, a, u: dpg.show_item(
+                                f"{tag}_markers_popup"
+                            ),
+                        )
+                    else:
+                        dpg.add_button(
+                            label="Edit",
+                            callback=open_edit_markers_dialog,
+                        )
 
                 dpg.add_text("|")
                 dpg.add_text("0.000 / 0.000", tag=f"{tag}_progress_value")
@@ -668,12 +729,6 @@ def add_wav_player(
                 callback=set_trim_marker_pos,
                 user_data="end_trim",
                 tag=f"{tag}_end_trim_value",
-            )
-
-        if not edit_markers_inplace:
-            dpg.add_button(
-                label="Editor",
-                callback=open_edit_markers_dialog,
             )
 
     if initial_file:

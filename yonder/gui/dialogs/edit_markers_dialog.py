@@ -27,14 +27,6 @@ def edit_markers_dialog(
     if not tag:
         tag = dpg.generate_uuid()
 
-    loop_info: tuple[float, float, bool] = None
-
-    def on_markers_changed(
-        sender: str, new_loop_info: tuple[float, float, bool], user_data: Any
-    ) -> None:
-        nonlocal loop_info
-        loop_info = new_loop_info
-
     def show_message(
         msg: str = None, color: tuple[int, int, int, int] = style.red
     ) -> None:
@@ -50,10 +42,6 @@ def edit_markers_dialog(
         )
 
     def on_okay():
-        if loop_info:
-            if on_loop_changed:
-                on_loop_changed(tag, loop_info, user_data)
-
         dpg.delete_item(window)
 
     with dpg.window(
@@ -65,6 +53,8 @@ def edit_markers_dialog(
         tag=tag,
         on_close=lambda: dpg.delete_item(window),
     ) as window:
+        dpg.add_spacer(height=10)
+        
         add_wav_player(
             sound,
             allow_change_file=False,
@@ -88,9 +78,9 @@ def edit_markers_dialog(
         dpg.add_separator()
         dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
 
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="Okay", callback=on_okay, tag=f"{tag}_button_okay")
-            dpg.add_button(
-                label="Cancel",
-                callback=lambda: dpg.delete_item(window),
-            )
+        # with dpg.group(horizontal=True):
+        #     dpg.add_button(label="Okay", callback=on_okay, tag=f"{tag}_button_okay")
+        #     dpg.add_button(
+        #         label="Cancel",
+        #         callback=lambda: dpg.delete_item(window),
+        #     )
