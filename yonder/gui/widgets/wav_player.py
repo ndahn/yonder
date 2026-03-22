@@ -103,7 +103,11 @@ def add_wav_player(
             if trim_enabled and use_trims:
                 trims = get_trims()
                 begin_trim = get_valid_pos(trims[0], False)
-                end_trim = get_valid_pos(trims[1], False)
+                if trims[1] == 0.0:
+                    end_trim = player.duration
+                else:
+                    end_trim = get_valid_pos(trims[1], False)
+
                 min_pos = max(0.0, min(begin_trim, player.duration))
                 max_pos = min(player.duration, max(0.0, end_trim))
             else:
@@ -199,8 +203,8 @@ def add_wav_player(
                 player.seek(trims[0])
 
         dpg.set_value(f"{tag}_progress", pos)
-        dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
         dpg.set_value(f"{tag}_progress_axis", pos)
+        dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
         dpg.set_frame_callback(dpg.get_frame_count() + 2, progress_update)
 
     # LOOP MARKERS
@@ -217,32 +221,33 @@ def add_wav_player(
         return (start, end, active)
 
     def set_loop_marker_pos(sender: str, pos: float, loop_marker: str) -> None:
+        pos = get_valid_pos(pos, False)
         if loop_marker == "loop_end" and pos == 0.0:
             pos = -0.01
 
-        pos = get_valid_pos(pos, False)
         dpg.set_value(f"{tag}_{loop_marker}", pos)
+        dpg.set_value(f"{tag}_{loop_marker}_axis", pos)
 
         if on_loop_changed:
             on_loop_changed(tag, get_loop_state(), user_data)
 
     def update_loop_widgets() -> None:
         loop_start, loop_end, _ = get_loop_state()
-        if loop_end == 0.0:
-            loop_end = -0.01
-
+        
         loop_start = get_valid_pos(loop_start, False)
         loop_end = get_valid_pos(loop_end, False)
+        loop_end_viz = player.duration if loop_end == 0.0 else loop_end
+
         # Can't have overlap
         loop_start = min(loop_start, loop_end)
 
         dpg.set_value(f"{tag}_loop_start", loop_start)
-        dpg.set_value(f"{tag}_loop_start_value", loop_start)
         dpg.set_value(f"{tag}_loop_start_axis", loop_start)
+        dpg.set_value(f"{tag}_loop_start_value", loop_start)
 
-        dpg.set_value(f"{tag}_loop_end", loop_end)
+        dpg.set_value(f"{tag}_loop_end", loop_end_viz)
+        dpg.set_value(f"{tag}_loop_end_axis", loop_end_viz)
         dpg.set_value(f"{tag}_loop_end_value", loop_end)
-        dpg.set_value(f"{tag}_loop_end_axis", loop_end)
 
     def on_loop_marker_moved() -> None:
         update_loop_widgets()
@@ -264,34 +269,34 @@ def add_wav_player(
         if trim_marker == "begin_trim":
             pos = get_valid_pos(pos, False)
             dpg.set_value(f"{tag}_begin_trim", (-10, -1, pos, 1))
+            dpg.set_value(f"{tag}_begin_trim_axis", pos)
         if trim_marker == "end_trim":
             if pos == 0.0:
                 pos = -0.01
             pos = get_valid_pos(pos, False)
             dpg.set_value(f"{tag}_end_trim", (pos, -1, 1000, 1))
+            dpg.set_value(f"{tag}_end_trim_axis", pos)
 
         if on_trim_marker_changed:
             on_trim_marker_changed(tag, get_trims(), user_data)
 
     def update_trim_widgets() -> None:
         begin_trim, end_trim = get_trims()
-        begin_trim = get_valid_pos(begin_trim, False)
 
-        # end trim is always negative
-        if end_trim == 0.0:
-            end_trim = -0.01
-        end_trim_pos = get_valid_pos(end_trim, False)
+        begin_trim = get_valid_pos(begin_trim, False)
+        end_trim = get_valid_pos(end_trim, False)
+        end_trim_viz = player.duration if end_trim == 0.0 else end_trim
 
         # Can't have overlap
-        begin_trim = min(begin_trim, end_trim_pos)
+        begin_trim = min(begin_trim, end_trim_viz)
 
         dpg.set_value(f"{tag}_begin_trim", (-1000, -1, begin_trim, 1))
-        dpg.set_value(f"{tag}_begin_trim_value", begin_trim)
         dpg.set_value(f"{tag}_begin_trim_axis", begin_trim)
+        dpg.set_value(f"{tag}_begin_trim_value", begin_trim)
 
-        dpg.set_value(f"{tag}_end_trim", (end_trim_pos, -1, 1000, 1))
+        dpg.set_value(f"{tag}_end_trim", (end_trim_viz, -1, 1000, 1))
+        dpg.set_value(f"{tag}_end_trim_axis", end_trim_viz)
         dpg.set_value(f"{tag}_end_trim_value", end_trim)  # raw value
-        dpg.set_value(f"{tag}_end_trim_axis", end_trim_pos)
 
     def on_trim_marker_moved() -> None:
         # Storing the value in the float widget instead
