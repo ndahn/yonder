@@ -718,6 +718,7 @@ def _create_attributes_music_track(
             else:
                 path = get_sound_path(bnk, source)
 
+            trims = node.get_trims(i)
             add_wav_player(
                 path,
                 on_file_changed=on_source_changed,
@@ -727,8 +728,8 @@ def _create_attributes_music_track(
                 loop_start=loop_start,
                 loop_end=loop_end,
                 trim_enabled=True,
-                begin_trim=node.playlist[i]["begin_trim_offset"] / 1000.0,
-                end_trim=node.playlist[i]["end_trim_offset"] / 1000.0,
+                begin_trim=trims[0] / 1000.0,
+                end_trim=trims[1] / 1000.0,
                 on_trim_marker_changed=set_trims,
                 user_data=i,
             )

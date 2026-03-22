@@ -1,6 +1,5 @@
 from typing import Any, Callable
 from pathlib import Path
-import wave
 import numpy as np
 
 from dearpygui import dearpygui as dpg
@@ -96,11 +95,22 @@ def add_wav_player(
             logger.error(f"Audio must be a wav or wem file ({audio})")
             return None
 
-    def get_valid_pos(pos: float) -> float:
+    def get_valid_pos(pos: float, use_trims: bool = True) -> float:
         if player:
             if pos < 0:
-                pos = player.duration - pos
-            return max(0.0, min(pos, player.duration))
+                pos = player.duration + pos
+            
+            if trim_enabled and use_trims:
+                trims = get_trims()
+                begin_trim = get_valid_pos(trims[0], False)
+                end_trim = get_valid_pos(trims[1], False)
+                min_pos = max(0.0, min(begin_trim, player.duration))
+                max_pos = min(player.duration, max(0.0, end_trim))
+            else:
+                min_pos = 0.0
+                max_pos = player.duration
+
+            return max(min_pos, min(pos, max_pos))
 
         return max(0.0, abs(pos))
 
@@ -145,9 +155,13 @@ def add_wav_player(
             player.play()
             progress_update()
 
-    def on_progress_update(sender: str) -> None:
+    def on_progress_moved(sender: str) -> None:
+        pos = dpg.get_value(sender)
+        dpg.set_value(f"{tag}_progress_axis", pos)
+        
         if player:
-            player.seek(dpg.get_value(sender))
+            dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
+            player.seek(pos)
 
     def progress_update() -> None:
         if not player or not player.playing:
@@ -159,16 +173,11 @@ def add_wav_player(
             return
 
         pos = player.position
-        trims = get_trims()
         loop_start, loop_end, loop_active = get_loop_state()
         
         if loop_active:
-            # A bit of a weird interaction between loop points and trims, 
-            # but seems to always use the inner ones
-            if trim_enabled:
-                loop_start = max(loop_start, trims[0])
-                loop_end = min(loop_end, player.duration - trims[1])
-
+            loop_start = get_valid_pos(loop_start)
+            loop_end = get_valid_pos(loop_end)
             if pos >= loop_end:
                 pos = loop_start
                 player.seek(pos)
@@ -183,6 +192,7 @@ def add_wav_player(
                 player.seek(pos)
         # Use trimming only when not in loop testing mode
         elif trim_enabled:
+            trims = get_trims()
             if pos < trims[0]:
                 player.seek(trims[0])
             elif pos >= player.duration + trims[1]:
@@ -207,15 +217,22 @@ def add_wav_player(
         return (start, end, active)
 
     def set_loop_marker_pos(sender: str, pos: float, loop_marker: str) -> None:
+        if loop_marker == "loop_end" and pos == 0.0:
+            pos = -0.01
+
+        pos = get_valid_pos(pos, False)
         dpg.set_value(f"{tag}_{loop_marker}", pos)
+
         if on_loop_changed:
             on_loop_changed(tag, get_loop_state(), user_data)
 
     def update_loop_widgets() -> None:
-        loop_start, loop_end, active = get_loop_state()
-        loop_start = get_valid_pos(loop_start)
-        loop_end = get_valid_pos(loop_end)
+        loop_start, loop_end, _ = get_loop_state()
+        if loop_end == 0.0:
+            loop_end = -0.01
 
+        loop_start = get_valid_pos(loop_start, False)
+        loop_end = get_valid_pos(loop_end, False)
         # Can't have overlap
         loop_start = min(loop_start, loop_end)
 
@@ -245,8 +262,12 @@ def add_wav_player(
 
     def set_trim_marker_pos(sender: str, pos: float, trim_marker: str) -> None:
         if trim_marker == "begin_trim":
+            pos = get_valid_pos(pos, False)
             dpg.set_value(f"{tag}_begin_trim", (-10, -1, pos, 1))
         if trim_marker == "end_trim":
+            if pos == 0.0:
+                pos = -0.01
+            pos = get_valid_pos(pos, False)
             dpg.set_value(f"{tag}_end_trim", (pos, -1, 1000, 1))
 
         if on_trim_marker_changed:
@@ -254,10 +275,12 @@ def add_wav_player(
 
     def update_trim_widgets() -> None:
         begin_trim, end_trim = get_trims()
-        begin_trim = get_valid_pos(begin_trim)
+        begin_trim = get_valid_pos(begin_trim, False)
 
         # end trim is always negative
-        end_trim_pos = get_valid_pos(player.duration + end_trim)
+        if end_trim == 0.0:
+            end_trim = -0.01
+        end_trim_pos = get_valid_pos(end_trim, False)
 
         # Can't have overlap
         begin_trim = min(begin_trim, end_trim_pos)
@@ -318,7 +341,7 @@ def add_wav_player(
         sender: str, trims: tuple[float, float], user_data: Any
     ) -> None:
         dpg.set_value(f"{tag}_begin_trim", (-1000, -1, trims[0], 1))
-        dpg.set_value(f"{tag}_end_trim", (trims[1], -1, 1000, 1))
+        dpg.set_value(f"{tag}_end_trim", (player.duration + trims[1], -1, 1000, 1))
         on_trim_marker_moved()
 
     def on_user_marker_edit(
@@ -545,7 +568,7 @@ def add_wav_player(
                         show_label=False,
                         thickness=2,
                         color=style.light_blue,
-                        callback=on_progress_update,
+                        callback=on_progress_moved,
                         tag=f"{tag}_progress",
                     )
                     dpg.add_axis_tag(

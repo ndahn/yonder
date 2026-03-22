@@ -21,10 +21,12 @@ def choice_dialog(
         tag = dpg.generate_uuid()
 
     def on_choice(sender: str, app_data: Any, choice: str) -> None:
-        callback(tag, choice, user_data)
-
+        # Delete first, otherwise chaining into other modal dialogs won't work
         if close_on_pick:
             dpg.delete_item(dialog)
+            dpg.split_frame()
+
+        callback(tag, choice, user_data)
 
     with dpg.window(
         label=title,

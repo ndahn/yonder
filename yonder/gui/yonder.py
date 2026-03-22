@@ -147,11 +147,8 @@ class BanksOfYonder:
 
             dpg.add_separator()
             with dpg.menu(label="Bank", tag=f"{self.tag}_menu_bank"):
-                dpg.add_menu_item(
-                    label="Pin Orphans", 
-                    callback=self.pin_lost_objects
-                )
-                
+                dpg.add_menu_item(label="Pin Orphans", callback=self.pin_lost_objects)
+
                 dpg.add_separator()
                 dpg.add_menu_item(
                     label="Solve HIRC",
@@ -517,15 +514,15 @@ class BanksOfYonder:
         dpg.delete_item(f"{self.tag}_menu_recent_files", slot=1, children_only=True)
         # dpg.split_frame()
 
-        def load_file_choice(sender: str, choice: str, user_data: Any) -> None:
+        def load_file_choice(sender: str, choice: str, path: Path) -> None:
             if choice == "Save":
                 self._save_soundbank()
-                self._load_soundbank(path)
+                self._load_soundbank_with_choice(path)
             elif choice == "Save as":
                 if self._save_soundbank_as():
-                    self._load_soundbank(path)
+                    self._load_soundbank_with_choice(path)
             elif choice == "Just do it":
-                self._load_soundbank(path)
+                self._load_soundbank_with_choice(path)
 
         def load_file(sender: str, app_data: Any, path: Path) -> None:
             if self.bnk:
@@ -535,10 +532,11 @@ class BanksOfYonder:
                     ["Save", "Save as", "|", "Just do it"],
                     load_file_choice,
                     title="Continue?",
+                    user_data=path,
                 )
                 return
             else:
-                self._load_soundbank(path)
+                self._load_soundbank_with_choice(path)
 
         for i in range(10):
             if i < len(self.config.recent_files):
@@ -570,7 +568,7 @@ class BanksOfYonder:
     def add_pinned_object(self, node: int | Node) -> None:
         if node is None:
             return
-        
+
         if not isinstance(node, Node):
             node = self.bnk[node]
 
@@ -741,8 +739,34 @@ class BanksOfYonder:
                 lang.soundbank_files: "*.bnk",
             },
         )
+
         if path:
-            self._load_soundbank(Path(path))
+            self._load_soundbank_with_choice(Path(path))
+
+    def _load_soundbank_with_choice(self, path: Path) -> None:
+        if path.name.endswith(".bnk"):
+            unpacked_json = path.parent / path.stem / "soundbank.json"
+
+            def on_unpack_choice(sender: str, choice: str, bnk_path: Path):
+                if choice == "Open json":
+                    target = bnk_path.parent / bnk_path.stem / "soundbank.json"
+                else:
+                    target = bnk_path
+
+                self._load_soundbank(target)
+
+            if unpacked_json.is_file():
+                # Soundbank was already unpacked, ask if we should open the json instead
+                choice_dialog(
+                    f"Soundbank {path.stem} was already unpacked. Open the json instead?",
+                    ["Open json", "Unpack again"],
+                    on_unpack_choice,
+                    user_data=path,
+                    title="Bnk or json?",
+                )
+                return
+        
+        self._load_soundbank(path)
 
     def _load_soundbank(self, path: Path) -> None:
         if not path.is_file():
@@ -754,18 +778,6 @@ class BanksOfYonder:
             return
 
         if path.name.endswith(".bnk"):
-            bnk_json = path.parent / path.stem / "soundbank.json"
-            if bnk_json.is_file():
-                # Soundbank was already unpacked, ask if we should open the json instead
-                choice_dialog(
-                    f"Soundbank {path.stem} was already unpacked. Open the json instead?",
-                    ["Open json", "Unpack again"],
-                    lambda s, a, u: self._load_soundbank(u),
-                    user_data=bnk_json,
-                    title="Bnk or json?"
-                )
-                return
-
             logger.info(f"Unpacking soundbank {path}")
             loading = loading_indicator("Unpacking...")
             try:
