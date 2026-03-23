@@ -362,12 +362,12 @@ class BanksOfYonder:
                         tag=f"{tag}_json_apply",
                     )
                     dpg.add_button(
-                        label="Reset",
-                        callback=self.node_reset_json,
+                        label="Reload Json",
+                        callback=self.update_json_panel,
                     )
                     dpg.add_button(
-                        label="Reload",
-                        callback=self.update_json_panel,
+                        label="Reset Node",
+                        callback=self.node_reset_json,
                     )
 
         # Shown now, but will be positioned properly by the welcome message
