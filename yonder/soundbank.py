@@ -118,7 +118,7 @@ class Soundbank:
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
         if source_type == "Embedded":
             target = self.bnk_dir / f"{wem.stem}.wem"
-            if wem.samefile(target):
+            if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
 
             if target.is_file():
