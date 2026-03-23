@@ -4,7 +4,9 @@ from dearpygui import dearpygui as dpg
 
 
 class Color(tuple):
-    def __new__(cls, color_or_r: int | Iterable[int], g: int = None, b: int = None, a: int = 255):
+    def __new__(
+        cls, color_or_r: int | Iterable[int], g: int = None, b: int = None, a: int = 255
+    ):
         if isinstance(color_or_r, Iterable):
             if len(color_or_r) == 3:
                 r, g, b = color_or_r
@@ -47,7 +49,9 @@ class Color(tuple):
     def a(self) -> int:
         return self[3]
 
-    def but(self, *, r: int = None, g: int = None, b: int = None, a: int = None) -> "Color":
+    def but(
+        self, *, r: int = None, g: int = None, b: int = None, a: int = None
+    ) -> "Color":
         if r is None:
             r = self.r
 
@@ -106,7 +110,7 @@ light_red = Color(255, 112, 119)
 class themes:
     notification_frame = None
     item_default = None
-    item_blue = None
+    item_highlight = None
     link_button = None
     no_padding = None
     plot_blue = None
@@ -194,13 +198,13 @@ def init_themes():
                 dpg.mvThemeCol_Border, (0, 0, 0), category=dpg.mvThemeCat_Core
             )
 
-    with dpg.theme() as themes.item_blue:
+    with dpg.theme() as themes.item_highlight:
         with dpg.theme_component(dpg.mvAll):
             dpg.add_theme_color(
-                dpg.mvThemeCol_Text, (27, 151, 234), category=dpg.mvThemeCat_Core
+                dpg.mvThemeCol_Text, light_green, category=dpg.mvThemeCat_Core
             )
             dpg.add_theme_color(
-                dpg.mvThemeCol_Border, (27, 151, 234), category=dpg.mvThemeCat_Core
+                dpg.mvThemeCol_Border, light_green, category=dpg.mvThemeCat_Core
             )
 
     with dpg.theme() as themes.link_button:
@@ -234,10 +238,12 @@ def init_themes():
     with dpg.theme() as themes.plot_blue:
         with dpg.theme_component(dpg.mvLineSeries):
             dpg.add_theme_color(dpg.mvPlotCol_Line, blue, category=dpg.mvThemeCat_Plots)
-    
+
     with dpg.theme() as themes.plot_red:
         with dpg.theme_component(dpg.mvLineSeries):
-            dpg.add_theme_color(dpg.mvPlotCol_Line, orange, category=dpg.mvThemeCat_Plots)
+            dpg.add_theme_color(
+                dpg.mvPlotCol_Line, orange, category=dpg.mvThemeCat_Plots
+            )
 
 
 class HighContrastColorGenerator:

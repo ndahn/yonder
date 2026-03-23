@@ -352,13 +352,14 @@ class BanksOfYonder:
                     multiline=True,
                     width=-1,
                     height=-30,
-                    callback=lambda s, a, u: self._set_component_highlight(s, True),
+                    callback=lambda s, a, u: self._set_json_highlight(True),
                     tag=f"{tag}_json",
                 )
                 with dpg.group(horizontal=True):
                     dpg.add_button(
                         label="Apply",
                         callback=self.node_apply_json,
+                        tag=f"{tag}_json_apply",
                     )
                     dpg.add_button(
                         label="Reset",
@@ -670,7 +671,7 @@ class BanksOfYonder:
 
     def _set_component_highlight(self, widget: str, highlight: bool) -> None:
         if highlight:
-            dpg.bind_item_theme(widget, themes.item_blue)
+            dpg.bind_item_theme(widget, themes.item_highlight)
         else:
             dpg.bind_item_theme(widget, themes.item_default)
 
@@ -764,7 +765,7 @@ class BanksOfYonder:
                     title="Bnk or json?",
                 )
                 return
-        
+
         self._load_soundbank(path)
 
     def _load_soundbank(self, path: Path) -> None:
@@ -1011,7 +1012,7 @@ class BanksOfYonder:
             dpg.set_value(f"{self.tag}_json", "")
 
         self._selected_node = node
-        self._set_component_highlight(f"{self.tag}_json", False)
+        self._set_json_highlight(False)
 
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
         if node:
@@ -1218,7 +1219,11 @@ class BanksOfYonder:
         if self._selected_node:
             value = self._selected_node.json()
         dpg.set_value(f"{self.tag}_json", value)
-        dpg.bind_item_theme(f"{self.tag}_json", themes.item_default)
+        self._set_json_highlight(False)
+
+    def _set_json_highlight(self, highlight: bool) -> None:
+        self._set_component_highlight(f"{self.tag}_json", highlight)
+        self._set_component_highlight(f"{self.tag}_json_apply", highlight)
 
     def _open_create_node_dialog(self) -> None:
         tag = f"{self.tag}_create_node_dialog"
