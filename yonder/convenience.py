@@ -209,8 +209,9 @@ def create_boss_bgm(
                 mrs_playlist_root = phase_mrsc.add_playlist_item(
                     bnk.new_id(), 0, avoid_repeat=1, ers_type=0
                 )
+                # Setup playlist item as loop intro
                 phase_mrsc.add_playlist_item(
-                    bnk.new_id(), intro_seg.id, parent=mrs_playlist_root
+                    bnk.new_id(), intro_seg.id, loop_base=True, parent=mrs_playlist_root
                 )
             else:
                 logger.warning(
@@ -246,6 +247,8 @@ def create_boss_bgm(
                 dest_fade_curve="Linear",
                 dest_play_pre_entry=True,
             )
+        else:
+            phase_mrsc.transition_rules[0]["source_transition_rule"]["play_pre_entry"] = 1
 
         # Add markers for looping
         if loop_markers and len(loop_markers) > i and loop_markers[i]:
@@ -258,7 +261,7 @@ def create_boss_bgm(
         # According to Shion this is probably just for testing
         phase_seg.set_marker("LoopCheck", loop_end - 3000)
         phase_seg.set_marker(MusicSegment.loop_end_id, loop_end)
-        phase_track.set_trims(loop_start - 1000, loop_end + 1000, 0)
+        # Don't trim the loop track!
 
         # Add the segment to the music container's playlist
         if not phase_mrsc.playlist_items:

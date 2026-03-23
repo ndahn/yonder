@@ -90,6 +90,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
         use_weight: bool = False,
         shuffle: bool = False,
         avoid_repeat: int = 0,
+        loop_base: bool = False,
         ers_type: int = 4294967295,
         parent: int = 0,
     ) -> int:
@@ -130,7 +131,7 @@ class MusicRandomSequenceContainer(ContainerMixin, WwiseNode):
             "playlist_item_id": playlist_item_id,
             "child_count": 0,
             "ers_type": ers_type,
-            "loop_base": 0,
+            "loop_base": 1 if loop_base else 0,
             "loop_min": 0,
             "loop_max": 0,
             "weight": weight,
