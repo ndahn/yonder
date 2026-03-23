@@ -284,10 +284,11 @@ def new_boss_track_dialog(
         add_paragraphs(
             """\
             - Boss tracks need to be added to cs_smain
-            - First track is the regular BGM, subsequent tracks will be used for 'heatup' phases
             - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
+            - Additional tracks will be used for 'heatup' phases
             - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
-            - BgmBossChrIdConv strings cannot be changed and must be 6-digit
+            - Only already existing BgmEnemyType strings can be used!
+            - BgmBossChrIdConv params mus be 6-digit for EMEVD
 """,
             color=style.light_blue,
         )

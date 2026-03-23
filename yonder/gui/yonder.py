@@ -785,6 +785,7 @@ class BanksOfYonder:
                 unpack_soundbank(bnk2json, path)
             finally:
                 dpg.delete_item(loading)
+                dpg.split_frame()  # to enable the next modal loading indicator
 
         logger.info(f"Loading soundbank {path}")
         loading = loading_indicator("Loading soundbank...")
