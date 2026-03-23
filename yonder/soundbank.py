@@ -85,6 +85,14 @@ class Soundbank:
         self._id2index: dict[int, int] = {}
         self._regenerate_index_table()
 
+    @property
+    def bnk_file(self) -> Path:
+        return self.bnk_dir.parent / f"{self.bnk_dir.stem}.bnk"
+
+    @property
+    def json_file(self) -> Path:
+        return self.bnk_dir / "soundbank.json"
+
     def _regenerate_index_table(self):
         self._id2index.clear()
 
@@ -371,7 +379,6 @@ class Soundbank:
         return g
 
     def get_subtree(self, entrypoint: int | Node, children_only: bool = True) -> nx.DiGraph:
-        """Collects all descendant nodes from the specified entrypoint in a graph."""
         if isinstance(entrypoint, int):
             entrypoint = self[entrypoint]
 
@@ -397,14 +404,6 @@ class Soundbank:
 
             if parent_id is not None:
                 g.add_edge(parent_id, node_id)
-
-            if node_type == "Sound":
-                # We found an actual sound
-                wem = node["bank_source_data/media_information/source_id"]
-                g.nodes[node_id]["wems"] = [wem]
-            elif node_type == "MusicTrack":
-                wems = [src["media_information"]["source_id"] for src in node["sources"]]
-                g.nodes[node_id]["wems"] = wems
 
             if children_only:
                 if node.type in ("Event", "Action"):

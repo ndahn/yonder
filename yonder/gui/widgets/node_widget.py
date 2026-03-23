@@ -35,9 +35,9 @@ def add_node_widget(
             if not node_type or isinstance(node, node_type):
                 yield node
 
-    def on_node_selected(sender: str, node: Node, cb_user_data: Any) -> None:
-        dpg.set_value(tag, str(node.id))
-        callback(tag, node, user_data)
+    def on_node_selected(sender: str, nodes: list[Node], cb_user_data: Any) -> None:
+        dpg.set_value(tag, str(nodes[0].id))
+        callback(tag, nodes[0], user_data)
 
     def select_node() -> None:
         select_nodes_dialog(

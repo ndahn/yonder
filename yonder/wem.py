@@ -11,8 +11,10 @@ from yonder.util import logger
 
 
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
+    from yonder.node_types import WwiseNode
+    
     for wem in wems:
-        if not wem.endswith(".wem"):
+        if not wem.name.endswith(".wem"):
             continue
 
         # We allow adding additional info to the wem filename to make them easier to handle
@@ -27,20 +29,26 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         else:
             wem_id = int(wem.stem)
 
-        # FIXME need to handle streamed and prefetch-streamed sounds
-        target_path = bnk.bnk_dir / f"{wem_id}.wem"
+        # Copy to the correct location
+        stream_path_rel = Path(f"wem/{str(wem_id)[:2]}/{wem.name}")
+        if str(wem).endswith(str(stream_path_rel)):
+            # Handle streamed sounds
+            target_path = bnk.bnk_dir.parent / stream_path_rel
+        else:
+            target_path = bnk.bnk_dir / f"{wem_id}.wem"
+
         shutil.copy(wem, target_path)
 
-        # FIXME need to find source_ids in MusicTracks and possibly other nodes as well
-        sound_nodes = list(
-            bnk.query(
-                f"type=Sound bank_source_data/media_information/source_id={wem_id}"
-            )
-        )
-
+        # Update memory sizes
+        wem_nodes = list(bnk.query(f"'**/source_id'={wem_id}"))
         wem_size = target_path.stat().st_size
-        for node in sound_nodes:
-            node["bank_source_data/media_information/in_memory_media_size"] = wem_size
+        for node in wem_nodes:
+            if isinstance(node, WwiseNode):
+                attr_paths = node.resolve_path("**/media_information")
+                for _, media_info in attr_paths:
+                    # Music tracks have multiple sources, so check if this is the right one
+                    if media_info.get("source_id") == wem_id:
+                        media_info["in_memory_media_size"] = wem_size
 
 
 def get_wem_metadata(wem: Path) -> float:

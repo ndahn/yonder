@@ -1,3 +1,5 @@
+from typing import Any
+
 from yonder.node import Node
 from yonder.util import logger
 from yonder.enums import SoundType
@@ -40,6 +42,13 @@ class Event(Node):
             return f"{sound_type}{event_id:010d}"
 
         return f"{event_type}_{sound_type}{event_id:010d}"
+
+    def get_wwise_id(self, default: Any = None) -> str:
+        name = self.get_name()
+        if name and "_" in name:
+            return name.split("_")[1]
+
+        return default
 
     @property
     def actions(self) -> list[int]:

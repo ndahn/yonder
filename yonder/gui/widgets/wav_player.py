@@ -210,6 +210,9 @@ def add_wav_player(
     # LOOP MARKERS
 
     def get_loop_state() -> tuple[float, float, bool]:
+        if not loop_markers_enabled:
+            return (0.0, 0.0, False)
+
         start = dpg.get_value(f"{tag}_loop_start")
         end = dpg.get_value(f"{tag}_loop_end")
 

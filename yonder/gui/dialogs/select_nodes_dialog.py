@@ -7,10 +7,12 @@ _T = TypeVar("_T", bound=Type[Node])
 
 def select_nodes_dialog(
     get_items: Callable[[str], Iterable[Node]],
-    on_nodes_selected: Callable[[str, Node | list[Node], Any], None],
+    on_nodes_selected: Callable[[str, list[Node] | list[str], Any], None],
     *,
     get_node_details: Callable[[Node], list[str]] = None,
+    get_node_label: Callable[[Node], str] = None,
     multiple: bool = False,
+    return_labels: bool = False,
     max_items: int = 200,
     title: str = "Select Node",
     tag: str = 0,
@@ -26,6 +28,9 @@ def select_nodes_dialog(
     # Maps row_tag -> item key for lookup
     row_tags: dict[int, str] = {}
     selected_keys: set[str] = set()
+
+    if not get_node_label:
+        get_node_label = lambda n: f"{n.lookup_name('<?>')} ({n.id})"
 
     def _set_row_highlight(row_tag: int, selected: bool) -> None:
         dpg.highlight_table_row(
@@ -85,7 +90,7 @@ def select_nodes_dialog(
         items.clear()
         items.update(
             {
-                f"{x.lookup_name('<?>')} ({x.id})": x
+                get_node_label(x): x
                 for i, x in enumerate(get_items(filt))
                 if i < max_items
             }
@@ -97,11 +102,18 @@ def select_nodes_dialog(
             return
 
         if multiple:
-            result = [items[k] for k in selected_keys if k in items]
+            if return_labels:
+                result = [k for k in selected_keys if k in items]
+            else:
+                result = [items[k] for k in selected_keys if k in items]
             on_nodes_selected(tag, result, user_data)
         else:
             key = next(iter(selected_keys), None)
-            on_nodes_selected(tag, items[key], user_data)
+            if return_labels:
+                result = key
+            else:
+                result = items[key]
+            on_nodes_selected(tag, result, user_data)
 
         dpg.delete_item(window)
 
@@ -156,10 +168,12 @@ def select_nodes_dialog(
 def select_nodes_of_type(
     bnk: Soundbank,
     node_type: _T,
-    on_node_selected: Callable[[str, _T | list[_T], Any], None],
+    on_node_selected: Callable[[str, list[_T] | list[str], Any], None],
     *,
     get_node_details: Callable[[Node], list[str]] = None,
+    get_node_label: Callable[[Node], str] = None,
     multiple: bool = False,
+    return_labels: bool = False,
     tag: str = 0,
     user_data: Any = None,
 ) -> str:
@@ -175,7 +189,9 @@ def select_nodes_of_type(
         get_nodes,
         on_node_selected,
         get_node_details=get_node_details,
+        get_node_label=get_node_label,
         multiple=multiple,
+        return_labels=return_labels,
         tag=tag,
         user_data=user_data,
     )

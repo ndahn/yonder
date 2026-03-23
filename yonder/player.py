@@ -45,6 +45,7 @@ class WavPlayer:
 
         self._playing = True
         if not self._stream:
+            self._cursor = 0
             self._stream = sd.OutputStream(
                 samplerate=self._params.framerate,
                 channels=self._params.nchannels,
@@ -52,6 +53,7 @@ class WavPlayer:
                 callback=self._callback,
                 finished_callback=self._on_finished,
             )
+
         self._stream.start()
 
     def pause(self):
