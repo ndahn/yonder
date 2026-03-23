@@ -44,7 +44,7 @@ from yonder.gui.dialogs.file_dialog import (
 )
 from yonder.gui.dialogs.create_simple_sound_dialog import create_simple_sound_dialog
 from yonder.gui.dialogs.calc_hash_dialog import calc_hash_dialog
-from yonder.gui.dialogs.transfer_events_dialog import transfer_events_dialog
+from yonder.gui.dialogs.mass_transfer_dialog import mass_transfer_dialog
 from yonder.gui.dialogs.convert_wav_dialog import convert_wavs_dialog
 from yonder.gui.dialogs.settings_dialog import settings_dialog
 from yonder.gui.dialogs.new_boss_track_dialog import new_boss_track_dialog
@@ -1369,7 +1369,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        transfer_events_dialog(tag=tag)
+        mass_transfer_dialog(tag=tag)
 
         dpg.split_frame()
         center_window(tag)

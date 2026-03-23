@@ -11,7 +11,7 @@ from yonder.gui.widgets import add_generic_widget
 from .select_nodes_dialog import select_nodes_of_type
 
 
-def transfer_events_dialog(
+def mass_transfer_dialog(
     *,
     title: str = "Transfer Sounds",
     tag: str = None,
@@ -80,7 +80,9 @@ def transfer_events_dialog(
 
         return pruned
 
-    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(
+        msg: str = None, color: tuple[int, int, int, int] = style.red
+    ) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return
