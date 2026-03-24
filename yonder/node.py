@@ -101,8 +101,15 @@ class Node:
         idsec.pop("Hash", None)
         idsec["String"] = name
 
-    def get_name(self) -> str:
-        return self._attr["id"].get("String")
+    def lookup_name(self, default: str = None) -> str:
+        name = self._attr["id"].get("String")
+        if not name:
+            name = lookup_name(self.id)
+
+        if name is None:
+            return default
+
+        return name
 
     @property
     def parent(self) -> int:
@@ -127,16 +134,6 @@ class Node:
             n.parent = parent
 
         return n
-
-    def lookup_name(self, default: str = None) -> str:
-        name = self._attr["id"].get("String")
-        if not name:
-            name = lookup_name(self.id)
-
-        if name is None:
-            return default
-
-        return name
 
     def paths(self) -> Iterator[str]:
         def delve(item: dict, path: str):

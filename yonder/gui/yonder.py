@@ -17,7 +17,7 @@ from yonder.node_types import (
 )
 
 from yonder.util import logger, unpack_soundbank, repack_soundbank
-from yonder.query import query_nodes
+from yonder.query import query_nodes, query_help_text
 from yonder.gui.config import Config, load_config
 from yonder.gui.helpers import center_window, shorten_path
 from yonder.gui.widgets import (
@@ -29,6 +29,7 @@ from yonder.gui.widgets import (
     get_foldable_row_descriptor,
     is_row_visible,
     add_graph_widget,
+    add_paragraphs,
 )
 from yonder.gui import style
 from yonder.gui.style import themes
@@ -284,13 +285,23 @@ class BanksOfYonder:
                 with dpg.child_window(border=True, resizable_y=True, height=500):
                     with dpg.tab_bar():
                         with dpg.tab(label="Events"):
-                            dpg.add_input_text(
-                                hint="Search on enter",
-                                width=-1,
-                                on_enter=True,
-                                callback=self._regenerate_events_list,
-                                tag=f"{tag}_events_filter",
-                            )
+                            with dpg.group(horizontal=True):
+                                dpg.add_input_text(
+                                    hint="Search on enter",
+                                    width=-30,
+                                    on_enter=True,
+                                    callback=self._regenerate_events_list,
+                                    tag=f"{tag}_events_filter",
+                                )
+                                dpg.add_button(
+                                    label="?",
+                                    small=True,
+                                )
+                                with dpg.tooltip(dpg.last_item()):
+                                    add_paragraphs(
+                                        query_help_text, color=style.light_blue
+                                    )
+
                             dpg.add_text("Showing 0 events", tag=f"{tag}_events_count")
                             with dpg.table(
                                 no_host_extendX=True,
@@ -895,10 +906,14 @@ class BanksOfYonder:
             events = set()
 
             for node in selected:
-                for pid in nx.ancestors(g, node.id):
-                    parent = self.bnk[pid]
-                    if parent.type == "Event":
-                        events.add(parent)
+                if node.type == "Event":
+                    events.add(node)
+                else:
+                    for pid in nx.ancestors(g, node.id):
+                        parent = self.bnk[pid]
+                        if parent.type == "Event":
+                            events.add(parent)
+                            break
 
             events = sorted(events)
         else:

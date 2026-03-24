@@ -48,20 +48,20 @@ lucene_grammar = r"""
 lucene_url = "https://lucene.apache.org/core/2_9_4/queryparsersyntax.html"
 
 
-lucene_help_text = """\
+query_help_text = """\
 Supports Lucene-style search queries (<field>=<value>). 
 
-- Fields are used verbatim, with the only excception that array indices may be replaced by a * wildcard.
-- Values may be specified using fields, wildcards, fuzzy searches, ranges.
+- You may use the * wildcard for values
+- You may use the * and ** wildcards for field paths
+- Use [X..Y] to specify a value range
+- Precede your value with tilde ~ to do a fuzzy search
 - Terms may be combined using grouping, OR, NOT. 
 - Terms separated by a space are assumed to be AND.
 
 You may run queries over the following fields:
-- id
-- type
-- name
+- id, type, name
 - parent
-- any attribute path
+- any attribute path separated by forward slashes /
 
 Examples:
 - id=*588 OR type=RandomSequenceContainer
@@ -105,7 +105,7 @@ class _ValueCondition(_Condition):
     def _candidates(self, node: "Node") -> Generator[str, None, None]:
         yield node.id
         yield node.type
-        yield node.get_name()
+        yield node.lookup_name()
 
     def evaluate(self, obj: "Node") -> bool:
         return any(_match_value(val, self.value) for val in self._candidates(obj))
