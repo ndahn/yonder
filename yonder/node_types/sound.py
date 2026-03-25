@@ -96,7 +96,10 @@ class Sound(WwiseNode):
         if src <= 0:
             return None
 
-        return bnk.bnk_dir / f"{src}.wem"
+        if self.source_type == "Embedded":
+            return bnk.bnk_dir / f"{src}.wem"
+
+        return bnk.bnk_dir.parent / "wem" / f"{str(self.source_id)[:2]}" / f"{self.source_id}.wem"
 
     @property
     def plugin(self) -> PluginType:

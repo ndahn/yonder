@@ -914,11 +914,22 @@ class BanksOfYonder:
                         if parent.type == "Event":
                             events.add(parent)
                             break
-
-            events = sorted(events)
+            events = list(events)
         else:
             events = all_events
 
+        def evt_sort_key(evt: Event) -> str:
+            name = evt.lookup_name()
+            if not name:
+                return f"zzz{evt.id}"
+
+            if name.startswith("Play"):
+                return f"00_{name}"
+            elif name.startswith("Stop"):
+                return f"01_{name}"
+            return f"99_{name}"
+
+        events.sort(key=evt_sort_key)
         for node in events:
             node: Event = node.cast()
             node_tag = self._create_root_entry(node, f"{self.tag}_events_table")

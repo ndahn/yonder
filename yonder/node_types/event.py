@@ -46,7 +46,7 @@ class Event(Node):
     def get_wwise_id(self, default: Any = None) -> str:
         name = self.lookup_name()
         if name and "_" in name:
-            return name.split("_")[1]
+            return name.split("_")[-1]
 
         return default
 

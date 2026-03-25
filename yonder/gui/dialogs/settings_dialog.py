@@ -56,7 +56,7 @@ def settings_dialog(
             w = add_generic_widget(
                 Path,
                 "bnk2json",
-                lambda s, a, u: setattr(config, "bnk2json_exe", a),
+                lambda s, a, u: setattr(config, "bnk2json_exe", str(a)),
                 default=shorten_path(config.bnk2json_exe),
                 filetypes={"bnk2json.exe": "bnk2json.exe"},
             )
@@ -68,7 +68,7 @@ def settings_dialog(
             w = add_generic_widget(
                 Path,
                 "wwise",
-                lambda s, a, u: setattr(config, "wwise_exe", a),
+                lambda s, a, u: setattr(config, "wwise_exe", str(a)),
                 default=shorten_path(config.wwise_exe),
                 filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
             )
@@ -78,7 +78,7 @@ def settings_dialog(
             w = add_generic_widget(
                 Path,
                 "vgmstream",
-                lambda s, a, u: setattr(config, "vgmstream_exe", a),
+                lambda s, a, u: setattr(config, "vgmstream_exe", str(a)),
                 default=shorten_path(config.vgmstream_exe),
                 filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
             )
