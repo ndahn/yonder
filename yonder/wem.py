@@ -210,7 +210,7 @@ def wav2wem(
 
         # NOTE as long as all paths are absolute this should be fine
         source_lines.append(
-            f'<Source Path="{wav.absolute()}" Conversion="{conversion}"/>'
+            f'<Source Path="{wav.resolve()}" Conversion="{conversion}"/>'
         )
 
     # Create a list of files to convert
@@ -226,36 +226,46 @@ def wav2wem(
     )
 
     # Create a wwise project if it doesn't exist yet
-    wproj_path = wav_dir / "yonder_wav2wem/yonder.wproj"
+    # NOTE parent folder and project file MUST have the same name!
+    wproj_path = wav_dir / "yonder_wav2wem/yonder_wav2wem.wproj"
     if not wproj_path.is_file():
-        subprocess.check_call(
-            [str(wwise_exe), "create-new-project", str(wproj_path), "--quiet"]
-        )
+        try:
+            subprocess.check_output(
+                [str(wwise_exe), "create-new-project", str(wproj_path), "--quiet"]
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Creating wwise project failed: {e.output}")
+            raise e
 
     # Convert the wav files by passing the wsources list to wwise
-    subprocess.check_call(
-        [
-            str(wwise_exe),
-            "convert-external-source",
-            str(wproj_path),
-            "--source-file",
-            str(wsources_path),
-            "--output",
-            str(out_dir),
-            "--quiet",
-        ]
-    )
+    try:
+        subprocess.check_output(
+            [
+                str(wwise_exe),
+                "convert-external-source",
+                str(wproj_path),
+                "--source-file",
+                str(wsources_path),
+                "--output",
+                str(out_dir),
+                "--quiet",
+            ]
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Conversion failed: {e.output}")
+        raise e
 
     # Generated files will be stored in a Windows folder (on Windows)
     wwise_out_dir = out_dir / "Windows"
     for file in wwise_out_dir.glob("*"):
+        (out_dir / file.name).unlink(missing_ok=True)
         shutil.move(file, out_dir)
 
     # Cleanup
     wsources_path.unlink()
     shutil.rmtree(wwise_out_dir)
     if not keep_proj_dir:
-        shutil.rmtree(wproj_path)
+        shutil.rmtree(wproj_path.parent)
 
     return [out_dir / f"{f.stem}.wem" for f in waves]
 
@@ -281,7 +291,7 @@ def wem2wav(
                 continue
 
             target = out_dir / (wem.stem + ".wav")
-            subprocess.check_call(
+            subprocess.check_output(
                 [
                     str(vgmstream_exe),
                     "-i",  # ignore looping
