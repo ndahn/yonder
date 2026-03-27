@@ -949,7 +949,8 @@ class BanksOfYonder:
         global_nodes = [
             n
             for n in self.bnk
-            if n.parent is None and n.type not in ("Event", "Action")
+            if (n.parent is None and n.type not in ("Event", "Action"))
+            or n.type in ("ActorMixer",)
         ]
 
         type_map: dict[str, list[Node]] = {}
