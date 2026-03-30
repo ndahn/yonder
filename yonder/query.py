@@ -52,21 +52,21 @@ query_help_text = """\
 Supports Lucene-style search queries (<field>=<value>). 
 
 - You may use the * wildcard for values
-- You may use the * and ** wildcards for field paths
+- Field paths are prepended by ** unless quoted
 - Use [X..Y] to specify a value range
 - Precede your value with tilde ~ to do a fuzzy search
 - Terms may be combined using grouping, OR, NOT. 
 - Terms separated by a space are assumed to be AND.
 
 You may run queries over the following fields:
-- id, type, name
-- parent
-- any attribute path separated by forward slashes /
+- id (or hash), type, name
+- any field name
+- any field path separated by slashes /
 
 Examples:
 - id=*588 OR type=RandomSequenceContainer
-- "**/source_id"=123456789
-- NOT node_base_params/parent_id=[100000..200000]
+- source_id=123456789
+- NOT "node_base_params/parent_id"=[100000..200000]
 - name=~Play_s*
 """
 
@@ -78,12 +78,23 @@ class _Condition(ABC):
 
 class _FieldCondition(_Condition):
     def __init__(self, field_path: str, value: str):
+        if not field_path.startswith("\"'") and field_path not in (
+            "id",
+            "type",
+            "name",
+            "hash",
+        ):
+            field_path = f"**/{field_path}"
+
         self.field_path = field_path.strip("\"'")
         self.value = value.strip("\"'")
 
     def _get_field_values(self, node: "Node") -> list[str]:
-        if self.field_path == "id":
+        if self.field_path in ("id", "hash"):
             return [node.id]
+
+        if self.field_path == "name":
+            return [node.lookup_name(None)]
 
         if self.field_path == "type":
             return [node.type]
