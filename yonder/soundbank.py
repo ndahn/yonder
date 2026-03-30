@@ -597,23 +597,25 @@ class Soundbank:
 
             parent_id = node.parent
             if parent_id is not None:
+                parent = self.get(parent_id)
+
                 if parent_id <= 0:
                     logger.warning(f"{node}: node has no parent")
                     severity = max(severity, 1)
                 elif parent_id in discovered_ids:
                     logger.error(f"{node}: defined after its parent {parent_id}")
                     severity = max(severity, 2)
-                elif parent_id in self:
-                    parent = self[parent_id]
-                    if hasattr(parent, "children"):
-                        if node_id not in parent.children:
-                            logger.error(
-                                f"{node}: parent {parent_id} does not include node in its children"
-                            )
-                            severity = max(severity, 2)
-                else:
+                
+                if parent_id > 0 and not parent:
                     logger.error(f"{node}: parent {parent_id} does not exist")
                     severity = max(severity, 2)
+                
+                if parent and hasattr(parent, "children"):
+                    if node_id not in parent.children:
+                        logger.error(
+                            f"{node}: parent {parent_id} does not include node in its children"
+                        )
+                        severity = max(severity, 2)
 
             for _, ref in node.get_references():
                 if ref in self and ref not in discovered_ids:

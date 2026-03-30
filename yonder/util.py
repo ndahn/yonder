@@ -78,13 +78,14 @@ def format_hierarchy(bnk: "Soundbank", graph: nx.DiGraph) -> str:
         visited.add(nid)
         children = list(graph.successors(nid))
 
-        for i, child in enumerate(children):
-            is_last = i == len(children) - 1
+        for i, child_id in enumerate(children):
+            is_last = (i == len(children) - 1)
             branch = "└──" if is_last else "├──"
-            ret += f"{prefix}{branch} {child}\n"
+            node = bnk.get(child_id, f"#{child_id}")
+            ret += f"{prefix}{branch} {node}\n"
 
             new_prefix = prefix + ("    " if is_last else "│   ")
-            delve(child, new_prefix)
+            delve(child_id, new_prefix)
 
     # Find root node
     roots = [n for n in graph.nodes() if graph.in_degree(n) == 0]

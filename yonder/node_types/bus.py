@@ -398,7 +398,11 @@ class Bus(RtpcMixin, StateChunkMixin, Node):
             "initial_values/bus_initial_params/aux_params/aux2",
             "initial_values/bus_initial_params/aux_params/aux3",
             "initial_values/bus_initial_params/aux_params/aux4",
-        )
-        refs.extend([(p, r) for p in paths if (r := self.get(p, 0)) > 0])
+        )        
+        for p in paths:
+            ref = self.get(p, 0)
+            if ref > 0:
+                refs.append((p, ref))
+
 
         return refs

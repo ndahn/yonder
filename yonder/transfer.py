@@ -1,5 +1,6 @@
 from yonder import Soundbank, Node
 from yonder.node_types import Event, Action, Sound, MusicTrack
+from yonder.node_types.mixins import ContainerMixin
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
 
@@ -26,9 +27,13 @@ def copy_event(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     event: Event,
+    new_name: str = None,
 ) -> Event:
     event = event.copy()
     actions = []
+
+    if new_name:
+        event.name = new_name
 
     for aid in event.actions:
         action: Action = src_bnk.get(aid)
@@ -55,7 +60,7 @@ def copy_node_structure(
     # Collect the hierarchy responsible for playing the sound(s)
     action_tree = src_bnk.get_subtree(entrypoint, False)
     tree_str = format_hierarchy(src_bnk, action_tree)
-    logger.info(f"Hierarchy for node {entrypoint}:\n{tree_str}\n")
+    logger.info(f"Discovered hierarchy:\n{entrypoint}\n{tree_str}\n")
 
     # Collect the wems
     wems = set()
@@ -86,24 +91,19 @@ def copy_node_structure(
     for up_id in upchain:
         # Once we encounter an existing node we can assume the rest of the chain is
         # intact. Child nodes must be inserted *before* the first existing parent.
-        if up_id in dst_bnk:
-            up_node = dst_bnk[up_id]
-            items = up_node["children/items"]
-
-            if up_child.id not in items:
-                items.append(up_child.id)
-                up_child.parent = up_node.id
-                items.sort()
-
+        up_node: ContainerMixin = dst_bnk.get(up_id)
+        if up_node:
+            up_node.add_child(up_child)
             break
 
         # First time we encounter upchain node, clear the children, as non-existing items
         # will make the soundbank invalid
-        up = src_bnk[up_id].copy()
-        up["children/items"] = []
-        dst_bnk.add_nodes(up)
+        up_node = src_bnk[up_id].copy()
+        up_node.clear_children()
+        up_node.add_child(up_child)
+        dst_bnk.add_nodes(up_node)
 
-        up_child = up
+        up_child = up_node
 
     return wems
 
@@ -127,6 +127,9 @@ def copy_wems(
         if streamed.is_file():
             wem_paths.append(streamed)
 
+        if not embedded.is_file() and not streamed.is_file():
+            logger.warning(f"Could not locate wem {wem}")
+
     import_wems(dst_bnk, wem_paths)
 
 
@@ -148,7 +151,7 @@ def copy_wwise_events(
             raise ValueError(f"{wwise_src} is not an Event")
 
         # Copy the event and its actions
-        evt = copy_event(src_bnk, dst_bnk, evt)
+        evt = copy_event(src_bnk, dst_bnk, evt, wwise_dst)
 
         # Collect the structures attached to each action
         for action_id in evt.actions:

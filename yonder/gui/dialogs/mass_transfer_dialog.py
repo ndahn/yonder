@@ -193,6 +193,7 @@ def mass_transfer_dialog(
                 show_message(f"{line} already exists in destination bank")
                 return
 
+        # Resolve the user inputs to specific events
         event_map = {}
         for sid, did in zip(src_ids, dst_ids):
             src_explicit = sid.startswith(("Play_", "Stop_", "#"))

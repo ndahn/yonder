@@ -65,7 +65,7 @@ You may run queries over the following fields:
 
 Examples:
 - id=*588 OR type=RandomSequenceContainer
-- node_base_params/rtcp:0/id=12345
+- "**/source_id"=123456789
 - NOT node_base_params/parent_id=[100000..200000]
 - name=~Play_s*
 """

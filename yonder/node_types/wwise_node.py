@@ -215,7 +215,10 @@ class WwiseNode(RtpcMixin, StateChunkMixin, Node):
             f"{self.base_params_path}/aux_params/aux3",
             f"{self.base_params_path}/aux_params/aux4",
         )
-        refs.extend([(p, r) for p in paths if (r := self.get(p, 0)) > 0])
+        for p in paths:
+            ref = self.get(p, 0)
+            if ref > 0:
+                refs.append((p, ref))
 
         for i, (key, val) in enumerate(self.properties.items()):
             if key == "AttenuationID":
