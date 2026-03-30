@@ -27,7 +27,7 @@ class Config:
     # Your advertisement could go here
 
     def add_recent_file(self, file_path: str) -> None:
-        file_path = str(Path(file_path).resolve())
+        file_path = str(Path(file_path).absolute())
         if file_path in self.recent_files:
             self.recent_files.remove(file_path)
 

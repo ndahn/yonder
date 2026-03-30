@@ -19,7 +19,7 @@ class Soundbank:
     def load(cls, bnk_path: Path | str) -> "Soundbank":
         """Load a soundbank and return a more manageable representation."""
         # Resolve the path to the unpacked soundbank
-        bnk_path: Path = Path(bnk_path).resolve()
+        bnk_path: Path = Path(bnk_path).absolute()
         if bnk_path.name == "soundbank.json":
             json_path = bnk_path
             bnk_path = bnk_path.parent

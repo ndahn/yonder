@@ -59,12 +59,12 @@ def add_wav_player(
             filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
         )
         if ret:
-            path = Path(ret).resolve()
+            path = Path(ret).absolute()
             if path == audio:
                 return
 
             if on_file_changed:
-                on_file_changed(tag, Path(ret), user_data)
+                on_file_changed(tag, path, user_data)
 
             if player:
                 player.stop()

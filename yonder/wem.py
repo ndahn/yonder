@@ -208,9 +208,8 @@ def wav2wem(
             logger.error(f"FileNotFound: {wav}")
             continue
 
-        # NOTE as long as all paths are absolute this should be fine
         source_lines.append(
-            f'<Source Path="{wav.resolve()}" Conversion="{conversion}"/>'
+            f'<Source Path="{wav.absolute()}" Conversion="{conversion}"/>'
         )
 
     # Create a list of files to convert
