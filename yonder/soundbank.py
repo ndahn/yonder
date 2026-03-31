@@ -204,7 +204,7 @@ class Soundbank:
         self._apply_hirc_to_json()
 
         if path:
-            path = Path(path).resolve()
+            path = Path(path).absolute()
         else:
             path = self.bnk_dir
 
