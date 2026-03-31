@@ -56,7 +56,7 @@ class Soundbank:
         return cls(bnk_path, bnk_json, bnk_id, hirc)
 
     @classmethod
-    def create_empty_soundbank(path: Path | str, name: str) -> "Soundbank":
+    def create_empty_soundbank(cls, path: Path | str, name: str) -> "Soundbank":
         if not path.is_dir():
             raise ValueError(f"{path} is not a directory")
 
