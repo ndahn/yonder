@@ -780,7 +780,7 @@ def _create_attributes_sound(
     if node.source_type == "Embedded":
         path = node.get_source_path(bnk)
     else:
-        path = get_sound_path(bnk, node.source_id)
+        path = get_sound_path(bnk, node.source_info)
 
     with dpg.group():
         add_wav_player(path, on_file_changed=on_filepath_selected)
