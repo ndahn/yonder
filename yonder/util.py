@@ -1,6 +1,7 @@
 from typing import Any, Callable, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
+import os
 import re
 from pathlib import Path
 from dataclasses import dataclass
@@ -41,7 +42,9 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:
-    subprocess.check_output([str(bnk2json_exe), str(bnk_path)])
+    env = os.environ.copy()
+    env["RUST_BACKTRACE"] = 1
+    subprocess.check_output([str(bnk2json_exe), str(bnk_path)], env=env)
 
     return bnk_path.parent / bnk_path.stem / "soundbank.json"
 
@@ -50,7 +53,9 @@ def repack_soundbank(bnk2json_exe: Path, bnk_dir: Path) -> Path:
     if bnk_dir.name == "sounbank.json":
         bnk_dir = bnk_dir.parent
 
-    subprocess.check_output([str(bnk2json_exe), str(bnk_dir)])
+    env = os.environ.copy()
+    env["RUST_BACKTRACE"] = 1
+    subprocess.check_output([str(bnk2json_exe), str(bnk_dir)], env=env)
 
     # Rename the backup and new soundbank to make things a little easier for the user
     old_file = bnk_dir.parent / (bnk_dir.stem + ".bnk")
