@@ -42,10 +42,10 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:
-    env = os.environ.copy()
-    env["RUST_BACKTRACE"] = 1
-    subprocess.check_output([str(bnk2json_exe), str(bnk_path)], env=env)
-
+    # NOTE in a compiled application (pyinstaller), check_output
+    # will not work anymore after importing sounddevice...
+    # See https://github.com/spatialaudio/python-sounddevice/issues/461
+    subprocess.check_call([str(bnk2json_exe), str(bnk_path)])
     return bnk_path.parent / bnk_path.stem / "soundbank.json"
 
 
@@ -53,9 +53,7 @@ def repack_soundbank(bnk2json_exe: Path, bnk_dir: Path) -> Path:
     if bnk_dir.name == "sounbank.json":
         bnk_dir = bnk_dir.parent
 
-    env = os.environ.copy()
-    env["RUST_BACKTRACE"] = 1
-    subprocess.check_output([str(bnk2json_exe), str(bnk_dir)], env=env)
+    subprocess.check_call([str(bnk2json_exe), str(bnk_dir)])
 
     # Rename the backup and new soundbank to make things a little easier for the user
     old_file = bnk_dir.parent / (bnk_dir.stem + ".bnk")

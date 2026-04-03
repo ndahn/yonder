@@ -229,7 +229,7 @@ def wav2wem(
     wproj_path = wav_dir / "yonder_wav2wem/yonder_wav2wem.wproj"
     if not wproj_path.is_file():
         try:
-            subprocess.check_output(
+            subprocess.check_call(
                 [str(wwise_exe), "create-new-project", str(wproj_path), "--quiet"]
             )
         except subprocess.CalledProcessError as e:
@@ -238,7 +238,7 @@ def wav2wem(
 
     # Convert the wav files by passing the wsources list to wwise
     try:
-        subprocess.check_output(
+        subprocess.check_call(
             [
                 str(wwise_exe),
                 "convert-external-source",
@@ -290,7 +290,7 @@ def wem2wav(
                 continue
 
             target = out_dir / (wem.stem + ".wav")
-            subprocess.check_output(
+            subprocess.check_call(
                 [
                     str(vgmstream_exe),
                     "-i",  # ignore looping
