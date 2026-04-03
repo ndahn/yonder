@@ -29,8 +29,15 @@ class SoundType(StrEnum):
 class ActionType(IntFlag):
     PLAY = 1027
     STOP = 259
+    EVENT = 8451
+    SET_STATE = 4612
     MUTE_BUS = 1538
+    SET_VOLUME_M = 2562
+    RESET_VOLUME_M = 2818
+    UNMUTE_BUS_M = 1794
+    RESET_BUS_VOLUME_ALL = 3332
     RESET_BUS_VOLUME = 2818
+    RESET_BUS_VOLUME_M = 3330
     RESET_BUS_LPFM = 3842
 
 

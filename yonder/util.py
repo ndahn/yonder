@@ -1,4 +1,4 @@
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, Iterable, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
 import os
@@ -181,6 +181,14 @@ def deepmerge(base: dict, updates: dict, delete_missing: bool = False) -> None:
 
 
 class PathDict(MutableMapping):
+    @classmethod
+    def from_paths(cls, paths: Iterable[tuple[str, Any]]) -> "PathDict":
+        d = PathDict({})
+        for key, val in paths:
+            d[key] = val
+
+        return d
+
     def __init__(self, d: dict):
         self._d = d
 
