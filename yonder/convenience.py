@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from yonder import Soundbank, Node
 from yonder.datatypes import GraphPoint
-from yonder.node_types import (
+from yonder.types import (
     Event,
     Action,
     RandomSequenceContainer,

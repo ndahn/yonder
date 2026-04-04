@@ -2,7 +2,7 @@ from typing import Any, Callable, get_args
 from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
-from yonder.node_types import MusicSwitchContainer, MusicRandomSequenceContainer
+from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
 from yonder.enums import CurveType, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style

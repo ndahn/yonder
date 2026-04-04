@@ -28,7 +28,7 @@ class Node:
     @classmethod
     def wrap(cls, node_dict: dict, *args, **kwargs):
         # Make sure the subclasses have been loaded
-        import yonder.node_types
+        import yonder.types
 
         def all_subclasses(c: type) -> dict[str, type]:
             result = {}

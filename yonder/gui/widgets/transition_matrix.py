@@ -3,7 +3,7 @@ from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.node_types import MusicSwitchContainer, MusicRandomSequenceContainer
+from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
 from yonder.gui import style
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 

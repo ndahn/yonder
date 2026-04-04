@@ -3,7 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.node_types import Event
+from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
 from yonder.util import repack_soundbank

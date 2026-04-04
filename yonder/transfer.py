@@ -1,6 +1,6 @@
 from yonder import Soundbank, Node
-from yonder.node_types import Event, Action, Sound, MusicTrack
-from yonder.node_types.mixins import ContainerMixin
+from yonder.types import Event, Action, Sound, MusicTrack
+from yonder.types.mixins import ContainerMixin
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
 

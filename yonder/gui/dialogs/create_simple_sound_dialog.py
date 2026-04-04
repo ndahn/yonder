@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
 from yonder.convenience import create_simple_sound
-from yonder.node_types import Event, ActorMixer
+from yonder.types import Event, ActorMixer
 from yonder.enums import property_defaults
 from yonder.util import logger
 from yonder.wem import wav2wem

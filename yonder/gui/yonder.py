@@ -10,7 +10,7 @@ import networkx as nx
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
-from yonder.node_types import (
+from yonder.types import (
     Action,
     Event,
     WwiseNode,

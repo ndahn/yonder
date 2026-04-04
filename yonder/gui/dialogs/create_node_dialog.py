@@ -2,7 +2,7 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.node_types import WwiseNode
+from yonder.types import WwiseNode
 from yonder.util import get_function_spec, logger
 from yonder.gui import style
 from yonder.gui.widgets import add_generic_widget

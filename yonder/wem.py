@@ -11,7 +11,7 @@ from yonder.util import logger
 
 
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
-    from yonder.node_types import WwiseNode
+    from yonder.types import WwiseNode
     
     for wem in wems:
         if not wem.name.endswith(".wem"):

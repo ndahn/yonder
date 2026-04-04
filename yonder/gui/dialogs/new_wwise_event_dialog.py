@@ -3,7 +3,7 @@ import re
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
-from yonder.node_types import Event, Action
+from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
 from yonder.gui.widgets import add_generic_widget

@@ -2,7 +2,7 @@ from typing import Any, Callable, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
-from yonder.node_types import MusicSwitchContainer
+from yonder.types import MusicSwitchContainer
 from yonder.hash import lookup_name, calc_hash
 from yonder.gui import style
 from yonder.gui.widgets import add_node_widget

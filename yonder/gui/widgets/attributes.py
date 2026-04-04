@@ -7,7 +7,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
 from yonder.hash import lookup_name
-from yonder.node_types import (
+from yonder.types import (
     Action,
     ActorMixer,
     Attenuation,

@@ -3,7 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Node
-from yonder.node_types import MusicSwitchContainer
+from yonder.types import MusicSwitchContainer
 from yonder.hash import calc_hash, lookup_name
 from yonder.util import logger
 from yonder.convenience import create_boss_bgm
