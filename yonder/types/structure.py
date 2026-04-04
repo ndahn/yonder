@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Union, ClassVar, Generic, TypeVar
-from dataclasses import dataclass, field, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass, replace
+import json
 
 from .rewwise_base_types import (
     IAkPlugin,
@@ -205,10 +206,7 @@ class HIRCNode(Generic[_BodyType]):
         self._id.name = new_name
 
     def get_name(self, default: str = None) -> str:
-        name = self._id.name
-        if name:
-            return name
-        return default
+        return self._id.get_name(default)
 
     @property
     def type_id(self) -> int:
@@ -217,6 +215,31 @@ class HIRCNode(Generic[_BodyType]):
     @property
     def type_name(self) -> str:
         return type(self.body).__name__
+
+    def json(self) -> str:
+        return json.dumps(self.to_dict())
+
+    def apply(self, data: dict) -> str:
+        def apply_dict(obj, data: dict):
+            for f in fields(obj):
+                if f.name not in data:
+                    continue
+
+                value = data[f.name]
+                current = getattr(obj, f.name)
+
+                if is_dataclass(current):
+                    apply_dict(current, value)
+                elif isinstance(current, dict):
+                    current.clear()
+                    current.update(value)
+                elif isinstance(current, list):
+                    current.clear()
+                    current.extend(value)
+                else:
+                    setattr(obj, f.name, value)
+
+        return apply_dict(self.body, data)
 
     def to_dict(self) -> dict:
         ser = serialize(self)
@@ -235,6 +258,30 @@ class HIRCNode(Generic[_BodyType]):
     def from_dict(cls, data: dict) -> "HIRCNode":
         data["_id"] = data.pop("id")
         return deserialize(cls, data)
+
+    def glob(self, pattern: str) -> list:
+        segments = pattern.split("/")
+
+        def match(node: dataclass, segs: list[str]):
+            if not segs:
+                yield node
+                return
+            
+            seg, rest = segs[0], segs[1:]
+            if not is_dataclass(node):
+                return
+
+            if seg == "**":
+                yield from match(node, rest)
+                for field in fields(node):
+                    yield from match(getattr(node, field.name), segs)
+            elif seg == "*":
+                for field in fields(node):
+                    yield from match(getattr(node, field.name), rest)
+            elif hasattr(node, seg):
+                yield from match(getattr(node, seg), rest)
+
+        return list(match(self.body, segments))
 
     def get_references(self) -> list[tuple[str, int]]:
         # For convenience

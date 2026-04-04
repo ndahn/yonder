@@ -1,3 +1,4 @@
+from typing import Any
 from yonder.hash import calc_hash, lookup_name
 
 
@@ -50,6 +51,17 @@ class ObjectId:
     @name.setter
     def name(self, value: str) -> None:
         self.set(value)
+
+    def get_name(self, default: Any = None) -> str:
+        if self._name:
+            return self._name
+
+        name = lookup_name(self._hash)
+        if name:
+            self._name = name
+            return name
+
+        return default
 
     def __hash__(self) -> int:
         return self._hash

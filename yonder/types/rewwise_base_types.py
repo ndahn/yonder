@@ -359,7 +359,7 @@ class RTPC:
     rtpc_type: RtpcType = RtpcType.GameParameter
     rtpc_accum: RtpcAccum = RtpcAccum.Nothing
     param_id: int = 0
-    curve_id: int = 0
+    curve_id: int = 0  # TODO seems to be a hash?
     curve_scaling: CurveScaling = CurveScaling.Nothing
     graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
