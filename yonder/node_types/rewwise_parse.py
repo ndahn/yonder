@@ -98,8 +98,3 @@ def deserialize(target_type: Type, data: dict) -> Any:
         kwargs[key] = _parse_value(field_type, value)
 
     return target_type(**kwargs)
-
-
-# TODO needs proper testing
-# TODO move node types into separate modules?
-# TODO add helper functions where useful

@@ -3,7 +3,7 @@ from typing import Union, ClassVar
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 
-from .rewwise_enums import AkValueMeaning
+from .rewwise_enums import ValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
 from .structure import _HIRCNodeBody
 from .rewwise_parse import serialize, deserialize
@@ -27,7 +27,7 @@ class Action(_HIRCNodeBody):
         is_bus: bool = False,
         **params_kwargs,
     ):
-        action_name = ActionParamId(action_type).name
+        action_name = ActionTypeId(action_type).name
         if action_name == "Unk2102":
             raise ValueError(f"Action type {action_type} (Unk2102) is not supported")
 
@@ -51,7 +51,7 @@ class Action(_HIRCNodeBody):
 @dataclass
 class _ActionParams:
     def to_dict(self) -> dict:
-        action_name = ActionParamId(self.action_type).name
+        action_name = ActionTypeId(self.action_type).name
         return {action_name: serialize(self)}
 
     @classmethod
@@ -95,7 +95,7 @@ class ActionSetSwitch(_ActionParams):
 @dataclass
 class ActionSetGameParameterParams:
     bypass_transition: int = 0
-    value_meaning: AkValueMeaning = AkValueMeaning.Default
+    value_meaning: ValueMeaning = ValueMeaning.Default
     randomizer_modifier: RandomizerModifier = field(default_factory=RandomizerModifier)
 
 
@@ -123,7 +123,7 @@ class ActionResume(_ActionParams):
 
 @dataclass
 class ActionSetAkPropParams:
-    value_meaning: AkValueMeaning = AkValueMeaning.Default
+    value_meaning: ValueMeaning = ValueMeaning.Default
     randomizer_modifier: RandomizerModifier = field(default_factory=RandomizerModifier)
 
 
@@ -192,7 +192,7 @@ ActionParams = Union[
 ]
 
 
-class ActionParamId(IntEnum):
+class ActionTypeId(IntEnum):
     None_ = 0x0000
     SetState = 0x1204
     BypassFXM = 0x1A02

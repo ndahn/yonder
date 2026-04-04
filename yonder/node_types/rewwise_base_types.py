@@ -3,19 +3,18 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 from .rewwise_enums import (
-    AkCurveInterpolation,
-    AkPropID,
-    AkParameterID,
-    AkPathMode,
-    Ak3DSpatializationMode,
-    AkSpeakerPanningType,
-    Ak3DPositionType,
-    AkVirtualQueueBehavior,
-    AkBelowThresholdBehavior,
-    AkSyncType,
-    AkSyncTypeU8,
-    AkRtpcAccum,
-    AkRtpcType,
+    CurveInterpolation,
+    PropID,
+    ParameterID,
+    PathMode,
+    ThreeDSpatializationMode,
+    SpeakerPanningType,
+    ThreeDPositionType,
+    VirtualQueueBehavior,
+    BelowThresholdBehavior,
+    SyncType,
+    RtpcAccum,
+    RtpcType,
     CurveScaling,
     SourceType,
     PluginId,
@@ -41,7 +40,7 @@ class DecisionTreeNode:
 @dataclass
 class MusicFade:
     transition_time: int = 0
-    curve: AkCurveInterpolation = AkCurveInterpolation.Constant
+    curve: CurveInterpolation = CurveInterpolation.Constant
     offset: int = 0
 
 
@@ -57,9 +56,9 @@ class MusicTransitionObject:
 @dataclass
 class MusicTransSrcRule:
     transition_time: int = 0
-    fade_curve: AkCurveInterpolation = AkCurveInterpolation.Constant
+    fade_curve: CurveInterpolation = CurveInterpolation.Constant
     fade_offet: int = 0
-    sync_type: AkSyncType = AkSyncType.Immediate
+    sync_type: SyncType = SyncType.Immediate
     clue_filter_hash: int = 0
     play_post_exit: int = 0
 
@@ -67,7 +66,7 @@ class MusicTransSrcRule:
 @dataclass
 class MusicTransDstRule:
     transition_time: int = 0
-    fade_curve: AkCurveInterpolation = AkCurveInterpolation.Constant
+    fade_curve: CurveInterpolation = CurveInterpolation.Constant
     fade_offet: int = 0
     clue_filter_hash: int = 0
     jump_to_id: int = 0
@@ -83,9 +82,7 @@ class MusicTransitionRule:
     source_ids: list[int] = field(default_factory=list)
     destination_transition_rule_count: int = 0
     destination_ids: list[int] = field(default_factory=list)
-    source_transition_rule: MusicTransSrcRule = field(
-        default_factory=MusicTransSrcRule
-    )
+    source_transition_rule: MusicTransSrcRule = field(default_factory=MusicTransSrcRule)
     destination_transition_rule: MusicTransDstRule = field(
         default_factory=MusicTransDstRule
     )
@@ -97,7 +94,7 @@ class MusicTransitionRule:
 class RTPCGraphPoint:
     from_: float
     to: float
-    interpolation: AkCurveInterpolation = AkCurveInterpolation.Linear
+    interpolation: CurveInterpolation = CurveInterpolation.Linear
 
 
 @dataclass
@@ -222,9 +219,9 @@ class Ak3DAutomationParams:
 @dataclass
 class PositioningParams:
     unk1: bool = False
-    three_dimensional_position_type: Ak3DPositionType = Ak3DPositionType.Emitter
-    speaker_panning_type: AkSpeakerPanningType = (
-        AkSpeakerPanningType.DirectSpeakerAssignment
+    three_dimensional_position_type: ThreeDPositionType = ThreeDPositionType.Emitter
+    speaker_panning_type: SpeakerPanningType = (
+        SpeakerPanningType.DirectSpeakerAssignment
     )
     listener_relative_routing: bool = False
     override_parent: bool = False
@@ -233,10 +230,10 @@ class PositioningParams:
     hold_listener_orientation: bool = False
     hold_emitter_position_and_orientation: bool = False
     enable_attenuation: bool = False
-    three_dimensional_spatialization_mode: Ak3DSpatializationMode = (
-        Ak3DSpatializationMode.Nothing
+    three_dimensional_spatialization_mode: ThreeDSpatializationMode = (
+        ThreeDSpatializationMode.Nothing
     )
-    path_mode: AkPathMode = AkPathMode.StepSequence
+    path_mode: PathMode = PathMode.StepSequence
     transition_time: int = 0
     vertex_count: int = 0
     vertices: list[PathVertex] = field(default_factory=list)
@@ -273,12 +270,12 @@ class AdvSettingsParams:
     unk4: bool = False
     use_virtual_behavior: bool = False
     kill_newest: bool = False
-    virtual_queue_behavior: AkVirtualQueueBehavior = (
-        AkVirtualQueueBehavior.PlayFromBeginning
+    virtual_queue_behavior: VirtualQueueBehavior = (
+        VirtualQueueBehavior.PlayFromBeginning
     )
     max_instance_count: int = 0
-    below_threshold_behavior: AkBelowThresholdBehavior = (
-        AkBelowThresholdBehavior.ContinueToPlay
+    below_threshold_behavior: BelowThresholdBehavior = (
+        BelowThresholdBehavior.ContinueToPlay
     )
     unk5: bool = False
     unk6: bool = False
@@ -298,15 +295,15 @@ class AkState:
 
 @dataclass
 class AkStatePropertyInfo:
-    property: AkPropID
-    accum_type: AkRtpcAccum = AkRtpcAccum.Nothing
+    property: PropID
+    accum_type: RtpcAccum = RtpcAccum.Nothing
     in_db: int = 0
 
 
 @dataclass
 class AkStateGroupChunk:
     state_group_id: int
-    sync_type: AkSyncTypeU8 = AkSyncTypeU8.Immediate
+    sync_type: SyncType = SyncType.Immediate
     state_count: int = 0
     states: list[AkState] = field(default_factory=list)
 
@@ -322,8 +319,8 @@ class StateChunk:
 @dataclass
 class RTPC:
     id: int
-    rtpc_type: AkRtpcType = AkRtpcType.GameParameter
-    rtpc_accum: AkRtpcAccum = AkRtpcAccum.Nothing
+    rtpc_type: RtpcType = RtpcType.GameParameter
+    rtpc_accum: RtpcAccum = RtpcAccum.Nothing
     param_id: int = 0
     curve_id: int = 0
     curve_scaling: CurveScaling = CurveScaling.Nothing
@@ -347,7 +344,7 @@ class NodeInitialFxParams:
 
 @dataclass
 class PropBundle:
-    prop_id: AkPropID
+    prop_id: PropID
     value: float = 0.0
 
 
@@ -362,7 +359,7 @@ class NodeInitialParams:
 @dataclass
 class PropBundleByte:
     count: int = 0
-    types: list[AkPropID] = field(default_factory=list)
+    types: list[PropID] = field(default_factory=list)
     values: list[float] = field(default_factory=list)
 
 
@@ -459,8 +456,8 @@ class FxBaseInitialValues:
 
 @dataclass
 class PluginPropertyValue:
-    property: AkParameterID
-    rtpc_accum: AkRtpcAccum = AkRtpcAccum.Nothing
+    property: ParameterID
+    rtpc_accum: RtpcAccum = RtpcAccum.Nothing
     value: float = 0.0
 
 
@@ -470,8 +467,8 @@ class DuckInfo:
     duck_volume: float = 0.0
     fade_out_time: int = 0
     fade_in_time: int = 0
-    fade_curve: AkCurveInterpolation = AkCurveInterpolation.Linear
-    target_prop: AkPropID = AkPropID.Volume
+    fade_curve: CurveInterpolation = CurveInterpolation.Linear
+    target_prop: PropID = PropID.Volume
 
 
 @dataclass
@@ -498,7 +495,7 @@ class MeterInfo:
 class Stinger:
     trigger_id: int
     segment_id: int
-    sync_play_at: AkSyncType = AkSyncType.Immediate
+    sync_play_at: SyncType = SyncType.Immediate
     cue_filter_hash: int = 0
     dont_repeat_time: int = 0
     segment_look_head_count: int = 0

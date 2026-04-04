@@ -10,7 +10,7 @@ from yonder.util import logger
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 if TYPE_CHECKING:
-    from yonder.soundbank import Soundbank
+    from yonder.node_types.soundbank import Soundbank
 
 
 @dataclass

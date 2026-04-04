@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class AkCurveInterpolation(IntEnum):
+class CurveInterpolation(IntEnum):
     Log3 = 0x0
     Sine = 0x1
     Log1 = 0x2
@@ -14,7 +14,7 @@ class AkCurveInterpolation(IntEnum):
     Constant = 0x9
 
 
-class AkPropID(IntEnum):
+class PropID(IntEnum):
     Volume = 0x00
     LFE = 0x01
     Pitch = 0x02
@@ -88,7 +88,7 @@ class AkPropID(IntEnum):
     ReflectionBusVolume = 0x48
 
 
-class AkParameterID(IntEnum):
+class ParameterID(IntEnum):
     Volume = 0x0
     LFE = 0x1
     Pitch = 0x2
@@ -157,13 +157,13 @@ class AkParameterID(IntEnum):
     Custom5 = 0x41
 
 
-class AkValueMeaning(IntEnum):
+class ValueMeaning(IntEnum):
     Default = 0x0
     Independent = 0x1
     Offset = 0x2
 
 
-class AkPathMode(IntEnum):
+class PathMode(IntEnum):
     StepSequence = 0x0
     StepRandom = 0x1
     ContinuousSequence = 0x2
@@ -172,38 +172,38 @@ class AkPathMode(IntEnum):
     StepRandomPickNewPath = 0x5
 
 
-class Ak3DSpatializationMode(IntEnum):
+class ThreeDSpatializationMode(IntEnum):
     Nothing = 0x0
     PositionOnly = 0x1
     PositionAndOrientation = 0x2
 
 
-class AkSpeakerPanningType(IntEnum):
+class SpeakerPanningType(IntEnum):
     DirectSpeakerAssignment = 0x0
     BalanceFadeHeight = 0x1
     SteeringPanner = 0x2
 
 
-class Ak3DPositionType(IntEnum):
+class ThreeDPositionType(IntEnum):
     Emitter = 0x0
     EmitterWithAutomation = 0x1
     ListenerWithAutomation = 0x2
 
 
-class AkVirtualQueueBehavior(IntEnum):
+class VirtualQueueBehavior(IntEnum):
     PlayFromBeginning = 0x0
     PlayFromElapsedTime = 0x1
     Resume = 0x2
 
 
-class AkBelowThresholdBehavior(IntEnum):
+class BelowThresholdBehavior(IntEnum):
     ContinueToPlay = 0x0
     KillVoice = 0x1
     SetAsVirtualVoice = 0x2
     KillIfOneShotElseVirtual = 0x3
 
 
-class AkSyncType(IntEnum):
+class SyncType(IntEnum):
     Immediate = 0x0
     NextGrid = 0x1
     NextBar = 0x2
@@ -216,20 +216,7 @@ class AkSyncType(IntEnum):
     LastExitPosition = 0x9
 
 
-class AkSyncTypeU8(IntEnum):
-    Immediate = 0x0
-    NextGrid = 0x1
-    NextBar = 0x2
-    NextBeat = 0x3
-    NextMarket = 0x4
-    NextUserMarker = 0x5
-    EntryMarker = 0x6
-    ExitMarker = 0x7
-    ExitNever = 0x8
-    LastExitPosition = 0x9
-
-
-class AkRtpcAccum(IntEnum):
+class RtpcAccum(IntEnum):
     Nothing = 0x0
     Exclusive = 0x1
     Additive = 0x2
@@ -239,7 +226,7 @@ class AkRtpcAccum(IntEnum):
     Filter = 0x6
 
 
-class AkRtpcType(IntEnum):
+class RtpcType(IntEnum):
     GameParameter = 0x0
     MIDIParameter = 0x1
     Modulator = 0x2

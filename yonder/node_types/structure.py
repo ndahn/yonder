@@ -228,11 +228,11 @@ SectionBody = Union[
 ]
 
 
-NODE_TYPE_MAP = {cls.body_type: cls for cls in _HIRCNodeBody.__subclasses__()}
-
-
 @dataclass
 class Section:
     magic: list[int]
     size: int = 0
     body: SectionBody
+
+
+NODE_TYPE_MAP = {cls.body_type: cls for cls in _HIRCNodeBody.__subclasses__()}

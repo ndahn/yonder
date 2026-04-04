@@ -23,7 +23,7 @@ class ConversionTable:
 
 
 @dataclass
-class Attentuation(_HIRCNodeBody):
+class Attenuation(_HIRCNodeBody):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0
     cone_params: ConeParams = field(default_factory=ConeParams)

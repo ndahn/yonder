@@ -3,7 +3,7 @@ from typing import ClassVar
 
 from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children, RTPCGraphPoint, InitialRTPC
-from .rewwise_enums import AkRtpcType
+from .rewwise_enums import RtpcType
 
 
 @dataclass
@@ -18,7 +18,7 @@ class Layer:
     layer_id: int
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     rtpc_id: int = 0
-    rtpc_type: AkRtpcType = AkRtpcType.GameParameter
+    rtpc_type: RtpcType = RtpcType.GameParameter
     associated_childen_count: int = 0
     associated_children: list[AssociatedChildData] = field(default_factory=list)
 
