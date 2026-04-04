@@ -7,6 +7,17 @@ class ObjectId:
         self._name = None
         self.set(initial_value)
 
+    def to_dict(self) -> dict:
+        if self._name:
+            return {"String": self._name}
+        return {"Hash": self._hash}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ObjectId":
+        if "String" in data:
+            return cls(data["String"])
+        return cls(data["Hash"])
+
     def set(self, value: int | str) -> None:
         if isinstance(value, int):
             self._hash = value

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import ClassVar, Optional, Union, get_args
+from typing import Any, ClassVar, Optional, Union, get_args
 from dataclasses import dataclass, field
 
 from .rewwise_base_types import (
@@ -26,12 +26,55 @@ from .rewwise_base_types import (
     AkMusicRanSeqPlaylistItem,
     AkLayer,
 )
-from .rewwise_action_params import ActionParams
 from .rewwise_enums import AkGroupType, AkDecisionTreeMode
+from .rewwise_parse import serialize, deserialize
+from .object_id import ObjectId
+
+
+# rewwise inserts the class name of the node type into the hierarchy
+# (e.g. body: {Sound: ...})
+@dataclass
+class _HIRCNodeBody:
+    def to_dict(self) -> dict:
+        return {type(self).__name__: serialize(self)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "_HIRCNodeBody":
+        for sub in cls.__subclasses__():
+            if sub.__name__ in data:
+                return deserialize(sub, data[sub.__name__])
+
+        raise ValueError(f"Not a valid _HIRCNodeBody: {data}")
 
 
 @dataclass
-class AkStateObj:
+class HIRCNode:
+    id: ObjectId
+    body: _HIRCNodeBody
+
+    @property
+    def type_id(self) -> int:
+        return type(self.body).body_type
+
+    @property
+    def type_name(self) -> str:
+        return type(self.body).__name__
+
+    def to_dict(self) -> dict:
+        ser = serialize(self)
+        ser.update(
+            {
+                # These two are just here to make rewwise happy
+                "body_type": self.type_id,
+                "size": 0,
+            }
+        )
+        return ser
+
+
+
+@dataclass
+class State(_HIRCNodeBody):
     body_type: ClassVar[int] = 1
     entry_count: int = 0
     parameters: list[int] = field(default_factory=list)
@@ -39,32 +82,32 @@ class AkStateObj:
 
 
 @dataclass
-class Sound:
+class Sound(_HIRCNodeBody):
     body_type: ClassVar[int] = 2
-    bank_source_data: AkBankSourceData
+    bank_source_data: AkBankSourceData = field(default_factory=AkBankSourceData)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
 
 
 @dataclass
-class Action:
+class Action(_HIRCNodeBody):
     body_type: ClassVar[int] = 3
     action_type: int
     external_id: int
     is_bus: int = 0
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
-    params: ActionParams
+    params: _ActionParams
 
 
 @dataclass
-class Event:
+class Event(_HIRCNodeBody):
     body_type: ClassVar[int] = 4
     action_count: int = 0
     actions: list[int] = field(default_factory=list)
 
 
 @dataclass
-class RandomSequenceContainer:
+class RandomSequenceContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     loop_count: int = 0
@@ -83,7 +126,7 @@ class RandomSequenceContainer:
 
 
 @dataclass
-class SwitchContainer:
+class SwitchContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     group_type: int = 0
@@ -98,20 +141,20 @@ class SwitchContainer:
 
 
 @dataclass
-class ActorMixer:
+class ActorMixer(_HIRCNodeBody):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
 
 
 @dataclass
-class Bus:
+class Bus(_HIRCNodeBody):
     body_type: ClassVar[int] = 8
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)
 
 
 @dataclass
-class LayerContainer:
+class LayerContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -121,7 +164,7 @@ class LayerContainer:
 
 
 @dataclass
-class Attentuation:
+class Attentuation(_HIRCNodeBody):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0
     cone_params: Optional[ConeParams] = None
@@ -132,7 +175,7 @@ class Attentuation:
 
 
 @dataclass
-class MusicRandomSequenceContainer:
+class MusicRandomSequenceContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 13
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
@@ -142,7 +185,7 @@ class MusicRandomSequenceContainer:
 
 
 @dataclass
-class MusicSegment:
+class MusicSegment(_HIRCNodeBody):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
@@ -151,7 +194,7 @@ class MusicSegment:
 
 
 @dataclass
-class MusicTrack:
+class MusicTrack(_HIRCNodeBody):
     body_type: ClassVar[int] = 11
     flags: int = 0
     source_count: int = 0
@@ -167,7 +210,7 @@ class MusicTrack:
 
 
 @dataclass
-class MusicSwitchContainer:
+class MusicSwitchContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 12
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
@@ -186,7 +229,7 @@ class MusicSwitchContainer:
 
 
 @dataclass
-class DialogueEvent:
+class DialogueEvent(_HIRCNodeBody):
     body_type: ClassVar[int] = 15
     probability: int = 100
     tree_depth: int = 0
@@ -204,7 +247,7 @@ class DialogueEvent:
 
 
 @dataclass
-class FxShareSet:
+class FxShareSet(_HIRCNodeBody):
     body_type: ClassVar[int] = 16
     fx_base_initial_values: FxBaseInitialValues = field(
         default_factory=lambda: FxBaseInitialValues(fx_id=0)
@@ -212,7 +255,7 @@ class FxShareSet:
 
 
 @dataclass
-class FxCustom:
+class FxCustom(_HIRCNodeBody):
     body_type: ClassVar[int] = 17
     fx_base_initial_values: FxBaseInitialValues = field(
         default_factory=lambda: FxBaseInitialValues(fx_id=0)
@@ -220,13 +263,13 @@ class FxCustom:
 
 
 @dataclass
-class AuxBus:
+class AuxBus(_HIRCNodeBody):
     body_type: ClassVar[int] = 18
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)
 
 
 @dataclass
-class AudioDevice:
+class AudioDevice(_HIRCNodeBody):
     body_type: ClassVar[int] = 21
     fx_base_initial_values: FxBaseInitialValues = field(
         default_factory=lambda: FxBaseInitialValues(fx_id=0)
@@ -234,7 +277,7 @@ class AudioDevice:
 
 
 @dataclass
-class TimeModulator:
+class TimeModulator(_HIRCNodeBody):
     body_type: ClassVar[int] = 22
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
@@ -242,13 +285,14 @@ class TimeModulator:
 
 
 @dataclass
-class TodoObject:
+class TodoObject(_HIRCNodeBody):
     body_type: ClassVar[int] = 0
     data: list[int] = field(default_factory=list)
 
 
+# AkNodeType = Union[*_HIRCNodeBody.__subclasses__()]
 AkNodeType = Union[
-    AkStateObj,
+    State,
     Sound,
     Action,
     Event,

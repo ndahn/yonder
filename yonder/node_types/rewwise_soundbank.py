@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Union
 from dataclasses import dataclass, field
 
-from .object_id import ObjectId
 from .rewwise_base_types import (
     IAkPlugin,
     ConversionTable,
@@ -12,7 +11,7 @@ from .rewwise_base_types import (
     AkAcousticTexture,
     AkStateTransition,
 )
-from .rewwise_nodes import AkNodeType as HIRCObjectBody
+from .rewwise_nodes import HIRCNode
 
 
 @dataclass
@@ -106,20 +105,9 @@ class STMGSectionStateGroup:
 
 
 @dataclass
-class HIRCObject:
-    id: ObjectId
-    body: HIRCObjectBody
-    size: int = 0
-
-    @property
-    def body_type(self) -> int:
-        return type(self.body).body_type
-
-
-@dataclass
 class HIRCSection:
     object_count: int = 0
-    objects: list[HIRCObject] = field(default_factory=list)
+    objects: list[HIRCNode] = field(default_factory=list)
 
 
 SectionBody = Union[
