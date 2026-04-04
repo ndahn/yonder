@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import PropBundle, PropRangedModifiers, InitialRTPC
 
 

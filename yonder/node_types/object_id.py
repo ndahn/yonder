@@ -18,10 +18,16 @@ class ObjectId:
             return cls(data["String"])
         return cls(data["Hash"])
 
+    def validate(self) -> None:
+        if self._name and calc_hash(self._name) != self._hash:
+            raise ValueError(
+                f"Object hash and name out of sync ({self._hash} vs. ({self._name}))"
+            )
+
     def set(self, value: int | str) -> None:
         if isinstance(value, int):
             self._hash = value
-            self._name = lookup_name(value)
+            self._name = lookup_name(value, None)
         else:
             self._hash = calc_hash(value)
             self._name = value

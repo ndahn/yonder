@@ -479,6 +479,10 @@ class Children:
     count: int = 0
     items: list[int] = field(default_factory=list)
 
+    def validate(self) -> None:
+        self.items = sorted(set(self.items))
+        self.count = len(self.items)
+
 
 @dataclass
 class MeterInfo:

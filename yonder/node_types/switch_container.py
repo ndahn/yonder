@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children
 
 
@@ -48,3 +48,7 @@ class SwitchContainer(_HIRCNodeBody):
     switch_groups: list[SwitchPackage] = field(default_factory=list)
     switch_param_count: int = 0
     switch_params: list[SwitchNodeParams] = field(default_factory=list)
+
+    @property
+    def parent(self) -> int:
+        return self.node_base_params.direct_parent_id

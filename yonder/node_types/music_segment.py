@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import MusicNodeParams
 
 
@@ -20,3 +20,7 @@ class MusicSegment(_HIRCNodeBody):
     duration: float = 0.0
     marker_count: int = 0
     markers: list[MusicMarkerWwise] = field(default_factory=list)
+
+    @property
+    def parent(self) -> int:
+        return self.music_node_params.node_base_params.direct_parent_id

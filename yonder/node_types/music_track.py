@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, BankSourceData, RTPCGraphPoint
 from .rewwise_enums import ClipAutomationType
 
@@ -39,3 +39,7 @@ class MusicTrack(_HIRCNodeBody):
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     track_type: int = 0
     look_ahead_time: int = 0
+
+    @property
+    def parent(self) -> int:
+        return self.node_base_params.direct_parent_id

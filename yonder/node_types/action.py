@@ -5,7 +5,7 @@ from enum import Enum, IntEnum
 
 from .rewwise_enums import AkValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_parse import serialize, deserialize
 
 
@@ -21,19 +21,20 @@ class Action(_HIRCNodeBody):
 
     def __init__(
         self,
-        action_type: ActionParamTypes,
+
+        action_type: SupportedActionType,
         external_id: int,
         is_bus: bool = False,
         **params_kwargs,
     ):
-        action_name = ActionParamIds(action_type).name
+        action_name = ActionParamId(action_type).name
         if action_name == "Unk2102":
             raise ValueError(f"Action type {action_type} (Unk2102) is not supported")
 
         if action_name == "PlayEvent":
             params = "PlayEvent"
         else:
-            param_cls = ActionParamTypes[action_name].value
+            param_cls = SupportedActionType[action_name].value
             params = param_cls(**params_kwargs)
 
         super().__init__(
@@ -43,17 +44,20 @@ class Action(_HIRCNodeBody):
             params=params,
         )
 
+    @classmethod
+    def new_play_action(cls, nid)
+
 
 @dataclass
 class _ActionParams:
     def to_dict(self) -> dict:
-        action_name = ActionParamIds(self.action_type).name
+        action_name = ActionParamId(self.action_type).name
         return {action_name: serialize(self)}
 
     @classmethod
     def from_dict(cls, data: dict) -> "_ActionParams":
         action_name = next(data.keys())
-        param_cls = ActionParamTypes[action_name].value
+        param_cls = SupportedActionType[action_name].value
         return deserialize(param_cls, data[action_name])
 
 
@@ -163,8 +167,9 @@ class ActionPause(_ActionParams):
 
 @dataclass
 class ActionStopParams:
-    flags1: int = 0
-    flags2: int = 0
+    # NOTE: unknown, usually 4 and 6, sometimes 7 and 6
+    flags1: int = 4
+    flags2: int = 6
 
 
 @dataclass
@@ -187,7 +192,7 @@ ActionParams = Union[
 ]
 
 
-class ActionParamIds(IntEnum):
+class ActionParamId(IntEnum):
     None_ = 0x0000
     SetState = 0x1204
     BypassFXM = 0x1A02
@@ -293,7 +298,8 @@ class ActionParamIds(IntEnum):
     PlayEvent = 0x2103
 
 
-class ActionParamTypes(Enum):
+# NOTE: Includes only the ones we actually support
+class SupportedActionType(Enum):
     SetState = ActionSetSwitch
     SetSwitch = ActionSetSwitch
     Play = ActionPlay

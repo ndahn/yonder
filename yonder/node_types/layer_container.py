@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children, RTPCGraphPoint, InitialRTPC
 from .rewwise_enums import AkRtpcType
 
@@ -31,3 +31,7 @@ class LayerContainer(_HIRCNodeBody):
     layer_count: int = 0
     layers: list[Layer] = field(default_factory=list)
     is_continuous_validation: int = 0
+
+    @property
+    def parent(self) -> int:
+        return self.node_base_params.direct_parent_id

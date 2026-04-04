@@ -1,118 +1,123 @@
+from yonder.node_types.structure import Section, BKHDSection, HIRCSection, HIRCNode
+from yonder.node_types.rewwise_parse import serialize, deserialize
+from yonder.node_types.rewwise_enums import SourceType
+from yonder.node_types.action import SupportedActionType
+
+from yonder.node_types import (
+    Action,
+    Event,
+    LayerContainer,
+    MusicRandomSequenceContainer,
+    MusicSwitchContainer,
+    MusicSegment,
+    MusicTrack,
+    RandomSequenceContainer,
+    Sound,
+    SwitchContainer,
+)
+
+
 from typing import Any, Generator, Iterator
 from pathlib import Path
 from random import randrange
 from collections import deque
 import json
-import copy
 import shutil
 import networkx as nx
 
 from yonder.hash import calc_hash
 from yonder.util import logger, resource_data
-from yonder.enums import SourceType
-from yonder.node import Node
 from yonder.query import query_nodes
 
 
 class Soundbank:
     @classmethod
-    def load(cls, bnk_path: Path | str) -> "Soundbank":
-        """Load a soundbank and return a more manageable representation."""
-        # Resolve the path to the unpacked soundbank
-        bnk_path: Path = Path(bnk_path).absolute()
-        if bnk_path.name == "soundbank.json":
-            json_path = bnk_path
-            bnk_path = bnk_path.parent
-        else:
-            if bnk_path.name.endswith(".bnk"):
-                bnk_path = bnk_path.parent / bnk_path.stem
-            json_path = bnk_path / "soundbank.json"
+    def create_empty_soundbank(
+        cls, bnk_dir: Path | str, name: str, save: bool = True
+    ) -> "Soundbank":
+        if not bnk_dir.is_dir():
+            raise ValueError(f"{bnk_dir} is not a directory")
 
-        with json_path.open() as f:
-            bnk_json: dict = json.load(f)
+        bnk_data = json.loads(resource_data("empty_soundbank.json"))
+        bnk = cls.from_dict(bnk_dir / "soundbank.json", bnk_data)
+        bnk.bkhd.bank_id = calc_hash(name)
 
-        # Read the sections
-        sections = bnk_json.get("sections", None)
+        if save:
+            bnk.save(backup=False)
 
-        if not sections:
-            raise ValueError("Could not find 'sections' in bnk")
+        return bnk
 
-        for sec in sections:
-            body = sec["body"]
-
-            if "BKHD" in body:
-                bnk_id = body["BKHD"]["bank_id"]
-            elif "HIRC" in body:
-                hirc: list[Node] = [Node.wrap(obj) for obj in body["HIRC"]["objects"]]
-                cleaned = {n.id: n for n in hirc}
-                if len(cleaned) < len(hirc):
-                    logger.warning(
-                        f"Removed {len(hirc) - len(cleaned)} duplicate nodes from soundbank"
-                    )
-                    hirc = list(cleaned.values())
-            else:
-                pass
-
-        return cls(bnk_path, bnk_json, bnk_id, hirc)
-
-    @classmethod
-    def create_empty_soundbank(cls, path: Path | str, name: str) -> "Soundbank":
-        if not path.is_dir():
-            raise ValueError(f"{path} is not a directory")
-
-        bnk = json.loads(resource_data("empty_soundbank.json"))
-        name_hash = calc_hash(name)
-        bnk["sections"][0]["body"]["BKHD"]["bank_id"] = name_hash
-
-        bnk_path = Path(path) / name / "soundbank.json"
-        json.dump(bnk, bnk_path.open("w"))
-
-        return Soundbank.load(bnk_path)
-
-    def __init__(
-        self,
-        bnk_dir: Path,
-        json: dict,
-        id: int,
-        hirc: list[Node],
-    ):
-        self.bnk_dir = bnk_dir
-        self.id = id
-        self._json = json
-        self._hirc = hirc
+    def __init__(self, json_path: Path, sections: list[Section]):
+        self.json_path = json_path
+        self.sections = {type(sec.body).__name__: sec for sec in sections}
 
         # A helper dict for mapping object IDs to HIRC indices
         self._id2index: dict[int, int] = {}
         self._regenerate_index_table()
 
-    @property
-    def bnk_file(self) -> Path:
-        return self.bnk_dir.parent / f"{self.bnk_dir.stem}.bnk"
-
-    @property
-    def json_file(self) -> Path:
-        return self.bnk_dir / "soundbank.json"
-
     def _regenerate_index_table(self):
-        self._id2index.clear()
+        table = self._id2index
+        table.clear()
 
-        for idx, node in enumerate(self._hirc):
-            idsec = node.dict["id"]
-            if "Hash" in idsec:
-                oid = idsec["Hash"]
-                self._id2index[oid] = idx
-            elif "String" in idsec:
-                eid = idsec["String"]
-                self._id2index[eid] = idx
-                # Events are sometimes referred to by their hash, but it's not included in the json
-                oid = calc_hash(eid)
-                self._id2index[oid] = idx
-            else:
-                logger.error(f"Don't know how to handle object with id {idsec}")
+        for idx, obj in enumerate(self.hirc.objects):
+            table[obj.id] = idx
+            if obj.name:
+                table[obj.name] = idx
+
+    @classmethod
+    def from_file(cls, bnk_path: Path | str) -> "Soundbank":
+        bnk_path: Path = Path(bnk_path).absolute()
+        if bnk_path.is_dir():
+            json_path = bnk_path / "soundbank.json"
+        else:
+            json_path = bnk_path
+
+        with json_path.open() as f:
+            bnk_data = json.load(f)
+
+        return cls.from_dict(json_path, bnk_data)
+
+    @classmethod
+    def from_dict(cls, json_path: Path, data: dict) -> list[Section]:
+        sections = deserialize(list[Section], data["sections"])
+        return Soundbank(json_path, sections)
+
+    def to_dict(self) -> dict:
+        return {"sections": serialize(list(self.sections.values()))}
+
+    @property
+    def bkhd(self) -> BKHDSection:
+        return self.sections["BKHD"]
+
+    @property
+    def hirc(self) -> HIRCSection:
+        return self.sections["HIRC"]
+
+    @property
+    def bank_id(self) -> int:
+        return self.bkhd.bank_id
+
+    @bank_id.setter
+    def bank_id(self, new_id: int) -> None:
+        self.bkhd.bank_id = new_id
 
     @property
     def name(self) -> str:
-        return self.bnk_dir.name
+        return self.bkhd.name
+
+    @name.setter
+    def name(self, new_name: str) -> None:
+        self.bkhd.name = new_name
+
+    def get_name(self, default: str = None) -> str:
+        name = self.bkhd.name
+        if name:
+            return name
+        return default
+
+    @property
+    def bnk_dir(self) -> Path:
+        return self.json_path.parent
 
     def wems(self) -> list[int]:
         wems = []
@@ -131,7 +136,7 @@ class Soundbank:
 
             if target.is_file():
                 target.unlink()
-            
+
             shutil.copy(wem, target)
             return target
 
@@ -142,7 +147,7 @@ class Soundbank:
             target = streaming_dir / f"{wem.stem}.wem"
             if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
-                
+
             if target.is_file():
                 target.unlink()
 
@@ -158,7 +163,7 @@ class Soundbank:
             target = self.bnk_dir / f"{wem.stem}.wem"
             if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
-            
+
             if target.is_file():
                 target.unlink()
 
@@ -167,193 +172,6 @@ class Soundbank:
 
         else:
             raise ValueError(f"Unknown source type {source_type}")
-
-    def _apply_hirc_to_json(self) -> None:
-        """Update this soundbank's json with its current HIRC."""
-        sections = self._json["sections"]
-        for sec in sections:
-            if "HIRC" in sec["body"]:
-                sec["body"]["HIRC"]["objects"] = [n.dict for n in self._hirc]
-                break
-
-    def copy(self, name: str, new_bnk_id: int = None) -> "Soundbank":
-        self._apply_hirc_to_json()
-
-        bnk = Soundbank(
-            self.bnk_dir.parent / name,
-            copy.deepcopy(self._json),
-            self.id,
-            [n.copy() for n in self._hirc],
-        )
-
-        if new_bnk_id is not None:
-            bnk.id = new_bnk_id
-            for action in bnk.query("type=Action"):
-                bid = action.get("params/bank_id", None)
-                if bid == self.id:
-                    action["params/bank_id"] = new_bnk_id
-
-        return bnk
-
-    def save(self, path: Path | str = None, backup: bool = True) -> None:
-        logger.info(f"Saving {self}")
-
-        # Solve the dependency graph
-        self.solve()
-        self.verify()
-        self._apply_hirc_to_json()
-
-        if path:
-            path = Path(path).absolute()
-        else:
-            path = self.bnk_dir
-
-        if path.name != "soundbank.json":
-            if not path.is_dir():
-                raise ValueError(f"Not a directory: {path}")
-            path = path / "soundbank.json"
-
-        if backup and path.is_file():
-            shutil.copy(path, str(path) + ".bak")
-
-        with path.open("w") as f:
-            json.dump(self._json, f, indent=2)
-
-        logger.info(f"Saved {self} to {path}, a backup was created")
-
-    def new_id(self) -> int:
-        while True:
-            # IDs should be signed 32bit integers, although in practice
-            # I've rarely seen any below 1000000 (expected I guess?)
-            id = randrange(2**24, 2**31 - 1)
-            if id not in self._id2index:
-                return id
-
-    def get_insertion_index(self, nodes: list[Node]) -> tuple[int, int]:
-        min_idx = 0
-        max_idx = len(self._hirc)
-
-        for node in nodes:
-            try:
-                parent = node.parent
-                max_idx = min(max_idx, self._id2index[parent])
-            except KeyError:
-                pass
-
-            if "children" in node:
-                children: list = node["children/items"]
-                # Nodes must appear before any nodes referencing them
-                for child in children:
-                    min_idx = max(min_idx, self._id2index[child])
-
-        if min_idx > max_idx:
-            raise ValueError(f"Invalid index constraints: {min_idx} >= {max_idx}")
-
-        return min_idx
-
-    def get(self, nid: int | str, default: Any = None) -> Node:
-        try:
-            return self[nid]
-        except (KeyError, IndexError):
-            return default
-
-    def add_nodes(self, *nodes: Node) -> None:
-        for n in nodes:
-            if n.id <= 0:
-                raise ValueError(f"Node {n} has invalid ID {n.id}")
-            if n.id in self._id2index:
-                raise ValueError(f"Soundbank already contains a node with ID {n.id}")
-
-            self._hirc.append(n)
-
-        self._regenerate_index_table()
-
-    def delete_nodes(self, *nodes: int | Node) -> None:
-        abandoned = []
-        for n in nodes:
-            if not isinstance(n, Node):
-                n = self[n]
-            abandoned.append(n.id)
-
-        for nid in abandoned:
-            # Don't use `del self[nid]` as it will regenerate the index table on every delete
-            idx = self._id2index[nid]
-            del self._hirc[idx]
-
-        # Search for any nodes referencing the deleted nodes and clear those references
-        for node in self._hirc:
-            for path, ref in node.get_references(node):
-                if ref not in abandoned:
-                    continue
-
-                # Remove reference from an array
-                if ":" in path.rsplit("/", maxsplit=1)[-1]:
-                    parent_value: list[int] = node[path.rsplit("/", maxsplit=1)[0]]
-                    # Luckily the X_count fields don't matter to rewwise,
-                    # otherwise we'd have to update them here, too
-                    parent_value.remove(ref)
-                else:
-                    # Unset reference field
-                    node[path] = 0
-
-        self._regenerate_index_table()
-
-    def find_orphans(self) -> list[Node]:
-        g = self.get_full_tree()
-        
-        forbidden_types = {
-            "ActorMixer",
-            "Attenuation",
-            "Bus",
-            "EffectCustom",
-            "Event",
-        }
-
-        return [
-            self[nid]
-            for nid, tp in g.nodes.data("type")
-            if tp not in forbidden_types and g.in_degree(nid) == 0
-        ]
-
-    def delete_orphans(self, cascade: bool = True) -> None:
-        g = self.get_full_tree()
-        indices = set()
-
-        forbidden_types = {
-            "ActorMixer",
-            "Attenuation",
-            "Bus",
-            "EffectCustom",
-            "Event",
-        }
-
-        while True:
-            # Collect non-event nodes with no references to them
-            orphans = [
-                nid
-                for nid, tp in g.nodes.data("type")
-                if tp not in forbidden_types and g.in_degree(nid) == 0
-            ]
-            if not orphans:
-                break
-
-            indices.update(self._id2index[n] for n in orphans)
-            g.remove_nodes_from(orphans)
-
-            # Check if new orphans appeared in the graph from the removal of the
-            # discovered orphans
-            if not cascade:
-                break
-
-        # Clear the hirc
-        orphan_nodes = [str(self._hirc[i]) for i in indices]
-        logger.info(
-            f"The following {len(indices)} nodes have been orphaned (cascade={cascade}):\n{'  \n'.join(orphan_nodes)}"
-        )
-        self._hirc = [x for i, x in enumerate(self._hirc) if i not in indices]
-        self._regenerate_index_table()
-
-        logger.info(f"Found and deleted {len(indices)} orphans")
 
     def remove_unused_wems(self) -> None:
         used = set(self.wems())
@@ -366,11 +184,88 @@ class Soundbank:
 
         logger.info(f"Removed {len(removed)} unused wems")
 
+    def save(self, path: Path | str = None, backup: bool = True) -> None:
+        logger.info(f"Saving {self}")
+
+        # Solve the dependency graph
+        self.solve()
+        self.verify()
+
+        if path:
+            path = Path(path).absolute()
+            if path.is_dir():
+                path = path / "soundbank.json"
+        else:
+            path = self.json_path
+
+        if backup and path.is_file():
+            shutil.copy(path, str(path) + ".bak")
+        else:
+            backup = False
+
+        with path.open("w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+        if backup:
+            logger.info(f"Saved {self} to {path}, a backup was created")
+        else:
+            logger.info(f"Saved {self} to {path}")
+
+    def new_id(self) -> int:
+        while True:
+            # IDs should be signed 32bit integers, although in practice
+            # I've rarely seen any below 1000000 (expected I guess?)
+            id = randrange(2**24, 2**31 - 1)
+            if id not in self._id2index:
+                return id
+
+    def add_nodes(self, *nodes: HIRCNode) -> None:
+        for n in nodes:
+            if n.id <= 0:
+                raise ValueError(f"Node {n} has invalid ID {n.id}")
+            if n.id in self._id2index:
+                raise ValueError(f"Soundbank already contains a node with ID {n.id}")
+
+            self.hirc.objects.append(n)
+
+        self._regenerate_index_table()
+
+    def delete_nodes(self, *nodes: int | HIRCNode) -> None:
+        abandoned = []
+        for n in nodes:
+            if not isinstance(n, HIRCNode):
+                n = self[n]
+            abandoned.append(n.id)
+
+        for nid in abandoned:
+            # Don't use `del self[nid]` as it will regenerate the index table on every delete
+            idx = self._id2index[nid]
+            del self.hirc.objects[idx]
+
+        # Search for any nodes referencing the deleted nodes and clear those references
+        for node in self.hirc.objects:
+            for path, ref in node.get_references(node):
+                if ref not in abandoned:
+                    continue
+
+                # Remove reference from an array
+                parts = path.rsplit("/", maxsplit=1)
+                if ":" in parts[-1]:
+                    parent_value: list[int] = node[parts[0]]
+                    # Luckily the X_count fields don't matter to rewwise,
+                    # otherwise we'd have to update them here, too
+                    parent_value.remove(ref)
+                else:
+                    # Unset reference field
+                    node[path] = 0
+
+        self._regenerate_index_table()
+
     def get_full_tree(self, valid_only: bool = True) -> nx.DiGraph:
         g = nx.DiGraph()
 
-        for node in self._hirc:
-            g.add_node(node.id, type=node.type)
+        for node in self.hirc.objects:
+            g.add_node(node.id, type=node.type_name)
             references = node.get_references()
             for _, ref in references:
                 if not valid_only or ref in self:
@@ -378,7 +273,12 @@ class Soundbank:
 
         return g
 
-    def get_subtree(self, entrypoint: int | Node, children_only: bool = True) -> nx.DiGraph:
+    def get_subtree(
+        self,
+        entrypoint: int | HIRCNode,
+        children_only: bool = True,
+        include_external: bool = True,
+    ) -> nx.DiGraph:
         if isinstance(entrypoint, int):
             entrypoint = self[entrypoint]
 
@@ -394,19 +294,19 @@ class Soundbank:
 
             idx = self._id2index.get(node_id)
             if idx is None:
-                g.add_node(node_id, type="(external)")
-                g.add_edge(parent_id, node_id)
+                if include_external:
+                    g.add_node(node_id, type="(external)")
+                    g.add_edge(parent_id, node_id)
                 continue
 
-            node = self._hirc[idx]
-            node_type = node.type
-            g.add_node(node_id, type=node_type)
+            node = self.hirc.objects[idx]
+            g.add_node(node_id, type=node.type_name)
 
             if parent_id is not None:
                 g.add_edge(parent_id, node_id)
 
             if children_only:
-                if node.type in ("Event", "Action"):
+                if isinstance(node, (Action, Event)):
                     todo.extend((ref, node_id) for _, ref in node.get_references())
                 elif hasattr(node, "children"):
                     todo.extend((cid, node_id) for cid in node.children)
@@ -415,8 +315,11 @@ class Soundbank:
 
         return g
 
-    def get_parent_chain(self, entrypoint: Node) -> list[int]:
+    def get_parent_chain(self, entrypoint: HIRCNode) -> list[int]:
         """Go up in the HIRC from the specified entrypoint and collect all node IDs along the way until we reach the top."""
+        if not hasattr(entrypoint, "parent"):
+            raise ValueError("Must start from a parentable object")
+
         parent_id = entrypoint.parent
         upchain = []
 
@@ -430,7 +333,7 @@ class Soundbank:
                 # Print the loop
                 logger.error(f"Reference loop detected: {upchain}")
                 for pid in upchain:
-                    debug_obj: Node = self[pid]
+                    debug_obj: HIRCNode = self[pid]
                     debug_parent = debug_obj.parent
                     print(f"{pid} -> {debug_parent}")
 
@@ -440,36 +343,104 @@ class Soundbank:
                     f"Parent chain for node {entrypoint} contains a loop at node {parent_id}"
                 )
 
-            # Children before parents
             upchain.append(parent_id)
             parent_id = self[parent_id].parent
 
         return upchain
 
-    def query(self, query: str) -> Generator[Node, None, None]:
-        yield from query_nodes(self._hirc, query)
+    def query(self, query: str) -> Generator[HIRCNode, None, None]:
+        yield from query_nodes(self.hirc.objects, query)
 
-    def query_one(self, query: str, default: Any = None) -> Node:
+    def query_one(self, query: str, default: Any = None) -> HIRCNode:
         return next(self.query(query), default)
 
-    def find_events(self, event_type: str = "Play") -> Generator[Node, None, None]:
-        events = list(self.query("type=Event"))
+    def find_orphans(self) -> list[HIRCNode]:
+        g = self.get_full_tree()
+
+        search_types = {
+            c.__name__
+            for c in (
+                LayerContainer,
+                MusicRandomSequenceContainer,
+                MusicSwitchContainer,
+                MusicSegment,
+                MusicTrack,
+                RandomSequenceContainer,
+                Sound,
+                SwitchContainer,
+            )
+        }
+
+        return [
+            self[nid]
+            for nid, tp in g.nodes.data("type")
+            if tp in search_types and g.in_degree(nid) == 0
+        ]
+
+    def delete_orphans(self, cascade: bool = True) -> None:
+        g = self.get_full_tree()
+        indices = set()
+
+        search_types = {
+            c.__name__
+            for c in (
+                LayerContainer,
+                MusicRandomSequenceContainer,
+                MusicSwitchContainer,
+                MusicSegment,
+                MusicTrack,
+                RandomSequenceContainer,
+                Sound,
+                SwitchContainer,
+            )
+        }
+
+        while True:
+            # Collect non-event nodes with no references to them
+            orphans = [
+                nid
+                for nid, tp in g.nodes.data("type")
+                if tp in search_types and g.in_degree(nid) == 0
+            ]
+            if not orphans:
+                break
+
+            indices.update(self._id2index[n] for n in orphans)
+            g.remove_nodes_from(orphans)
+
+            # Check if new orphans appeared in the graph from the removal of the
+            # discovered orphans
+            if not cascade:
+                break
+
+        # Clear the hirc
+        orphan_nodes = [str(self.hirc.objects[i]) for i in indices]
+        logger.info(
+            f"The following {len(indices)} nodes have been orphaned (cascade={cascade}):\n{'  \n'.join(orphan_nodes)}"
+        )
+        self.hirc.objects = [x for i, x in enumerate(self.hirc.objects) if i not in indices]
+        self._regenerate_index_table()
+
+        logger.info(f"Found and deleted {len(indices)} orphans")
+
+    def find_events(self, action_type: SupportedActionType = SupportedActionType.Play) -> Generator[HIRCNode, None, None]:
+        events: list[HIRCNode[Event]] = list(self.query("type=Event"))
         for evt in events:
-            for aid in evt["actions"]:
+            for aid in evt.body.actions:
                 action = self[aid]
-                if not event_type or event_type == action.type:
+                if not action_type or action_type == action.type_name:
                     yield evt
                     break
 
     def find_event_subgraphs_for(
-        self, node: int | Node
-    ) -> Generator[tuple[Node, nx.DiGraph], None, None]:
-        if isinstance(node, Node):
+        self, node: int | HIRCNode
+    ) -> Generator[tuple[HIRCNode, nx.DiGraph], None, None]:
+        if isinstance(node, HIRCNode):
             node = node.id
 
         # TODO cache nodes by type
         # TODO cache full graph
-        events = list(self.query("type=Event"))
+        events: list[HIRCNode[Event]] = list(self.query("type=Event"))
 
         g = self.get_full_tree()
         for evt in events:
@@ -477,113 +448,56 @@ class Soundbank:
             if node in desc:
                 yield evt, g.subgraph({evt.id} | desc)
 
-    def find_related_objects(self, object_ids: list[int]) -> set[int]:
-        """Recursively collect any values of attributes that look like they could be a reference to another object, e.g. a bus."""
-        extras = []
-        object_ids = set(object_ids)  # for efficiency
-
-        # TODO instead of just taking everything that even remotely looks like an object we really should decide based on node type and attribute name, but.... eh
-        def delve(item: Any, field: str, new_ids: set):
-            if field in ["source_id", "direct_parent_id", "children"]:
-                return
-
-            if isinstance(item, list):
-                for i, subnode in enumerate(item):
-                    delve(subnode, f"{field}[{i}]", new_ids)
-
-            elif isinstance(item, dict):
-                for key, val in item.items():
-                    delve(val, key, new_ids)
-
-            elif isinstance(item, int):
-                if item in self._id2index and item not in object_ids:
-                    new_ids.add(item)
-
-        for oid in object_ids:
-            todo = deque([oid])
-
-            while todo:
-                node_id = todo.pop()
-                node = self._hirc[self._id2index[node_id]]
-
-                new_ids = set()
-                delve(node.body, "body", new_ids)
-
-                for id in new_ids.difference(extras):
-                    todo.append(id)
-                    # Will contain the highest parents in the beginning (to the left) and deeper
-                    # children towards the end (right)
-                    extras.append(id)
-
-        return extras
-
     def solve(self) -> None:
-        from yonder.node_types import Event
-
         g = self.get_full_tree()
-        new_hirc = []
+        objects = []
 
         if not nx.is_directed_acyclic_graph(g):
             logger.warning("HIRC is not acyclic")
 
         # These will be appended at the very end
-        events: list[Event] = []
+        events: list[HIRCNode[Event]] = []
+        actions: list[HIRCNode[Action]] = []
 
         # Reverse g so we get the children before their parents. This means that any objects
         # with no references to other nodes (like Attenuations) will come at the very beginning.
         # Since references must appear before the nodes referencing them this is exactly what
         # we need.
         for generation in nx.topological_generations(g.reverse()):
-            nodes: list[Node] = []
+            nodes: list[HIRCNode] = []
 
             for nid in generation:
                 node = self[nid]
-                if type(node) is Node:
-                    logger.debug(f"Uncast node {node}")
-
-                if node.type == "Event":
+                if isinstance(node, Event):
                     events.append(node)
-                elif node.type == "Action":
-                    # Will be placed later
-                    pass
+                elif isinstance(node, Action):
+                    actions.append(node)
                 else:
                     nodes.append(node)
 
             # Sort by type first, then ID
-            nodes.sort(key=lambda n: f"{n.type} {n.id:010d}")
-            new_hirc.extend(n for n in nodes)
+            nodes.sort(key=lambda n: f"{n.type_name} {n.id:010d}")
+            objects.extend(n for n in nodes)
 
-        # Actions are usually placed immediately before their events
+        # Actions are usually placed immediately before their events, but this way
+        # is both easier and more reliable
         events.sort(key=lambda n: n.id)
-        placed_actions = set()
+        objects.extend(events)
+        
+        actions.sort(key=lambda n: n.id)
+        objects.extend(actions)
 
-        for evt in events:
-            for aid in sorted(evt.actions):
-                if aid in placed_actions:
-                    continue
-
-                action = self.get(aid)
-                if action:
-                    new_hirc.append(action)
-                    placed_actions.add(aid)
-
-            new_hirc.append(evt)
-
-        self._hirc = new_hirc
-
+        self.hirc.objects = objects
         logger.info(f"Solved structure for {len(g)} nodes ({len(events)} events)")
         self._regenerate_index_table()
 
     def verify(self) -> int:
-        from yonder.node_types.mixins import ContainerMixin
-
         severity = 0
         discovered_ids = set([0])
 
         logger.info(f"Verifying {self}...")
 
-        for node in self._hirc:
-            node = node.cast()
+        for node in self.hirc.objects:
             node_id = node.id
 
             if node_id <= 0:
@@ -595,8 +509,8 @@ class Soundbank:
 
             discovered_ids.add(node_id)
 
-            parent_id = node.parent
-            if parent_id is not None:
+            if hasattr(node, "parent"):
+                parent_id = node.parent
                 parent = self.get(parent_id)
 
                 if parent_id <= 0:
@@ -605,11 +519,11 @@ class Soundbank:
                 elif parent_id in discovered_ids:
                     logger.error(f"{node}: defined after its parent {parent_id}")
                     severity = max(severity, 2)
-                
+
                 if parent_id > 0 and not parent:
                     logger.error(f"{node}: parent {parent_id} does not exist")
                     severity = max(severity, 2)
-                
+
                 if parent and hasattr(parent, "children"):
                     if node_id not in parent.children:
                         logger.error(
@@ -622,7 +536,7 @@ class Soundbank:
                     logger.error(f"{node}: defined before referenced node {ref}")
                     severity = max(severity, 2)
 
-            if isinstance(node, ContainerMixin):
+            if hasattr(node, "children"):
                 prev_child_id = -1
                 wrong_order = False
 
@@ -639,6 +553,8 @@ class Soundbank:
                     # if child_id not in self:
                     #     logger.warning(f"{node}: child {child_id} does not exist")
                     #     severity = max(severity, 1)
+
+                    # Any node that can be added to children will also have a parent attribute
                     if child_id in self:
                         child = self[child_id]
                         if child.parent is not None and child.parent != node.id:
@@ -656,49 +572,24 @@ class Soundbank:
 
         return severity
 
-    def verify_raw(self) -> None:
-        # Experimental, treats everything that looks remotely like an ID as a reference,
-        # only checks order
-        discovered_ids = set([0])
-        for node in self._hirc:
-            references = set()
+    def get(self, nid: int | str, default: Any = None) -> HIRCNode:
+        try:
+            return self[nid]
+        except (KeyError, IndexError):
+            return default
 
-            def delve(d: dict) -> None:
-                for k, v in d.items():
-                    if isinstance(v, dict):
-                        delve(v)
-                    elif isinstance(v, list):
-                        sub = {i: s for i, s in enumerate(v)}
-                        delve(sub)
-                    elif k in (
-                        "Hash",
-                        "String",
-                        "direct_parent_id",
-                        "source_id",
-                        "in_memory_media_size",
-                        "bank_id",
-                    ):
-                        continue
-                    elif isinstance(v, int) and 10**6 <= v <= 10**10:
-                        references.add(v)
+    def __iter__(self) -> Iterator[HIRCNode]:
+        yield from self.hirc.objects
 
-            delve(node.body)
-            for ref in references:
-                if ref in self and ref not in discovered_ids:
-                    logger.error(f"{node}: defined before its reference {ref}")
-
-    def __iter__(self) -> Iterator[Node]:
-        yield from self._hirc
-
-    def __contains__(self, key: Any) -> Node:
-        if isinstance(key, Node):
+    def __contains__(self, key: Any) -> HIRCNode:
+        if isinstance(key, HIRCNode):
             key = key.id
         elif isinstance(key, str):
             key = calc_hash(key)
 
         return key in self._id2index
 
-    def __getitem__(self, key: int | str) -> Node:
+    def __getitem__(self, key: int | str) -> HIRCNode:
         if isinstance(key, str):
             if key.startswith("#"):
                 key = int(key[1:])
@@ -706,10 +597,10 @@ class Soundbank:
                 key = calc_hash(key)
 
         idx = self._id2index[key]
-        return self._hirc[idx]
+        return self.hirc.objects[idx]
 
-    def __delitem__(self, key: int | str | Node) -> None:
-        if isinstance(key, Node):
+    def __delitem__(self, key: int | str | HIRCNode) -> None:
+        if isinstance(key, HIRCNode):
             key = key.id
         elif isinstance(key, str):
             if key.startswith("#"):
@@ -718,9 +609,9 @@ class Soundbank:
                 key = calc_hash(key)
 
         idx = self._id2index.pop(key)
-        del self._hirc[idx]
+        del self.hirc.objects[idx]
 
         self._regenerate_index_table()
 
     def __str__(self):
-        return f"Soundbank (id={self.id}, bnk={self.name})"
+        return f"Soundbank {self.bank_id} ({self.name})"

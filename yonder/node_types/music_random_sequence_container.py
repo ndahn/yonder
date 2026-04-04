@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
-from .rewwise_base_types import MusicTransNodeParams
+from .structure import _HIRCNodeBody
+from .rewwise_base_types import MusicNodeParams, MusicTransNodeParams
 
 
 @dataclass
@@ -23,8 +23,17 @@ class MusicRanSeqPlaylistItem:
 @dataclass
 class MusicRandomSequenceContainer(_HIRCNodeBody):
     body_type: ClassVar[int] = 13
+    music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
     playlist_item_count: int = 0
     playlist_items: list[MusicRanSeqPlaylistItem] = field(default_factory=list)
+
+    @property
+    def parent(self) -> int:
+        return self.music_node_params.node_base_params.direct_parent_id
+
+    @property
+    def children(self) -> list[int]:
+        return self.music_node_params.children

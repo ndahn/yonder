@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .soundbank import _HIRCNodeBody
+from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children
 
 
@@ -34,3 +34,7 @@ class RandomSequenceContainer(_HIRCNodeBody):
     flags: int = 0
     children: Children = field(default_factory=Children)
     playlist: Playlist = field(default_factory=Playlist)
+
+    @property
+    def parent(self) -> int:
+        return self.node_base_params.direct_parent_id
