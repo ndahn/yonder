@@ -159,6 +159,10 @@ class HIRCNode(Generic[_BodyType]):
     _id: ObjectId
     body: _BodyType
 
+    def __init__(self, id: int | str, body: _BodyType):
+        self._id = ObjectId(id)
+        self.body = body
+
     @property
     def id(self) -> int:
         return self._id.hash

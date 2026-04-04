@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Union, ClassVar
-from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from typing import Type, Union, ClassVar
+from dataclasses import dataclass, field, InitVar
+from enum import Enum
 
 from .rewwise_enums import ValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_parse import serialize, deserialize
 
 
@@ -21,43 +21,92 @@ class Action(_HIRCNodeBody):
 
     def __init__(
         self,
-
-        action_type: SupportedActionType,
+        action_type: ActionType,
         external_id: int,
+        params: _ActionParams,
         is_bus: bool = False,
-        **params_kwargs,
     ):
-        action_name = ActionTypeId(action_type).name
-        if action_name == "Unk2102":
-            raise ValueError(f"Action type {action_type} (Unk2102) is not supported")
+        if action_type == ActionType.Unk2102:
+            raise ValueError("Action type (Unk2102) is not supported")
 
-        if action_name == "PlayEvent":
+        if action_type == ActionType.PlayEvent:
             params = "PlayEvent"
-        else:
-            param_cls = SupportedActionType[action_name].value
-            params = param_cls(**params_kwargs)
 
         super().__init__(
-            action_type=action_type,
+            action_type=action_type.type_id,
             external_id=external_id,
             is_bus=is_bus,
             params=params,
         )
 
     @classmethod
-    def new_play_action(cls, nid)
+    def new_play_action(
+        cls, nid: int, target_id: int, bank_id: int = 0, fade_curve: int = 0
+    ) -> HIRCNode[Action]:
+        return HIRCNode(
+            nid,
+            Action(
+                ActionType.Play,
+                target_id,
+                is_bus=False,
+                params=ActionPlay(ActionType.Play, bank_id, fade_curve),
+            ),
+        )
+
+    @classmethod
+    def new_stop_action(
+        cls,
+        nid: int,
+        target_id: int,
+        flags1: int = 4,  # ? usually 4, rarely 7
+        flags2: int = 6,  # ? usually 6
+        exceptions: list[int | tuple[int, bool]] = None,
+    ) -> HIRCNode[Action]:
+        if exceptions:
+            exc_items = []
+            for oid in exceptions:
+                is_bus = False
+                if isinstance(oid, tuple):
+                    oid, is_bus = oid
+                exc_items.append(ActionParamsExceptEntry(oid, is_bus))
+        else:
+            exc_items = []
+
+        return HIRCNode(
+            nid,
+            Action(
+                ActionType.StopEO,
+                target_id,
+                is_bus=False,
+                params=ActionStop(
+                    ActionType.StopEO,
+                    ActionStopParams(flags1=flags1, flags2=flags2),
+                    ActionParamsExcept(exceptions=exc_items),
+                ),
+            ),
+        )
+
+    @property
+    def action_type_name(self) -> str:
+        return ActionType(self.action_type).name
 
 
 @dataclass
 class _ActionParams:
+    # Just for serialization since we won't have access to the parent Action object
+    action_type: InitVar[ActionType]
+
     def to_dict(self) -> dict:
-        action_name = ActionTypeId(self.action_type).name
+        action_name = self.action_type.name
         return {action_name: serialize(self)}
 
     @classmethod
     def from_dict(cls, data: dict) -> "_ActionParams":
         action_name = next(data.keys())
-        param_cls = SupportedActionType[action_name].value
+        param_cls = action_name.params_cls
+        if not param_cls:
+            raise KeyError(f"Action type {action_name} is not supported yet")
+        
         return deserialize(param_cls, data[action_name])
 
 
@@ -192,155 +241,117 @@ ActionParams = Union[
 ]
 
 
-class ActionTypeId(IntEnum):
-    None_ = 0x0000
-    SetState = 0x1204
-    BypassFXM = 0x1A02
-    BypassFXO = 0x1A03
-    ResetBypassFXM = 0x1B02
-    ResetBypassFXO = 0x1B03
-    ResetBypassFXALL = 0x1B04
-    ResetBypassFXALLO = 0x1B05
-    ResetBypassFXAE = 0x1B08
-    ResetBypassFXAEO = 0x1B09
-    SetSwitch = 0x1901
-    UseStateE = 0x1002
-    UnuseStateE = 0x1102
-    Play = 0x0403
-    PlayAndContinue = 0x0503
-    StopE = 0x0102
-    StopEO = 0x0103
-    StopALL = 0x0104
-    StopALLO = 0x0105
-    StlopAE = 0x0108
-    StopAEO = 0x0109
-    PauseE = 0x0202
-    PauseEO = 0x0203
-    PauseALL = 0x0204
-    PauseALLO = 0x0205
-    PauseAE = 0x0208
-    PauseAEO = 0x0209
-    ResumeE = 0x0302
-    ResumeEO = 0x0303
-    ResumeALL = 0x0304
-    ResumeALLO = 0x0305
-    ResumeAE = 0x0308
-    ResumeAEO = 0x0309
-    BreakE = 0x1C02
-    BreakEO = 0x1C03
-    MuteM = 0x0602
-    MuteO = 0x0603
-    UnmuteM = 0x0702
-    UnmuteO = 0x0703
-    UnmuteALL = 0x0704
-    UnmuteALLO = 0x0705
-    UnmuteAE = 0x0708
-    UnmuteAEO = 0x0709
-    SetVolumeM = 0x0A02
-    SetVolumeO = 0x0A03
-    ResetVolumeM = 0x0B02
-    ResetVolumeO = 0x0B03
-    ResetVolumeALL = 0x0B04
-    ResetVolumeALLO = 0x0B05
-    ResetVolumeAE = 0x0B08
-    ResetVolumeAEO = 0x0B09
-    SetPitchM = 0x0802
-    SetPitchO = 0x0803
-    ResetPitchM = 0x0902
-    ResetPitchO = 0x0903
-    ResetPitchALL = 0x0904
-    ResetPitchALLO = 0x0905
-    ResetPitchAE = 0x0908
-    ResetPitchAEO = 0x0909
-    SetLPFM = 0x0E02
-    SetLPFO = 0x0E03
-    ResetLPFM = 0x0F02
-    ResetLPFO = 0x0F03
-    ResetLPFALL = 0x0F04
-    ResetLPFALLO = 0x0F05
-    ResetLPFAE = 0x0F08
-    ResetLPFAEO = 0x0F09
-    SetHPFM = 0x2002
-    SetHPFO = 0x2003
-    ResetHPFM = 0x3002
-    ResetHPFO = 0x3003
-    ResetHPFALL = 0x3004
-    ResetHPFALLO = 0x3005
-    ResetHPFAE = 0x3008
-    ResetHPFAEO = 0x3009
-    SetBusVolumeM = 0x0C02
-    SetBusVolumeO = 0x0C03
-    ResetBusVolumeM = 0x0D02
-    ResetBusVolumeO = 0x0D03
-    ResetBusVolumeALL = 0x0D04
-    ResetBusVolumeAE = 0x0D08
-    StopEvent = 0x1511
-    PauseEvent = 0x1611
-    ResumeEvent = 0x1711
-    Duck = 0x1820
-    Trigger = 0x1D00
-    TriggerO = 0x1D01
-    SeekE = 0x1E02
-    SeekEO = 0x1E03
-    SeekALL = 0x1E04
-    SeekALLO = 0x1E05
-    SeekAE = 0x1E08
-    SeekAEO = 0x1E09
-    ResetPlaylistE = 0x2202
-    ResetPlaylistEO = 0x2203
-    SetGameParameter = 0x1302
-    SetGameParameterO = 0x1303
-    ResetGameParameter = 0x1402
-    ResetGameParameterO = 0x1403
-    Release = 0x1F02
-    ReleaseO = 0x1F03
-    Unk2102 = 0x2102
-    PlayEvent = 0x2103
+class ActionType(Enum):
+    type_id: int
+    params_cls: Type[_ActionParams]
 
+    def __new__(cls, type_id: int, params_cls: Type[_ActionParams]):
+        member = object.__new__(cls)
+        member._value_ = type_id
+        member.type_id = type_id
+        member.params_cls = params_cls
+        return member
 
-# NOTE: Includes only the ones we actually support
-class SupportedActionType(Enum):
-    SetState = ActionSetSwitch
-    SetSwitch = ActionSetSwitch
-    Play = ActionPlay
-    StopE = ActionStop
-    StopEO = ActionStop
-    PauseE = ActionPause
-    ResumeE = ActionResume
-    MuteM = ActionMute
-    MuteO = ActionMute
-    UnmuteM = ActionMute
-    UnmuteO = ActionMute
-    UnmuteALL = ActionMute
-    UnmuteALLO = ActionMute
-    UnmuteAE = ActionMute
-    UnmuteAEO = ActionMute
-    SetVolumeM = ActionSetAkProp
-    SetVolumeO = ActionSetAkProp
-    ResetVolumeM = ActionSetAkProp
-    ResetVolumeO = ActionSetAkProp
-    ResetVolumeALL = ActionSetAkProp
-    SetPitchM = ActionSetAkProp
-    SetPitchO = ActionSetAkProp
-    ResetPitchM = ActionSetAkProp
-    ResetPitchO = ActionSetAkProp
-    ResetPitchALL = ActionSetAkProp
-    ResetPitchALLO = ActionSetAkProp
-    ResetPitchAE = ActionSetAkProp
-    ResetPitchAEO = ActionSetAkProp
-    SetLPFM = ActionSetAkProp
-    SetLPFO = ActionSetAkProp
-    ResetLPFM = ActionSetAkProp
-    ResetLPFO = ActionSetAkProp
-    ResetLPFALL = ActionSetAkProp
-    SetHPFM = ActionSetAkProp
-    SetHPFO = ActionSetAkProp
-    ResetHPFM = ActionSetAkProp
-    ResetHPFALL = ActionSetAkProp
-    SetBusVolumeM = ActionSetAkProp
-    ResetBusVolumeM = ActionSetAkProp
-    ResetBusVolumeALL = ActionSetAkProp
-    SeekEO = ActionSeek
-    SetGameParameter = ActionSetGameParameter
-    Unk2102 = None
-    PlayEvent = str
+    None_ = 0x0000, None
+    SetState = 0x1204, ActionSetSwitch
+    BypassFXM = 0x1A02, None
+    BypassFXO = 0x1A03, None
+    ResetBypassFXM = 0x1B02, None
+    ResetBypassFXO = 0x1B03, None
+    ResetBypassFXALL = 0x1B04, None
+    ResetBypassFXALLO = 0x1B05, None
+    ResetBypassFXAE = 0x1B08, None
+    ResetBypassFXAEO = 0x1B09, None
+    SetSwitch = 0x1901, ActionSetSwitch
+    UseStateE = 0x1002, None
+    UnuseStateE = 0x1102, None
+    Play = 0x0403, ActionPlay
+    PlayAndContinue = 0x0503, None
+    StopE = 0x0102, ActionStop
+    StopEO = 0x0103, ActionStop
+    StopALL = 0x0104, None
+    StopALLO = 0x0105, None
+    StlopAE = 0x0108, None
+    StopAEO = 0x0109, None
+    PauseE = 0x0202, ActionPause
+    PauseEO = 0x0203, None
+    PauseALL = 0x0204, None
+    PauseALLO = 0x0205, None
+    PauseAE = 0x0208, None
+    PauseAEO = 0x0209, None
+    ResumeE = 0x0302, ActionResume
+    ResumeEO = 0x0303, None
+    ResumeALL = 0x0304, None
+    ResumeALLO = 0x0305, None
+    ResumeAE = 0x0308, None
+    ResumeAEO = 0x0309, None
+    BreakE = 0x1C02, None
+    BreakEO = 0x1C03, None
+    MuteM = 0x0602, ActionMute
+    MuteO = 0x0603, ActionMute
+    UnmuteM = 0x0702, ActionMute
+    UnmuteO = 0x0703, ActionMute
+    UnmuteALL = 0x0704, ActionMute
+    UnmuteALLO = 0x0705, ActionMute
+    UnmuteAE = 0x0708, ActionMute
+    UnmuteAEO = 0x0709, ActionMute
+    SetVolumeM = 0x0A02, ActionSetAkProp
+    SetVolumeO = 0x0A03, ActionSetAkProp
+    ResetVolumeM = 0x0B02, ActionSetAkProp
+    ResetVolumeO = 0x0B03, ActionSetAkProp
+    ResetVolumeALL = 0x0B04, ActionSetAkProp
+    ResetVolumeALLO = 0x0B05, None
+    ResetVolumeAE = 0x0B08, None
+    ResetVolumeAEO = 0x0B09, None
+    SetPitchM = 0x0802, ActionSetAkProp
+    SetPitchO = 0x0803, ActionSetAkProp
+    ResetPitchM = 0x0902, ActionSetAkProp
+    ResetPitchO = 0x0903, ActionSetAkProp
+    ResetPitchALL = 0x0904, ActionSetAkProp
+    ResetPitchALLO = 0x0905, ActionSetAkProp
+    ResetPitchAE = 0x0908, ActionSetAkProp
+    ResetPitchAEO = 0x0909, ActionSetAkProp
+    SetLPFM = 0x0E02, ActionSetAkProp
+    SetLPFO = 0x0E03, ActionSetAkProp
+    ResetLPFM = 0x0F02, ActionSetAkProp
+    ResetLPFO = 0x0F03, ActionSetAkProp
+    ResetLPFALL = 0x0F04, ActionSetAkProp
+    ResetLPFALLO = 0x0F05, None
+    ResetLPFAE = 0x0F08, None
+    ResetLPFAEO = 0x0F09, None
+    SetHPFM = 0x2002, ActionSetAkProp
+    SetHPFO = 0x2003, ActionSetAkProp
+    ResetHPFM = 0x3002, ActionSetAkProp
+    ResetHPFO = 0x3003, None
+    ResetHPFALL = 0x3004, ActionSetAkProp
+    ResetHPFALLO = 0x3005, None
+    ResetHPFAE = 0x3008, None
+    ResetHPFAEO = 0x3009, None
+    SetBusVolumeM = 0x0C02, ActionSetAkProp
+    SetBusVolumeO = 0x0C03, None
+    ResetBusVolumeM = 0x0D02, ActionSetAkProp
+    ResetBusVolumeO = 0x0D03, None
+    ResetBusVolumeALL = 0x0D04, ActionSetAkProp
+    ResetBusVolumeAE = 0x0D08, None
+    StopEvent = 0x1511, None
+    PauseEvent = 0x1611, None
+    ResumeEvent = 0x1711, None
+    Duck = 0x1820, None
+    Trigger = 0x1D00, None
+    TriggerO = 0x1D01, None
+    SeekE = 0x1E02, None
+    SeekEO = 0x1E03, ActionSeek
+    SeekALL = 0x1E04, None
+    SeekALLO = 0x1E05, None
+    SeekAE = 0x1E08, None
+    SeekAEO = 0x1E09, None
+    ResetPlaylistE = 0x2202, None
+    ResetPlaylistEO = 0x2203, None
+    SetGameParameter = 0x1302, ActionSetGameParameter
+    SetGameParameterO = 0x1303, None
+    ResetGameParameter = 0x1402, None
+    ResetGameParameterO = 0x1403, None
+    Release = 0x1F02, None
+    ReleaseO = 0x1F03, None
+    Unk2102 = 0x2102, None
+    PlayEvent = 0x2103, str
