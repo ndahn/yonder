@@ -19,6 +19,9 @@ class AssociatedChildData:
     graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("associated_child_id", self.associated_child_id)]
+
 
 @dataclass
 class Layer:

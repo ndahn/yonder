@@ -11,6 +11,9 @@ class PlaylistItem:
     play_id: int
     weight: int = 50
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("play_id", self.play_id)]
+
 
 @dataclass
 class Playlist:

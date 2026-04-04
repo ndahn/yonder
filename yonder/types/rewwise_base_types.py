@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Optional
 from dataclasses import dataclass, field
 
 from .rewwise_enums import (
@@ -39,6 +38,9 @@ class DecisionTreeNode:
     def validate(self) -> None:
         self.children.sort(key=lambda x: x.key)
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("node_id", self.node_id)]
+
 
 @dataclass
 class MusicFade:
@@ -54,6 +56,9 @@ class MusicTransitionObject:
     fade_in: MusicFade = field(default_factory=MusicFade)
     play_pre_entry: int = 0
     play_post_exit: int = 0
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("segment_id", self.segment_id)]
 
 
 @dataclass
@@ -78,6 +83,9 @@ class MusicTransDstRule:
     play_pre_entry: int = 0
     destination_match_source_cue_name: int = 0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("jump_to_id", self.jump_to_id)]
+
 
 @dataclass
 class MusicTransitionRule:
@@ -90,7 +98,17 @@ class MusicTransitionRule:
         default_factory=MusicTransDstRule
     )
     alloc_trans_object_flag: int = 0
-    transition_object: Optional[MusicTransitionObject] = None
+    transition_object: MusicTransitionObject = field(default_factory=MusicTransitionObject)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        refs = []
+        refs.extend([
+            (f"source_ids:{i}", sid) for i, sid in enumerate(self.source_ids)
+        ])
+        refs.extend([
+            (f"destination_ids:{i}", did) for i, did in enumerate(self.destination_ids)
+        ])
+        return refs
 
 
 @dataclass
@@ -184,6 +202,9 @@ class FXChunk:
     is_share_set: int = 0
     is_rendered: int = 0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("fx_id", self.fx_id)]
+
 
 @dataclass
 class PropRangedModifier:
@@ -262,6 +283,15 @@ class AuxParams:
     aux4: int = 0
     reflections_aux_bus: int = 0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [
+            ("aux1", self.aux1),
+            ("aux2", self.aux2),
+            ("aux3", self.aux3),
+            ("aux4", self.aux4),
+            ("reflection_aux_bus", self.reflection_aux_bus),
+        ]
+
 
 @dataclass
 class AdvSettingsParams:
@@ -295,16 +325,20 @@ class AkState:
     state_id: int
     state_instance_id: int
 
+    def get_references(self) -> list[tuple[str, int]]:
+        # TODO not sure about this one
+        return [("state_id", self.state_id)]
+
 
 @dataclass
-class AkStatePropertyInfo:
+class StatePropertyInfo:
     property: PropID
     accum_type: RtpcAccum = RtpcAccum.Nothing
     in_db: int = 0
 
 
 @dataclass
-class AkStateGroupChunk:
+class StateGroupChunk:
     state_group_id: int
     sync_type: SyncType = SyncType.Immediate
     state_count: int = 0
@@ -314,9 +348,9 @@ class AkStateGroupChunk:
 @dataclass
 class StateChunk:
     state_property_count: int = 0
-    state_property_info: list[AkStatePropertyInfo] = field(default_factory=list)
+    state_property_info: list[StatePropertyInfo] = field(default_factory=list)
     state_group_count: int = 0
-    state_group_chunks: list[AkStateGroupChunk] = field(default_factory=list)
+    state_group_chunks: list[StateGroupChunk] = field(default_factory=list)
 
 
 @dataclass
@@ -350,6 +384,10 @@ class PropBundle:
     prop_id: PropID
     value: float = 0.0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        if self.prop_id in (PropID.AttachedPluginFXID, PropID.AttenuationID):
+            return [("value", int(self.value))]
+
 
 @dataclass
 class NodeInitialParams:
@@ -357,6 +395,8 @@ class NodeInitialParams:
     prop_ranged_modifiers: PropRangedModifiers = field(
         default_factory=PropRangedModifiers
     )
+
+    # TODO might also use attenuation or FX but enum is not known atm
 
 
 @dataclass
@@ -382,12 +422,19 @@ class NodeBaseParams:
     state_chunk: StateChunk = field(default_factory=StateChunk)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("override_bus_id", self.override_bus_id)]
+
 
 @dataclass
 class MediaInformation:
     source_id: int
     in_memory_media_size: int = 0
     source_flags: int = 0
+
+    def get_references(self) -> list[tuple[str, int]]:
+        # May match an fx effect
+        return [("source_id", self.source_id)]
 
 
 @dataclass
@@ -420,6 +467,9 @@ class BusInitialFxParams:
     fx_id_0: int = 0
     is_share_set_0: int = 0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("fx_id_0", self.fx_id_0)]
+
 
 @dataclass
 class BusInitialValues:
@@ -437,11 +487,18 @@ class BusInitialValues:
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     state_chunk: StateChunk = field(default_factory=StateChunk)
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("override_bus_id", self.override_bus_id), ("device_share_set_id", self.device_share_set_id)]
+
 
 @dataclass
 class MediaMap:
     index: int
     source_id: int
+
+    def get_references(self) -> list[tuple[str, int]]:
+        # Usually not a reference, but might be paired with an effect
+        return [("source_id", self.source_id)]
 
 
 @dataclass
@@ -455,6 +512,10 @@ class FxBaseInitialValues:
     state_chunk: StateChunk = field(default_factory=StateChunk)
     property_value_count: int = 0
     property_values: list[PluginPropertyValue] = field(default_factory=list)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        # TODO not sure about this one
+        return [("fx_id", self.fx_id)]
 
 
 @dataclass
@@ -473,6 +534,9 @@ class DuckInfo:
     fade_curve: CurveInterpolation = CurveInterpolation.Linear
     target_prop: PropID = PropID.Volume
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("bus_id", self.bus_id)]
+
 
 @dataclass
 class Children:
@@ -482,6 +546,9 @@ class Children:
     def validate(self) -> None:
         self.items = sorted(set(self.items))
         self.count = len(self.items)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("items", self.items)]
 
 
 @dataclass
@@ -502,6 +569,9 @@ class Stinger:
     cue_filter_hash: int = 0
     dont_repeat_time: int = 0
     segment_look_head_count: int = 0
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("segment_id", self.segment_id)]
 
 
 @dataclass

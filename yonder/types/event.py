@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 
 from .structure import _HIRCNodeBody
-from .action import SupportedActionType, ActionTypeId
+from .action import ActionType
 
 if TYPE_CHECKING:
     from .soundbank import Soundbank
@@ -14,13 +14,11 @@ class Event(_HIRCNodeBody):
     action_count: int = 0
     actions: list[int] = field(default_factory=list)
 
-    def has_action_type(self, bnk: "Soundbank", val: SupportedActionType | ActionTypeId | str | int) -> bool:
-        if isinstance(val, SupportedActionType):
-            type_id = ActionTypeId[val.name].value
-        elif isinstance(val, ActionTypeId):
-            type_id = val.value
+    def has_action_type(self, bnk: "Soundbank", val: ActionType | str | int) -> bool:
+        if isinstance(val, ActionType):
+            type_id = val.type_id
         elif isinstance(val, str):
-            type_id = ActionTypeId[val].value
+            type_id = ActionType[val].type_id
         else:
             type_id = val
 
@@ -30,3 +28,6 @@ class Event(_HIRCNodeBody):
                 return True
 
         return False
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [(f"actions:{i}", aid) for i, aid in enumerate(self.actions)]

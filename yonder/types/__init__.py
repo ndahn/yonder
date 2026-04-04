@@ -1,4 +1,4 @@
-from .action import Action, ActionTypeId, SupportedActionType
+from .action import Action, ActionType
 from .actor_mixer import ActorMixer
 from .attenuation import Attenuation
 from .audio_device import AudioDevice

@@ -87,8 +87,12 @@ class Action(_HIRCNodeBody):
         )
 
     @property
-    def action_type_name(self) -> str:
-        return ActionType(self.action_type).name
+    def action_type_enum(self) -> ActionType:
+        # NOTE "action_type" is already reserved for serialization
+        return ActionType(self.action_type)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("external_id", self.external_id)]
 
 
 @dataclass

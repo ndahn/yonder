@@ -13,7 +13,7 @@ from yonder.query import query_nodes
 from .structure import Section, BKHDSection, HIRCSection, HIRCNode
 from .rewwise_parse import serialize, deserialize
 from .rewwise_enums import SourceType
-from .action import SupportedActionType
+from .action import ActionType
 
 from . import (
     Action,
@@ -422,12 +422,12 @@ class Soundbank:
 
         logger.info(f"Found and deleted {len(indices)} orphans")
 
-    def find_events(self, action_type: SupportedActionType = SupportedActionType.Play) -> Generator[HIRCNode, None, None]:
+    def find_events(self, action_type: ActionType = ActionType.Play) -> Generator[HIRCNode, None, None]:
         events: list[HIRCNode[Event]] = list(self.query("type=Event"))
         for evt in events:
             for aid in evt.body.actions:
-                action = self[aid]
-                if not action_type or action_type == action.type_name:
+                action: Action = self[aid]
+                if not action_type or action_type == action.action_type_enum:
                     yield evt
                     break
 

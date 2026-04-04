@@ -25,6 +25,9 @@ class MusicRanSeqPlaylistItem:
     use_weight: int = 0
     shuffle: int = 0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("segment_id", self.segment_id)]
+
 
 @dataclass
 class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):

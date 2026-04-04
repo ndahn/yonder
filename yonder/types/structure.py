@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import Union, ClassVar, Generic, TypeVar
-from dataclasses import dataclass, field
+from typing import Any, Union, ClassVar, Generic, TypeVar
+from dataclasses import dataclass, field, fields, is_dataclass
 
 from .rewwise_base_types import (
     IAkPlugin,
@@ -150,6 +150,31 @@ class _HIRCNodeBody:
 
         raise ValueError(f"Not a valid _HIRCNodeBody: {data}")
 
+    def get_references(self) -> list[tuple[str, int]]:
+        def delve(obj: Any, path: str = "") -> list[tuple[str, int]]:
+            ret = []
+
+            if hasattr(obj, "get_references") and callable(obj.get_references):
+                for key, val in obj.get_references():
+                    if isinstance(val, int) and val > 0:
+                        ret.extend((f"{path}/{key}", val))
+            
+            if is_dataclass(obj):
+                for f in fields(obj):
+                    ret.extend(delve(f, f"{path}/{f.name}"))
+
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    ret.extend(delve(item, f"{path}:{i}"))
+
+            elif isinstance(obj, dict):
+                for key, val in obj.items():
+                    ret.extend(delve(item, f"{path}/{key}"))
+
+            return ret
+
+        return delve(self)
+
 
 _BodyType = TypeVar("_BodyType", bound=_HIRCNodeBody)
 
@@ -210,6 +235,10 @@ class HIRCNode(Generic[_BodyType]):
     def from_dict(cls, data: dict) -> "HIRCNode":
         data["_id"] = data.pop("id")
         return deserialize(cls, data)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        # For convenience
+        return self.body.get_references()
 
     def __hash__(self) -> int:
         return self.id

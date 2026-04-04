@@ -30,6 +30,11 @@ class TrackSrcInfo:
     end_trim_offset: float = 0.0
     source_duration: float = 0.0
 
+    def get_references(self) -> list[tuple[str, int]]:
+        # TODO not sure about track_id and event_id
+        # source_id might also match an fx effect
+        return [("source_id", self.source_id)]
+
 
 @dataclass
 class MusicTrack(PropertyMixin, _HIRCNodeBody):
