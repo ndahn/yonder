@@ -6,6 +6,6 @@ from .rewwise_base_types import BusInitialValues
 
 
 @dataclass
-class Bus(_HIRCNodeBody):
-    body_type: ClassVar[int] = 8
+class AuxBus(_HIRCNodeBody):
+    body_type: ClassVar[int] = 18
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)

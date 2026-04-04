@@ -1,80 +1,33 @@
-from yonder.node import Node
-from yonder.util import logger
-from .wwise_node import WwiseNode
-from .mixins import ContainerMixin
+from dataclasses import dataclass, field
+from typing import ClassVar
+
+from .soundbank import _HIRCNodeBody
+from .rewwise_base_types import NodeBaseParams, Children, RTPCGraphPoint, InitialRTPC
+from .rewwise_enums import AkRtpcType
 
 
-class LayerContainer(ContainerMixin, WwiseNode):
-    """Plays multiple child sounds simultaneously as layers.
+@dataclass
+class AssociatedChildData:
+    associated_child_id: int
+    graph_point_count: int = 0
+    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
-    Useful for layered sound design where different components play together (e.g., engine loop + transmission sounds).
-    """
 
-    @classmethod
-    def new(cls, nid: int, parent: int | Node = None) -> "LayerContainer":
-        """Create a new LayerContainer node.
+@dataclass
+class Layer:
+    layer_id: int
+    initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
+    rtpc_id: int = 0
+    rtpc_type: AkRtpcType = AkRtpcType.GameParameter
+    associated_childen_count: int = 0
+    associated_children: list[AssociatedChildData] = field(default_factory=list)
 
-        Parameters
-        ----------
-        nid : int
-            Node ID (hash).
-        parent : int | Node, default=None
-            Parent node.
 
-        Returns
-        -------
-        LayerContainer
-            New LayerContainer instance.
-        """
-        temp = cls.load_template(cls.__name__)
-
-        container = cls(temp)
-        container.id = nid
-        if parent is not None:
-            container.parent = parent
-
-        logger.info(f"Created new node {container}")
-        return container
-
-    @property
-    def layers(self) -> list[dict]:
-        """Layer definitions for simultaneous playback configuration.
-
-        Returns
-        -------
-        list[dict]
-            List of layer definitions.
-        """
-        return self["layers"]
-
-    @property
-    def continuous_validation(self) -> bool:
-        """Controls whether layer validation runs continuously during playback.
-
-        Returns
-        -------
-        bool
-            True if continuous validation is enabled.
-        """
-        return bool(self["is_continuous_validation"])
-
-    @continuous_validation.setter
-    def continuous_validation(self, value: bool) -> None:
-        self["is_continuous_validation"] = int(value)
-
-    # NOTE Seems to not be used in ER/NR, so no clue what would go here
-    def add_layer(self, layer: dict) -> None:
-        """Associates a layer definition with this container.
-
-        Parameters
-        ----------
-        layer : dict
-            Layer definition dictionary.
-        """
-        self["layers"].append(layer)
-        self["layer_count"] = len(self["layers"])
-
-    def clear_layers(self) -> None:
-        """Disassociates all layer definitions from this container."""
-        self["layers"] = []
-        self["layer_count"] = 0
+@dataclass
+class LayerContainer(_HIRCNodeBody):
+    body_type: ClassVar[int] = 9
+    node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
+    children: Children = field(default_factory=Children)
+    layer_count: int = 0
+    layers: list[Layer] = field(default_factory=list)
+    is_continuous_validation: int = 0

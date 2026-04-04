@@ -8,10 +8,11 @@ from .rewwise_base_types import (
     StateGroup,
     SwitchGroup,
     RTPCRamping,
-    AkAcousticTexture,
-    AkStateTransition,
+    AcousticTexture,
+    StateTransition,
 )
-from .rewwise_nodes import HIRCNode
+from .rewwise_parse import serialize, deserialize
+from .object_id import ObjectId
 
 
 @dataclass
@@ -93,7 +94,7 @@ class STMGSection:
     ramping_param_count: int = 0
     ramping_params: list[RTPCRamping] = field(default_factory=list)
     texture_count: int = 0
-    textures: list[AkAcousticTexture] = field(default_factory=list)
+    textures: list[AcousticTexture] = field(default_factory=list)
 
 
 @dataclass
@@ -101,13 +102,54 @@ class STMGSectionStateGroup:
     id: int
     default_transition_time: int = 0
     state_transition_count: int = 0
-    state_transitions: list[AkStateTransition] = field(default_factory=list)
+    state_transitions: list[StateTransition] = field(default_factory=list)
 
 
 @dataclass
 class HIRCSection:
     object_count: int = 0
     objects: list[HIRCNode] = field(default_factory=list)
+
+
+@dataclass
+class _HIRCNodeBody:
+    def to_dict(self) -> dict:
+        # rewwise inserts the class name of the node type into the hierarchy
+        # (e.g. body: {Sound: ...})
+        return {type(self).__name__: serialize(self)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "_HIRCNodeBody":
+        for sub in cls.__subclasses__():
+            if sub.__name__ in data:
+                return deserialize(sub, data[sub.__name__])
+
+        raise ValueError(f"Not a valid _HIRCNodeBody: {data}")
+
+
+@dataclass
+class HIRCNode:
+    id: ObjectId
+    body: _HIRCNodeBody
+
+    @property
+    def type_id(self) -> int:
+        return type(self.body).body_type
+
+    @property
+    def type_name(self) -> str:
+        return type(self.body).__name__
+
+    def to_dict(self) -> dict:
+        ser = serialize(self)
+        ser.update(
+            {
+                # These two are just here to make rewwise happy
+                "body_type": self.type_id,
+                "size": 0,
+            }
+        )
+        return ser
 
 
 SectionBody = Union[
@@ -122,6 +164,9 @@ SectionBody = Union[
     INITSection,
     PLATSection,
 ]
+
+
+NODE_TYPE_MAP = {cls.body_type: cls for cls in _HIRCNodeBody.__subclasses__()}
 
 
 @dataclass

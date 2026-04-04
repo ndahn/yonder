@@ -16,47 +16,46 @@ from .rewwise_enums import (
     AkSyncTypeU8,
     AkRtpcAccum,
     AkRtpcType,
-    AkCurveScaling,
-    AkClipAutomationType,
+    CurveScaling,
     SourceType,
     PluginId,
 )
 
 
 @dataclass
-class AkGameSync:
+class GameSync:
     group_id: int
 
 
 @dataclass
-class AkDecisionTreeNode:
+class DecisionTreeNode:
     key: int
     node_id: int
     first_child_index: int
     child_count: int = 0
     weight: int = 50
     probability: int = 100
-    children: list[AkDecisionTreeNode] = field(default_factory=list)
+    children: "list[DecisionTreeNode]" = field(default_factory=list)
 
 
 @dataclass
-class AkMusicFade:
+class MusicFade:
     transition_time: int = 0
     curve: AkCurveInterpolation = AkCurveInterpolation.Constant
     offset: int = 0
 
 
 @dataclass
-class AkMusicTransitionObject:
+class MusicTransitionObject:
     segment_id: int = 0
-    fade_out: AkMusicFade = field(default_factory=AkMusicFade)
-    fade_in: AkMusicFade = field(default_factory=AkMusicFade)
+    fade_out: MusicFade = field(default_factory=MusicFade)
+    fade_in: MusicFade = field(default_factory=MusicFade)
     play_pre_entry: int = 0
     play_post_exit: int = 0
 
 
 @dataclass
-class AkMusicTransSrcRule:
+class MusicTransSrcRule:
     transition_time: int = 0
     fade_curve: AkCurveInterpolation = AkCurveInterpolation.Constant
     fade_offet: int = 0
@@ -66,7 +65,7 @@ class AkMusicTransSrcRule:
 
 
 @dataclass
-class AkMusicTransDstRule:
+class MusicTransDstRule:
     transition_time: int = 0
     fade_curve: AkCurveInterpolation = AkCurveInterpolation.Constant
     fade_offet: int = 0
@@ -79,23 +78,23 @@ class AkMusicTransDstRule:
 
 
 @dataclass
-class AkMusicTransitionRule:
+class MusicTransitionRule:
     source_transition_rule_count: int = 0
     source_ids: list[int] = field(default_factory=list)
     destination_transition_rule_count: int = 0
     destination_ids: list[int] = field(default_factory=list)
-    source_transition_rule: AkMusicTransSrcRule = field(
-        default_factory=AkMusicTransSrcRule
+    source_transition_rule: MusicTransSrcRule = field(
+        default_factory=MusicTransSrcRule
     )
-    destination_transition_rule: AkMusicTransDstRule = field(
-        default_factory=AkMusicTransDstRule
+    destination_transition_rule: MusicTransDstRule = field(
+        default_factory=MusicTransDstRule
     )
     alloc_trans_object_flag: int = 0
-    transition_object: Optional[AkMusicTransitionObject] = None
+    transition_object: Optional[MusicTransitionObject] = None
 
 
 @dataclass
-class AkRTPCGraphPoint:
+class RTPCGraphPoint:
     from_: float
     to: float
     interpolation: AkCurveInterpolation = AkCurveInterpolation.Linear
@@ -106,7 +105,7 @@ class ObsOccCurve:
     curve_enabled: int = 0
     curve_scaling: int = 0
     point_count: int = 0
-    points: list[AkRTPCGraphPoint] = field(default_factory=list)
+    points: list[RTPCGraphPoint] = field(default_factory=list)
 
 
 @dataclass
@@ -127,14 +126,14 @@ class IAkPlugin:
 
 
 @dataclass
-class AkStateTransition:
+class StateTransition:
     from_state: int = 0
     to_state: int = 0
     transition_time: int = 0
 
 
 @dataclass
-class AkSwitchGraphPoint:
+class SwitchGraphPoint:
     rtpc_value: float
     switch: int
     curve_shape: int
@@ -145,7 +144,7 @@ class StateGroup:
     id: int
     default_transition_time: int = 0
     transition_count: int = 0
-    transitions: list[AkStateTransition] = field(default_factory=list)
+    transitions: list[StateTransition] = field(default_factory=list)
 
 
 @dataclass
@@ -154,7 +153,7 @@ class SwitchGroup:
     rtpc_id: int = 0
     rtpc_type: int = 0
     graph_point_count: int = 0
-    graph_points: list[AkSwitchGraphPoint] = field(default_factory=list)
+    graph_points: list[SwitchGraphPoint] = field(default_factory=list)
 
 
 @dataclass
@@ -168,7 +167,7 @@ class RTPCRamping:
 
 
 @dataclass
-class AkAcousticTexture:
+class AcousticTexture:
     id: int
     absorption_offset: float = 0.0
     absorption_low: float = 0.0
@@ -200,7 +199,7 @@ class PropRangedModifiers:
 
 
 @dataclass
-class AkPathVertex:
+class PathVertex:
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -208,7 +207,7 @@ class AkPathVertex:
 
 
 @dataclass
-class AkPathListItemOffset:
+class PathListItemOffset:
     vertices_offset: int
     vertices_count: int
 
@@ -240,9 +239,9 @@ class PositioningParams:
     path_mode: AkPathMode = AkPathMode.StepSequence
     transition_time: int = 0
     vertex_count: int = 0
-    vertices: list[AkPathVertex] = field(default_factory=list)
+    vertices: list[PathVertex] = field(default_factory=list)
     path_list_item_count: int = 0
-    path_list_item_offsets: list[AkPathListItemOffset] = field(default_factory=list)
+    path_list_item_offsets: list[PathListItemOffset] = field(default_factory=list)
     three_dimensional_automation_params: list[Ak3DAutomationParams] = field(
         default_factory=list
     )
@@ -327,9 +326,9 @@ class RTPC:
     rtpc_accum: AkRtpcAccum = AkRtpcAccum.Nothing
     param_id: int = 0
     curve_id: int = 0
-    curve_scaling: AkCurveScaling = AkCurveScaling.Nothing
+    curve_scaling: CurveScaling = CurveScaling.Nothing
     graph_point_count: int = 0
-    graph_points: list[AkRTPCGraphPoint] = field(default_factory=list)
+    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
 
 @dataclass
@@ -361,7 +360,7 @@ class NodeInitialParams:
 
 
 @dataclass
-class AkPropBundleByte:
+class PropBundleByte:
     count: int = 0
     types: list[AkPropID] = field(default_factory=list)
     values: list[float] = field(default_factory=list)
@@ -385,57 +384,21 @@ class NodeBaseParams:
 
 
 @dataclass
-class AkMediaInformation:
+class MediaInformation:
     source_id: int
     in_memory_media_size: int = 0
     source_flags: int = 0
 
 
 @dataclass
-class AkBankSourceData:
+class BankSourceData:
     plugin: PluginId
     source_type: SourceType = SourceType.Embedded
-    media_information: AkMediaInformation = field(
-        default_factory=lambda: AkMediaInformation(source_id=0)
+    media_information: MediaInformation = field(
+        default_factory=lambda: MediaInformation(source_id=0)
     )
     params_size: int = 0
     params: list[int] = field(default_factory=list)
-
-
-@dataclass
-class AkMediaMap:
-    index: int
-    source_id: int
-
-
-@dataclass
-class PluginPropertyValue:
-    property: AkParameterID
-    rtpc_accum: AkRtpcAccum = AkRtpcAccum.Nothing
-    value: float = 0.0
-
-
-@dataclass
-class FxBaseInitialValues:
-    fx_id: int
-    params_size: int = 0
-    params: list[int] = field(default_factory=list)
-    media_count: int = 0
-    media: list[AkMediaMap] = field(default_factory=list)
-    initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
-    state_chunk: StateChunk = field(default_factory=StateChunk)
-    property_value_count: int = 0
-    property_values: list[PluginPropertyValue] = field(default_factory=list)
-
-
-@dataclass
-class AkDuckInfo:
-    bus_id: int
-    duck_volume: float = 0.0
-    fade_out_time: int = 0
-    fade_in_time: int = 0
-    fade_curve: AkCurveInterpolation = AkCurveInterpolation.Linear
-    target_prop: AkPropID = AkPropID.Volume
 
 
 @dataclass
@@ -466,7 +429,7 @@ class BusInitialValues:
     recovery_time: int = 0
     max_duck_volume: float = 0.0
     duck_count: int = 0
-    ducks: list[AkDuckInfo] = field(default_factory=list)
+    ducks: list[DuckInfo] = field(default_factory=list)
     bus_initial_fx_params: BusInitialFxParams = field(
         default_factory=BusInitialFxParams
     )
@@ -476,33 +439,39 @@ class BusInitialValues:
 
 
 @dataclass
-class SwitchPackage:
-    switch_id: int
-    node_count: int = 0
-    nodes: list[int] = field(default_factory=list)
+class MediaMap:
+    index: int
+    source_id: int
 
 
 @dataclass
-class AkSwitchNodeParams:
-    node_id: int
-    unk1: bool = False
-    unk2: bool = False
-    unk3: bool = False
-    unk4: bool = False
-    unk5: bool = False
-    unk6: bool = False
-    continue_playback: bool = False
-    is_first_only: bool = False
-    unk9: bool = False
-    unk10: bool = False
-    unk11: bool = False
-    unk12: bool = False
-    unk13: bool = False
-    unk14: bool = False
-    unk15: bool = False
-    unk16: bool = False
+class FxBaseInitialValues:
+    fx_id: int
+    params_size: int = 0
+    params: list[int] = field(default_factory=list)
+    media_count: int = 0
+    media: list[MediaMap] = field(default_factory=list)
+    initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
+    state_chunk: StateChunk = field(default_factory=StateChunk)
+    property_value_count: int = 0
+    property_values: list[PluginPropertyValue] = field(default_factory=list)
+
+
+@dataclass
+class PluginPropertyValue:
+    property: AkParameterID
+    rtpc_accum: AkRtpcAccum = AkRtpcAccum.Nothing
+    value: float = 0.0
+
+
+@dataclass
+class DuckInfo:
+    bus_id: int
+    duck_volume: float = 0.0
     fade_out_time: int = 0
     fade_in_time: int = 0
+    fade_curve: AkCurveInterpolation = AkCurveInterpolation.Linear
+    target_prop: AkPropID = AkPropID.Volume
 
 
 @dataclass
@@ -512,35 +481,7 @@ class Children:
 
 
 @dataclass
-class PlaylistItem:
-    play_id: int
-    weight: int = 50
-
-
-@dataclass
-class Playlist:
-    count: int = 0
-    items: list[PlaylistItem] = field(default_factory=list)
-
-
-@dataclass
-class ConeParams:
-    inside_degrees: float = 0.0
-    outside_degrees: float = 0.0
-    outside_volume: float = 0.0
-    low_pass: float = 0.0
-    high_pass: float = 0.0
-
-
-@dataclass
-class AkConversionTable:
-    curve_scaling: AkCurveScaling = AkCurveScaling.Nothing
-    point_count: int = 0
-    points: list[AkRTPCGraphPoint] = field(default_factory=list)
-
-
-@dataclass
-class AkMeterInfo:
+class MeterInfo:
     grid_period: float = 0.0
     grid_offset: float = 0.0
     tempo: float = 120.0
@@ -564,72 +505,13 @@ class MusicNodeParams:
     flags: int = 0
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
-    meter_info: AkMeterInfo = field(default_factory=AkMeterInfo)
+    meter_info: MeterInfo = field(default_factory=MeterInfo)
     stinger_count: int = 0
     stingers: list[Stinger] = field(default_factory=list)
-
-
-@dataclass
-class AkMusicMarkerWwise:
-    id: int
-    position: float = 0.0
-    string_length: int = 0
-    string: str = ""
-
-
-@dataclass
-class AkClipAutomation:
-    clip_index: int
-    auto_type: AkClipAutomationType = AkClipAutomationType.Volume
-    graph_point_count: int = 0
-    graph_points: list[AkRTPCGraphPoint] = field(default_factory=list)
-
-
-@dataclass
-class AkTrackSrcInfo:
-    track_id: int
-    source_id: int
-    event_id: int = 0
-    play_at: float = 0.0
-    begin_trim_offset: float = 0.0
-    end_trim_offset: float = 0.0
-    source_duration: float = 0.0
 
 
 @dataclass
 class MusicTransNodeParams:
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     transition_rule_count: int = 0
-    transition_rules: list[AkMusicTransitionRule] = field(default_factory=list)
-
-
-@dataclass
-class AkMusicRanSeqPlaylistItem:
-    segment_id: int
-    playlist_item_id: int = 0
-    child_count: int = 0
-    ers_type: int = 0
-    loop_base: int = 0
-    loop_min: int = 0
-    loop_max: int = 0
-    weight: int = 50
-    avoid_repeat_count: int = 0
-    use_weight: int = 0
-    shuffle: int = 0
-
-
-@dataclass
-class AssociatedChildData:
-    associated_child_id: int
-    graph_point_count: int = 0
-    graph_points: list[AkRTPCGraphPoint] = field(default_factory=list)
-
-
-@dataclass
-class AkLayer:
-    layer_id: int
-    initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
-    rtpc_id: int = 0
-    rtpc_type: AkRtpcType = AkRtpcType.GameParameter
-    associated_childen_count: int = 0
-    associated_children: list[AssociatedChildData] = field(default_factory=list)
+    transition_rules: list[MusicTransitionRule] = field(default_factory=list)

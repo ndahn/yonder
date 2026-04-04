@@ -245,24 +245,24 @@ class AkRtpcType(IntEnum):
     Modulator = 0x2
 
 
-class AkCurveScaling(IntEnum):
+class CurveScaling(IntEnum):
     Nothing = 0x0
     DB = 0x2
     Log = 0x3
     DBToLin = 0x4
 
 
-class AkGroupType(IntEnum):
+class GroupType(IntEnum):
     Switch = 0x0
     State = 0x1
 
 
-class AkDecisionTreeMode(IntEnum):
+class DecisionTreeMode(IntEnum):
     BestMatch = 0x0
     Weighted = 0x1
 
 
-class AkClipAutomationType(IntEnum):
+class ClipAutomationType(IntEnum):
     Volume = 0x00
     LPF = 0x01
     HPF = 0x02
@@ -376,4 +376,3 @@ class PluginId(IntEnum):
     CPRVoiceBroadcastReceive2 = 0x000429A2
     CPRVoiceBroadcastSend2 = 0x000529A3
     CrankcaseREVModelPlayer = 0x01A01052
-
