@@ -2,8 +2,13 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import _HIRCNodeBody
-from .rewwise_base_types import MusicNodeParams, MusicTransNodeParams, PropBundle
-from .mixins.properties import PropertyMixin
+from .rewwise_base_types import (
+    MusicNodeParams,
+    MusicTransNodeParams,
+    PropBundle,
+    Children,
+)
+from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
@@ -22,7 +27,7 @@ class MusicRanSeqPlaylistItem:
 
 
 @dataclass
-class MusicRandomSequenceContainer(PropertyMixin, _HIRCNodeBody):
+class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 13
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -40,7 +45,7 @@ class MusicRandomSequenceContainer(PropertyMixin, _HIRCNodeBody):
         self.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property
-    def children(self) -> list[int]:
+    def children(self) -> Children:
         return self.music_node_params.children
 
     @property

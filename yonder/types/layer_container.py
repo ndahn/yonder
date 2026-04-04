@@ -10,7 +10,7 @@ from .rewwise_base_types import (
     PropBundle,
 )
 from .rewwise_enums import RtpcType
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
@@ -31,7 +31,7 @@ class Layer:
 
 
 @dataclass
-class LayerContainer(PropertyMixin, _HIRCNodeBody):
+class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

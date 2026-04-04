@@ -9,7 +9,7 @@ from .rewwise_base_types import (
     PropRangedModifiers,
 )
 from .rewwise_enums import DecisionTreeMode, GroupType
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin
 
 
 @dataclass

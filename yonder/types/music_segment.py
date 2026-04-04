@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import _HIRCNodeBody
-from .rewwise_base_types import MusicNodeParams, PropBundle
-from .mixins.properties import PropertyMixin
+from .rewwise_base_types import MusicNodeParams, PropBundle, Children
+from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
@@ -15,7 +15,7 @@ class MusicMarkerWwise:
 
 
 @dataclass
-class MusicSegment(PropertyMixin, _HIRCNodeBody):
+class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
@@ -29,6 +29,10 @@ class MusicSegment(PropertyMixin, _HIRCNodeBody):
     @parent.setter
     def parent(self, new_parent: int) -> None:
         self.music_node_params.node_base_params.direct_parent_id = new_parent
+
+    @property
+    def children(self) -> Children:
+        return self.music_node_params.children
 
     @property
     def properties(self) -> list[PropBundle]:

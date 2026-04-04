@@ -3,7 +3,7 @@ from typing import ClassVar
 
 from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
@@ -19,7 +19,7 @@ class Playlist:
 
 
 @dataclass
-class RandomSequenceContainer(PropertyMixin, _HIRCNodeBody):
+class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     loop_count: int = 0

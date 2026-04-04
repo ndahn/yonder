@@ -30,11 +30,14 @@ class GameSync:
 class DecisionTreeNode:
     key: int
     node_id: int
-    first_child_index: int
+    first_child_index: int = 0
     child_count: int = 0
     weight: int = 50
     probability: int = 100
-    children: "list[DecisionTreeNode]" = field(default_factory=list)
+    children: list[DecisionTreeNode] = field(default_factory=list)
+
+    def validate(self) -> None:
+        self.children.sort(key=lambda x: x.key)
 
 
 @dataclass

@@ -3,7 +3,7 @@ from typing import ClassVar
 
 from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, BankSourceData, PropBundle
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin
 
 
 @dataclass

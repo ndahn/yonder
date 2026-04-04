@@ -2,8 +2,7 @@ from yonder.types.rewwise_base_types import PropBundle
 from yonder.types.rewwise_enums import PropID
 
 
-# NOTE: classes this class is mixed with must expose 
-# a mutable "properties" list of PropBundles
+# NOTE: mixed class must expose a "properties" member
 class PropertyMixin:
     def get_property(self, property: PropID, default: float = None) -> float:
         """Get a property value by name.

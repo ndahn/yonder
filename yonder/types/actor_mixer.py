@@ -3,11 +3,11 @@ from typing import ClassVar
 
 from .structure import _HIRCNodeBody
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
-class ActorMixer(PropertyMixin, _HIRCNodeBody):
+class ActorMixer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

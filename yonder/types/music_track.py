@@ -9,7 +9,7 @@ from .rewwise_base_types import (
     PropBundle,
 )
 from .rewwise_enums import ClipAutomationType
-from .mixins.properties import PropertyMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
