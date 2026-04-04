@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import _HIRCNodeBody
-from .rewwise_base_types import NodeBaseParams, Children
+from .rewwise_base_types import NodeBaseParams, Children, PropBundle
+from .mixins.properties import PropertyMixin
 
 
 @dataclass
@@ -36,7 +37,7 @@ class SwitchNodeParams:
 
 
 @dataclass
-class SwitchContainer(_HIRCNodeBody):
+class SwitchContainer(PropertyMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     group_type: int = 0
@@ -52,3 +53,7 @@ class SwitchContainer(_HIRCNodeBody):
     @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.node_base_params.node_initial_params.prop_initial_values

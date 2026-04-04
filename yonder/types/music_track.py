@@ -2,8 +2,14 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import _HIRCNodeBody
-from .rewwise_base_types import NodeBaseParams, BankSourceData, RTPCGraphPoint
+from .rewwise_base_types import (
+    NodeBaseParams,
+    BankSourceData,
+    RTPCGraphPoint,
+    PropBundle,
+)
 from .rewwise_enums import ClipAutomationType
+from .mixins.properties import PropertyMixin
 
 
 @dataclass
@@ -26,7 +32,7 @@ class TrackSrcInfo:
 
 
 @dataclass
-class MusicTrack(_HIRCNodeBody):
+class MusicTrack(PropertyMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 11
     flags: int = 0
     source_count: int = 0
@@ -47,3 +53,7 @@ class MusicTrack(_HIRCNodeBody):
     @parent.setter
     def parent(self, new_parent: int) -> None:
         self.node_base_params.direct_parent_id = new_parent
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.node_base_params.node_initial_params.prop_initial_values

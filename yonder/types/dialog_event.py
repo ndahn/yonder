@@ -9,10 +9,11 @@ from .rewwise_base_types import (
     PropRangedModifiers,
 )
 from .rewwise_enums import DecisionTreeMode, GroupType
+from .mixins.properties import PropertyMixin
 
 
 @dataclass
-class DialogueEvent(_HIRCNodeBody):
+class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 15
     probability: int = 100
     tree_depth: int = 0
@@ -25,3 +26,8 @@ class DialogueEvent(_HIRCNodeBody):
     )
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.prop_bundle
+    

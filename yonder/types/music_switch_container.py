@@ -2,12 +2,19 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import _HIRCNodeBody
-from .rewwise_base_types import MusicNodeParams, MusicTransNodeParams, GameSync, DecisionTreeNode
+from .rewwise_base_types import (
+    MusicNodeParams,
+    MusicTransNodeParams,
+    GameSync,
+    DecisionTreeNode,
+    PropBundle,
+)
 from .rewwise_enums import GroupType, DecisionTreeMode
+from .mixins.properties import PropertyMixin
 
 
 @dataclass
-class MusicSwitchContainer(_HIRCNodeBody):
+class MusicSwitchContainer(PropertyMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 12
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -34,3 +41,7 @@ class MusicSwitchContainer(_HIRCNodeBody):
     @property
     def children(self) -> list[int]:
         return self.music_node_params.children
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
