@@ -88,16 +88,6 @@ class Sound(_HIRCNodeBody):
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
 
 
-@dataclass
-class Action(_HIRCNodeBody):
-    body_type: ClassVar[int] = 3
-    action_type: int
-    external_id: int
-    is_bus: int = 0
-    prop_bundle: list[PropBundle] = field(default_factory=list)
-    ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
-    params: _ActionParams
-
 
 @dataclass
 class Event(_HIRCNodeBody):
