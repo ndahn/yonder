@@ -43,3 +43,7 @@ class MusicTrack(_HIRCNodeBody):
     @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
+
+    @parent.setter
+    def parent(self, new_parent: int) -> None:
+        self.node_base_params.direct_parent_id = new_parent

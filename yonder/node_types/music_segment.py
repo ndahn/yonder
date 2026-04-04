@@ -24,3 +24,7 @@ class MusicSegment(_HIRCNodeBody):
     @property
     def parent(self) -> int:
         return self.music_node_params.node_base_params.direct_parent_id
+
+    @parent.setter
+    def parent(self, new_parent: int) -> None:
+        self.music_node_params.node_base_params.direct_parent_id = new_parent
