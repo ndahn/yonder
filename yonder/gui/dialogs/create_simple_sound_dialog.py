@@ -58,11 +58,15 @@ def create_simple_sound_dialog(
         properties.clear()
         properties.update(new_properties)
 
-    def on_soundfiles_changed(sender: str, data: tuple[list[Path], ...], user_data: Any) -> None:
+    def on_soundfiles_changed(
+        sender: str, data: tuple[list[Path], ...], user_data: Any
+    ) -> None:
         soundfiles.clear()
         soundfiles.extend(data[0])
 
-    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(
+        msg: str = None, color: tuple[int, int, int, int] = style.red
+    ) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return
@@ -111,7 +115,7 @@ def create_simple_sound_dialog(
             name,
             soundfiles,
             amx,
-            avoid_repeats=avoid_repeats,
+            avoid_repeat_count=avoid_repeats,
             properties=properties,
         )
 

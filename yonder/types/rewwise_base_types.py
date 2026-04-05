@@ -70,7 +70,7 @@ class MusicTransitionObject:
 class MusicTransSrcRule:
     transition_time: int = 0
     fade_curve: CurveInterpolation = CurveInterpolation.Constant
-    fade_offet: int = 0
+    fade_offet: int = 0  # TODO typo in bnk2json
     sync_type: SyncType = SyncType.Immediate
     clue_filter_hash: int = 0
     play_post_exit: int = 0
@@ -80,7 +80,7 @@ class MusicTransSrcRule:
 class MusicTransDstRule:
     transition_time: int = 0
     fade_curve: CurveInterpolation = CurveInterpolation.Constant
-    fade_offet: int = 0
+    fade_offet: int = 0  # TODO typo in bnk2json
     clue_filter_hash: int = 0
     jump_to_id: int = 0
     jump_to_type: int = 0

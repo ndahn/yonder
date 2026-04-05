@@ -12,7 +12,7 @@ from .rewwise_base_types import (
     RTPCGraphPoint,
     PropBundle,
 )
-from yonder.enums import ClipAutomationType, PropID, PluginId, SourceType
+from yonder.enums import ClipAutomationType, PropID, SourceType
 from .mixins import PropertyMixin
 
 
@@ -66,7 +66,7 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
         wem: Path = None,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
-        source_type: SourceType = SourceType.Embedded,
+        source_type: SourceType = SourceType.Streaming,
         props: dict[PropID, float] = None,
         parent: int = 0,
     ) -> "HIRCNode[MusicTrack]":
@@ -149,12 +149,32 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
                 media_information=MediaInformation(source_id, media_size),
             )
         )
+        begin_trim = abs(begin_trim)
         self.playlist.append(
             TrackSrcInfo(
                 source_id=source_id,
                 play_at=-begin_trim,
                 begin_trim_offset=begin_trim,
-                end_trim_offset=end_trim,
+                end_trim_offset=-abs(end_trim),
                 source_duration=duration,
             )
         )
+
+    def add_clip(
+        self,
+        clip_type: ClipAutomationType,
+        points: list[RTPCGraphPoint],
+    ) -> ClipAutomation:
+        clip = ClipAutomation(
+            len(self.clip_items),
+            clip_type,
+            graph_points=points,
+        )
+        self.clip_items.append(clip)
+        return clip
+
+    def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
+        begin_trim = abs(begin_trim)
+        self.playlist[idx].begin_trim_offset = begin_trim
+        self.playlist[idx].play_at = -begin_trim
+        self.playlist[idx].end_trim_offset = -abs(end_trim)

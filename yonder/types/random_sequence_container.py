@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from yonder.enums import PropID
+from yonder.enums import PropID, RandomMode
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -31,17 +31,17 @@ class Playlist:
 class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
-    loop_count: int = 0
+    loop_count: int = 1
     loop_mod_min: int = 0
     loop_mod_max: int = 0
-    transition_time: float = 0.0
+    transition_time: float = 1000.0
     transition_time_mod_min: float = 0.0
     transition_time_mod_max: float = 0.0
-    avoid_repeat_count: int = 0
+    avoid_repeat_count: int = 1
     transition_mode: int = 0
     random_mode: int = 0
     mode: int = 0
-    flags: int = 0
+    flags: int = 18
     children: Children = field(default_factory=Children)
     playlist: Playlist = field(default_factory=Playlist)
 
@@ -50,16 +50,18 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         cls,
         nid: int | str,
         nodes: int | list[int],
-        loop_count: int = 0,
         avoid_repeat_count: int = 0,
+        loop_count: int = 0,
+        random_mode: RandomMode = RandomMode.Random,
         props: dict[PropID, float] = None,
         parent: int = 0,
     ) -> "HIRCNode[RandomSequenceContainer]":
         obj = HIRCNode(
             nid,
             cls(
-                loop_count=loop_count,
                 avoid_repeat_count=avoid_repeat_count,
+                loop_count=loop_count,
+                random_mode=random_mode.value,
             ),
         )
 

@@ -29,7 +29,7 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     def new(
         cls,
         nid: int | str,
-        tracks: int | list[int],
+        tracks: int | list[int] = None,
         markers: list[int | str, float] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,

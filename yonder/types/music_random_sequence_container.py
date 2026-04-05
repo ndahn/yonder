@@ -9,8 +9,11 @@ from .rewwise_base_types import (
     MusicTransNodeParams,
     PropBundle,
     Children,
+    MusicTransitionRule,
+    MusicTransSrcRule,
+    MusicTransDstRule,
 )
-from yonder.enums import PropID
+from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -46,7 +49,7 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
     def new(
         cls,
         nid: int | str,
-        playlist: list[int, list[int]],
+        playlist: list[int, list[int]] = None,
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
         parent: int = 0,
@@ -136,3 +139,144 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
             assemble(child, playlist, playlist[-1].playlist_item_id)
 
         return playlist
+
+    def add_playlist_item(
+        self,
+        playlist_item_id: int,
+        segment_id: int,
+        weight: int = 50000,
+        use_weight: bool = False,
+        shuffle: bool = False,
+        avoid_repeat_count: int = 1,
+        loop_base: bool = False,
+        ers_type: int = 4294967295,
+        parent: int = 0,
+    ) -> MusicRanSeqPlaylistItem:
+        """Associates a segment with this playlist for random/sequential playback. A playlist is actually a flattened tree structure where children inherit settings from their parents. Use the parent parameter to associate child items to their parents.
+
+        Parameters
+        ----------
+        playlist_item_id : int
+            Unique playlist item ID.
+        segment_id : int | Node
+            Segment node ID.
+        weight : int, default=50000
+            Relative weight for random selection.
+        use_weight : bool, default=False
+            Whether to use weight when shuffling. Always True for the first playlist item.
+        avoid_repeat : int, default=0
+            Number of recent items to avoid repeating.
+        ers_type : int, default=0
+            Playlist playback type (0 - sequence, 1 - random, 2 - shuffle, 4294967295 - inherit).
+        parent : int, default=0
+            Which playlist item to associate the new item with (0 - root).
+        """
+        if len(self.playlist_items) == 0:
+            if parent > 0:
+                raise ValueError("parent cannot be set for first playlist item")
+
+            if ers_type == 4294967295:
+                ers_type = 0
+
+            use_weight = True
+
+        new_item = MusicRanSeqPlaylistItem(
+            segment_id,
+            playlist_item_id,
+            ers_type=ers_type,
+            loop_base=1 if loop_base else 0,
+            weight=weight,
+            use_weight=1 if use_weight else 0,
+            avoid_repeat_count=avoid_repeat_count,
+            shuffle=1 if shuffle else 0,
+        )
+
+        if parent > 0:
+            # Insert after parent
+            for idx, item in enumerate(self.playlist_items):
+                if item.playlist_item_id == parent:
+                    insert_idx = idx + 1
+                    parent_item = item
+                    break
+            else:
+                raise ValueError(f"No playlist item with key {parent}")
+
+            insert_idx += parent_item.child_count
+            self.playlist_items.insert(insert_idx, new_item)
+        else:
+            self.playlist_items.append(new_item)
+
+        if segment_id > 0:
+            self.add_child(segment_id)
+
+        return new_item
+
+    def add_transition_rule(
+        self,
+        source_ids: int | list[int] = -1,
+        dest_ids: int | list[int] = -1,
+        sync_type: SyncType = SyncType.Immediate,
+        source_transition_time: int = 0,
+        source_fade_offset: int = 0,
+        source_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        source_play_post_exit: bool = False,
+        dest_transition_time: int = 0,
+        dest_fade_offset: int = 0,
+        dest_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        dest_play_pre_entry: bool = False,
+        transition_segment: int = 0,
+    ) -> MusicTransitionRule:
+        """Add a transition rule between segments.
+
+        Parameters
+        ----------
+        source_ids : int | list[int], default = -1
+            Source segment IDs (-1 = any).
+        dest_ids : int | list[int], default = -1
+            Destination segment IDs (-1 = any).
+        source_transition_time : int, default=0
+            Source fade out time in ms.
+        source_fade_offset : int, default=0
+            Delay in ms before the source starts fading out.
+        source_fade_curve : str, default="Linear"
+            Source fade out curve type.
+        sync_type : SyncType, default="Immediate"
+            Marker sync type.
+        dest_transition_time : int, default=0
+            Destination fade out time in ms.
+        dest_fade_offset : int, default=0
+            Delay in ms before the destination starts fading in.
+        dest_fade_curve : str, default="Linear"
+            Destination fade in curve type.
+        transition_segment: int | Node, default=0
+            A MusicSegment to play during the transition.
+        """
+        if isinstance(source_ids, int):
+            source_ids = [source_ids]
+
+        if isinstance(dest_ids, int):
+            dest_ids = [dest_ids]
+
+        rule = MusicTransitionRule(
+            source_ids=source_ids,
+            destination_ids=dest_ids,
+            source_transition_rule=MusicTransSrcRule(
+                transition_time=source_transition_time,
+                fade_curve=source_fade_curve,
+                fade_offet=source_fade_offset,
+                sync_type=sync_type,
+                play_post_exit=1 if source_play_post_exit else 0,
+            ),
+            destination_transition_rule=MusicTransDstRule(
+                transition_time=dest_transition_time,
+                fade_curve=dest_fade_curve,
+                fade_offet=dest_fade_offset,
+                play_pre_entry=1 if dest_play_pre_entry else 0,
+            ),
+        )
+
+        if transition_segment:
+            rule.transition_object.segment_id = transition_segment
+
+        self.music_trans_node_params.transition_rules.append(rule)
+        return rule

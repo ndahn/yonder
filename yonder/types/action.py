@@ -42,7 +42,7 @@ class Action(_HIRCNodeBody):
 
     @classmethod
     def new_play_action(
-        cls, nid: int, target_id: int, bank_id: int = 0, fade_curve: int = 0
+        cls, nid: int, target_id: int, bank_id: int = 0, fade_curve: int = 4
     ) -> HIRCNode[Action]:
         return HIRCNode(
             nid,
@@ -204,7 +204,7 @@ class ActionSeek(_ActionParams):
 @dataclass
 class ActionPlay(_ActionParams):
     bank_id: int
-    fade_curve: int = 0
+    fade_curve: int = 4
 
 
 @dataclass
