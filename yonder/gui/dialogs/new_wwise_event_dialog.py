@@ -49,13 +49,13 @@ def new_wwise_event_dialog(
         show_message()
 
         new_nodes = []
-        target_id = int(dpg.get_value(f"{tag}_target_id"))
+        external_id = int(dpg.get_value(f"{tag}_external_id"))
 
         create_play_event = dpg.get_value(f"{tag}_create_play_event")
         if create_play_event:
             play_evt = Event.new(f"Play_{name}")
             play_action = Action.new_play_action(
-                bnk.new_id(), target_id, bank_id=bnk.id
+                bnk.new_id(), external_id, bank_id=bnk.id
             )
             play_evt.add_action(play_action)
             new_nodes.extend([play_evt, play_action])
@@ -63,7 +63,7 @@ def new_wwise_event_dialog(
         create_stop_event = dpg.get_value(f"{tag}_create_stop_event")
         if create_stop_event:
             stop_evt = Event.new(f"Stop_{name}")
-            stop_action = Action.new_stop_action(bnk.new_id(), target_id)
+            stop_action = Action.new_stop_action(bnk.new_id(), external_id)
             stop_evt.add_action(stop_action)
             new_nodes.extend([stop_evt, stop_action])
 
@@ -100,7 +100,7 @@ def new_wwise_event_dialog(
             Node,
             "Target node",
             None,
-            tag=f"{tag}_target_id",
+            tag=f"{tag}_external_id",
         )
 
         dpg.add_checkbox(

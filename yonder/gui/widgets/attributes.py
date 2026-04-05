@@ -5,7 +5,7 @@ from docstring_parser import parse as doc_parse
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name
 from yonder.types import (
     Action,
@@ -21,11 +21,10 @@ from yonder.types import (
     RandomSequenceContainer,
     Sound,
     SwitchContainer,
-    WwiseNode,
 )
 from yonder.util import logger
-from yonder.datatypes import GraphPoint, GraphCurve
-from yonder.enums import SourceType, ScalingType, ClipType
+from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.enums import SourceType, CurveScaling, CurveInterpolation
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
@@ -41,9 +40,9 @@ from .hash_widget import add_hash_widget
 
 def create_attribute_widgets(
     bnk: Soundbank,
-    node: Node,
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    node: HIRCNode,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     tag: str = 0,
     parent: str = 0,
@@ -63,7 +62,7 @@ def create_attribute_widgets(
             node.id = nid
 
     def on_node_properties_changed(
-        sender: str, new_props: dict[str, float], node: WwiseNode
+        sender: str, new_props: dict[str, float], node: HIRCNode
     ) -> None:
         for key in list(node.properties.keys()):
             if key not in new_props:
@@ -151,7 +150,7 @@ def create_attribute_widgets(
                     with dpg.tooltip(dpg.last_item()):
                         dpg.add_text(doc.short_description)
 
-            if isinstance(node, WwiseNode):
+            if hasattr(node, "properties"):
                 dpg.add_spacer(height=5)
                 add_properties_table(
                     node.properties,
@@ -165,8 +164,8 @@ def create_attribute_widgets(
 
 
 def add_node_link(
-    node: Node,
-    on_node_selected: Callable[[str, Node, Any], None],
+    node: HIRCNode,
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     tag: str = 0,
     user_data: Any = None,
@@ -260,10 +259,10 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
 
 def _create_type_specific_attributes(
     bnk: Soundbank,
-    node: Node,
+    node: HIRCNode,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -356,8 +355,8 @@ def _create_attributes_attenuation(
     bnk: Soundbank,
     node: Attenuation,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -405,7 +404,7 @@ def _create_attributes_attenuation(
                 GraphCurve.from_wwise(curve["curve_scaling"], curve["points"])
                 for curve in node.curves
             ],
-            get_args(ScalingType),
+            get_args(CurveScaling),
             on_curves_changed,
             curve_type_label="Scaling Type",
         )
@@ -415,8 +414,8 @@ def _create_attributes_music_random_sequence_container(
     bnk: Soundbank,
     node: MusicRandomSequenceContainer,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -433,8 +432,8 @@ def _create_attributes_music_switch_container(
     bnk: Soundbank,
     node: MusicSwitchContainer,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -532,8 +531,8 @@ def _create_attributes_music_segment(
     bnk: Soundbank,
     node: MusicSegment,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -648,8 +647,8 @@ def _create_attributes_music_track(
     bnk: Soundbank,
     node: MusicTrack,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     parent: str = 0,
     user_data: Any = None,
@@ -739,7 +738,7 @@ def _create_attributes_music_track(
                 GraphCurve.from_wwise(clip["auto_type"], clip["graph_points"])
                 for clip in node.clips
             ],
-            get_args(ClipType),
+            get_args(CurveInterpolation),
             on_clips_changed,
             label="Clips",
             add_item_label="+ Add Clip",
@@ -754,8 +753,8 @@ def _create_attributes_sound(
     bnk: Soundbank,
     node: Sound,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -794,8 +793,8 @@ def _create_attributes_switch_container(
     bnk: Soundbank,
     node: SwitchContainer,
     properties: dict[str, property],
-    on_node_changed: Callable[[str, Node, Any], None],
-    on_node_selected: Callable[[str, Node, Any], None],
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,

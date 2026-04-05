@@ -50,7 +50,7 @@ class DecisionTreeNode:
 @dataclass
 class MusicFade:
     transition_time: int = 0
-    curve: CurveInterpolation = CurveInterpolation.Constant
+    curve: CurveInterpolation = CurveInterpolation.Log3
     offset: int = 0
 
 
@@ -69,7 +69,7 @@ class MusicTransitionObject:
 @dataclass
 class MusicTransSrcRule:
     transition_time: int = 0
-    fade_curve: CurveInterpolation = CurveInterpolation.Constant
+    fade_curve: CurveInterpolation = CurveInterpolation.Linear
     fade_offet: int = 0  # TODO typo in bnk2json
     sync_type: SyncType = SyncType.Immediate
     clue_filter_hash: int = 0
@@ -79,7 +79,7 @@ class MusicTransSrcRule:
 @dataclass
 class MusicTransDstRule:
     transition_time: int = 0
-    fade_curve: CurveInterpolation = CurveInterpolation.Constant
+    fade_curve: CurveInterpolation = CurveInterpolation.Linear
     fade_offet: int = 0  # TODO typo in bnk2json
     clue_filter_hash: int = 0
     jump_to_id: int = 0
@@ -95,9 +95,9 @@ class MusicTransDstRule:
 @dataclass
 class MusicTransitionRule:
     source_transition_rule_count: int = field_property(init=False, raw=True)
-    source_ids: list[int] = field(default_factory=list)
+    source_ids: list[int] = field(default_factory=lambda: [-1])
     destination_transition_rule_count: int = field_property(init=False, raw=True)
-    destination_ids: list[int] = field(default_factory=list)
+    destination_ids: list[int] = field(default_factory=lambda: [-1])
     source_transition_rule: MusicTransSrcRule = field(default_factory=MusicTransSrcRule)
     destination_transition_rule: MusicTransDstRule = field(
         default_factory=MusicTransDstRule

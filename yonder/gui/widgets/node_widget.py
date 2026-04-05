@@ -1,19 +1,19 @@
 from typing import Any, Callable, Type, Iterable
 from dearpygui import dearpygui as dpg
 
-from yonder.node import Node, NodeLike
+from yonder import HIRCNode
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
 
 
 def add_node_widget(
-    get_items: Callable[[str], Iterable[Node]],
+    get_items: Callable[[str], Iterable[HIRCNode]],
     label: str,
-    callback: Callable[[str, Node | list[Node], Any], None],
+    callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
     *,
-    get_node_details: Callable[[Node], list[str]] = None,
+    get_node_details: Callable[[HIRCNode], list[str]] = None,
     multiple: bool = False,
-    default: NodeLike = None,
-    node_type: Type[Node] = None,
+    default: HIRCNode = None,
+    node_type: Type[HIRCNode] = None,
     readonly: bool = False,
     parent: str = 0,
     tag: str = 0,
@@ -22,7 +22,7 @@ def add_node_widget(
     if not tag:
         tag = dpg.generate_uuid()
 
-    if isinstance(default, Node):
+    if isinstance(default, HIRCNode):
         default = default.id
 
     if default is None:
@@ -30,12 +30,12 @@ def add_node_widget(
 
     default = str(default)
 
-    def get_nodes(filt: str) -> Iterable[Node]:
+    def get_nodes(filt: str) -> Iterable[HIRCNode]:
         for node in get_items(filt):
             if not node_type or isinstance(node, node_type):
                 yield node
 
-    def on_node_selected(sender: str, nodes: list[Node], cb_user_data: Any) -> None:
+    def on_node_selected(sender: str, nodes: list[HIRCNode], cb_user_data: Any) -> None:
         dpg.set_value(tag, str(nodes[0].id))
         callback(tag, nodes[0], user_data)
 

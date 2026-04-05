@@ -2,7 +2,7 @@ from typing import get_args
 import math
 import dearpygui.dearpygui as dpg
 
-from yonder.enums import CurveType
+from yonder.enums import CurveInterpolation
 
 
 def draw_linear(
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     ):
         with dpg.drawlist(width=CANVAS_W, height=CANVAS_H) as dl:
             with dpg.draw_layer(parent=dl):
-                for idx, name in enumerate(get_args(CurveType)):
+                for idx, name in enumerate(CurveInterpolation):
                     col = idx % COL_COUNT
                     row = idx // COL_COUNT
                     ox = PAD + col * CELL_W

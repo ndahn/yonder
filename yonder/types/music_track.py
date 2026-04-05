@@ -95,6 +95,10 @@ class MusicTrack(PropertyMixin, HIRCNode):
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
 
+    @property
+    def source_ids(self) -> list[int]:
+        return [s.media_information.source_id for s in self.sources]
+
     @field_property(source_count)
     def get_source_count(self) -> int:
         return len(self.sources)

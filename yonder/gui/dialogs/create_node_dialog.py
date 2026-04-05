@@ -1,8 +1,7 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank
-from yonder.types import WwiseNode
+from yonder import Soundbank, HIRCNode
 from yonder.util import get_function_spec, logger
 from yonder.gui import style
 from yonder.gui.widgets import add_generic_widget
@@ -10,7 +9,7 @@ from yonder.gui.widgets import add_generic_widget
 
 def create_node_dialog(
     bnk: Soundbank,
-    callback: Callable[[WwiseNode], None],
+    callback: Callable[[HIRCNode], None],
     *,
     title: str = "Create Node",
     tag: str = None,
@@ -21,7 +20,7 @@ def create_node_dialog(
         dpg.delete_item(tag)
 
     nid = bnk.new_id()
-    node_types = {t.__name__: t for t in WwiseNode.__subclasses__()}
+    node_types = {t.__name__: t for t in HIRCNode.__subclasses__()}
     selected_type = next(t for t in node_types.keys())
     node_args = {}
 

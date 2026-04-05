@@ -9,11 +9,10 @@ import pyperclip
 import networkx as nx
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.types import (
     Action,
     Event,
-    WwiseNode,
 )
 
 from yonder.util import logger, unpack_soundbank, repack_soundbank
@@ -69,7 +68,7 @@ class BanksOfYonder:
         self.event_map: dict[int, Event] = {}
         self.globals_map: dict[int, Event] = {}
         self._selected_root: str = None
-        self._selected_node: Node = None
+        self._selected_node: HIRCNode = None
         self._selected_node_backup: dict = None
 
         self.config: Config = load_config()
@@ -576,11 +575,11 @@ class BanksOfYonder:
 
         return ret
 
-    def add_pinned_object(self, node: int | Node) -> None:
+    def add_pinned_object(self, node: int | HIRCNode) -> None:
         if node is None:
             return
 
-        if not isinstance(node, Node):
+        if not isinstance(node, HIRCNode):
             node = self.bnk[node]
 
         if dpg.does_item_exist(f"{self.tag}_pin_{node}"):
@@ -605,8 +604,8 @@ class BanksOfYonder:
             )
             dpg.bind_item_handler_registry(dpg.last_item(), f"{self.tag}_pin_registry")
 
-    def remove_pinned_object(self, node: int | Node) -> None:
-        if isinstance(node, Node):
+    def remove_pinned_object(self, node: int | HIRCNode) -> None:
+        if isinstance(node, HIRCNode):
             node = node.id
 
         for row in dpg.get_item_children(f"{self.tag}_pinned_objects_table", slot=1):
@@ -822,7 +821,7 @@ class BanksOfYonder:
     def _create_root_entry(self, node: Event, table: str) -> None:
         bnk = self.bnk
 
-        def register_context_menu(tag: str, node: Node) -> None:
+        def register_context_menu(tag: str, node: HIRCNode) -> None:
             registry = f"{tag}_handlers"
 
             if not dpg.does_item_exist(registry):
@@ -837,9 +836,9 @@ class BanksOfYonder:
             dpg.bind_item_handler_registry(tag, registry)
 
         def lazy_load_event_structure(
-            sender: str, anchor: str, entrypoint: Node
+            sender: str, anchor: str, entrypoint: HIRCNode
         ) -> None:
-            def delve(node: Node) -> None:
+            def delve(node: HIRCNode) -> None:
                 references = node.get_references()
                 seen = set()
 
@@ -896,7 +895,7 @@ class BanksOfYonder:
         dpg.delete_item(f"{self.tag}_events_table", children_only=True, slot=1)
         self.event_map.clear()
 
-        all_events = list(self.bnk.query("type=Event"))
+        all_events: list[Event] = list(self.bnk.query("type=Event"))
 
         filt: str = dpg.get_value(f"{self.tag}_events_filter").strip()
         if filt:
@@ -931,7 +930,6 @@ class BanksOfYonder:
 
         events.sort(key=evt_sort_key)
         for node in events:
-            node: Event = node.cast()
             node_tag = self._create_root_entry(node, f"{self.tag}_events_table")
             self.event_map[node.id] = node_tag
             if len(self.event_map) >= self.max_list_nodes:
@@ -953,7 +951,7 @@ class BanksOfYonder:
             or n.type in ("ActorMixer",)
         ]
 
-        type_map: dict[str, list[Node]] = {}
+        type_map: dict[str, list[HIRCNode]] = {}
         for node in global_nodes:
             type_map.setdefault(node.type, []).append(node)
 
@@ -989,7 +987,7 @@ class BanksOfYonder:
         )
 
     def _open_context_menu(
-        self, sender: str, app_data: Any, user_data: tuple[str, Node]
+        self, sender: str, app_data: Any, user_data: tuple[str, HIRCNode]
     ) -> None:
         item, node = user_data
         self._on_node_selected(item, app_data, node)
@@ -1009,17 +1007,17 @@ class BanksOfYonder:
         dpg.set_item_pos(f"{self.tag}_context_menu", dpg.get_mouse_pos())
         dpg.show_item(f"{self.tag}_context_menu")
 
-    def select_node(self, node: int | Node) -> None:
+    def select_node(self, node: int | HIRCNode) -> None:
         sender = None
         if node:
-            node_id = node.id if isinstance(node, Node) else node
+            node_id = node.id if isinstance(node, HIRCNode) else node
             row = f"{self.tag}_node_{node_id}"
             desc = get_foldable_row_descriptor(row)
             sender = desc.selectable
 
         self._on_node_selected(sender, None, node)
 
-    def _on_node_selected(self, sender: str, app_data: Any, node: int | Node) -> None:
+    def _on_node_selected(self, sender: str, app_data: Any, node: int | HIRCNode) -> None:
         # Deselect previous selectable
         if self._selected_root and dpg.does_item_exist(self._selected_root):
             dpg.set_value(self._selected_root, False)
@@ -1029,10 +1027,9 @@ class BanksOfYonder:
             dpg.set_value(sender, True)
 
         if isinstance(node, int):
-            node: Node = self.bnk[node]
+            node: HIRCNode = self.bnk[node]
 
-        if isinstance(node, Node):
-            node = node.cast()
+        if isinstance(node, HIRCNode):
             self._selected_node_backup = deepcopy(node.dict)
             dpg.set_value(f"{self.tag}_json", node.json())
         else:
@@ -1053,14 +1050,14 @@ class BanksOfYonder:
                 parent=f"{self.tag}_attributes",
             )
 
-    def jump_to_event_node(self, node: int | Node) -> None:
+    def jump_to_event_node(self, node: int | HIRCNode) -> None:
         if isinstance(node, int):
             node_id = node
             node = self.bnk[node_id]
         else:
             node_id = node.id
 
-        if not isinstance(node.cast(), Event):
+        if not isinstance(node, Event):
             for evt, sub in self.bnk.find_event_subgraphs_for(node):
                 if not self._selected_node or self._selected_node.id in sub:
                     break
@@ -1083,8 +1080,8 @@ class BanksOfYonder:
         self.select_node(node)
         self._scroll_to_item(f"{self.tag}_events_table", node)
 
-    def _scroll_to_item(self, table: str, node: int | Node) -> None:
-        node_id = node.id if isinstance(node, Node) else node
+    def _scroll_to_item(self, table: str, node: int | HIRCNode) -> None:
+        node_id = node.id if isinstance(node, HIRCNode) else node
         num_visible = 0
 
         for row in dpg.get_item_children(table, slot=1):
@@ -1132,7 +1129,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_node_created(node: WwiseNode) -> None:
+        def on_node_created(node: HIRCNode) -> None:
             self.bnk.add_nodes(node)
             self._selected_node.add_child(node)
             logger.info(f"Attached new node {node} to {self._selected_node}")
@@ -1198,8 +1195,8 @@ class BanksOfYonder:
 
     def node_paste_child(self) -> None:
         data = json.loads(pyperclip.paste())
-        node = Node.wrap(data)
-        if not isinstance(node, WwiseNode):
+        node = HIRCNode.from_dict(data)
+        if not hasattr(node, "parent"):
             raise ValueError(f"Node {node} cannot be parented")
 
         if node.id in self.bnk:
@@ -1260,7 +1257,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_node_created(node: WwiseNode) -> None:
+        def on_node_created(node: HIRCNode) -> None:
             data = node.json()
             pyperclip.copy(data)
             logger.info(f"Copied new node {node} to clipboard")
@@ -1293,7 +1290,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_graph_node_click(sender: str, node: int | Node, user_data: Any) -> None:
+        def on_graph_node_click(sender: str, node: int | HIRCNode, user_data: Any) -> None:
             if node in self.bnk:
                 self.jump_to_event_node(node)
 
@@ -1312,7 +1309,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_events_created(nodes: list[Node]) -> None:
+        def on_events_created(nodes: list[HIRCNode]) -> None:
             logger.info(f"Created {len(nodes)} new nodes")
             self.regenerate()
             self.select_node(nodes[0])
@@ -1348,7 +1345,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_boss_track_created(bgm_enemy_type: str, nodes: list[Node]) -> None:
+        def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
             logger.info(
                 f"Added new boss track for {bgm_enemy_type}, branch starting at {nodes[0]}"
             )
@@ -1367,7 +1364,7 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_ambience_track_created(nodes: list[Node]) -> None:
+        def on_ambience_track_created(nodes: list[HIRCNode]) -> None:
             logger.info(
                 f"Added new ambience track {nodes[0].lookup_name()} ({nodes[0].id})"
             )

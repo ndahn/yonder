@@ -1,11 +1,11 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder.enums import property_defaults
+from yonder.enums import PropID
 
 
 def add_properties_table(
-    properties: dict[str, Any],
+    properties: dict[PropID, Any],
     on_value_changed: Callable[[str, dict[str, Any], Any], None],
     *,
     tag: str | int = 0,
@@ -19,7 +19,7 @@ def add_properties_table(
         if exclude:
             used.discard(exclude)
 
-        return [k for k in property_defaults.keys() if k not in used]
+        return [k.name for k in PropID if k not in used]
 
     def refresh_table() -> None:
         dpg.delete_item(tag, children_only=True, slot=1)
@@ -35,10 +35,9 @@ def add_properties_table(
         old_key = next(k for k, combo in row_widgets.items() if combo[0] == sender)
         properties.pop(old_key)
 
-        val = property_defaults[new_key]
-        properties[new_key] = val
+        properties[new_key] = 0.0
         row_widgets[new_key] = row_widgets.pop(old_key)
-        dpg.configure_item(value_widget, default_value=val)
+        dpg.configure_item(value_widget, default_value=0.0)
         sync_combos()
 
         on_value_changed(tag, dict(properties), user_data)
@@ -57,7 +56,7 @@ def add_properties_table(
             return
 
         new_key = available[0]
-        properties[new_key] = property_defaults[new_key]
+        properties[new_key] = 0.0
         refresh_table()
         on_value_changed(tag, dict(properties), user_data)
 

@@ -1,4 +1,27 @@
-from enum import IntEnum
+from enum import IntEnum, StrEnum
+
+
+class SoundType(StrEnum):
+    Environment = "a"
+    Character = "c"
+    Menu = "f"
+    Object = "o"
+    CutsceneSe = "p"
+    Sfx = "s"
+    Bgm = "m"
+    Voice = "v"
+    FloorMaterialDetermined = "x"
+    ArmorMaterialDetermined = "b"
+    Phantom = "i"
+    MultiChannelStreaming = "y"
+    MaterialRelated = "z"
+    FootEffect = "e"
+    GeometryAsset = "g"
+    DynamicDialog = "d"
+
+    @classmethod
+    def values(cls) -> str:
+        return "".join(s.value for s in cls)
 
 
 class CurveInterpolation(IntEnum):

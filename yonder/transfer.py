@@ -1,11 +1,11 @@
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action, Sound, MusicTrack
 from yonder.types.mixins import ContainerMixin
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
 
 
-def extract_structure(bnk: Soundbank, entrypoint) -> list[Node]:
+def extract_structure(bnk: Soundbank, entrypoint) -> list[HIRCNode]:
     nodes = []
 
     # Collect the hierarchy responsible for playing the sound(s)
@@ -15,10 +15,6 @@ def extract_structure(bnk: Soundbank, entrypoint) -> list[Node]:
     # Go upwards through the parents chain and see what needs to be transferred
     upchain = bnk.get_parent_chain(entrypoint)
     nodes.extend((bnk[uid] for uid in upchain))
-
-    # Collect additional referenced items
-    extras = bnk.find_related_objects(action_tree.nodes)
-    nodes.extend(bnk[eid] for eid in extras if eid in bnk)
 
     return nodes
 
@@ -40,9 +36,12 @@ def copy_event(
         if action:
             # Some actions make references to other soundbanks
             action = action.copy()
-            if action.bank_id == src_bnk.id:
-                action.bank_id = dst_bnk.id
-        
+            if (
+                hasattr(action.params, "bank_id")
+                and action.params.bank_id == src_bnk.id
+            ):
+                action.params.bank_id = dst_bnk.id
+
             actions.append(action)
         else:
             # This probably shouldn't happen
@@ -55,7 +54,7 @@ def copy_event(
 def copy_node_structure(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
-    entrypoint: Node,
+    entrypoint: HIRCNode,
 ) -> list[int]:
     # Collect the hierarchy responsible for playing the sound(s)
     action_tree = src_bnk.get_subtree(entrypoint, False)
@@ -70,7 +69,7 @@ def copy_node_structure(
             if isinstance(node, Sound):
                 wems.add(node.source_id)
             elif isinstance(node, MusicTrack):
-                wems.update(s["media_information"]["source_id"] for s in node.sources)
+                wems.update(node.source_ids)
 
     transfer_nodes = []
     for nid in action_tree:
@@ -122,7 +121,7 @@ def copy_wems(
         embedded = src_bnk.bnk_dir / f"{wem}.wem"
         if embedded.is_file():
             wem_paths.append(embedded)
-        
+
         streamed = src_bnk.bnk_dir.parent / "wem" / str(wem)[:2] / f"{wem}.wem"
         if streamed.is_file():
             wem_paths.append(streamed)
@@ -146,7 +145,7 @@ def copy_wwise_events(
     logger.info(f"The following events will be transferred:\n{map_str}\n")
 
     for wwise_src, wwise_dst in wwise_map.items():
-        evt: Event = src_bnk[wwise_src].cast()
+        evt: Event = src_bnk[wwise_src]
         if not isinstance(evt, Event):
             raise ValueError(f"{wwise_src} is not an Event")
 
@@ -158,13 +157,14 @@ def copy_wwise_events(
             action: Action = src_bnk[action_id]
 
             # NOTE action_bnk_id will already be translated from src_bnk to dst_bnk
-            if action.bank_id != 0 and action.bank_id != dst_bnk.id:
-                logger.info(
-                    f"Action {action.id} references external soundbank {action.bank_id}"
-                )
-                continue
+            if hasattr(action.params, "bank_id"):
+                if action.params.bank_id != 0 and action.params.bank_id != dst_bnk.id:
+                    logger.info(
+                        f"Action {action.id} references external soundbank {action.params.bank_id}"
+                    )
+                    continue
 
-            entrypoint = src_bnk[action.target_id]
+            entrypoint = src_bnk[action.external_id]
             new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
             wems.extend(new_wems)
 
@@ -177,10 +177,12 @@ def copy_wwise_events(
         dst_bnk.solve()
         severity = dst_bnk.verify()
         if severity > 0:
-            logger.warning(" - some issues were found in your soundbank. Check the log!")
+            logger.warning(
+                " - some issues were found in your soundbank. Check the log!"
+            )
         else:
             logger.info(" - seems surprisingly fine :o\n")
-    
+
     # Copy WEMs
     copy_wems(src_bnk, dst_bnk, wems)
 
@@ -191,7 +193,7 @@ def copy_wwise_events(
 def copy_structures_with_new_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
-    nodes: dict[Node, str],
+    nodes: dict[HIRCNode, str],
     save: bool = False,
 ) -> None:
     wems = []
@@ -201,12 +203,12 @@ def copy_structures_with_new_events(
         play_action = Action.new_play_action(
             dst_bnk.new_id(), f"Stop_{wwise_dst}", bank_id=dst_bnk.id
         )
-        play_action.target_id = entrypoint.id
+        play_action.external_id = entrypoint.id
         play_event.add_action(play_action)
 
         stop_event = Event.new(f"Stop_{wwise_dst}")
         stop_action = Action.new_stop_action(dst_bnk.new_id(), f"Stop_{wwise_dst}")
-        stop_action.target_id = entrypoint.id
+        stop_action.external_id = entrypoint.id
         stop_event.add_action(stop_action)
 
         dst_bnk.add_nodes(play_event, play_action, stop_event, stop_action)

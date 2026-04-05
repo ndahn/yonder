@@ -2,15 +2,15 @@ from typing import Any, Callable
 import networkx as nx
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.gui import style
 from yonder.gui.helpers import estimate_drawn_text_size
 
 
 def add_graph_widget(
     bnk: Soundbank,
-    root: Node,
-    on_node_selected: Callable[[str, int | Node, Any], None] = None,
+    root: HIRCNode,
+    on_node_selected: Callable[[str, int | HIRCNode, Any], None] = None,
     *,
     children_only: bool = True,
     horizontal: bool = True,

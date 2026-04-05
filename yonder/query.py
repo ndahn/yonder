@@ -6,7 +6,7 @@ from fnmatch import fnmatch
 from rapidfuzz import fuzz
 
 if TYPE_CHECKING:
-    from yonder import Node
+    from yonder.types import HIRCNode
 
 
 lucene_grammar = r"""
@@ -73,7 +73,7 @@ Examples:
 
 class _Condition(ABC):
     @abstractmethod
-    def evaluate(self, obj: "Node") -> bool: ...
+    def evaluate(self, obj: "HIRCNode") -> bool: ...
 
 
 class _FieldCondition(_Condition):
@@ -89,19 +89,19 @@ class _FieldCondition(_Condition):
         self.field_path = field_path.strip("\"'")
         self.value = value.strip("\"'")
 
-    def _get_field_values(self, node: "Node") -> list[str]:
+    def _get_field_values(self, node: "HIRCNode") -> list[str]:
         if self.field_path in ("id", "hash"):
             return [node.id]
 
         if self.field_path == "name":
-            return [node.lookup_name(None)]
+            return [node.name]
 
         if self.field_path == "type":
-            return [node.type]
+            return [node.type_name]
 
-        return [str(v) for _, v in node.resolve_path(self.field_path, [])]
+        return [str(v) for _, v in node.glob(self.field_path)]
 
-    def evaluate(self, obj: "Node") -> bool:
+    def evaluate(self, obj: "HIRCNode") -> bool:
         actual_values = self._get_field_values(obj)
         return any(_match_value(val, self.value) for val in actual_values)
 
@@ -113,12 +113,12 @@ class _ValueCondition(_Condition):
     def __init__(self, value: str):
         self.value = value.strip("\"'")
 
-    def _candidates(self, node: "Node") -> Generator[str, None, None]:
+    def _candidates(self, node: "HIRCNode") -> Generator[str, None, None]:
         yield node.id
-        yield node.type
-        yield node.lookup_name()
+        yield node.type_name
+        yield node.name
 
-    def evaluate(self, obj: "Node") -> bool:
+    def evaluate(self, obj: "HIRCNode") -> bool:
         return any(_match_value(val, self.value) for val in self._candidates(obj))
 
     def __repr__(self):
@@ -129,7 +129,7 @@ class _OrCondition(_Condition):
     def __init__(self, conditions: list[_Condition]):
         self.conditions = conditions
 
-    def evaluate(self, obj: "Node") -> bool:
+    def evaluate(self, obj: "HIRCNode") -> bool:
         return any(c.evaluate(obj) for c in self.conditions)
 
     def __repr__(self):
@@ -140,7 +140,7 @@ class _AndCondition(_Condition):
     def __init__(self, conditions: list[_Condition]):
         self.conditions = conditions
 
-    def evaluate(self, node: "Node") -> bool:
+    def evaluate(self, node: "HIRCNode") -> bool:
         return all(c.evaluate(node) for c in self.conditions)
 
     def __repr__(self):
@@ -151,7 +151,7 @@ class _NotCondition(_Condition):
     def __init__(self, condition: _Condition):
         self.condition = condition
 
-    def evaluate(self, obj: "Node") -> bool:
+    def evaluate(self, obj: "HIRCNode") -> bool:
         # Special-case: NOT on a field requires the field to exist
         if isinstance(self.condition, _FieldCondition):
             vals = self.condition._get_field_values(obj)
@@ -233,10 +233,10 @@ def _match_value(actual_value: str, search_value: str) -> bool:
 
 
 def query_nodes(
-    candidates: Iterable["Node"],
+    candidates: Iterable["HIRCNode"],
     query: str,
-    object_filter: Callable[["Node"], bool] = None,
-) -> Generator["Node", None, None]:
+    object_filter: Callable[["HIRCNode"], bool] = None,
+) -> Generator["HIRCNode", None, None]:
     if not query:
         yield from filter(object_filter, candidates)
         return

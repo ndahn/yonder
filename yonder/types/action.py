@@ -40,11 +40,11 @@ class Action(HIRCNode):
 
     @classmethod
     def new_play_action(
-        cls, nid: int, target_id: int, bank_id: int = 0, fade_curve: int = 4
+        cls, nid: int, external_id: int, bank_id: int = 0, fade_curve: int = 4
     ) -> Action:
         super().__init__(nid)
         return cls(
-            target_id,
+            external_id,
             is_bus=False,
             params=ActionPlay(ActionType.Play, bank_id, fade_curve),
         )
@@ -53,7 +53,7 @@ class Action(HIRCNode):
     def new_stop_action(
         cls,
         nid: int,
-        target_id: int,
+        external_id: int,
         flags1: int = 4,  # ? usually 4, rarely 7
         flags2: int = 6,  # ? usually 6
         exceptions: list[int | tuple[int, bool]] = None,
@@ -70,7 +70,7 @@ class Action(HIRCNode):
 
         super().__init__(nid)
         return cls(
-            target_id,
+            external_id,
             is_bus=False,
             params=ActionStop(
                 ActionType.StopEO,

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Union, ClassVar
 from dataclasses import dataclass, field, fields, is_dataclass
 from abc import ABCMeta
+from copy import deepcopy
 import json
 
 from .rewwise_base_types import (
@@ -192,6 +193,9 @@ class HIRCNode(metaclass=ABCMeta):
 
     def json(self) -> str:
         return json.dumps(self.to_dict())
+
+    def copy(self) -> "HIRCNode":
+        return deepcopy(self)
 
     def apply(self, data: dict) -> str:
         def apply_dict(obj, data: dict):

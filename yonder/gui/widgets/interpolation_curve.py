@@ -1,13 +1,14 @@
-from typing import Any, Callable, get_args
+from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder.enums import CurveType
-from yonder.datatypes import GraphPoint, GraphCurve
+from yonder.enums import CurveInterpolation
+from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.datatypes import GraphCurve
 from yonder.gui import style
 from .draw_curve import draw_curve
 
 
-interpolation_colors: dict[CurveType, style.Color] = {
+interpolation_colors: dict[CurveInterpolation, style.Color] = {
     "Constant": style.light_grey,
     "Linear": style.white,
     "SCurve": style.light_green,
@@ -24,7 +25,7 @@ interpolation_colors: dict[CurveType, style.Color] = {
 
 def add_interpolation_curve(
     initial_curve: GraphCurve,
-    on_curve_changed: Callable[[str, list[GraphPoint], Any], None] = None,
+    on_curve_changed: Callable[[str, list[RTPCGraphPoint], Any], None] = None,
     *,
     tag: str = None,
     user_data: Any = None,
@@ -34,12 +35,12 @@ def add_interpolation_curve(
 
     if not initial_curve:
         initial_curve = [
-            GraphPoint(0.0, 0.0, "Linear"),
-            GraphPoint(100.0, 100.0, "Linear"),
+            RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Linear),
+            RTPCGraphPoint(100.0, 100.0, CurveInterpolation.Linear),
         ]
 
-    curve: GraphCurve = initial_curve.copy()
-    interpolations: list[CurveType] = []
+    curve: list[RTPCGraphPoint] = initial_curve.copy()
+    interpolations: list[CurveInterpolation] = []
     dirty: bool = True
     drag_points: list[int] = []
     hovered: int = -1
@@ -64,8 +65,9 @@ def add_interpolation_curve(
             return
 
         dirty = True
-        interpolations[selected] = interp
-        curve[selected].interp = interp
+        curve_type = CurveInterpolation[interp]
+        interpolations[selected] = curve_type
+        curve[selected].interpolation = curve_type
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
 
@@ -100,7 +102,7 @@ def add_interpolation_curve(
 
         x = (p0[0] + p1[0]) / 2
         y = (p1[0] + p1[1]) / 2
-        curve.insert(selected + 1, GraphPoint(x, y, "Linear"))
+        curve.insert(selected + 1, RTPCGraphPoint(x, y, CurveInterpolation.Linear))
 
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
@@ -191,6 +193,7 @@ def add_interpolation_curve(
         drag_points.clear()
         dirty = True
 
+        # FIXME
         x, y, interpolations = map(list, zip(*[(p.x, p.y, p.interp) for p in curve]))
         dpg.add_custom_series(
             x,
@@ -244,7 +247,7 @@ def add_interpolation_curve(
         with dpg.group(horizontal=True):
             dpg.add_text("p0", tag=f"{tag}_point_label")
             dpg.add_combo(
-                get_args(CurveType),
+                [c.name for c in CurveInterpolation],
                 default_value=curve[0].interp,
                 width=100,
                 callback=on_interpolation_changed,

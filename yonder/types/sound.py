@@ -54,6 +54,10 @@ class Sound(PropertyMixin, HIRCNode):
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
 
+    @property
+    def source_id(self) -> int:
+        return self.bank_source_data.media_information.source_id
+
     def set_source_from_wem(
         self,
         wem: Path,
