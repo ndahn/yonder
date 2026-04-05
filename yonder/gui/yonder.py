@@ -12,6 +12,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.types import (
     Action,
+    ActorMixer,
     Event,
 )
 
@@ -905,12 +906,12 @@ class BanksOfYonder:
             events = set()
 
             for node in selected:
-                if node.type == "Event":
+                if isinstance(node, Event):
                     events.add(node)
                 else:
                     for pid in nx.ancestors(g, node.id):
                         parent = self.bnk[pid]
-                        if parent.type == "Event":
+                        if isinstance(parent, Event):
                             events.add(parent)
                             break
             events = list(events)
@@ -918,7 +919,7 @@ class BanksOfYonder:
             events = all_events
 
         def evt_sort_key(evt: Event) -> str:
-            name = evt.lookup_name()
+            name = evt.name
             if not name:
                 return f"zzz{evt.id}"
 
@@ -947,13 +948,13 @@ class BanksOfYonder:
         global_nodes = [
             n
             for n in self.bnk
-            if (n.parent is None and n.type not in ("Event", "Action"))
-            or n.type in ("ActorMixer",)
+            if (getattr(n, "parent", None) is None and not isinstance(n, (Event, Action)))
+            or isinstance(n, ActorMixer)
         ]
 
         type_map: dict[str, list[HIRCNode]] = {}
         for node in global_nodes:
-            type_map.setdefault(node.type, []).append(node)
+            type_map.setdefault(node.type_name, []).append(node)
 
         filt: str = dpg.get_value(f"{self.tag}_globals_filter")
         if filt:
@@ -1030,7 +1031,7 @@ class BanksOfYonder:
             node: HIRCNode = self.bnk[node]
 
         if isinstance(node, HIRCNode):
-            self._selected_node_backup = deepcopy(node.dict)
+            self._selected_node_backup = deepcopy(node)
             dpg.set_value(f"{self.tag}_json", node.json())
         else:
             self._selected_node_backup = None

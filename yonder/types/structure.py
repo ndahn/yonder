@@ -15,17 +15,17 @@ from .rewwise_base_types import (
     AcousticTexture,
     StateTransition,
 )
-from .rewwise_parse import serialize, deserialize
+from .rewwise_parse import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
 
 @dataclass
-class SectionHeader(metaclass=ABCMeta):
+class SectionHeader:
     magic: list[int] = field(default_factory=list)
     size: int = 0
 
 @dataclass
-class Section:
+class Section(metaclass=ABCMeta):
     _header: SectionHeader = field(default_factory=SectionHeader)
 
     @classmethod
@@ -33,7 +33,7 @@ class Section:
         return cls.__name__[:4].upper()
 
     def to_dict(self) -> dict:
-        data = serialize(self)
+        data = _serialize_value(self)
         trans = {
             **data.pop("_header"),
             "body": {
@@ -56,7 +56,7 @@ class Section:
 
         for sub in cls.__subclasses__():
             if sub.section_name() == section_type:
-                return deserialize(sub, trans)
+                return _deserialize_fields(sub, trans)
         
         raise ValueError(f"Unknown section type {section_type}")
 
@@ -172,23 +172,18 @@ class HIRCSection(Section):
 class HIRCNodeHeader:
     # These two are just here to make rewwise happy
     body_type: int = 0
-    size: int = field(default=0, init=False, repr=False, hash=False, compare=False)
+    size: int = 0
     id: ObjectId = None
 
-    def __init__(self, body_type: int, nid: int | str):
-        self.body_type = body_type
-        self.id = ObjectId(nid)
-
     def to_dict(self) -> dict:
-        ser = serialize(self)
+        ser = _serialize_value(self)
         ser.pop("_id", None)
         ser["id"] = self.id.to_dict()
         return ser
 
     @classmethod
     def from_dict(cls, data: dict) -> "HIRCNode":
-        data["_id"] = data.pop("id")
-        return deserialize(cls, data)
+        return _deserialize_fields(cls, data)
 
 
 @dataclass
@@ -224,7 +219,7 @@ class HIRCNode(metaclass=ABCMeta):
         return self._header.id.get_name(default)
 
     def json(self) -> str:
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_dict(), indent=2)
 
     def copy(self) -> "HIRCNode":
         return deepcopy(self)
@@ -256,7 +251,7 @@ class HIRCNode(metaclass=ABCMeta):
     def to_dict(self) -> dict:
         # rewwise inserts the class name of the node type into the hierarchy
         # (e.g. body: {Sound: ...})
-        data = serialize(self)
+        data = _serialize_value(self)
         return {
             **data.pop("_header"),
             "body": {
@@ -283,7 +278,7 @@ class HIRCNode(metaclass=ABCMeta):
 
         for sub in cls.__subclasses__():
             if sub.__name__ == node_type:
-                return deserialize(sub, trans)
+                return _deserialize_fields(sub, trans)
 
         raise ValueError(f"Unknown node type {node_type}")
 
@@ -291,22 +286,24 @@ class HIRCNode(metaclass=ABCMeta):
         def delve(obj: Any, path: str = "") -> list[tuple[str, int]]:
             ret = []
 
-            if hasattr(obj, "get_references") and callable(obj.get_references):
+            # Use get_references() only on objects other than self
+            if obj is not self and hasattr(obj, "get_references") and callable(obj.get_references):
                 for key, val in obj.get_references():
                     if isinstance(val, int) and val > 0:
-                        ret.extend((f"{path}/{key}", val))
+                        ret.append((f"{path}/{key}", val))
+
+                # get_references() already handled this object's subtree
+                return ret
 
             if is_dataclass(obj):
                 for f in fields(obj):
-                    ret.extend(delve(f, f"{path}/{f.name}"))
-
+                    ret.extend(delve(getattr(obj, f.name), f"{path}/{f.name}"))
             elif isinstance(obj, list):
                 for i, item in enumerate(obj):
                     ret.extend(delve(item, f"{path}:{i}"))
-
             elif isinstance(obj, dict):
                 for key, val in obj.items():
-                    ret.extend(delve(item, f"{path}/{key}"))
+                    ret.extend(delve(val, f"{path}/{key}"))
 
             return ret
 
@@ -314,6 +311,9 @@ class HIRCNode(metaclass=ABCMeta):
 
     def __hash__(self) -> int:
         return self.id
+
+    def __lt__(self, other: HIRCNode) -> bool:
+        return self.id < other.id
 
     def __str__(self) -> str:
         return f"{self.type_name} #{self.id}"

@@ -48,7 +48,7 @@ class Soundbank:
 
     def __init__(self, json_path: Path, sections: list[Section]):
         self.json_path = json_path
-        self.sections = {type(sec).__name__: sec for sec in sections}
+        self.sections = {sec.section_name(): sec for sec in sections}
 
         # A helper dict for mapping object IDs to HIRC indices
         self._id2index: dict[int, int] = {}

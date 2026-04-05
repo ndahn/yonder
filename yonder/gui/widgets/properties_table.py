@@ -110,6 +110,8 @@ def add_properties_table(
             label="Value", width_stretch=True, init_width_or_weight=100
         )
         dpg.add_table_column(label="", width_fixed=True)
+        
         for prop, val in properties.items():
             add_row(prop, val)
+
         add_footer()

@@ -87,7 +87,7 @@ def create_attribute_widgets(
     try:
         with dpg.group(tag=tag, parent=parent):
             # Heading
-            dpg.add_text(node.type)
+            dpg.add_text(node.type_name)
             if node.__class__.__doc__:
                 with dpg.tooltip(dpg.last_item()):
                     add_paragraphs(node.__class__.__doc__)

@@ -6,13 +6,13 @@ from .rewwise_base_types import FxBaseInitialValues
 
 
 @dataclass
-class FxCustom(HIRCNode):
+class EffectCustom(HIRCNode):
     body_type: ClassVar[int] = 17
     fx_base_initial_values: FxBaseInitialValues = field(
         default_factory=lambda: FxBaseInitialValues(fx_id=0)
     )
 
     @classmethod
-    def new(cls, nid: int | str) -> "FxCustom":
+    def new(cls, nid: int | str) -> "EffectCustom":
         super().__init__(nid)
         return cls()

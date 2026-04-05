@@ -141,7 +141,7 @@ class RTPCGraphPoint:
 
 @dataclass
 class ConversionTable:
-    curve_scaling: CurveScaling = CurveScaling.Nothing
+    curve_scaling: CurveScaling = CurveScaling.None_
     point_count: int = field_property(init=False, raw=True)
     points: list[RTPCGraphPoint] = field(default_factory=list)
 
@@ -331,7 +331,7 @@ class PositioningParams:
     hold_emitter_position_and_orientation: bool = False
     enable_attenuation: bool = False
     three_dimensional_spatialization_mode: ThreeDSpatializationMode = (
-        ThreeDSpatializationMode.Nothing
+        ThreeDSpatializationMode.None_
     )
     path_mode: PathMode = PathMode.StepSequence
     transition_time: int = 0
@@ -417,7 +417,7 @@ class AkState:
 @dataclass
 class StatePropertyInfo:
     property: PropID = PropID.Volume
-    accum_type: RtpcAccum = RtpcAccum.Nothing
+    accum_type: RtpcAccum = RtpcAccum.None_
     in_db: int = 0
 
 
@@ -453,10 +453,10 @@ class StateChunk:
 class RTPC:
     id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
-    rtpc_accum: RtpcAccum = RtpcAccum.Nothing
+    rtpc_accum: RtpcAccum = RtpcAccum.None_
     param_id: int = 0
     curve_id: int = 0  # TODO seems to be a hash?
-    curve_scaling: CurveScaling = CurveScaling.Nothing
+    curve_scaling: CurveScaling = CurveScaling.None_
     graph_point_count: int = field_property(init=False, raw=True)
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
@@ -660,7 +660,7 @@ class FxBaseInitialValues:
 @dataclass
 class PluginPropertyValue:
     property: ParameterID = ParameterID.Volume
-    rtpc_accum: RtpcAccum = RtpcAccum.Nothing
+    rtpc_accum: RtpcAccum = RtpcAccum.None_
     value: float = 0.0
 
 

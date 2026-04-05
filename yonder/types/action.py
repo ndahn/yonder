@@ -6,7 +6,7 @@ from enum import Enum
 from yonder.enums import ValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
 from .structure import HIRCNode
-from .rewwise_parse import serialize, deserialize
+from .rewwise_parse import _serialize_value, _deserialize_fields
 
 
 @dataclass
@@ -19,24 +19,14 @@ class Action(HIRCNode):
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
-    def __init__(
-        self,
-        external_id: int,
-        params: _ActionParams,
-        is_bus: bool = False,
-    ):
-        action_type = params.action_type
+    def __post_init__(self):
+        action_type = self.params.action_type
 
         if action_type == ActionType.Unk2102:
             raise ValueError("Action type (Unk2102) is not supported")
 
         if action_type == ActionType.PlayEvent:
-            params = "PlayEvent"
-
-        self.action_type=action_type.type_id
-        self.external_id=external_id
-        self.params=params
-        self.is_bus=is_bus
+            self.params = "PlayEvent"
 
     @classmethod
     def new_play_action(
@@ -94,19 +84,20 @@ class _ActionParams:
 
     def to_dict(self) -> dict:
         # Needed for serialization, but not part of it
-        data = serialize(self)
+        data = _serialize_value(self)
         data.pop("action_type")
         return {self.action_type.name: data}
 
     @classmethod
     def from_dict(cls, data: dict) -> "_ActionParams":
-        action_type = ActionType[next(data.keys())]
+        action_type = ActionType[next(iter(data.keys()))]
         param_cls = action_type.params_cls
         if not param_cls:
             raise KeyError(f"Action type {action_type} is not supported yet")
 
-        data["action_type"] = action_type
-        return deserialize(param_cls, data[action_type])
+        param_data = data[action_type.name]
+        param_data["action_type"] = action_type
+        return _deserialize_fields(param_cls, param_data)
 
 
 @dataclass

@@ -213,7 +213,7 @@ class PathMode(IntEnum):
 
 
 class ThreeDSpatializationMode(IntEnum):
-    Nothing = 0x0
+    None_ = 0x0
     PositionOnly = 0x1
     PositionAndOrientation = 0x2
 
@@ -257,7 +257,7 @@ class SyncType(IntEnum):
 
 
 class RtpcAccum(IntEnum):
-    Nothing = 0x0
+    None_ = 0x0
     Exclusive = 0x1
     Additive = 0x2
     Multiply = 0x3
@@ -273,7 +273,7 @@ class RtpcType(IntEnum):
 
 
 class CurveScaling(IntEnum):
-    Nothing = 0x0
+    None_ = 0x0
     DB = 0x2
     Log = 0x3
     DBToLin = 0x4
@@ -304,7 +304,7 @@ class SourceType(IntEnum):
 
 
 class PluginId(IntEnum):
-    Nothing = 0x00000000
+    None_ = 0x00000000
     BANK = 0x00000001
     PCM = 0x00010001
     ADPCM = 0x00020001
