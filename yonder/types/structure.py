@@ -183,12 +183,12 @@ class HIRCNode(metaclass=ABCMeta):
     def name(self, new_name: str) -> None:
         self._header.id.name = new_name
 
-    def get_name(self, default: str = None) -> str:
-        return self._header.id.get_name(default)
-
     @property
     def type_name(self) -> str:
         return type(self).__name__
+
+    def get_name(self, default: str = None) -> str:
+        return self._header.id.get_name(default)
 
     def json(self) -> str:
         return json.dumps(self.to_dict())
