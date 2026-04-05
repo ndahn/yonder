@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import InitialRTPC, RTPCGraphPoint
 from yonder.enums import CurveScaling, CurveParameters
 
@@ -28,7 +28,7 @@ class ConversionTable:
 
 
 @dataclass
-class Attenuation(_HIRCNodeBody):
+class Attenuation(HIRCNode):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0
     cone_params: ConeParams = field(default_factory=ConeParams)
@@ -45,16 +45,14 @@ class Attenuation(_HIRCNodeBody):
         nid: int | str,
         curves_to_use: list[CurveParameters],
         curves: list[ConversionTable],
-    ) -> "HIRCNode[Attenuation]":
+    ) -> "Attenuation":
         if len(curves_to_use) != 7:
             raise ValueError("Curves to use must be exactly 7 elements")
 
-        return HIRCNode(
-            nid,
-            cls(
-                curves_to_use=[crv.value for crv in curves_to_use],
-                curves=curves,
-            ),
+        super().__init__(nid)
+        return cls(
+            curves_to_use=[crv.value for crv in curves_to_use],
+            curves=curves,
         )
 
     @field_property(curve_count)

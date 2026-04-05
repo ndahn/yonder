@@ -3,7 +3,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from yonder.hash import calc_hash
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     MusicNodeParams,
     MusicTransNodeParams,
@@ -17,7 +17,7 @@ from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
-class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class MusicSwitchContainer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 12
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -39,21 +39,22 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         branches: list[tuple[list[int | str], int]] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[MusicSwitchContainer]":
-        obj = HIRCNode(nid, cls())
+    ) -> "MusicSwitchContainer":
+        super().__init__(nid)
+        obj = cls()
 
         for arg, group_type in arguments:
-            obj.body.add_argument(arg, group_type)
+            obj.add_argument(arg, group_type)
 
         if branches:
             for state_values, node_id in branches:
-                obj.body.add_branch(state_values, node_id)
+                obj.add_branch(state_values, node_id)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

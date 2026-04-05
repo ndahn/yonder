@@ -34,7 +34,7 @@ def create_simple_sound(
     bnk: Soundbank,
     event_name: str,
     wems: list[Path] | Path,
-    actor_mixer: int | HIRCNode[ActorMixer],
+    actor_mixer: int | ActorMixer,
     avoid_repeat_count: int = 1,
     properties: dict[PropID, float] = None,
 ) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[Sound]]:
@@ -77,7 +77,7 @@ def create_simple_sound(
     sounds = []
     for w in wems:
         snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
-        rsc.body.add_child(snd)
+        rsc.add_child(snd)
         sounds.append(snd)
 
     play = Event.new(f"Play_{event_name}")
@@ -102,7 +102,7 @@ def create_simple_sound(
                 )
 
     if isinstance(actor_mixer, HIRCNode):
-        actor_mixer.body.add_child(rsc)
+        actor_mixer.add_child(rsc)
 
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
     for w in wems:
@@ -113,7 +113,7 @@ def create_simple_sound(
 
 def create_boss_bgm(
     bnk: Soundbank,
-    master: HIRCNode[MusicSwitchContainer],
+    master: MusicSwitchContainer,
     state_path: str | list[str | int],
     tracks: list[Path] | Path,
     loop_markers: list[tuple[float, float]] = None,
@@ -124,7 +124,7 @@ def create_boss_bgm(
     phase_transitions: list[tuple[MusicFade, MusicFade]] = None,
     self_transitions: list[tuple[MusicFade, MusicFade]] = None,
     repeat_transitions: list[tuple[MusicFade, MusicFade]] = None,
-) -> tuple[HIRCNode[MusicSwitchContainer], list[HIRCNode]]:
+) -> tuple[MusicSwitchContainer, list[HIRCNode]]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
     def apply_fades(
@@ -155,7 +155,7 @@ def create_boss_bgm(
     if isinstance(state_path, str):
         bgm_enemy_type = state_path
         state_path: list[str] = []
-        for arg in master.body.arguments:
+        for arg in master.arguments:
             if lookup_name(arg) == "BgmEnemyType":
                 state_path.append(bgm_enemy_type)
             else:
@@ -204,20 +204,20 @@ def create_boss_bgm(
                     ],
                 )
 
-                intro_seg.body.add_child(intro_track)
-                intro_seg.body.duration = intro_track.body.playlist[0].source_duration
+                intro_seg.add_child(intro_track)
+                intro_seg.duration = intro_track.playlist[0].source_duration
 
                 # Trim track to loop_markers marker
-                intro_seg.body.set_marker(MarkerIds.LoopStart.value, 0.0)
-                intro_seg.body.set_marker(MarkerIds.LoopEnd.value, main_loop_start)
-                intro_track.body.set_trims(0.0, main_loop_start - 1000)
+                intro_seg.set_marker(MarkerIds.LoopStart.value, 0.0)
+                intro_seg.set_marker(MarkerIds.LoopEnd.value, main_loop_start)
+                intro_track.set_trims(0.0, main_loop_start - 1000)
 
                 # Needs a root playlist item first
-                mrs_playlist_root = phase_mrsc.body.add_playlist_item(
+                mrs_playlist_root = phase_mrsc.add_playlist_item(
                     bnk.new_id(), 0, ers_type=0
                 )
                 # Setup playlist item as loop intro
-                phase_mrsc.body.add_playlist_item(
+                phase_mrsc.add_playlist_item(
                     bnk.new_id(), intro_seg.id, loop_base=True, parent=mrs_playlist_root
                 )
             else:
@@ -230,7 +230,7 @@ def create_boss_bgm(
         phase_track = MusicTrack.new(bnk.new_id(), bgm, parent=phase_seg)
 
         # Pronounced fade in for the track
-        phase_track.body.add_clip(
+        phase_track.add_clip(
             ClipAutomationType.FadeIn,
             [
                 RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
@@ -239,16 +239,16 @@ def create_boss_bgm(
         )
 
         # Add to segment
-        track_duration_ms = phase_track.body.playlist[0].source_duration
-        phase_seg.body.add_child(phase_track)
-        phase_seg.body.duration = track_duration_ms
+        track_duration_ms = phase_track.playlist[0].source_duration
+        phase_seg.add_child(phase_track)
+        phase_seg.duration = track_duration_ms
 
         # Intro to main track transition rule
         if has_intro:
-            base_rule = phase_mrsc.body.music_trans_node_params.transition_rules[0]
+            base_rule = phase_mrsc.music_trans_node_params.transition_rules[0]
             base_rule.source_transition_rule.play_post_exit = 0
 
-            phase_mrsc.body.add_transition_rule(
+            phase_mrsc.add_transition_rule(
                 intro_seg.id,
                 phase_seg.id,
                 SyncType.ExitMarker,
@@ -261,7 +261,7 @@ def create_boss_bgm(
                 dest_play_pre_entry=True,
             )
         else:
-            base_rule = phase_mrsc.body.music_trans_node_params.transition_rules[0]
+            base_rule = phase_mrsc.music_trans_node_params.transition_rules[0]
             base_rule.destination_transition_rule.play_pre_entry = 1
 
         # Add markers for looping
@@ -271,39 +271,39 @@ def create_boss_bgm(
             loop_start = 0.0
             loop_end = track_duration_ms
 
-        phase_seg.body.set_marker(MarkerIds.LoopStart.value, loop_start)
+        phase_seg.set_marker(MarkerIds.LoopStart.value, loop_start)
         # According to Shion this is probably just for testing
-        phase_seg.body.set_marker("LoopCheck", loop_end - 3000)
-        phase_seg.body.set_marker(MarkerIds.LoopEnd.value, loop_end)
+        phase_seg.set_marker("LoopCheck", loop_end - 3000)
+        phase_seg.set_marker(MarkerIds.LoopEnd.value, loop_end)
         # Don't trim the loop track!
 
         # Add the segment to the music container's playlist
-        if not phase_mrsc.body.playlist_items:
-            mrs_playlist_root = phase_mrsc.body.add_playlist_item(
+        if not phase_mrsc.playlist_items:
+            mrs_playlist_root = phase_mrsc.add_playlist_item(
                 bnk.new_id(), 0, ers_type=0
             )
         else:
-            mrs_playlist_root = phase_mrsc.body.playlist_items[0].playlist_item_id
+            mrs_playlist_root = phase_mrsc.playlist_items[0].playlist_item_id
 
-        phase_mrsc.body.add_playlist_item(
+        phase_mrsc.add_playlist_item(
             bnk.new_id(), phase_seg.id, parent=mrs_playlist_root
         )
 
         # Setup transition rules when repeating song
         if repeat_transitions and i < len(repeat_transitions):
             if i == 0:
-                base_rule = phase_mrsc.body.music_trans_node_params.transition_rules[0]
+                base_rule = phase_mrsc.music_trans_node_params.transition_rules[0]
 
                 apply_fades(base_rule, *repeat_transitions[i], SyncType.ExitMarker)
             else:
-                rule = phase_mrsc.body.add_transition_rule(
+                rule = phase_mrsc.add_transition_rule(
                     phase_seg.id,
                     phase_seg.id,
                 )
                 apply_fades(rule, *repeat_transitions[i], SyncType.ExitMarker)
 
         # Add this phase to the boss music manager
-        boss_msc.body.add_branch([phase], phase_mrsc.id)
+        boss_msc.add_branch([phase], phase_mrsc.id)
 
         # Collect the nodes we added
         children.append(phase_mrsc)
@@ -313,18 +313,18 @@ def create_boss_bgm(
 
     # To disable the boss music, presumably not used by bosses you can't run away from
     if add_nobattle_state:
-        boss_msc.body.add_branch(["NoBattle"], 0)
+        boss_msc.add_branch(["NoBattle"], 0)
 
     # Setup phase transition rules
     if default_transition:
-        base_rule = boss_msc.body.music_trans_node_params.transition_rules[0]
+        base_rule = boss_msc.music_trans_node_params.transition_rules[0]
         apply_fades(rule, *default_transition, SyncType.Immediate)
 
     if phase_transitions:
         # the "any" phase will use the default transition
         for i in range(boss_phases[1:-1]):
             if phase_transitions[i]:
-                rule = boss_msc.body.add_transition_rule(
+                rule = boss_msc.add_transition_rule(
                     phase_masters[i].id,
                     phase_masters[i + 1].id,
                 )
@@ -334,7 +334,7 @@ def create_boss_bgm(
         # the "any" phase will use the default transition
         for i in range(boss_phases[1:]):
             if self_transitions[i]:
-                rule = boss_msc.body.add_transition_rule(
+                rule = boss_msc.add_transition_rule(
                     phase_masters[i].id,
                     phase_masters[i].id,
                 )
@@ -342,7 +342,7 @@ def create_boss_bgm(
 
     # Add new bgm decision branch to master
     master_state_keys: list[int] = MusicSwitchContainer.parse_state_path(state_path)
-    master.body.add_branch(master_state_keys, boss_msc.id)
+    master.add_branch(master_state_keys, boss_msc.id)
 
     # Add nodes and wems to soundbank
     bnk.add_nodes(boss_msc, *children)

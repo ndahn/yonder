@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Any, Union, ClassVar, Generic, TypeVar
-from dataclasses import dataclass, field, fields, is_dataclass, replace
+from typing import Any, Union, ClassVar
+from dataclasses import dataclass, field, fields, is_dataclass
+from abc import ABCMeta
 import json
 
 from .rewwise_base_types import (
@@ -135,86 +136,59 @@ class HIRCSection:
 
 
 @dataclass
-class _HIRCNodeBody:
-    body_type: ClassVar[int] = 0
+class HIRCNodeHeader:
+    # These two are just here to make rewwise happy
+    body_type: int
+    size: int = field(default=0, init=False, repr=False, hash=False, compare=False)
+    id: ObjectId
+
+    def __init__(self, body_type: int, nid: int | str):
+        self.body_type = body_type
+        self.id = ObjectId(nid)
 
     def to_dict(self) -> dict:
-        # rewwise inserts the class name of the node type into the hierarchy
-        # (e.g. body: {Sound: ...})
-        return {type(self).__name__: serialize(self)}
+        ser = serialize(self)
+        ser.pop("_id", None)
+        ser["id"] = self.id.to_dict()
+        return ser
 
     @classmethod
-    def from_dict(cls, data: dict) -> "_HIRCNodeBody":
-        for sub in cls.__subclasses__():
-            if sub.__name__ in data:
-                return deserialize(sub, data[sub.__name__])
-
-        raise ValueError(f"Not a valid _HIRCNodeBody: {data}")
-
-    def get_references(self) -> list[tuple[str, int]]:
-        def delve(obj: Any, path: str = "") -> list[tuple[str, int]]:
-            ret = []
-
-            if hasattr(obj, "get_references") and callable(obj.get_references):
-                for key, val in obj.get_references():
-                    if isinstance(val, int) and val > 0:
-                        ret.extend((f"{path}/{key}", val))
-            
-            if is_dataclass(obj):
-                for f in fields(obj):
-                    ret.extend(delve(f, f"{path}/{f.name}"))
-
-            elif isinstance(obj, list):
-                for i, item in enumerate(obj):
-                    ret.extend(delve(item, f"{path}:{i}"))
-
-            elif isinstance(obj, dict):
-                for key, val in obj.items():
-                    ret.extend(delve(item, f"{path}/{key}"))
-
-            return ret
-
-        return delve(self)
-
-
-_BodyType = TypeVar("_BodyType", bound=_HIRCNodeBody)
+    def from_dict(cls, data: dict) -> "HIRCNode":
+        data["_id"] = data.pop("id")
+        return deserialize(cls, data)
 
 
 @dataclass
-class HIRCNode(Generic[_BodyType]):
-    _id: ObjectId
-    body: _BodyType
+class HIRCNode(metaclass=ABCMeta):
+    # Expected to be set on class definition
+    body_type: ClassVar[int] = 0
+    _header: HIRCNodeHeader
 
-    def __init__(self, id: int | str, body: _BodyType):
-        self._id = ObjectId(id)
-        self.body = body
+    def __init__(self, id: int | str):
+        self._header = HIRCNodeHeader(self.body_type, id)
 
     @property
     def id(self) -> int:
-        return self._id.hash
+        return self._header.id.hash
 
     @id.setter
     def id(self, new_id: int) -> None:
-        self._id.hash = new_id
+        self._header.id.hash = new_id
 
     @property
     def name(self) -> str:
-        return self._id.name
+        return self._header.id.name
 
     @name.setter
     def name(self, new_name: str) -> None:
-        self._id.name = new_name
+        self._header.id.name = new_name
 
     def get_name(self, default: str = None) -> str:
-        return self._id.get_name(default)
-
-    @property
-    def type_id(self) -> int:
-        return type(self.body).body_type
+        return self._header.id.get_name(default)
 
     @property
     def type_name(self) -> str:
-        return type(self.body).__name__
+        return type(self).__name__
 
     def json(self) -> str:
         return json.dumps(self.to_dict())
@@ -239,25 +213,7 @@ class HIRCNode(Generic[_BodyType]):
                 else:
                     setattr(obj, f.name, value)
 
-        return apply_dict(self.body, data)
-
-    def to_dict(self) -> dict:
-        ser = serialize(self)
-        ser.pop("_id", None)
-        ser.update(
-            {
-                "id": self._id.to_dict(),
-                # These two are just here to make rewwise happy
-                "body_type": self.type_id,
-                "size": 0,
-            }
-        )
-        return ser
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "HIRCNode":
-        data["_id"] = data.pop("id")
-        return deserialize(cls, data)
+        return apply_dict(self, data)
 
     def glob(self, pattern: str) -> list:
         segments = pattern.split("/")
@@ -266,7 +222,7 @@ class HIRCNode(Generic[_BodyType]):
             if not segs:
                 yield node
                 return
-            
+
             seg, rest = segs[0], segs[1:]
             if not is_dataclass(node):
                 return
@@ -281,11 +237,66 @@ class HIRCNode(Generic[_BodyType]):
             elif hasattr(node, seg):
                 yield from match(getattr(node, seg), rest)
 
-        return list(match(self.body, segments))
+        return list(match(self, segments))
+
+    def to_dict(self) -> dict:
+        # rewwise inserts the class name of the node type into the hierarchy
+        # (e.g. body: {Sound: ...})
+        data = serialize(self)
+        return {
+            **data.pop("_header"),
+            "body": {
+                self.type_name: {**data},
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "HIRCNode":
+        node_type = next(data["body"].keys())
+        header = {
+            data.pop("body_type"),
+            data.pop("size"),
+            data.pop("id"),
+        }
+
+        # It's much more convenient to store all the header data in a nested dataclass
+        # and keep the actual node params at root level, so we have to massage the data
+        # rewwise spits out a little bit
+        trans = {
+            "_header": header,
+            **data["body"][node_type],
+        }
+
+        for sub in cls.__subclasses__():
+            if sub.__name__ == node_type:
+                return deserialize(sub, trans)
+
+        raise ValueError(f"Unknown node type {node_type}")
 
     def get_references(self) -> list[tuple[str, int]]:
-        # For convenience
-        return self.body.get_references()
+        def delve(obj: Any, path: str = "") -> list[tuple[str, int]]:
+            ret = []
+
+            if hasattr(obj, "get_references") and callable(obj.get_references):
+                for key, val in obj.get_references():
+                    if isinstance(val, int) and val > 0:
+                        ret.extend((f"{path}/{key}", val))
+
+            if is_dataclass(obj):
+                for f in fields(obj):
+                    ret.extend(delve(f, f"{path}/{f.name}"))
+
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    ret.extend(delve(item, f"{path}:{i}"))
+
+            elif isinstance(obj, dict):
+                for key, val in obj.items():
+                    ret.extend(delve(item, f"{path}/{key}"))
+
+            return ret
+
+        return delve(self)
 
     def __hash__(self) -> int:
         return self.id
@@ -315,4 +326,4 @@ class Section:
     body: SectionBody
 
 
-NODE_TYPE_MAP = {cls.body_type: cls for cls in _HIRCNodeBody.__subclasses__()}
+NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

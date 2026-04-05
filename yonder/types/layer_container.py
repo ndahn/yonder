@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     NodeBaseParams,
     Children,
@@ -43,7 +43,7 @@ class Layer:
 
 
 @dataclass
-class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class LayerContainer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -58,18 +58,19 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         layer_nodes: list[list[int]] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[LayerContainer]":
-        obj = HIRCNode(nid, cls())
+    ) -> "LayerContainer":
+        super().__init__(nid)
+        obj = cls()
 
         if layer_nodes:
             for layer in layer_nodes:
-                obj.body.add_layer(layer)
+                obj.add_layer(layer)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import PropBundle, PropRangedModifiers, InitialRTPC
 from yonder.enums import PropID
 
 
 @dataclass
-class TimeModulator(_HIRCNodeBody):
+class TimeModulator(HIRCNode):
     body_type: ClassVar[int] = 22
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
@@ -18,11 +18,12 @@ class TimeModulator(_HIRCNodeBody):
         cls,
         nid: int | str,
         props: dict[PropID, float] = None,
-    ) -> "HIRCNode[TimeModulator]":
-        obj = HIRCNode(nid, cls)
+    ) -> "TimeModulator":
+        super().__init__(nid)
+        obj = cls()
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
         return obj

@@ -48,7 +48,7 @@ class Soundbank:
 
     def __init__(self, json_path: Path, sections: list[Section]):
         self.json_path = json_path
-        self.sections = {type(sec.body).__name__: sec for sec in sections}
+        self.sections = {type(sec).__name__: sec for sec in sections}
 
         # A helper dict for mapping object IDs to HIRC indices
         self._id2index: dict[int, int] = {}
@@ -427,9 +427,9 @@ class Soundbank:
     def find_events(
         self, action_type: ActionType = ActionType.Play
     ) -> Generator[HIRCNode, None, None]:
-        events: list[HIRCNode[Event]] = list(self.query("type=Event"))
+        events: list[Event] = list(self.query("type=Event"))
         for evt in events:
-            for aid in evt.body.actions:
+            for aid in evt.actions:
                 action: Action = self[aid]
                 if not action_type or action_type == action.action_type_enum:
                     yield evt
@@ -443,7 +443,7 @@ class Soundbank:
 
         # TODO cache nodes by type
         # TODO cache full graph
-        events: list[HIRCNode[Event]] = list(self.query("type=Event"))
+        events: list[Event] = list(self.query("type=Event"))
 
         g = self.get_full_tree()
         for evt in events:
@@ -459,8 +459,8 @@ class Soundbank:
             logger.warning("HIRC is not acyclic")
 
         # These will be appended at the very end
-        events: list[HIRCNode[Event]] = []
-        actions: list[HIRCNode[Action]] = []
+        events: list[Event] = []
+        actions: list[Action] = []
 
         # Reverse g so we get the children before their parents. This means that any objects
         # with no references to other nodes (like Attenuations) will come at the very beginning.

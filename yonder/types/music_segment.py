@@ -3,7 +3,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from yonder.hash import calc_hash
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import MusicNodeParams, PropBundle, Children
 from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
@@ -18,7 +18,7 @@ class MusicMarkerWwise:
 
 
 @dataclass
-class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class MusicSegment(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
@@ -33,23 +33,24 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         markers: list[int | str, float] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[MusicSegment]":
-        obj = HIRCNode(nid, cls())
+    ) -> "MusicSegment":
+        super().__init__(nid)
+        obj = cls()
 
         if tracks:
             if isinstance(tracks, int):
                 tracks = [tracks]
-            obj.body.music_node_params.children.items = tracks
+            obj.music_node_params.children.items = tracks
 
         if markers:
             for mid, pos in markers:
-                obj.body.set_marker(mid, pos)
+                obj.set_marker(mid, pos)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

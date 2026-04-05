@@ -3,7 +3,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from yonder.hash import global_id_generator
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     MusicNodeParams,
     MusicTransNodeParams,
@@ -36,7 +36,7 @@ class MusicRanSeqPlaylistItem:
 
 
 @dataclass
-class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -53,28 +53,24 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[MusicRandomSequenceContainer]":
+    ) -> "MusicRandomSequenceContainer":
         if playlist:
             items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
         else:
             items = []
 
-        obj = HIRCNode(
-            nid,
-            cls(
-                playlist_items=items,
-            ),
-        )
+        super().__init__(nid)
+        obj = cls(playlist_items=items)
 
-        obj.body.music_node_params.children.items = [
+        obj.music_node_params.children.items = [
             p.segment_id for p in items if p.segment_id > 0
         ]
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

@@ -3,26 +3,27 @@ from typing import ClassVar
 from field_properties import field_property
 
 from yonder.hash import calc_hash
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 
 
 @dataclass
-class State(_HIRCNodeBody):
+class State(HIRCNode):
     body_type: ClassVar[int] = 1
     entry_count: int = field_property(init=False, raw=True)
     parameters: list[int] = field(default_factory=list)
     values: list[float] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: int | str, params: dict[int | str, float]) -> "HIRCNode[State]":
-        obj = HIRCNode(nid, cls())
+    def new(cls, nid: int | str, params: dict[int | str, float]) -> "State":
+        super().__init__(nid)
+        obj = cls()
 
         for key, val in params.items():
             if isinstance(key, str):
                 key = calc_hash(key)
 
-            obj.body.parameters.append(key)
-            obj.body.values.append(val)
+            obj.parameters.append(key)
+            obj.values.append(val)
 
         return obj
 

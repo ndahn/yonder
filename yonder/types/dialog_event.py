@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     GameSync,
     DecisionTreeNode,
@@ -14,7 +14,7 @@ from .mixins import PropertyMixin
 
 
 @dataclass
-class DialogueEvent(PropertyMixin, _HIRCNodeBody):
+class DialogueEvent(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 15
     probability: int = 100
     tree_depth: int = field_property(init=False, raw=True)
@@ -27,14 +27,13 @@ class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
     @classmethod
-    def new(
-        cls, nid: int | str, props: dict[PropID, float]
-    ) -> "HIRCNode[DialogueEvent]":
-        obj = HIRCNode(nid, cls())
+    def new(cls, nid: int | str, props: dict[PropID, float]) -> "DialogueEvent":
+        super().__init__(nid)
+        obj = cls()
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
         return obj
 

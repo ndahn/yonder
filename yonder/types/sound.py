@@ -3,7 +3,7 @@ from typing import ClassVar
 from pathlib import Path
 
 from yonder.wem import get_wem_metadata
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     NodeBaseParams,
     BankSourceData,
@@ -15,7 +15,7 @@ from .mixins import PropertyMixin
 
 
 @dataclass
-class Sound(PropertyMixin, _HIRCNodeBody):
+class Sound(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 2
     bank_source_data: BankSourceData = field(default_factory=BankSourceData)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
@@ -28,17 +28,18 @@ class Sound(PropertyMixin, _HIRCNodeBody):
         source_type: SourceType = SourceType.Embedded,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[Sound]":
-        obj = HIRCNode(nid, cls())
+    ) -> "Sound":
+        super().__init__(nid)
+        obj = cls()
 
         if wem:
-            obj.body.set_source_from_wem(wem, source_type)
+            obj.set_source_from_wem(wem, source_type)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

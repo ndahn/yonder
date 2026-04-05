@@ -5,19 +5,19 @@ from enum import Enum
 
 from yonder.enums import ValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_parse import serialize, deserialize
 
 
 @dataclass
-class Action(_HIRCNodeBody):
+class Action(HIRCNode):
     body_type: ClassVar[int] = 3
     action_type: int
     external_id: int
+    params: _ActionParams
     is_bus: int = 0
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
-    params: _ActionParams
 
     def __init__(
         self,
@@ -33,24 +33,20 @@ class Action(_HIRCNodeBody):
         if action_type == ActionType.PlayEvent:
             params = "PlayEvent"
 
-        super().__init__(
-            action_type=action_type.type_id,
-            external_id=external_id,
-            is_bus=is_bus,
-            params=params,
-        )
+        self.action_type=action_type.type_id
+        self.external_id=external_id
+        self.params=params
+        self.is_bus=is_bus
 
     @classmethod
     def new_play_action(
         cls, nid: int, target_id: int, bank_id: int = 0, fade_curve: int = 4
-    ) -> HIRCNode[Action]:
-        return HIRCNode(
-            nid,
-            Action(
-                target_id,
-                is_bus=False,
-                params=ActionPlay(ActionType.Play, bank_id, fade_curve),
-            ),
+    ) -> Action:
+        super().__init__(nid)
+        return cls(
+            target_id,
+            is_bus=False,
+            params=ActionPlay(ActionType.Play, bank_id, fade_curve),
         )
 
     @classmethod
@@ -61,7 +57,7 @@ class Action(_HIRCNodeBody):
         flags1: int = 4,  # ? usually 4, rarely 7
         flags2: int = 6,  # ? usually 6
         exceptions: list[int | tuple[int, bool]] = None,
-    ) -> HIRCNode[Action]:
+    ) -> Action:
         if exceptions:
             exc_items = []
             for oid in exceptions:
@@ -72,16 +68,14 @@ class Action(_HIRCNodeBody):
         else:
             exc_items = []
 
-        return HIRCNode(
-            nid,
-            Action(
-                target_id,
-                is_bus=False,
-                params=ActionStop(
-                    ActionType.StopEO,
-                    ActionStopParams(flags1=flags1, flags2=flags2),
-                    ActionParamsExcept(exceptions=exc_items),
-                ),
+        super().__init__(nid)
+        return cls(
+            target_id,
+            is_bus=False,
+            params=ActionStop(
+                ActionType.StopEO,
+                ActionStopParams(flags1=flags1, flags2=flags2),
+                ActionParamsExcept(exceptions=exc_items),
             ),
         )
 

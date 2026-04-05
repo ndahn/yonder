@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
 from yonder.enums import PropID, RandomMode
 from .mixins import PropertyMixin, ContainerMixin
@@ -28,7 +28,7 @@ class Playlist:
 
 
 @dataclass
-class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class RandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     loop_count: int = 1
@@ -55,25 +55,23 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         random_mode: RandomMode = RandomMode.Random,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[RandomSequenceContainer]":
-        obj = HIRCNode(
-            nid,
-            cls(
-                avoid_repeat_count=avoid_repeat_count,
-                loop_count=loop_count,
-                random_mode=random_mode.value,
-            ),
+    ) -> "RandomSequenceContainer":
+        super().__init__(nid)
+        obj = cls(
+            avoid_repeat_count=avoid_repeat_count,
+            loop_count=loop_count,
+            random_mode=random_mode.value,
         )
 
         if nodes:
             for node in nodes:
-                obj.body.add_child(node)
+                obj.add_child(node)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
 from yonder.enums import PropID, SWITCH_GROUP_IDS
 from .mixins import PropertyMixin, ContainerMixin
@@ -49,7 +49,7 @@ class SwitchNodeParams:
 
 
 @dataclass
-class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class SwitchContainer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     group_type: int = 0
@@ -69,12 +69,13 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         switch_groups: list[list[int]],
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[SwitchContainer]":
-        obj = HIRCNode(nid, cls())
+    ) -> "SwitchContainer":
+        super().__init__(nid)
+        obj = cls()
 
         if switch_groups:
             for idx, nodes in enumerate(switch_groups):
-                obj.body.switch_groups.append(
+                obj.switch_groups.append(
                     SwitchPackage(
                         switch_id=SWITCH_GROUP_IDS[idx],
                         nodes=nodes,
@@ -83,9 +84,9 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

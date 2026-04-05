@@ -4,7 +4,7 @@ from pathlib import Path
 from field_properties import field_property
 
 from yonder.wem import get_wem_metadata
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import (
     NodeBaseParams,
     BankSourceData,
@@ -45,7 +45,7 @@ class TrackSrcInfo:
 
 
 @dataclass
-class MusicTrack(PropertyMixin, _HIRCNodeBody):
+class MusicTrack(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0
     source_count: int = field_property(init=False, raw=True)
@@ -69,19 +69,18 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
         source_type: SourceType = SourceType.Streaming,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "HIRCNode[MusicTrack]":
-        obj = HIRCNode(nid, cls())
+    ) -> "MusicTrack":
+        super().__init__(nid)
+        obj = cls()
 
         if wem:
-            obj.body.add_source_from_wem(
-                wem, begin_trim, end_trim, source_type=source_type
-            )
+            obj.add_source_from_wem(wem, begin_trim, end_trim, source_type=source_type)
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
-        obj.body.parent = parent
+        obj.parent = parent
         return obj
 
     @property

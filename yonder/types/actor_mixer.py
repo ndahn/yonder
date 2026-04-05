@@ -1,14 +1,14 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody, HIRCNode
+from .structure import HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
 from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
-class ActorMixer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
+class ActorMixer(PropertyMixin, ContainerMixin, HIRCNode):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -20,20 +20,18 @@ class ActorMixer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         override_bus_id: int = 0,
         parent: int = 0,
         props: dict[PropID, float] = None,
-    ) -> "HIRCNode[ActorMixer]":
-        obj = HIRCNode(
-            nid,
-            cls(
-                NodeBaseParams(
-                    override_bus_id=override_bus_id,
-                    direct_parent_id=parent,
-                )
-            ),
+    ) -> "ActorMixer":
+        super().__init__(nid)
+        obj = cls(
+            NodeBaseParams(
+                override_bus_id=override_bus_id,
+                direct_parent_id=parent,
+            )
         )
 
         if props:
             for prop, val in props.items():
-                obj.body.set_property(prop, val)
+                obj.set_property(prop, val)
 
         return obj
 
