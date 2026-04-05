@@ -11,37 +11,11 @@ from .rewwise_base_types import (
     MediaInformation,
     RTPCGraphPoint,
     PropBundle,
+    ClipAutomation,
+    TrackSrcInfo,
 )
 from yonder.enums import ClipAutomationType, PropID, SourceType
 from .mixins import PropertyMixin
-
-
-@dataclass
-class ClipAutomation:
-    clip_index: int
-    auto_type: ClipAutomationType = ClipAutomationType.Volume
-    graph_point_count: int = field_property(init=False, raw=True)
-    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(graph_point_count)
-    def get_graph_point_count(self) -> int:
-        return len(self.graph_points)
-
-
-@dataclass
-class TrackSrcInfo:
-    track_id: int = 0
-    source_id: int
-    event_id: int = 0
-    play_at: float = 0.0
-    begin_trim_offset: float = 0.0
-    end_trim_offset: float = 0.0
-    source_duration: float = 0.0
-
-    def get_references(self) -> list[tuple[str, int]]:
-        # TODO not sure about track_id and event_id
-        # source_id might also match an fx effect
-        return [("source_id", self.source_id)]
 
 
 @dataclass

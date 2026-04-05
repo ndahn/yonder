@@ -1,16 +1,17 @@
-from typing import Any, Callable, get_args
+from typing import Any, Callable
 from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
-from yonder.enums import CurveType, SyncType
+from yonder.types.rewwise_base_types import MusicTransitionRule
+from yonder.enums import CurveInterpolation, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style
 
 
 def edit_transition_dialog(
     node: MusicSwitchContainer | MusicRandomSequenceContainer,
-    base_rule: dict,
+    base_rule: MusicTransitionRule,
     on_rule_changed: Callable[[str, dict, Any], None],
     *,
     tag: str = 0,
@@ -21,20 +22,47 @@ def edit_transition_dialog(
     elif dpg.does_item_exist(tag):
         dpg.delete_item(tag)
 
+    rule = deepcopy(base_rule)
+    src_rule = rule.source_transition_rule
+    dst_rule = rule.destination_transition_rule
+
+    def on_src_transition_time_changed(sender: str, new_val: int) -> None:
+        src_rule.transition_time = new_val
+
+    def on_src_fade_offet_changed(sender: str, new_val: int) -> None:
+        src_rule.fade_offet = new_val
+
+    def on_src_fade_curve_changed(sender: str, new_val: str) -> None:
+        src_rule.fade_curve = CurveInterpolation[new_val]
+
+    def on_src_sync_type_changed(sender: str, new_val: str) -> None:
+        src_rule.sync_type = SyncType[new_val]
+
+    def on_dst_transition_time_changed(sender: str, new_val: int) -> None:
+        dst_rule.transition_time = new_val
+
+    def on_dst_fade_offet_changed(sender: str, new_val: int) -> None:
+        dst_rule.fade_offet = new_val
+
+    def on_dst_fade_curve_changed(sender: str, new_val: int) -> None:
+        dst_rule.fade_curve = CurveInterpolation[new_val]
+
     def refresh(table: str, rule_key: str) -> None:
         dpg.delete_item(table, children_only=True, slot=1)
 
-        for src_id in rule[rule_key]:
+        for src_id in getattr(rule, rule_key):
             add_row(table, src_id, rule_key)
 
         add_footer(table, rule_key)
-        dpg.configure_item(table, height=min(150, 30 + len(rule[rule_key]) * 30))
+        dpg.configure_item(
+            table, height=min(150, 30 + len(getattr(rule, rule_key)) * 30)
+        )
 
     def on_remove_clicked(
         sender: str, app_data: Any, info: tuple[str, int, str]
     ) -> None:
         table, id, rule_key = info
-        ref_nodes: list[int] = rule[rule_key]
+        ref_nodes: list[int] = getattr(rule, rule_key)
         ref_nodes.remove(id)
 
         if not ref_nodes:
@@ -49,7 +77,7 @@ def edit_transition_dialog(
         if not new_ref:
             return
 
-        ref_nodes: list[int] = rule[rule_key]
+        ref_nodes: list[int] = getattr(rule, rule_key)
         if -1 in ref_nodes:
             ref_nodes.remove(-1)
 
@@ -68,7 +96,7 @@ def edit_transition_dialog(
             )
 
     def add_footer(table: str, rule_key: str) -> None:
-        missing = sorted(set(node.children).difference(rule[rule_key]))
+        missing = sorted(set(node.children).difference(getattr(rule, rule_key)))
 
         with dpg.table_row(parent=table):
             dpg.add_combo(
@@ -83,18 +111,9 @@ def edit_transition_dialog(
             )
 
     def on_okay():
-        # Other fields are update by the widgets directly
-        rule["source_transition_rule_count"] = len(rule["source_ids"])
-        rule["destination_transition_rule_count"] = len(rule["destination_ids"])
-
         deepmerge(base_rule, rule)
-
         on_rule_changed(tag, base_rule, user_data)
         dpg.delete_item(window)
-
-    rule = deepcopy(base_rule)
-    src_rule: dict = rule.setdefault("source_transition_rule", {})
-    dst_rule: dict = rule.setdefault("destination_transition_rule", {})
 
     with dpg.window(
         label=f"Edit Transition ({node.id})",
@@ -110,7 +129,7 @@ def edit_transition_dialog(
 
         dpg.add_input_int(
             label="Transition time (ms)",
-            default_value=src_rule["transition_time"],
+            default_value=src_rule.transition_time,
             min_value=0,
             max_value=60000,
             step=500,
@@ -118,11 +137,11 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_src_transition_time",
-            callback=lambda s, a, u: src_rule.update({"transition_time": a}),
+            callback=on_src_transition_time_changed,
         )
         dpg.add_input_int(
             label="Fade offset (ms)",
-            default_value=src_rule.get("fade_offet", 0),
+            default_value=src_rule.fade_offet,
             min_value=-60000,
             max_value=60000,
             step=500,
@@ -130,21 +149,21 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_src_fade_offset",
-            callback=lambda s, a, u: src_rule.update({"fade_offet": a}),
+            callback=on_src_fade_offet_changed,
         )
         dpg.add_combo(
             label="Fade curve",
-            items=get_args(CurveType),
-            default_value=src_rule.get("fade_curve", "Linear"),
+            items=[c.name for c in CurveInterpolation],
+            default_value=src_rule.fade_curve.name,
             tag=f"{tag}_src_fade_curve",
-            callback=lambda s, a, u: src_rule.update({"fade_curve": a}),
+            callback=on_src_fade_curve_changed,
         )
         dpg.add_combo(
             label="Sync Type",
-            items=get_args(SyncType),
-            default_value=src_rule.get("sync_type", "Immediate"),
+            items=[s.name for s in SyncType],
+            default_value=src_rule.sync_type.name,
             tag=f"{tag}_sync_type",
-            callback=lambda s, a, u: src_rule.update({"sync_type": a}),
+            callback=on_src_sync_type_changed,
         )
 
         dpg.add_spacer(height=10)
@@ -153,7 +172,7 @@ def edit_transition_dialog(
 
         dpg.add_input_int(
             label="Transition time (ms)",
-            default_value=dst_rule["transition_time"],
+            default_value=dst_rule.transition_time,
             min_value=0,
             max_value=60000,
             step=500,
@@ -161,24 +180,24 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_dst_transition_time",
-            callback=lambda s, a, u: dst_rule.update({"transition_time": a}),
+            callback=on_dst_transition_time_changed,
         )
         dpg.add_input_int(
             label="Fade offset (ms)",
-            default_value=dst_rule.get("fade_offet", 0),
+            default_value=dst_rule.fade_offet,
             min_value=-60000,
             max_value=60000,
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_dst_fade_offset",
-            callback=lambda s, a, u: dst_rule.update({"fade_offet": a}),
+            callback=on_dst_fade_offet_changed,
         )
         dpg.add_combo(
             label="Fade curve",
-            items=get_args(CurveType),
-            default_value=dst_rule.get("fade_curve", "Linear"),
+            items=[c.name for c in CurveInterpolation],
+            default_value=dst_rule.fade_curve.name,
             tag=f"{tag}_dst_fade_curve",
-            callback=lambda s, a, u: dst_rule.update({"fade_curve": a}),
+            callback=on_dst_fade_curve_changed,
         )
 
         dpg.add_spacer(height=10)
@@ -187,7 +206,7 @@ def edit_transition_dialog(
 
         with dpg.group(horizontal=True):
             with dpg.child_window(border=False, width=200, auto_resize_y=True):
-                dpg.add_text("Source IDs: ")
+                dpg.add_text("Source IDs:")
                 with dpg.table(
                     header_row=False,
                     no_host_extendX=True,
@@ -205,7 +224,7 @@ def edit_transition_dialog(
                     refresh(table, "source_ids")
 
             with dpg.child_window(border=False, width=200, auto_resize_y=True):
-                dpg.add_text("Destination IDs: ")
+                dpg.add_text("Destination IDs:")
                 with dpg.table(
                     header_row=False,
                     no_host_extendX=True,

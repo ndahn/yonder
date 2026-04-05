@@ -7,7 +7,7 @@ import json
 
 from .rewwise_base_types import (
     IAkPlugin,
-    ConversionTable,
+    ObsConversionTable,
     StateGroup,
     SwitchGroup,
     RTPCRamping,
@@ -20,7 +20,7 @@ from .object_id import ObjectId
 
 @dataclass
 class ENVSSection:
-    conversion_table: ConversionTable = field(default_factory=ConversionTable)
+    conversion_table: ObsConversionTable = field(default_factory=ObsConversionTable)
 
 
 @dataclass
@@ -196,28 +196,6 @@ class HIRCNode(metaclass=ABCMeta):
 
     def copy(self) -> "HIRCNode":
         return deepcopy(self)
-
-    def apply(self, data: dict) -> str:
-        def apply_dict(obj, data: dict):
-            for f in fields(obj):
-                if f.name not in data:
-                    continue
-
-                value = data[f.name]
-                current = getattr(obj, f.name)
-
-                if is_dataclass(current):
-                    apply_dict(current, value)
-                elif isinstance(current, dict):
-                    current.clear()
-                    current.update(value)
-                elif isinstance(current, list):
-                    current.clear()
-                    current.extend(value)
-                else:
-                    setattr(obj, f.name, value)
-
-        return apply_dict(self, data)
 
     def glob(self, pattern: str) -> list:
         segments = pattern.split("/")

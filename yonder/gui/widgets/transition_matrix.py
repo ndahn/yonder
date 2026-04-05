@@ -4,45 +4,27 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
+from yonder.types.rewwise_base_types import (
+    MusicTransitionRule,
+    MusicTransSrcRule,
+    MusicTransDstRule,
+)
 from yonder.gui import style
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 
 
 TransitionNode: TypeAlias = MusicSwitchContainer | MusicRandomSequenceContainer
 
-_base_transition_rule = {
-    "source_transition_rule_count": 1,
-    "source_ids": [-1],
-    "destination_transition_rule_count": 1,
-    "destination_ids": [-1],
-    "source_transition_rule": {
-        "transition_time": 500,
-        "fade_curve": "Linear",
-        "fade_offet": 500,
-        "sync_type": "Immediate",
-        "clue_filter_hash": 0,
-        "play_post_exit": 0,
-    },
-    "destination_transition_rule": {
-        "transition_time": 500,
-        "fade_curve": "Linear",
-        "fade_offet": 0,
-        "clue_filter_hash": 0,
-        "jump_to_id": 0,
-        "jump_to_type": 0,
-        "entry_type": 0,
-        "play_pre_entry": 0,
-        "destination_match_source_cue_name": 0,
-    },
-    "alloc_trans_object_flag": 0,
-    "transition_object": {
-        "segment_id": 0,
-        "fade_out": {"transition_time": 0, "curve": "Log3", "offset": 0},
-        "fade_in": {"transition_time": 0, "curve": "Log3", "offset": 0},
-        "play_pre_entry": 0,
-        "play_post_exit": 0,
-    },
-}
+
+_base_transition_rule = MusicTransitionRule(
+    source_transition_rule=MusicTransSrcRule(
+        transition_time=500,
+        fade_offet=500,
+    ),
+    destination_transition_rule=MusicTransDstRule(
+        transition_time=500,
+    ),
+)
 
 
 def add_transition_matrix(
@@ -155,10 +137,9 @@ def add_transition_matrix(
         sender: str, app_data: Any, cell_info: tuple[int, int, int]
     ) -> None:
         src, dst, _ = cell_info
-
         new_rule = deepcopy(_base_transition_rule)
-        new_rule["source_ids"] = [src]
-        new_rule["destination_ids"] = [dst]
+        new_rule.source_ids = [src]
+        new_rule.destination_ids = [dst]
 
         edit_transition_dialog(node, new_rule, on_rule_changed, user_data=True)
 

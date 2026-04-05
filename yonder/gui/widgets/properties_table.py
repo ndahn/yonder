@@ -14,7 +14,7 @@ def add_properties_table(
     if tag in (None, 0, ""):
         tag = dpg.generate_uuid()
 
-    def get_available_keys(exclude: str | None = None) -> list[str]:
+    def get_available_keys(exclude: PropID = None) -> list[str]:
         used = set(properties.keys())
         if exclude:
             used.discard(exclude)
@@ -32,11 +32,12 @@ def add_properties_table(
         row = dpg.get_item_parent(sender)
         siblings = dpg.get_item_children(row, slot=1)
         value_widget = siblings[1]
-        old_key = next(k for k, combo in row_widgets.items() if combo[0] == sender)
-        properties.pop(old_key)
+        old_prop = next(k for k, combo in row_widgets.items() if combo[0] == sender)
+        properties.pop(old_prop)
 
-        properties[new_key] = 0.0
-        row_widgets[new_key] = row_widgets.pop(old_key)
+        new_prop = PropID[new_key]
+        properties[new_prop] = 0.0
+        row_widgets[new_prop] = row_widgets.pop(old_prop)
         dpg.configure_item(value_widget, default_value=0.0)
         sync_combos()
 
@@ -70,11 +71,11 @@ def add_properties_table(
         for key, (combo_id, _, __) in row_widgets.items():
             dpg.configure_item(combo_id, items=get_available_keys(exclude=key))
 
-    def add_row(prop: str, val: float) -> None:
+    def add_row(prop: PropID, val: float) -> None:
         with dpg.table_row(parent=tag):
             combo_id = dpg.add_combo(
                 items=get_available_keys(exclude=prop),
-                default_value=prop,
+                default_value=prop.name,
                 width=-1,
                 callback=on_prop_type_changed,
             )
@@ -84,13 +85,13 @@ def add_properties_table(
                 callback=on_prop_value_changed,
             )
             remove_id = dpg.add_button(label="-", callback=on_remove_clicked)
-            row_widgets[prop] = (combo_id, value_id, remove_id)
+            row_widgets[PropID[prop]] = (combo_id, value_id, remove_id)
 
     def add_footer() -> None:
         with dpg.table_row(parent=tag):
             dpg.add_button(label="+ Add Property", callback=on_add_clicked)
 
-    row_widgets: dict[str, tuple[int, int, int]] = {}
+    row_widgets: dict[PropID, tuple[int, int, int]] = {}
 
     # The actual widgets
     dpg.add_text("Properties")

@@ -1,31 +1,31 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
+from copy import deepcopy
 
 from yonder.enums import CurveInterpolation
 from yonder.types.rewwise_base_types import RTPCGraphPoint
-from yonder.datatypes import GraphCurve
 from yonder.gui import style
+from yonder.gui.helpers import GraphCurve
 from .draw_curve import draw_curve
 
 
 interpolation_colors: dict[CurveInterpolation, style.Color] = {
-    "Constant": style.light_grey,
-    "Linear": style.white,
-    "SCurve": style.light_green,
-    "InvSCurve": style.green,
-    "Log1": style.pink,
-    "Log2": style.pink.mix(style.purple),
-    "Log3": style.purple,
-    "Exp1": style.light_blue,
-    "Exp2": style.light_blue.mix(style.blue),
-    "Exp3": style.blue,
-    "Sine": style.light_red,
+    CurveInterpolation.Constant: style.light_grey,
+    CurveInterpolation.Linear: style.white,
+    CurveInterpolation.SCurve: style.light_green,
+    CurveInterpolation.InvSCurve: style.green,
+    CurveInterpolation.Log1: style.pink,
+    CurveInterpolation.Log3: style.purple,
+    CurveInterpolation.Exp1: style.light_blue,
+    CurveInterpolation.Exp3: style.blue,
+    CurveInterpolation.Sine: style.light_red,
+    CurveInterpolation.SineRecip: style.red,
 }
 
 
 def add_interpolation_curve(
     initial_curve: GraphCurve,
-    on_curve_changed: Callable[[str, list[RTPCGraphPoint], Any], None] = None,
+    on_curve_changed: Callable[[str, GraphCurve, Any], None] = None,
     *,
     tag: str = None,
     user_data: Any = None,
@@ -33,14 +33,7 @@ def add_interpolation_curve(
     if not tag:
         tag = dpg.generate_uuid()
 
-    if not initial_curve:
-        initial_curve = [
-            RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Linear),
-            RTPCGraphPoint(100.0, 100.0, CurveInterpolation.Linear),
-        ]
-
-    curve: list[RTPCGraphPoint] = initial_curve.copy()
-    interpolations: list[CurveInterpolation] = []
+    curve: GraphCurve = deepcopy(initial_curve)
     dirty: bool = True
     drag_points: list[int] = []
     hovered: int = -1
@@ -65,9 +58,7 @@ def add_interpolation_curve(
             return
 
         dirty = True
-        curve_type = CurveInterpolation[interp]
-        interpolations[selected] = curve_type
-        curve[selected].interpolation = curve_type
+        curve[selected].interpolation = CurveInterpolation[interp]
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
 
@@ -78,9 +69,9 @@ def add_interpolation_curve(
             return
 
         if field == "x":
-            curve[selected].x = value
+            curve[selected].from_ = value
         elif field == "y":
-            curve[selected].y = value
+            curve[selected].to = value
         else:
             raise ValueError(f"Bug: unexpected field {field}")
 
@@ -102,7 +93,7 @@ def add_interpolation_curve(
 
         x = (p0[0] + p1[0]) / 2
         y = (p1[0] + p1[1]) / 2
-        curve.insert(selected + 1, RTPCGraphPoint(x, y, CurveInterpolation.Linear))
+        curve.points.insert(selected + 1, RTPCGraphPoint(x, y, CurveInterpolation.Linear))
 
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
@@ -116,7 +107,7 @@ def add_interpolation_curve(
         if len(curve) <= 2:
             return
 
-        curve.pop(selected)
+        curve.points.pop(selected)
         if on_curve_changed:
             on_curve_changed(tag, curve, user_data)
 
@@ -129,7 +120,7 @@ def add_interpolation_curve(
         p = curve[idx]
         selected = idx
         dpg.set_value(f"{tag}_point_label", f"p{idx}")
-        dpg.set_value(f"{tag}_point_interpolation", p.interp)
+        dpg.set_value(f"{tag}_point_interpolation", p.interpolation)
         dpg.set_value(f"{tag}_point_x", p.x)
         dpg.set_value(f"{tag}_point_y", p.y)
 
@@ -159,14 +150,17 @@ def add_interpolation_curve(
         # Draw a constant line to the first point
         first = (transformed_x[0], transformed_y[0])
         draw_curve(
-            (first[0] - 10**9, first[1]), first, "Linear", color=style.light_grey
+            (first[0] - 10**9, first[1]),
+            first,
+            CurveInterpolation.Linear,
+            color=style.light_grey,
         )
 
         last = (transformed_x[-1], transformed_y[-1])
-        draw_curve(last, None, "Constant", color=style.light_grey)
+        draw_curve(last, None, CurveInterpolation.Constant, color=style.light_grey)
 
         for i, (x, y, interp) in enumerate(
-            zip(transformed_x, transformed_y, interpolations)
+            zip(transformed_x, transformed_y, curve.interp)
         ):
             color = interpolation_colors.get(interp, style.white)
             next_point = (
@@ -184,7 +178,7 @@ def add_interpolation_curve(
         dpg.pop_container_stack()
 
     def regenerate() -> None:
-        nonlocal dirty, interpolations
+        nonlocal dirty
 
         dpg.delete_item(f"{tag}_yaxis", children_only=True, slot=1)
         for dp in drag_points:
@@ -193,12 +187,10 @@ def add_interpolation_curve(
         drag_points.clear()
         dirty = True
 
-        # FIXME
-        x, y, interpolations = map(list, zip(*[(p.x, p.y, p.interp) for p in curve]))
         dpg.add_custom_series(
-            x,
-            y,
-            2,
+            list(curve.x),
+            list(curve.y),
+            list(curve.interp),
             callback=render_curve,
             tooltip=True,
             parent=f"{tag}_yaxis",
@@ -207,10 +199,10 @@ def add_interpolation_curve(
 
         for i, p in enumerate(curve):
             # Point marker
-            color = interpolation_colors.get(p.interp, style.white)
+            color = interpolation_colors.get(p.interpolation, style.white)
             dp = dpg.add_drag_point(
-                label=f"p{i} ({p.interp})",
-                default_value=(p.x, p.y),
+                label=f"p{i} ({p.interpolation})",
+                default_value=p.coords,
                 color=color,
                 thickness=3,
                 callback=on_point_moved,
@@ -248,13 +240,13 @@ def add_interpolation_curve(
             dpg.add_text("p0", tag=f"{tag}_point_label")
             dpg.add_combo(
                 [c.name for c in CurveInterpolation],
-                default_value=curve[0].interp,
+                default_value=curve[0].interpolation,
                 width=100,
                 callback=on_interpolation_changed,
                 tag=f"{tag}_point_interpolation",
             )
             dpg.add_input_float(
-                default_value=curve[0].x,
+                default_value=curve[0].from_,
                 width=140,
                 min_value=0.0,
                 min_clamped=True,
@@ -263,7 +255,7 @@ def add_interpolation_curve(
                 user_data="x",
             )
             dpg.add_input_float(
-                default_value=curve[0].y,
+                default_value=curve[0].to,
                 width=140,
                 min_value=0.0,
                 min_clamped=True,
@@ -287,5 +279,5 @@ def add_interpolation_curve(
     regenerate()
     dpg.split_frame()
     dpg.fit_axis_data(f"{tag}_yaxis")
-    
+
     return tag

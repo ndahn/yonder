@@ -1,4 +1,4 @@
-from typing import Any, Callable, get_args
+from typing import Any, Callable
 from collections import deque
 from pathlib import Path
 from docstring_parser import parse as doc_parse
@@ -23,11 +23,17 @@ from yonder.types import (
     SwitchContainer,
 )
 from yonder.util import logger
-from yonder.types.rewwise_base_types import RTPCGraphPoint
-from yonder.enums import SourceType, CurveScaling, CurveInterpolation
+from yonder.types.rewwise_base_types import ConversionTable, ClipAutomation
+from yonder.enums import (
+    SourceType,
+    CurveScaling,
+    CurveInterpolation,
+    ClipAutomationType,
+)
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
+from yonder.gui.helpers import GraphCurve
 from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget
 from .loading_indicator import loading_indicator
@@ -369,7 +375,8 @@ def _create_attributes_attenuation(
 
         node.curves.clear()
         for curve in curves:
-            node.add_curve(curve.curve_type, curve)
+            curve_type = CurveInterpolation[curve.curve_type]
+            node.curves.append(ConversionTable(curve_type, points=curve.points))
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
@@ -400,11 +407,8 @@ def _create_attributes_attenuation(
 
         dpg.add_spacer(height=5)
         add_curves_table(
-            [
-                GraphCurve.from_wwise(curve["curve_scaling"], curve["points"])
-                for curve in node.curves
-            ],
-            get_args(CurveScaling),
+            [GraphCurve(c.curve_scaling, c.points) for c in node.curves],
+            [c.name for c in CurveScaling],
             on_curves_changed,
             curve_type_label="Scaling Type",
         )
@@ -687,8 +691,11 @@ def _create_attributes_music_track(
 
     def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:
         node.clear_clips()
-        for curve in curves:
-            node.add_clip(curve.curve_type, curve)
+        for idx, curve in enumerate(curves):
+            auto_type = ClipAutomationType[curve.curve_type]
+            node.clip_items.append(
+                ClipAutomation(idx, auto_type, graph_points=curve.points)
+            )
 
         on_node_changed(base_tag, node, user_data)
 
@@ -734,11 +741,8 @@ def _create_attributes_music_track(
             )
 
         add_curves_table(
-            [
-                GraphCurve.from_wwise(clip["auto_type"], clip["graph_points"])
-                for clip in node.clips
-            ],
-            get_args(CurveInterpolation),
+            [GraphCurve(c.auto_type, c.graph_points) for c in node.clip_items],
+            [c.name for c in ClipAutomationType],
             on_clips_changed,
             label="Clips",
             add_item_label="+ Add Clip",

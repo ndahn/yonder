@@ -4,6 +4,7 @@ from field_properties import field_property
 
 from yonder.enums import (
     CurveInterpolation,
+    ClipAutomationType,
     PropID,
     ParameterID,
     PathMode,
@@ -133,6 +134,21 @@ class RTPCGraphPoint:
     to: float
     interpolation: CurveInterpolation = CurveInterpolation.Linear
 
+    @property
+    def coords(self) -> tuple[float, float]:
+        return (self.from_, self.to)
+
+
+@dataclass
+class ConversionTable:
+    curve_scaling: CurveScaling = CurveScaling.Nothing
+    point_count: int = field_property(init=False, raw=True)
+    points: list[RTPCGraphPoint] = field(default_factory=list)
+
+    @field_property(point_count)
+    def get_point_count(self) -> int:
+        return len(self.points)
+
 
 @dataclass
 class ObsOccCurve:
@@ -147,13 +163,41 @@ class ObsOccCurve:
 
 
 @dataclass
-class ConversionTable:
+class ObsConversionTable:
     curve_obs_vol: ObsOccCurve = field(default_factory=ObsOccCurve)
     curve_obs_lpf: ObsOccCurve = field(default_factory=ObsOccCurve)
     curve_obs_hpf: ObsOccCurve = field(default_factory=ObsOccCurve)
     curve_occ_vol: ObsOccCurve = field(default_factory=ObsOccCurve)
     curve_occ_lpf: ObsOccCurve = field(default_factory=ObsOccCurve)
     curve_occ_hpf: ObsOccCurve = field(default_factory=ObsOccCurve)
+
+
+@dataclass
+class TrackSrcInfo:
+    track_id: int = 0
+    source_id: int
+    event_id: int = 0
+    play_at: float = 0.0
+    begin_trim_offset: float = 0.0
+    end_trim_offset: float = 0.0
+    source_duration: float = 0.0
+
+    def get_references(self) -> list[tuple[str, int]]:
+        # TODO not sure about track_id and event_id
+        # source_id might also match an fx effect
+        return [("source_id", self.source_id)]
+
+
+@dataclass
+class ClipAutomation:
+    clip_index: int
+    auto_type: ClipAutomationType = ClipAutomationType.Volume
+    graph_point_count: int = field_property(init=False, raw=True)
+    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+
+    @field_property(graph_point_count)
+    def get_graph_point_count(self) -> int:
+        return len(self.graph_points)
 
 
 @dataclass

@@ -3,8 +3,8 @@ from typing import ClassVar
 from field_properties import field_property
 
 from .structure import HIRCNode
-from .rewwise_base_types import InitialRTPC, RTPCGraphPoint
-from yonder.enums import CurveScaling, CurveParameters
+from .rewwise_base_types import InitialRTPC, ConversionTable
+from yonder.enums import CurveParameters
 
 
 @dataclass
@@ -14,17 +14,6 @@ class ConeParams:
     outside_volume: float = 0.0
     low_pass: float = 0.0
     high_pass: float = 0.0
-
-
-@dataclass
-class ConversionTable:
-    curve_scaling: CurveScaling = CurveScaling.Nothing
-    point_count: int = field_property(init=False, raw=True)
-    points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(point_count)
-    def get_point_count(self) -> int:
-        return len(self.points)
 
 
 @dataclass

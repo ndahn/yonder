@@ -234,15 +234,15 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
             Source fade out time in ms.
         source_fade_offset : int, default=0
             Delay in ms before the source starts fading out.
-        source_fade_curve : str, default="Linear"
+        source_fade_curve : str, default=CurveInterpolation.Linear
             Source fade out curve type.
-        sync_type : SyncType, default="Immediate"
+        sync_type : SyncType, default=SyncType.Immediate
             Marker sync type.
         dest_transition_time : int, default=0
             Destination fade out time in ms.
         dest_fade_offset : int, default=0
             Delay in ms before the destination starts fading in.
-        dest_fade_curve : str, default="Linear"
+        dest_fade_curve : str, default=CurveInterpolation.Linear
             Destination fade in curve type.
         transition_segment: int | Node, default=0
             A MusicSegment to play during the transition.

@@ -2,8 +2,9 @@ from typing import Any, Callable, TypeVar
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
-from yonder.datatypes import GraphPoint, GraphCurve
-from yonder.gui.helpers import shorten_path
+from yonder.enums import CurveInterpolation
+from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.gui.helpers import shorten_path, GraphCurve
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
 
 
@@ -213,7 +214,7 @@ def add_player_table(
 
         pos, new_items, all_items = info
         tracks[:] = all_items[:]
-        
+
         for _ in range(len(new_items)):
             loop_info.insert(pos, (0.0, 1.0, True))
             user_markers.insert(pos, list(initial_user_markers or []))
@@ -231,7 +232,7 @@ def add_player_table(
         loop_info.pop(pos)
         user_markers.pop(pos)
         trims.pop(pos)
-        
+
         data = (all_items, loop_info, trims, user_markers)
         on_filepaths_changed(sender, data, user_data)
 
@@ -288,7 +289,7 @@ def add_curves_table(
     curves: list[GraphCurve] = list(initial_curves if initial_curves else [])
 
     def on_curve_type_changed(sender: str, curve_type: str, curve_idx: int) -> None:
-        curves[curve_idx] = GraphCurve(curve_type, curves[curve_idx])
+        curves[curve_idx].curve_type = curve_type
 
         if on_curves_changed:
             on_curves_changed(tag, curves, user_data)
@@ -323,7 +324,13 @@ def add_curves_table(
 
     def new_curve() -> GraphCurve:
         return [
-            GraphCurve(curve_types[0], [GraphPoint(0.0, 0.0), GraphPoint(1.0, 1.0)])
+            GraphCurve(
+                curve_types[0],
+                [
+                    RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Constant),
+                    RTPCGraphPoint(1.0, 1.0, CurveInterpolation.Constant),
+                ],
+            )
         ]
 
     def create_row(curve: GraphCurve, idx: int):

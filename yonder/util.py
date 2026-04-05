@@ -3,7 +3,7 @@ from collections.abc import MutableMapping
 import sys
 import re
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, fields, asdict
 from docstring_parser import parse as doc_parse
 import inspect
 import builtins
@@ -149,32 +149,30 @@ def get_function_spec(
     return func_args
 
 
-def deepmerge(base: dict, updates: dict, delete_missing: bool = False) -> None:
-    def merge(target: dict, source: Any) -> Any:
-        if isinstance(target, dict) and isinstance(source, dict):
-            if delete_missing:
-                keys_to_remove = set(target.keys()) - set(source.keys())
-                for key in keys_to_remove:
-                    del target[key]
-            for key, value in source.items():
-                if (
-                    key in target
-                    and isinstance(target[key], (dict, list))
-                    and isinstance(value, (dict, list))
-                ):
-                    target[key] = merge(target[key], value)
-                else:
-                    target[key] = value
-        elif isinstance(target, list) and isinstance(source, list):
-            target.clear()
-            target.extend(source)
-        else:
-            # Caller will assign the return value
-            return source
+def deepmerge(base: dataclass, updates: dict | dataclass) -> None:
+    def apply_dict(obj, data: dict):
+        for f in fields(obj):
+            if f.name not in data:
+                continue
 
-        return target
+            value = data[f.name]
+            current = getattr(obj, f.name)
 
-    merge(base, updates)
+            if is_dataclass(current):
+                apply_dict(current, value)
+            elif isinstance(current, dict):
+                current.clear()
+                current.update(value)
+            elif isinstance(current, list):
+                current.clear()
+                current.extend(value)
+            else:
+                setattr(obj, f.name, value)
+
+    if is_dataclass(updates):
+        updates = asdict(updates)
+
+    return apply_dict(base, updates)
 
 
 class PathDict(MutableMapping):
