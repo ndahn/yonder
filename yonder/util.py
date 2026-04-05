@@ -1,7 +1,6 @@
 from typing import Any, Callable, Iterable, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
-import os
 import re
 from pathlib import Path
 from dataclasses import dataclass

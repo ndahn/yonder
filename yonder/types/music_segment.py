@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody
+from yonder.hash import calc_hash
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import MusicNodeParams, PropBundle, Children
+from .rewwise_enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -22,6 +24,31 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     marker_count: int = 0
     markers: list[MusicMarkerWwise] = field(default_factory=list)
 
+    @classmethod
+    def new(
+        cls,
+        nid: int | str,
+        tracks: int | list[int],
+        markers: list[int | str, float] = None,
+        props: dict[PropID, float] = None,
+    ) -> "HIRCNode[MusicSegment]":
+        seg = HIRCNode(nid, cls())
+
+        if tracks:
+            if isinstance(tracks, int):
+                tracks = [tracks]
+            seg.body.music_node_params.children.items = tracks
+
+        if markers:
+            for mid, pos in markers:
+                seg.body.set_marker(mid, pos)
+
+        if props:
+            for prop, val in props.items():
+                seg.body.set_property(prop, val)
+
+        return seg
+
     @property
     def parent(self) -> int:
         return self.music_node_params.node_base_params.direct_parent_id
@@ -37,3 +64,30 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    def set_marker(
+        self, mid: int | str, pos: float, update: bool = True
+    ) -> None:
+        if isinstance(mid, str):
+            label = mid
+            mid = calc_hash(mid)
+        else:
+            label = ""
+
+        for marker in self.markers:
+            if marker.id == mid:
+                if update:
+                    marker.position = pos
+                else:
+                    raise ValueError(f"Marker {mid} ({label}) already exists")
+
+                break
+        else:
+            self.markers.append(
+                MusicMarkerWwise(
+                    mid,
+                    pos,
+                    string_length=len(label) + 1 if label else 0,
+                    string=label,
+                )
+            )

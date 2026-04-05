@@ -1,11 +1,12 @@
 from pathlib import Path
 from dataclasses import dataclass
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.datatypes import GraphPoint
 from yonder.types import (
     Event,
     Action,
+    ActorMixer,
     RandomSequenceContainer,
     Sound,
     MusicSwitchContainer,
@@ -29,7 +30,7 @@ def create_simple_sound(
     bnk: Soundbank,
     event_name: str,
     wems: list[Path] | Path,
-    actor_mixer: int | Node,
+    actor_mixer: int | HIRCNode[ActorMixer],
     avoid_repeats: bool = False,
     properties: dict[str, float] = None,
 ) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[Sound]]:
@@ -99,9 +100,9 @@ def create_simple_sound(
                     f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, make sure to add the RSC's ID ({rsc.id}) to its children!"
                 )
             else:
-                amx_node.cast().add_child(rsc)
-    elif isinstance(actor_mixer, Node):
-        actor_mixer.cast().add_child(rsc)
+                amx_node.add_child(rsc)
+    elif isinstance(actor_mixer, HIRCNode):
+        actor_mixer.add_child(rsc)
 
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
     for w in wems:

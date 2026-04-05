@@ -439,7 +439,7 @@ class MediaInformation:
 
 @dataclass
 class BankSourceData:
-    plugin: PluginId
+    plugin: PluginId = PluginId.VORBIS
     source_type: SourceType = SourceType.Embedded
     media_information: MediaInformation = field(
         default_factory=lambda: MediaInformation(source_id=0)
@@ -512,10 +512,6 @@ class FxBaseInitialValues:
     state_chunk: StateChunk = field(default_factory=StateChunk)
     property_value_count: int = 0
     property_values: list[PluginPropertyValue] = field(default_factory=list)
-
-    def get_references(self) -> list[tuple[str, int]]:
-        # TODO not sure about this one
-        return [("fx_id", self.fx_id)]
 
 
 @dataclass

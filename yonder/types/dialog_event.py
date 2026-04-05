@@ -1,14 +1,14 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import (
     GameSync,
     DecisionTreeNode,
     PropBundle,
     PropRangedModifiers,
 )
-from .rewwise_enums import DecisionTreeMode, GroupType
+from .rewwise_enums import DecisionTreeMode, GroupType, PropID
 from .mixins import PropertyMixin
 
 
@@ -27,7 +27,22 @@ class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
+    @classmethod
+    def new(
+        cls, nid: int | str, props: dict[PropID, float]
+    ) -> "HIRCNode[DialogueEvent]":
+        dlg = HIRCNode(nid, cls())
+
+        if props:
+            for prop, val in props.items():
+                dlg.body.set_property(prop, val)
+
+        return dlg
+
     @property
     def properties(self) -> list[PropBundle]:
         return self.prop_bundle
-    
+
+    # TODO add same management stuff as MusicSwitchContainer
+    # TODO children should be kept in sync with the decision tree
+    # (or be updated during validate)

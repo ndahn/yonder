@@ -1,5 +1,6 @@
-from typing import Any
+from typing import Any, Container
 from pathlib import Path
+from random import randrange
 
 from yonder.util import resource_data
 
@@ -49,3 +50,22 @@ def lookup_name(h: int, default: Any = None) -> str:
         global_hash_dict.update(load_lookup_table())
 
     return global_hash_dict.get(h, default)
+
+
+class UniqueIdGenerator:
+    def __init__(self, invalid_ids: Container[int] = None):
+        self.invalid_ids = invalid_ids
+
+    def __call__(self) -> int:
+        return self.new_id()
+
+    def new_id(self) -> int:
+        while True:
+            # IDs should be signed 32bit integers, although in practice
+            # I've rarely seen any below 1000000 (expected I guess?)
+            id = randrange(2**24, 2**31 - 1)
+            if not self.invalid_ids or id not in self.invalid_ids:
+                return id
+
+
+global_id_generator = UniqueIdGenerator()

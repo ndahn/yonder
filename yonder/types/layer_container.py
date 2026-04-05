@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import (
     NodeBaseParams,
     Children,
@@ -9,7 +9,7 @@ from .rewwise_base_types import (
     InitialRTPC,
     PropBundle,
 )
-from .rewwise_enums import RtpcType
+from .rewwise_enums import RtpcType, PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -42,6 +42,25 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     layers: list[Layer] = field(default_factory=list)
     is_continuous_validation: int = 0
 
+    @classmethod
+    def new(
+        cls,
+        nid: int | str,
+        layer_nodes: list[list[int]] = None,
+        props: dict[PropID, float] = None,
+    ) -> "HIRCNode[LayerContainer]":
+        lyr = HIRCNode(nid, cls())
+
+        if layer_nodes:
+            for layer in layer_nodes:
+                lyr.body.add_layer(layer)
+
+        if props:
+            for prop, val in props.items():
+                lyr.body.set_property(prop, val)
+
+        return lyr
+
     @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
@@ -53,3 +72,10 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    def add_layer(self, nodes: list[int]) -> Layer:
+        self.layers.append(
+            Layer(associated_children=[AssociatedChildData(nid) for nid in nodes])
+        )
+
+    # TODO figure out how to fill children from layer data

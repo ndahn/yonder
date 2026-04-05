@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .action import ActionType
 
 if TYPE_CHECKING:
@@ -13,6 +13,10 @@ class Event(_HIRCNodeBody):
     body_type: ClassVar[int] = 4
     action_count: int = 0
     actions: list[int] = field(default_factory=list)
+
+    @classmethod
+    def new(cls, nid: int | str, actions: list[int] = None) -> "HIRCNode[Event]":
+        return HIRCNode(nid, cls(actions=actions or []))
 
     def has_action_type(self, bnk: "Soundbank", val: ActionType | str | int) -> bool:
         if isinstance(val, ActionType):

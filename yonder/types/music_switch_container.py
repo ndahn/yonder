@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import calc_hash
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import (
     MusicNodeParams,
     MusicTransNodeParams,
@@ -11,7 +11,7 @@ from .rewwise_base_types import (
     PropBundle,
     Children,
 )
-from .rewwise_enums import GroupType, DecisionTreeMode
+from .rewwise_enums import GroupType, DecisionTreeMode, PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -29,6 +29,28 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     tree_size: int = 0
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
+
+    @classmethod
+    def new(
+        cls,
+        nid: int | str,
+        arguments: list[tuple[int | str, GroupType]],
+        branches: list[tuple[list[int | str], int]],
+        props: dict[PropID, float] = None,
+    ) -> "HIRCNode[MusicSwitchContainer]":
+        msc = HIRCNode(nid, cls())
+
+        for arg, group_type in arguments:
+            msc.body.add_argument(arg, group_type)
+
+        for state_values, node_id in branches:
+            msc.body.add_branch(state_values, node_id)
+
+        if props:
+            for prop, val in props.items():
+                msc.body.set_property(prop, val)
+
+        return msc
 
     @property
     def parent(self) -> int:
@@ -64,14 +86,15 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
 
         return keys
 
-    def add_argument(self, argument: GameSync, group_type: GroupType) -> None:
+    def add_argument(self, argument: int | str, group_type: GroupType) -> None:
         if argument in self.arguments:
             raise ValueError(f"Argument {argument} already exists")
 
-        self.arguments.append(argument)
+        group_id = calc_hash(argument) if isinstance(argument, str) else argument
+        self.arguments.append(GameSync(group_id))
         self.group_types.append(group_type)
         self.tree_depth = len(self.arguments)
-        # TODO tree needs to be extended
+        # TODO we should extend the tree if it's more than just the root
 
     def add_branch(self, path: list[int | str], node_id: int) -> None:
         if len(path) != len(self.arguments):
@@ -104,9 +127,6 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         # Set the node ID on the leaf child
         branch.node_id = node_id
         if node_id > 0:
-            # TODO children mixin
             self.add_child(node_id)
 
     # TODO transition rule helper
-    # TODO expose children
-    # TODO get_references

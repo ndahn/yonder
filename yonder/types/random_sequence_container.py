@@ -1,15 +1,16 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import _HIRCNodeBody
+from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
+from .rewwise_enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
 @dataclass
 class PlaylistItem:
     play_id: int
-    weight: int = 50
+    weight: int = 50000
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("play_id", self.play_id)]
@@ -39,6 +40,35 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     children: Children = field(default_factory=Children)
     playlist: Playlist = field(default_factory=Playlist)
 
+    @classmethod
+    def new(
+        cls,
+        nid: int | str,
+        nodes: int | list[int],
+        loop_count: int = 0,
+        avoid_repeat_count: int = 0,
+        props: dict[PropID, float] = None,
+        parent: int = 0,
+    ) -> "HIRCNode[RandomSequenceContainer]":
+        obj = HIRCNode(
+            nid,
+            cls(
+                loop_count=loop_count,
+                avoid_repeat_count=avoid_repeat_count,
+            ),
+        )
+
+        if nodes:
+            for node in nodes:
+                obj.body.add_child(node)
+        
+        if props:
+            for prop, val in props.items():
+                obj.body.set_property(prop, val)
+
+        obj.body.parent = parent
+        return obj
+
     @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
@@ -50,3 +80,14 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    def add_child(self, child_id: int) -> None:
+        super().add_child(child_id)
+        self.playlist.items.append(PlaylistItem(child_id))
+
+    def remove_child(self, child_id: int) -> None:
+        super().remove_child(child_id)
+        for idx, item in enumerate(self.playlist.items):
+            if item.play_id == child_id:
+                self.playlist.items.pop(idx)
+                break

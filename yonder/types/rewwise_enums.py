@@ -14,6 +14,17 @@ class CurveInterpolation(IntEnum):
     Constant = 0x9
 
 
+class CurveParameters(IntEnum):
+    None_ = -1
+    Volume1 = 0
+    LPF = 1
+    Volume2 = 2
+    HPF = 3
+    Spread = 4
+    Focus = 5
+    Reserved = 6
+
+
 class PropID(IntEnum):
     Volume = 0x00
     LFE = 0x01
