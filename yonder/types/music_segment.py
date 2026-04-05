@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from yonder.hash import calc_hash
 from .structure import _HIRCNodeBody, HIRCNode
@@ -21,7 +22,7 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
-    marker_count: int = 0
+    marker_count: int = field_property(init=False, raw=True)
     markers: list[MusicMarkerWwise] = field(default_factory=list)
 
     @classmethod
@@ -66,6 +67,10 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @field_property(marker_count)
+    def get_marker_count(self) -> int:
+        return len(self.markers)
 
     def set_marker(
         self, mid: int | str, pos: float, update: bool = True

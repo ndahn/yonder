@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from yonder.hash import calc_hash
 from .structure import _HIRCNodeBody, HIRCNode
@@ -23,10 +24,10 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         default_factory=MusicTransNodeParams
     )
     continue_playback: int = 0
-    tree_depth: int = 0
+    tree_depth: int = field_property(init=False, raw=True)
     arguments: list[GameSync] = field(default_factory=list)
     group_types: list[GroupType] = field(default_factory=list)
-    tree_size: int = 0
+    tree_size: int = field_property(init=False, raw=True)
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
 
@@ -88,6 +89,19 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
 
         return keys
 
+    @field_property(tree_depth)
+    def get_tree_depth(self) -> int:
+        return len(self.arguments)
+
+    @field_property(tree_size)
+    def get_tree_size(self) -> int:
+        num_tree_nodes = 1
+        todo = [self.tree]
+        while todo:
+            item = todo.pop()
+            num_tree_nodes += len(item.children)
+            todo.extend(item.children)
+
     def add_argument(self, argument: int | str, group_type: GroupType) -> None:
         if argument in self.arguments:
             raise ValueError(f"Argument {argument} already exists")
@@ -130,5 +144,11 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         branch.node_id = node_id
         if node_id > 0:
             self.add_child(node_id)
+
+    def validate(self) -> None:
+        if len(self.group_types) != len(self.arguments):
+            raise ValueError("Found mismatch between group_types and arguments")
+
+        # TODO verify all branches have the correct depth
 
     # TODO transition rule helper

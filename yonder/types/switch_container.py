@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
@@ -130,8 +131,12 @@ switch_group_ids = [
 @dataclass
 class SwitchPackage:
     switch_id: int
-    node_count: int = 0
+    node_count: int = field_property(init=False, raw=True)
     nodes: list[int] = field(default_factory=list)
+
+    @field_property(node_count)
+    def get_node_count(self) -> int:
+        return len(self.nodes)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"nodes:{i}", nid) for i, nid in enumerate(self.nodes)]
@@ -172,9 +177,9 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     default_switch: int = 0
     continuous_validation: int = 0
     children: Children = field(default_factory=Children)
-    switch_group_count: int = 0
+    switch_group_count: int = field_property(init=False, raw=True)
     switch_groups: list[SwitchPackage] = field(default_factory=list)
-    switch_param_count: int = 0
+    switch_param_count: int = field_property(init=False, raw=True)
     switch_params: list[SwitchNodeParams] = field(default_factory=list)
 
     @classmethod
@@ -211,4 +216,12 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
 
+    @field_property(switch_group_count)
+    def get_switch_group_count(self) -> int:
+        return len(self.switch_groups)
+
+    @field_property(switch_param_count)
+    def get_switch_param_count(self) -> int:
+        return len(self.switch_params)
+    
     # TODO sync up children with switch groups/params

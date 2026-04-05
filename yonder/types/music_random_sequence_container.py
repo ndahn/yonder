@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from yonder.hash import global_id_generator
 from .structure import _HIRCNodeBody, HIRCNode
@@ -38,7 +39,7 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
-    playlist_item_count: int = 0
+    playlist_item_count: int = field_property(init=False, raw=True)
     playlist_items: list[MusicRanSeqPlaylistItem] = field(default_factory=list)
 
     @classmethod
@@ -88,6 +89,10 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @field_property(playlist_item_count)
+    def get_playlist_item_count(self) -> int:
+        return len(self.playlist_items)
 
     def set_playlist(self, items: list, root_ers_type: int = 0) -> None:
         playlist = self.make_playlist(items, root_ers_type)

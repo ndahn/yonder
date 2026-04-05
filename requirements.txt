@@ -12,3 +12,4 @@ numpy
 sounddevice
 pyyaml
 tqdm
+field_properties

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
+from field_properties import field_property
 
 from yonder.wem import get_wem_metadata
 from .structure import _HIRCNodeBody, HIRCNode
@@ -19,8 +20,12 @@ from .mixins import PropertyMixin
 class ClipAutomation:
     clip_index: int
     auto_type: ClipAutomationType = ClipAutomationType.Volume
-    graph_point_count: int = 0
+    graph_point_count: int = field_property(init=False, raw=True)
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+
+    @field_property(graph_point_count)
+    def get_graph_point_count(self) -> int:
+        return len(self.graph_points)
 
 
 @dataclass
@@ -43,12 +48,12 @@ class TrackSrcInfo:
 class MusicTrack(PropertyMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 11
     flags: int = 0
-    source_count: int = 0
+    source_count: int = field_property(init=False, raw=True)
     sources: list[BankSourceData] = field(default_factory=list)
-    playlist_item_count: int = 0
+    playlist_item_count: int = field_property(init=False, raw=True)
     playlist: list[TrackSrcInfo] = field(default_factory=list)
-    subtrack_count: int = 0
-    clip_item_count: int = 0
+    subtrack_count: int = field_property(init=False, raw=True)
+    clip_item_count: int = field_property(init=False, raw=True)
     clip_items: list[ClipAutomation] = field(default_factory=list)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     track_type: int = 0
@@ -88,6 +93,23 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @field_property(source_count)
+    def get_source_count(self) -> int:
+        return len(self.sources)
+
+    @field_property(playlist_item_count)
+    def get_playlist_item_count(self) -> int:
+        return len(self.playlist)
+
+    @field_property(subtrack_count)
+    def get_subtrack_count(self) -> int:
+        # TODO not clear what to return here
+        return 0
+
+    @field_property(clip_item_count)
+    def get_clip_item_count(self) -> int:
+        return len(self.clip_items)
 
     def add_source_from_wem(
         self,

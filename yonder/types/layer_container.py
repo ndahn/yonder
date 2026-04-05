@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import (
@@ -16,8 +17,12 @@ from .mixins import PropertyMixin, ContainerMixin
 @dataclass
 class AssociatedChildData:
     associated_child_id: int
-    graph_point_count: int = 0
+    graph_point_count: int = field_property(init=False, raw=True)
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+
+    @field_property(graph_point_count)
+    def get_graph_point_count(self) -> int:
+        return len(self.graph_points)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("associated_child_id", self.associated_child_id)]
@@ -29,8 +34,12 @@ class Layer:
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     rtpc_id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
-    associated_childen_count: int = 0
+    associated_children_count: int = field_property(init=False, raw=True)
     associated_children: list[AssociatedChildData] = field(default_factory=list)
+
+    @field_property(associated_children_count)
+    def get_associated_children_count(self) -> int:
+        return len(self.associated_children)
 
 
 @dataclass
@@ -38,7 +47,7 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
-    layer_count: int = 0
+    layer_count: int = field_property(init=False, raw=True)
     layers: list[Layer] = field(default_factory=list)
     is_continuous_validation: int = 0
 
@@ -74,6 +83,10 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @field_property(layer_count)
+    def get_layer_count(self) -> int:
+        return len(self.layers)
 
     def add_layer(self, nodes: list[int]) -> Layer:
         self.layers.append(

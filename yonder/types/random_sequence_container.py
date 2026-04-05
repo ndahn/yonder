@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar
+from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
@@ -18,8 +19,12 @@ class PlaylistItem:
 
 @dataclass
 class Playlist:
-    count: int = 0
+    count: int = field_property(init=False, raw=True)
     items: list[PlaylistItem] = field(default_factory=list)
+
+    @field_property
+    def get_count(self) -> int:
+        return len(self.items)
 
 
 @dataclass

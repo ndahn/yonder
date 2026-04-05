@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
+from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .action import ActionType
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class Event(_HIRCNodeBody):
     body_type: ClassVar[int] = 4
-    action_count: int = 0
+    action_count: int = field_property(init=False, raw=True)
     actions: list[int] = field(default_factory=list)
 
     @classmethod
@@ -32,6 +33,10 @@ class Event(_HIRCNodeBody):
                 return True
 
         return False
+
+    @field_property(action_count)
+    def get_action_count(self) -> int:
+        return len(self.actions)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"actions:{i}", aid) for i, aid in enumerate(self.actions)]
