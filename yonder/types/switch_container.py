@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from .rewwise_enums import PropID
+from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -200,7 +200,7 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
                         nodes=nodes,
                     )
                 )
-        
+
         if props:
             for prop, val in props.items():
                 obj.body.set_property(prop, val)
@@ -223,5 +223,5 @@ class SwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     @field_property(switch_param_count)
     def get_switch_param_count(self) -> int:
         return len(self.switch_params)
-    
+
     # TODO sync up children with switch groups/params

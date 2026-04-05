@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import InitialRTPC, RTPCGraphPoint
-from .rewwise_enums import CurveScaling, CurveParameters
+from yonder.enums import CurveScaling, CurveParameters
 
 
 @dataclass

@@ -12,7 +12,7 @@ from yonder.query import query_nodes
 
 from .structure import Section, BKHDSection, HIRCSection, HIRCNode
 from .rewwise_parse import serialize, deserialize
-from .rewwise_enums import SourceType
+from yonder.enums import SourceType
 from .action import ActionType
 
 from . import (
@@ -417,12 +417,16 @@ class Soundbank:
         logger.info(
             f"The following {len(indices)} nodes have been orphaned (cascade={cascade}):\n{'  \n'.join(orphan_nodes)}"
         )
-        self.hirc.objects = [x for i, x in enumerate(self.hirc.objects) if i not in indices]
+        self.hirc.objects = [
+            x for i, x in enumerate(self.hirc.objects) if i not in indices
+        ]
         self._regenerate_index_table()
 
         logger.info(f"Found and deleted {len(indices)} orphans")
 
-    def find_events(self, action_type: ActionType = ActionType.Play) -> Generator[HIRCNode, None, None]:
+    def find_events(
+        self, action_type: ActionType = ActionType.Play
+    ) -> Generator[HIRCNode, None, None]:
         events: list[HIRCNode[Event]] = list(self.query("type=Event"))
         for evt in events:
             for aid in evt.body.actions:
@@ -482,7 +486,7 @@ class Soundbank:
         # is both easier and more reliable
         events.sort(key=lambda n: n.id)
         objects.extend(events)
-        
+
         actions.sort(key=lambda n: n.id)
         objects.extend(actions)
 

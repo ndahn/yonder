@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from .rewwise_enums import PropID
+from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -66,7 +66,7 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         if nodes:
             for node in nodes:
                 obj.body.add_child(node)
-        
+
         if props:
             for prop, val in props.items():
                 obj.body.set_property(prop, val)

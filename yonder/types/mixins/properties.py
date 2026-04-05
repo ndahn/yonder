@@ -1,5 +1,5 @@
 from yonder.types.rewwise_base_types import PropBundle
-from yonder.types.rewwise_enums import PropID
+from yonder.enums import PropID
 
 
 # NOTE: mixed class must expose a "properties" member

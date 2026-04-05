@@ -10,7 +10,7 @@ from .rewwise_base_types import (
     InitialRTPC,
     PropBundle,
 )
-from .rewwise_enums import RtpcType, PropID
+from yonder.enums import RtpcType, PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 

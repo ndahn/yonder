@@ -3,7 +3,7 @@ from typing import ClassVar
 
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
-from .rewwise_enums import PropID
+from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 

@@ -10,7 +10,7 @@ from .rewwise_base_types import (
     PropBundle,
     Children,
 )
-from .rewwise_enums import PropID
+from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 

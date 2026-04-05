@@ -9,7 +9,7 @@ from .rewwise_base_types import (
     PropBundle,
     PropRangedModifiers,
 )
-from .rewwise_enums import DecisionTreeMode, GroupType, PropID
+from yonder.enums import DecisionTreeMode, GroupType, PropID
 from .mixins import PropertyMixin
 
 
@@ -22,9 +22,7 @@ class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     group_types: list[GroupType] = field(default_factory=list)
     tree_size: int = field_property(init=False, raw=True)
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
-    tree: DecisionTreeNode = field(
-        default_factory=lambda: DecisionTreeNode(0, 0)
-    )
+    tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 

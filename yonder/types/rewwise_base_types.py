@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from field_properties import field_property
 
-from .rewwise_enums import (
+from yonder.enums import (
     CurveInterpolation,
     PropID,
     ParameterID,

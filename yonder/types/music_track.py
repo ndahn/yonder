@@ -12,7 +12,7 @@ from .rewwise_base_types import (
     RTPCGraphPoint,
     PropBundle,
 )
-from .rewwise_enums import ClipAutomationType, PropID, PluginId, SourceType
+from yonder.enums import ClipAutomationType, PropID, PluginId, SourceType
 from .mixins import PropertyMixin
 
 
@@ -73,7 +73,9 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
         obj = HIRCNode(nid, cls())
 
         if wem:
-            obj.body.add_source_from_wem(wem, begin_trim, end_trim, source_type=source_type)
+            obj.body.add_source_from_wem(
+                wem, begin_trim, end_trim, source_type=source_type
+            )
 
         if props:
             for prop, val in props.items():

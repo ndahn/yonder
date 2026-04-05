@@ -5,7 +5,7 @@ from field_properties import field_property
 from yonder.hash import calc_hash
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_base_types import MusicNodeParams, PropBundle, Children
-from .rewwise_enums import PropID
+from yonder.enums import PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 
@@ -72,9 +72,7 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
     def get_marker_count(self) -> int:
         return len(self.markers)
 
-    def set_marker(
-        self, mid: int | str, pos: float, update: bool = True
-    ) -> None:
+    def set_marker(self, mid: int | str, pos: float, update: bool = True) -> None:
         if isinstance(mid, str):
             label = mid
             mid = calc_hash(mid)

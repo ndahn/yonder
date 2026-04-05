@@ -4,8 +4,13 @@ from pathlib import Path
 
 from yonder.wem import get_wem_metadata
 from .structure import _HIRCNodeBody, HIRCNode
-from .rewwise_base_types import NodeBaseParams, BankSourceData, PropBundle, MediaInformation
-from .rewwise_enums import SourceType, PropID
+from .rewwise_base_types import (
+    NodeBaseParams,
+    BankSourceData,
+    PropBundle,
+    MediaInformation,
+)
+from yonder.enums import SourceType, PropID
 from .mixins import PropertyMixin
 
 
@@ -28,7 +33,7 @@ class Sound(PropertyMixin, _HIRCNodeBody):
 
         if wem:
             obj.body.set_source_from_wem(wem, source_type)
-        
+
         if props:
             for prop, val in props.items():
                 obj.body.set_property(prop, val)

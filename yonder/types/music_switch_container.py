@@ -12,7 +12,7 @@ from .rewwise_base_types import (
     PropBundle,
     Children,
 )
-from .rewwise_enums import GroupType, DecisionTreeMode, PropID
+from yonder.enums import GroupType, DecisionTreeMode, PropID
 from .mixins import PropertyMixin, ContainerMixin
 
 

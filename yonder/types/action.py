@@ -3,7 +3,7 @@ from typing import Type, Union, ClassVar
 from dataclasses import dataclass, field
 from enum import Enum
 
-from .rewwise_enums import ValueMeaning
+from yonder.enums import ValueMeaning
 from .rewwise_base_types import PropBundle, PropRangedModifiers
 from .structure import _HIRCNodeBody, HIRCNode
 from .rewwise_parse import serialize, deserialize
@@ -110,7 +110,7 @@ class _ActionParams:
         param_cls = action_type.params_cls
         if not param_cls:
             raise KeyError(f"Action type {action_type} is not supported yet")
-        
+
         data["action_type"] = action_type
         return deserialize(param_cls, data[action_type])
 
