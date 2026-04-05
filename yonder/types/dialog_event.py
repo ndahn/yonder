@@ -22,7 +22,7 @@ class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     tree_size: int = 0
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(
-        default_factory=lambda: DecisionTreeNode(key=0, node_id=0, first_child_index=0)
+        default_factory=lambda: DecisionTreeNode(0, 0)
     )
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
@@ -31,13 +31,13 @@ class DialogueEvent(PropertyMixin, _HIRCNodeBody):
     def new(
         cls, nid: int | str, props: dict[PropID, float]
     ) -> "HIRCNode[DialogueEvent]":
-        dlg = HIRCNode(nid, cls())
+        obj = HIRCNode(nid, cls())
 
         if props:
             for prop, val in props.items():
-                dlg.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return dlg
+        return obj
 
     @property
     def properties(self) -> list[PropBundle]:

@@ -48,28 +48,30 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody)
         playlist: list[int, list[int]],
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
+        parent: int = 0,
     ) -> "HIRCNode[MusicRandomSequenceContainer]":
         if playlist:
             items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
         else:
             items = []
 
-        mrs = HIRCNode(
+        obj = HIRCNode(
             nid,
             cls(
                 playlist_items=items,
             ),
         )
 
-        mrs.body.music_node_params.children.items = [
+        obj.body.music_node_params.children.items = [
             p.segment_id for p in items if p.segment_id > 0
         ]
 
         if props:
             for prop, val in props.items():
-                mrs.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return mrs
+        obj.body.parent = parent
+        return obj
 
     @property
     def parent(self) -> int:

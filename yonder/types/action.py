@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Type, Union, ClassVar
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 from enum import Enum
 
 from .rewwise_enums import ValueMeaning
@@ -21,11 +21,12 @@ class Action(_HIRCNodeBody):
 
     def __init__(
         self,
-        action_type: ActionType,
         external_id: int,
         params: _ActionParams,
         is_bus: bool = False,
     ):
+        action_type = params.action_type
+
         if action_type == ActionType.Unk2102:
             raise ValueError("Action type (Unk2102) is not supported")
 
@@ -46,7 +47,6 @@ class Action(_HIRCNodeBody):
         return HIRCNode(
             nid,
             Action(
-                ActionType.Play,
                 target_id,
                 is_bus=False,
                 params=ActionPlay(ActionType.Play, bank_id, fade_curve),
@@ -75,7 +75,6 @@ class Action(_HIRCNodeBody):
         return HIRCNode(
             nid,
             Action(
-                ActionType.StopEO,
                 target_id,
                 is_bus=False,
                 params=ActionStop(
@@ -97,21 +96,23 @@ class Action(_HIRCNodeBody):
 
 @dataclass
 class _ActionParams:
-    # Just for serialization since we won't have access to the parent Action object
-    action_type: InitVar[ActionType]
+    action_type: ActionType
 
     def to_dict(self) -> dict:
-        action_name = self.action_type.name
-        return {action_name: serialize(self)}
+        # Needed for serialization, but not part of it
+        data = serialize(self)
+        data.pop("action_type")
+        return {self.action_type.name: data}
 
     @classmethod
     def from_dict(cls, data: dict) -> "_ActionParams":
-        action_name = next(data.keys())
-        param_cls = action_name.params_cls
+        action_type = ActionType[next(data.keys())]
+        param_cls = action_type.params_cls
         if not param_cls:
-            raise KeyError(f"Action type {action_name} is not supported yet")
+            raise KeyError(f"Action type {action_type} is not supported yet")
         
-        return deserialize(param_cls, data[action_name])
+        data["action_type"] = action_type
+        return deserialize(param_cls, data[action_type])
 
 
 @dataclass

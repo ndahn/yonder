@@ -21,7 +21,7 @@ class ActorMixer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         parent: int = 0,
         props: dict[PropID, float] = None,
     ) -> "HIRCNode[ActorMixer]":
-        amx = HIRCNode(
+        obj = HIRCNode(
             nid,
             cls(
                 NodeBaseParams(
@@ -33,9 +33,9 @@ class ActorMixer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
 
         if props:
             for prop, val in props.items():
-                amx.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return amx
+        return obj
 
     @property
     def parent(self) -> int:

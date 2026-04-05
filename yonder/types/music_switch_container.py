@@ -37,20 +37,22 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         arguments: list[tuple[int | str, GroupType]],
         branches: list[tuple[list[int | str], int]],
         props: dict[PropID, float] = None,
+        parent: int = 0,
     ) -> "HIRCNode[MusicSwitchContainer]":
-        msc = HIRCNode(nid, cls())
+        obj = HIRCNode(nid, cls())
 
         for arg, group_type in arguments:
-            msc.body.add_argument(arg, group_type)
+            obj.body.add_argument(arg, group_type)
 
         for state_values, node_id in branches:
-            msc.body.add_branch(state_values, node_id)
+            obj.body.add_branch(state_values, node_id)
 
         if props:
             for prop, val in props.items():
-                msc.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return msc
+        obj.body.parent = parent
+        return obj
 
     @property
     def parent(self) -> int:

@@ -20,7 +20,7 @@ class Bus(PropertyMixin, _HIRCNodeBody):
         ducks: list[DuckInfo] = None,
         props: dict[PropID, float] = None,
     ) -> "HIRCNode[Bus]":
-        bus = HIRCNode(
+        obj = HIRCNode(
             nid,
             cls(
                 BusInitialValues(
@@ -32,9 +32,9 @@ class Bus(PropertyMixin, _HIRCNodeBody):
 
         if props:
             for prop, val in props.items():
-                bus.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return bus
+        return obj
 
     @property
     def properties(self) -> list[PropBundle]:

@@ -31,23 +31,25 @@ class MusicSegment(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         tracks: int | list[int],
         markers: list[int | str, float] = None,
         props: dict[PropID, float] = None,
+        parent: int = 0,
     ) -> "HIRCNode[MusicSegment]":
-        seg = HIRCNode(nid, cls())
+        obj = HIRCNode(nid, cls())
 
         if tracks:
             if isinstance(tracks, int):
                 tracks = [tracks]
-            seg.body.music_node_params.children.items = tracks
+            obj.body.music_node_params.children.items = tracks
 
         if markers:
             for mid, pos in markers:
-                seg.body.set_marker(mid, pos)
+                obj.body.set_marker(mid, pos)
 
         if props:
             for prop, val in props.items():
-                seg.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return seg
+        obj.body.parent = parent
+        return obj
 
     @property
     def parent(self) -> int:

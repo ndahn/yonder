@@ -48,18 +48,20 @@ class LayerContainer(PropertyMixin, ContainerMixin, _HIRCNodeBody):
         nid: int | str,
         layer_nodes: list[list[int]] = None,
         props: dict[PropID, float] = None,
+        parent: int = 0,
     ) -> "HIRCNode[LayerContainer]":
-        lyr = HIRCNode(nid, cls())
+        obj = HIRCNode(nid, cls())
 
         if layer_nodes:
             for layer in layer_nodes:
-                lyr.body.add_layer(layer)
+                obj.body.add_layer(layer)
 
         if props:
             for prop, val in props.items():
-                lyr.body.set_property(prop, val)
+                obj.body.set_property(prop, val)
 
-        return lyr
+        obj.body.parent = parent
+        return obj
 
     @property
     def parent(self) -> int:
