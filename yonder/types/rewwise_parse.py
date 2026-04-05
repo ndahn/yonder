@@ -1,4 +1,5 @@
-from typing import Any, Type, TypeVar, get_type_hints, get_origin, get_args
+from typing import Any, Type, get_type_hints, get_origin, get_args
+from types import GenericAlias
 from dataclasses import is_dataclass, fields
 import keyword
 from enum import Enum, StrEnum
@@ -35,21 +36,18 @@ def serialize(obj: Any) -> dict:
 
 
 def _parse_value(target_type: Type, value: Any):
-    if issubclass(target_type, Enum):
+    origin = get_origin(target_type) or target_type
+    args = get_args(target_type) or [Any, Any]
+    
+    print("###", target_type, origin, type(origin))
+    if issubclass(origin, Enum):
         if isinstance(value, str):
-            if issubclass(target_type, StrEnum):
-                if value in target_type:
-                    return target_type(value)
-            return target_type[value]
-        return target_type(value)
-
-    if issubclass(target_type, TypeVar):
-        origin = target_type.__bound__
-        args = [Any, Any]
-    else:
-        origin = get_origin(target_type) or target_type
-        args = get_args(target_type) or [Any, Any]
-
+            if issubclass(origin, StrEnum):
+                if value in origin:
+                    return origin(value)
+            return origin[value]
+        return origin(value)
+    
     if origin is list:
         item_type = args[0]
         return [_parse_value(item_type, item) for item in value]
@@ -63,17 +61,18 @@ def _parse_value(target_type: Type, value: Any):
 
     # Concrete dataclass or class with from_dict
     if isinstance(value, dict):
-        if hasattr(target_type, "from_dict") and callable(target_type.from_dict):
-            return target_type.from_dict(value)
+        if hasattr(origin, "from_dict") and callable(origin.from_dict):
+            return origin.from_dict(value)
 
-        if is_dataclass(target_type):
+        if is_dataclass(origin):
             return deserialize(target_type, value)
 
     return value
 
 
 def deserialize(target_type: Type, data: dict) -> Any:
-    if hasattr(target_type, "from_dict") and callable(target_type.from_dict):
+    # Check if the type itself has custom deserialization
+    if "from_dict" in target_type.__dict__ and callable(target_type.from_dict):
         return target_type.from_dict(data)
 
     if not is_dataclass(target_type):

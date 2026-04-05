@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Any, Union, ClassVar
+from typing import Any, ClassVar
 from dataclasses import dataclass, field, fields, is_dataclass
 from abc import ABCMeta
 from copy import deepcopy
 import json
 
+from yonder.hash import calc_hash, lookup_name
 from .rewwise_base_types import (
     IAkPlugin,
     ObsConversionTable,
@@ -19,34 +20,66 @@ from .object_id import ObjectId
 
 
 @dataclass
-class ENVSSection:
+class SectionHeader(metaclass=ABCMeta):
+    magic: list[int] = field(default_factory=list)
+    size: int = 0
+
+@dataclass
+class Section:
+    _header: SectionHeader = field(default_factory=SectionHeader)
+
+    @classmethod
+    def section_name(cls) -> str:
+        return cls.__name__[:4].upper()
+
+    def to_dict(self) -> dict:
+        data = serialize(self)
+        trans = {
+            **data.pop("_header"),
+            "body": {
+                type(self).__name__: {**data},
+            }
+        }
+        return trans
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Section":
+        section_type = next(iter(data["body"].keys()))
+        header = {
+            "magic": data.pop("magic"),
+            "size": data.pop("size"),
+        }
+        trans = {
+            "_header": header,
+            **data["body"][section_type],
+        }
+
+        for sub in cls.__subclasses__():
+            if sub.section_name() == section_type:
+                return deserialize(sub, trans)
+        
+        raise ValueError(f"Unknown section type {section_type}")
+
+@dataclass
+class ENVSSection(Section):
     conversion_table: ObsConversionTable = field(default_factory=ObsConversionTable)
 
 
 @dataclass
-class BKHDSection:
-    version: int
-    _bank_id: ObjectId
+class BKHDSection(Section):
+    version: int = 0
+    bank_id: int = 0
     language_fnv_hash: int = 0
     wem_alignment: int = 0
     project_id: int = 0
     padding: list[int] = field(default_factory=list)
 
     @property
-    def bank_id(self) -> int:
-        return self._bank_id.hash
-
-    @bank_id.setter
-    def bank_id(self, new_id: int) -> None:
-        self._bank_id.hash = new_id
-
-    @property
     def name(self) -> str:
-        return self._bank_id.name
+        return lookup_name(self.bank_id)
 
-    @name.setter
-    def name(self, new_name: str) -> None:
-        self._bank_id.name = new_name
+    def set_name(self, new_name: str) -> None:
+        self.bank_id = calc_hash(new_name)
 
     def get_name(self, default: str = None) -> str:
         name = self._bank_id.name
@@ -56,41 +89,41 @@ class BKHDSection:
 
 
 @dataclass
-class INITSection:
+class INITSection(Section):
     plugin_count: int = 0
     plugins: list[IAkPlugin] = field(default_factory=list)
 
 
 @dataclass
-class DIDXSection:
+class DIDXSection(Section):
     descriptors: list[DIDXDescriptor] = field(default_factory=list)
 
 
 @dataclass
 class DIDXDescriptor:
-    id: int
-    offset: int
-    size: int
+    id: int = 0
+    offset: int = 0
+    size: int = 0
 
 
 @dataclass
-class DATASection:
+class DATASection(Section):
     data: list[int] = field(default_factory=list)
 
 
 @dataclass
-class PLATSection:
+class PLATSection(Section):
     string_length: int = 0
     string: str = ""
 
 
 @dataclass
-class TodoSection:
+class TodoSection(Section):
     data: list[int] = field(default_factory=list)
 
 
 @dataclass
-class STIDSection:
+class STIDSection(Section):
     string_encoding: int = 0
     entry_count: int = 0
     entries: list[STIDSectionEntry] = field(default_factory=list)
@@ -98,19 +131,18 @@ class STIDSection:
 
 @dataclass
 class STIDSectionEntry:
-    bnk_id: int
+    bnk_id: int = 0
     name_length: int = 0
     name: list[int] = field(default_factory=list)
-
     string_encoding: int = 0
     entry_count: int = 0
     entries: list[STIDSectionEntry] = field(default_factory=list)
 
 
 @dataclass
-class STMGSection:
-    volume_threshold: float
-    max_voice_instances: int
+class STMGSection(Section):
+    volume_threshold: float = 0.0
+    max_voice_instances: int = 1
     max_num_dangerous_virt_voices_limit_internal: int = 0
     state_group_count: int = 0
     state_groups: list[StateGroup] = field(default_factory=list)
@@ -124,14 +156,14 @@ class STMGSection:
 
 @dataclass
 class STMGSectionStateGroup:
-    id: int
+    id: int = 0
     default_transition_time: int = 0
     state_transition_count: int = 0
     state_transitions: list[StateTransition] = field(default_factory=list)
 
 
 @dataclass
-class HIRCSection:
+class HIRCSection(Section):
     object_count: int = 0
     objects: list[HIRCNode] = field(default_factory=list)
 
@@ -139,9 +171,9 @@ class HIRCSection:
 @dataclass
 class HIRCNodeHeader:
     # These two are just here to make rewwise happy
-    body_type: int
+    body_type: int = 0
     size: int = field(default=0, init=False, repr=False, hash=False, compare=False)
-    id: ObjectId
+    id: ObjectId = None
 
     def __init__(self, body_type: int, nid: int | str):
         self.body_type = body_type
@@ -163,7 +195,7 @@ class HIRCNodeHeader:
 class HIRCNode(metaclass=ABCMeta):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
-    _header: HIRCNodeHeader
+    _header: HIRCNodeHeader = field(default_factory=HIRCNodeHeader)
 
     def __init__(self, id: int | str):
         self._header = HIRCNodeHeader(self.body_type, id)
@@ -234,11 +266,11 @@ class HIRCNode(metaclass=ABCMeta):
 
     @classmethod
     def from_dict(cls, data: dict) -> "HIRCNode":
-        node_type = next(data["body"].keys())
+        node_type = next(iter(data["body"].keys()))
         header = {
-            data.pop("body_type"),
-            data.pop("size"),
-            data.pop("id"),
+            "body_type": data.pop("body_type"),
+            "size": data.pop("size"),
+            "id": data.pop("id"),
         }
 
         # It's much more convenient to store all the header data in a nested dataclass
@@ -285,27 +317,6 @@ class HIRCNode(metaclass=ABCMeta):
 
     def __str__(self) -> str:
         return f"{self.type_name} #{self.id}"
-
-
-SectionBody = Union[
-    BKHDSection,
-    DIDXSection,
-    DATASection,
-    ENVSSection,
-    TodoSection,
-    HIRCSection,
-    STIDSection,
-    STMGSection,
-    INITSection,
-    PLATSection,
-]
-
-
-@dataclass
-class Section:
-    magic: list[int]
-    size: int = 0
-    body: SectionBody
 
 
 NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

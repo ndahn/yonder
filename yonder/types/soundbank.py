@@ -78,7 +78,7 @@ class Soundbank:
 
     @classmethod
     def from_dict(cls, json_path: Path, data: dict) -> list[Section]:
-        sections = deserialize(list[Section], data["sections"])
+        sections = [deserialize(Section, sec) for sec in data["sections"]]
         return Soundbank(json_path, sections)
 
     def to_dict(self) -> dict:

@@ -804,7 +804,7 @@ class BanksOfYonder:
             dpg.set_value(f"{self.tag}_events_filter", "")
             dpg.set_value(f"{self.tag}_globals_filter", "")
 
-            self.bnk = Soundbank.load(path)
+            self.bnk = Soundbank.from_file(path)
             dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
             self.config.add_recent_file(path)
             self.config.save()

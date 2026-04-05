@@ -29,8 +29,8 @@ class GameSync:
 
 @dataclass
 class DecisionTreeNode:
-    key: int
-    node_id: int
+    key: int = 0
+    node_id: int = 0
     first_child_index: int = 0
     child_count: int = field_property(init=False, raw=True)
     weight: int = 50
@@ -130,8 +130,8 @@ class MusicTransitionRule:
 
 @dataclass
 class RTPCGraphPoint:
-    from_: float
-    to: float
+    from_: float = 0.0
+    to: float = 0.0
     interpolation: CurveInterpolation = CurveInterpolation.Linear
 
     @property
@@ -175,7 +175,7 @@ class ObsConversionTable:
 @dataclass
 class TrackSrcInfo:
     track_id: int = 0
-    source_id: int
+    source_id: int = 0
     event_id: int = 0
     play_at: float = 0.0
     begin_trim_offset: float = 0.0
@@ -190,7 +190,7 @@ class TrackSrcInfo:
 
 @dataclass
 class ClipAutomation:
-    clip_index: int
+    clip_index: int = 0
     auto_type: ClipAutomationType = ClipAutomationType.Volume
     graph_point_count: int = field_property(init=False, raw=True)
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
@@ -216,14 +216,14 @@ class StateTransition:
 
 @dataclass
 class SwitchGraphPoint:
-    rtpc_value: float
-    switch: int
-    curve_shape: int
+    rtpc_value: float = 0.0
+    switch: int = 0
+    curve_shape: int = 0
 
 
 @dataclass
 class StateGroup:
-    id: int
+    id: int = 0
     default_transition_time: int = 0
     transition_count: int = field_property(init=False, raw=True)
     transitions: list[StateTransition] = field(default_factory=list)
@@ -235,7 +235,7 @@ class StateGroup:
 
 @dataclass
 class SwitchGroup:
-    id: int
+    id: int = 0
     rtpc_id: int = 0
     rtpc_type: int = 0
     graph_point_count: int = field_property(init=False, raw=True)
@@ -248,7 +248,7 @@ class SwitchGroup:
 
 @dataclass
 class RTPCRamping:
-    rtpc_id: int
+    rtpc_id: int = 0
     value: int = 0
     ramp_type: int = 0
     ramp_up: float = 0.0
@@ -258,7 +258,7 @@ class RTPCRamping:
 
 @dataclass
 class AcousticTexture:
-    id: int
+    id: int = 0
     absorption_offset: float = 0.0
     absorption_low: float = 0.0
     absorption_mid_low: float = 0.0
@@ -269,8 +269,8 @@ class AcousticTexture:
 
 @dataclass
 class FXChunk:
-    fx_index: int
-    fx_id: int
+    fx_index: int = 0
+    fx_id: int = 0
     is_share_set: int = 0
     is_rendered: int = 0
 
@@ -280,7 +280,7 @@ class FXChunk:
 
 @dataclass
 class PropRangedModifier:
-    prop_type: int
+    prop_type: int = 0
     min: float = 0.0
     max: float = 0.0
 
@@ -305,8 +305,8 @@ class PathVertex:
 
 @dataclass
 class PathListItemOffset:
-    vertices_offset: int
-    vertices_count: int
+    vertices_offset: int = 0
+    vertices_count: int = 0
 
 
 @dataclass
@@ -406,8 +406,8 @@ class AdvSettingsParams:
 
 @dataclass
 class AkState:
-    state_id: int
-    state_instance_id: int
+    state_id: int = 0
+    state_instance_id: int = 0
 
     def get_references(self) -> list[tuple[str, int]]:
         # TODO not sure about this one
@@ -416,14 +416,14 @@ class AkState:
 
 @dataclass
 class StatePropertyInfo:
-    property: PropID
+    property: PropID = PropID.Volume
     accum_type: RtpcAccum = RtpcAccum.Nothing
     in_db: int = 0
 
 
 @dataclass
 class StateGroupChunk:
-    state_group_id: int
+    state_group_id: int = 0
     sync_type: SyncType = SyncType.Immediate
     state_count: int = field_property(init=False, raw=True)
     states: list[AkState] = field(default_factory=list)
@@ -451,7 +451,7 @@ class StateChunk:
 
 @dataclass
 class RTPC:
-    id: int
+    id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
     rtpc_accum: RtpcAccum = RtpcAccum.Nothing
     param_id: int = 0
@@ -489,7 +489,7 @@ class NodeInitialFxParams:
 
 @dataclass
 class PropBundle:
-    prop_id: PropID
+    prop_id: PropID = PropID.Volume
     value: float = 0.0
 
     def get_references(self) -> list[tuple[str, int]]:
@@ -544,7 +544,7 @@ class NodeBaseParams:
 
 @dataclass
 class MediaInformation:
-    source_id: int
+    source_id: int = 0
     in_memory_media_size: int = 0
     source_flags: int = 0
 
@@ -624,8 +624,8 @@ class BusInitialValues:
 
 @dataclass
 class MediaMap:
-    index: int
-    source_id: int
+    index: int = 0
+    source_id: int = 0
 
     def get_references(self) -> list[tuple[str, int]]:
         # Usually not a reference, but might be paired with an effect
@@ -634,7 +634,7 @@ class MediaMap:
 
 @dataclass
 class FxBaseInitialValues:
-    fx_id: int
+    fx_id: int = 0
     params_size: int = field_property(init=False, raw=True)
     params: list[int] = field(default_factory=list)
     media_count: int = field_property(init=False, raw=True)
@@ -659,14 +659,14 @@ class FxBaseInitialValues:
 
 @dataclass
 class PluginPropertyValue:
-    property: ParameterID
+    property: ParameterID = ParameterID.Volume
     rtpc_accum: RtpcAccum = RtpcAccum.Nothing
     value: float = 0.0
 
 
 @dataclass
 class DuckInfo:
-    bus_id: int
+    bus_id: int = 0
     duck_volume: float = 0.0
     fade_out_time: int = 0
     fade_in_time: int = 0
@@ -706,8 +706,8 @@ class MeterInfo:
 
 @dataclass
 class Stinger:
-    trigger_id: int
-    segment_id: int
+    trigger_id: int = 0
+    segment_id: int = 0
     sync_play_at: SyncType = SyncType.Immediate
     cue_filter_hash: int = 0
     dont_repeat_time: int = 0

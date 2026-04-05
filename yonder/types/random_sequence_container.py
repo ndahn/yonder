@@ -22,7 +22,7 @@ class Playlist:
     count: int = field_property(init=False, raw=True)
     items: list[PlaylistItem] = field(default_factory=list)
 
-    @field_property
+    @field_property(count)
     def get_count(self) -> int:
         return len(self.items)
 

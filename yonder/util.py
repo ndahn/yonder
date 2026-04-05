@@ -149,7 +149,7 @@ def get_function_spec(
     return func_args
 
 
-def deepmerge(base: dataclass, updates: dict | dataclass) -> None:
+def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
     def apply_dict(obj, data: dict):
         for f in fields(obj):
             if f.name not in data:

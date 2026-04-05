@@ -12,9 +12,9 @@ from .rewwise_parse import serialize, deserialize
 @dataclass
 class Action(HIRCNode):
     body_type: ClassVar[int] = 3
-    action_type: int
-    external_id: int
-    params: _ActionParams
+    action_type: int = 0
+    external_id: int = 0
+    params: _ActionParams = None
     is_bus: int = 0
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
@@ -118,7 +118,7 @@ class RandomizerModifier:
 
 @dataclass
 class ActionParamsExceptEntry:
-    object_id: int
+    object_id: int = 0
     is_bus: int = 0
 
 
@@ -130,14 +130,14 @@ class ActionParamsExcept:
 
 @dataclass
 class ActionSetState(_ActionParams):
-    state_group_id: int
-    target_state_id: int
+    state_group_id: int = 0
+    target_state_id: int = 0
 
 
 @dataclass
 class ActionSetSwitch(_ActionParams):
-    switch_group_id: int
-    switch_state_id: int
+    switch_group_id: int = 0
+    switch_state_id: int = 0
 
 
 @dataclass
@@ -197,7 +197,7 @@ class ActionSeek(_ActionParams):
 
 @dataclass
 class ActionPlay(_ActionParams):
-    bank_id: int
+    bank_id: int = 0
     fade_curve: int = 4
 
 
@@ -224,20 +224,6 @@ class ActionStopParams:
 class ActionStop(_ActionParams):
     stop: ActionStopParams = field(default_factory=ActionStopParams)
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
-
-
-ActionParams = Union[
-    ActionSetState,
-    ActionSetSwitch,
-    ActionPlay,
-    ActionStop,
-    ActionPause,
-    ActionResume,
-    ActionMute,
-    ActionSetAkProp,
-    ActionSeek,
-    ActionSetGameParameter,
-]
 
 
 class ActionType(Enum):

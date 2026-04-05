@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
-from yonder.types import HIRCNode
 
 from yonder.util import logger
 
 if TYPE_CHECKING:
+    from yonder import HIRCNode
     from yonder.types.rewwise_base_types import Children
 
 
@@ -17,6 +17,8 @@ class ContainerMixin:
         child_id : int | HIRCNode
             Child node ID or Node instance.
         """
+        from yonder.types import HIRCNode
+
         if isinstance(child_id, HIRCNode):
             if child_id.parent > 0 and child_id.parent != self.id:
                 logger.warning(f"Adding already adopted child {child_id} to {self}")
@@ -43,6 +45,8 @@ class ContainerMixin:
         bool
             True if child was removed, False if not found.
         """
+        from yonder.types import HIRCNode
+        
         if isinstance(child_id, HIRCNode):
             child_id = child_id.id
 

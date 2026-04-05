@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from pathlib import Path
 import shutil
 import subprocess
@@ -6,11 +6,14 @@ import subprocess
 # NOTE need to manually install audioop-lts
 from pydub import AudioSegment, silence
 
-from yonder import Soundbank, HIRCNode
 from yonder.util import logger
 
+if TYPE_CHECKING:
+    from yonder import Soundbank
 
-def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
+
+def import_wems(bnk: "Soundbank", wems: list[Path]) -> None:
+    from yonder import HIRCNode
     from yonder.types.rewwise_base_types import MediaInformation
 
     for wem in wems:
