@@ -58,7 +58,7 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
     def new(
         cls,
         nid: int | str,
-        wem: Path,
+        wem: Path = None,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Embedded,
@@ -68,13 +68,13 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
         obj = HIRCNode(nid, cls())
 
         if wem:
-            obj.body.add_wem(wem, begin_trim, end_trim, source_type=source_type)
+            obj.body.add_source_from_wem(wem, begin_trim, end_trim, source_type=source_type)
 
         if props:
             for prop, val in props.items():
                 obj.body.set_property(prop, val)
 
-        obj.body.node_base_params.direct_parent_id = parent
+        obj.body.parent = parent
         return obj
 
     @property
@@ -89,7 +89,7 @@ class MusicTrack(PropertyMixin, _HIRCNodeBody):
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
 
-    def add_wem(
+    def add_source_from_wem(
         self,
         wem: Path,
         begin_trim: float = 0.0,
