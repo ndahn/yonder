@@ -2,7 +2,7 @@ from typing import Any, Callable
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.types import MusicSwitchContainer
 from yonder.hash import calc_hash, lookup_name
 from yonder.util import logger
@@ -14,14 +14,13 @@ from yonder.gui.widgets import (
     add_node_widget,
     add_paragraphs,
     add_player_table,
-    add_transition_matrix,
 )
 from .create_state_path_dialog import create_state_path_dialog
 
 
 def new_boss_track_dialog(
     bnk: Soundbank,
-    on_boss_track_created: Callable[[str, list[Node]], None],
+    on_boss_track_created: Callable[[str, list[HIRCNode]], None],
     *,
     title: str = "New Boss BGM",
     tag: str = None,
@@ -215,7 +214,7 @@ def new_boss_track_dialog(
                     if f.stem == wem.stem:
                         bgm_tracks[idx] = wem
 
-        # TODO transition rules
+        # TODO transition rules?
         loop_info = [(li[0] * 1000, li[1] * 1000) for li in bgm_loop_infos]
         nodes = create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info, play_intro_enabled)
         if on_boss_track_created:

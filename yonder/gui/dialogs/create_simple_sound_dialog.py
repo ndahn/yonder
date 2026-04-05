@@ -5,7 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, calc_hash
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
-from yonder.enums import property_defaults
+from yonder.enums import PropID
 from yonder.util import logger
 from yonder.wem import wav2wem
 from yonder.gui import style
@@ -30,9 +30,7 @@ def create_simple_sound_dialog(
     elif dpg.does_item_exist(tag):
         dpg.delete_item(tag)
 
-    properties: dict[str, float] = {
-        "Volume": property_defaults["Volume"],
-    }
+    properties: dict[PropID, float] = {}
     soundfiles: list[Path] = []
 
     def update_name_and_id(sender: str, new_name: str, user_data: Any) -> None:
@@ -53,7 +51,7 @@ def create_simple_sound_dialog(
             dpg.set_value(f"{tag}_actor_mixer", amx.id)
 
     def on_properties_changed(
-        sender: str, new_properties: dict[str, float], user_data: Any
+        sender: str, new_properties: dict[PropID, float], user_data: Any
     ) -> None:
         properties.clear()
         properties.update(new_properties)

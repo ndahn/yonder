@@ -1,7 +1,7 @@
 from typing import Any, Callable, Iterable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.types import MusicSwitchContainer
 from yonder.hash import lookup_name, calc_hash
 from yonder.gui import style
@@ -32,13 +32,13 @@ def create_state_path_dialog(
 
     leaf_node_id: int = 0
 
-    def on_node_selected(sender: str, leaf_node: int | Node, user_data: Any) -> None:
+    def on_node_selected(sender: str, leaf_node: int | HIRCNode, user_data: Any) -> None:
         nonlocal leaf_node_id
-        if isinstance(leaf_node, Node):
+        if isinstance(leaf_node, HIRCNode):
             leaf_node = leaf_node.id
         leaf_node_id = leaf_node
 
-    def get_nodes(filt: str) -> Iterable[Node]:
+    def get_nodes(filt: str) -> Iterable[HIRCNode]:
         yield from bnk.query(filt)
 
     def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:

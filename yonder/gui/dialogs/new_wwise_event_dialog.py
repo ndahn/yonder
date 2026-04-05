@@ -2,7 +2,7 @@ from typing import Callable
 import re
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
@@ -11,7 +11,7 @@ from yonder.gui.widgets import add_generic_widget
 
 def new_wwise_event_dialog(
     bnk: Soundbank,
-    callback: Callable[[list[Node]], None],
+    callback: Callable[[list[HIRCNode]], None],
     *,
     title: str = "New Event",
     tag: str = None,
@@ -97,7 +97,7 @@ def new_wwise_event_dialog(
         )
 
         add_generic_widget(
-            Node,
+            HIRCNode,
             "Target node",
             None,
             tag=f"{tag}_external_id",

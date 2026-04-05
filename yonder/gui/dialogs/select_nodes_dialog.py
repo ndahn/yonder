@@ -1,16 +1,17 @@
 from typing import Any, Callable, Iterable, Type, TypeVar
 from dearpygui import dearpygui as dpg
-from yonder import Soundbank, Node
+from yonder import Soundbank, HIRCNode
 
-_T = TypeVar("_T", bound=Type[Node])
+
+_T = TypeVar("_T", bound=Type[HIRCNode])
 
 
 def select_nodes_dialog(
-    get_items: Callable[[str], Iterable[Node]],
-    on_nodes_selected: Callable[[str, list[Node] | list[str], Any], None],
+    get_items: Callable[[str], Iterable[HIRCNode]],
+    on_nodes_selected: Callable[[str, list[HIRCNode] | list[str], Any], None],
     *,
-    get_node_details: Callable[[Node], list[str]] = None,
-    get_node_label: Callable[[Node], str] = None,
+    get_node_details: Callable[[HIRCNode], list[str]] = None,
+    get_node_label: Callable[[HIRCNode], str] = None,
     multiple: bool = False,
     return_labels: bool = False,
     max_items: int = 200,
@@ -23,7 +24,7 @@ def select_nodes_dialog(
     elif dpg.does_item_exist(tag):
         dpg.delete_item(tag)
 
-    items: dict[str, Node] = {}
+    items: dict[str, HIRCNode] = {}
 
     # Maps row_tag -> item key for lookup
     row_tags: dict[int, str] = {}
@@ -170,8 +171,8 @@ def select_nodes_of_type(
     node_type: _T,
     on_node_selected: Callable[[str, list[_T] | list[str], Any], None],
     *,
-    get_node_details: Callable[[Node], list[str]] = None,
-    get_node_label: Callable[[Node], str] = None,
+    get_node_details: Callable[[HIRCNode], list[str]] = None,
+    get_node_label: Callable[[HIRCNode], str] = None,
     multiple: bool = False,
     return_labels: bool = False,
     tag: str = 0,
