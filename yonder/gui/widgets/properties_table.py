@@ -8,6 +8,7 @@ def add_properties_table(
     properties: dict[PropID, Any],
     on_value_changed: Callable[[str, dict[str, Any], Any], None],
     *,
+    label: str = "Properties",
     tag: str | int = 0,
     user_data: Any = None,
 ) -> None:
@@ -94,7 +95,8 @@ def add_properties_table(
     row_widgets: dict[PropID, tuple[int, int, int]] = {}
 
     # The actual widgets
-    dpg.add_text("Properties")
+    if label:
+        dpg.add_text(label)
 
     with dpg.table(
         header_row=False,

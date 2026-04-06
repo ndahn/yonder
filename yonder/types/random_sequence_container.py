@@ -5,7 +5,7 @@ from field_properties import field_property
 from .structure import HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
 from yonder.enums import PropID, RandomMode
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
@@ -28,7 +28,7 @@ class Playlist:
 
 
 @dataclass
-class RandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
+class RandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     loop_count: int = 1
@@ -65,7 +65,7 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
 
         if nodes:
             for node in nodes:
-                obj.add_child(node)
+                obj.add_playlist_item(node)
 
         if props:
             for prop, val in props.items():
@@ -86,12 +86,12 @@ class RandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
 
-    def add_child(self, child_id: int) -> None:
-        super().add_child(child_id)
+    def add_playlist_item(self, child_id: int) -> None:
+        self.children.add(child_id)
         self.playlist.items.append(PlaylistItem(child_id))
 
-    def remove_child(self, child_id: int) -> None:
-        super().remove_child(child_id)
+    def remove_playlist_item(self, child_id: int) -> None:
+        self.children.pop(child_id, missing_ok=True)
         for idx, item in enumerate(self.playlist.items):
             if item.play_id == child_id:
                 self.playlist.items.pop(idx)

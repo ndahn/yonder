@@ -1,6 +1,5 @@
 from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action, Sound, MusicTrack
-from yonder.types.mixins import ContainerMixin
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
 
@@ -90,16 +89,16 @@ def copy_node_structure(
     for up_id in upchain:
         # Once we encounter an existing node we can assume the rest of the chain is
         # intact. Child nodes must be inserted *before* the first existing parent.
-        up_node: ContainerMixin = dst_bnk.get(up_id)
+        up_node = dst_bnk.get(up_id)
         if up_node:
-            up_node.add_child(up_child)
+            up_node.children.add(up_child)
             break
 
         # First time we encounter upchain node, clear the children, as non-existing items
         # will make the soundbank invalid
         up_node = src_bnk[up_id].copy()
-        up_node.clear_children()
-        up_node.add_child(up_child)
+        up_node.children.clear()
+        up_node.children.add(up_child)
         dst_bnk.add_nodes(up_node)
 
         up_child = up_node

@@ -948,7 +948,10 @@ class BanksOfYonder:
         global_nodes = [
             n
             for n in self.bnk
-            if (getattr(n, "parent", None) is None and not isinstance(n, (Event, Action)))
+            if (
+                getattr(n, "parent", None) is None
+                and not isinstance(n, (Event, Action))
+            )
             or isinstance(n, ActorMixer)
         ]
 
@@ -1018,7 +1021,9 @@ class BanksOfYonder:
 
         self._on_node_selected(sender, None, node)
 
-    def _on_node_selected(self, sender: str, app_data: Any, node: int | HIRCNode) -> None:
+    def _on_node_selected(
+        self, sender: str, app_data: Any, node: int | HIRCNode
+    ) -> None:
         # Deselect previous selectable
         if self._selected_root and dpg.does_item_exist(self._selected_root):
             dpg.set_value(self._selected_root, False)
@@ -1132,7 +1137,7 @@ class BanksOfYonder:
 
         def on_node_created(node: HIRCNode) -> None:
             self.bnk.add_nodes(node)
-            self._selected_node.add_child(node)
+            self._selected_node.children.add(node)
             logger.info(f"Attached new node {node} to {self._selected_node}")
             # TODO no need to regenerate everything
             self.regenerate()
@@ -1207,7 +1212,7 @@ class BanksOfYonder:
             )
 
         self.bnk.add_nodes(node)
-        self._selected_node.add_child(node)
+        self._selected_node.children.add(node)
         logger.info(
             f"Pasted node {node} from clipboard as child of {self._selected_node}"
         )
@@ -1291,7 +1296,9 @@ class BanksOfYonder:
             dpg.focus_item(tag)
             return
 
-        def on_graph_node_click(sender: str, node: int | HIRCNode, user_data: Any) -> None:
+        def on_graph_node_click(
+            sender: str, node: int | HIRCNode, user_data: Any
+        ) -> None:
             if node in self.bnk:
                 self.jump_to_event_node(node)
 

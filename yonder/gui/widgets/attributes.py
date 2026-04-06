@@ -1,5 +1,4 @@
 from typing import Any, Callable
-from collections import deque
 from pathlib import Path
 from docstring_parser import parse as doc_parse
 import shutil
@@ -105,25 +104,11 @@ def create_attribute_widgets(
             dpg.add_separator()
             dpg.add_spacer(height=3)
 
-            # Find all exposed python properties, including those from base classes
-            properties: dict[str, property] = {}
-            todo = deque([node.__class__])
-            while todo:
-                c = todo.popleft()
-                for name, prop in c.__dict__.items():
-                    if name in ("id", "name", "type", "parent"):
-                        continue
-                    if isinstance(prop, property):
-                        properties.setdefault(name, prop)
-
-                todo.extend(c.__bases__)
-
             # This may remove or add properties that are handled differently
             try:
                 _create_type_specific_attributes(
                     bnk,
                     node,
-                    properties,
                     on_node_changed,
                     on_node_selected,
                     base_tag=tag,
@@ -133,36 +118,15 @@ def create_attribute_widgets(
                 logger.error(f"Error creating node widgets: {e}", exc_info=e)
                 dpg.add_text("Error creating node widgets, check logs", color=style.red)
 
-            # TODO should be deliberate about each node
-            for name, prop in properties.items():
-                value_type = prop.fget.__annotations__["return"]
-                value = prop.fget(node)
-                readonly = prop.fset is None
-                doc = doc_parse(prop.__doc__)
-
-                try:
-                    widget = add_generic_widget(
-                        value_type,
-                        name,
-                        set_property,
-                        default=value,
-                        readonly=readonly,
-                        user_data=prop,
-                    )
-                except Exception:
-                    continue
-
-                if widget and doc:
-                    with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text(doc.short_description)
-
             if hasattr(node, "properties"):
                 dpg.add_spacer(height=5)
-                add_properties_table(
-                    node.properties,
-                    on_node_properties_changed,
-                    user_data=node,
-                )
+                with dpg.tree_node(label="Properties"):
+                    add_properties_table(
+                        {p.prop_id: p.value for p in node.properties},
+                        on_node_properties_changed,
+                        label=None,
+                        user_data=node,
+                    )
     finally:
         dpg.delete_item(loading)
 
@@ -266,7 +230,6 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
 def _create_type_specific_attributes(
     bnk: Soundbank,
     node: HIRCNode,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -281,7 +244,6 @@ def _create_type_specific_attributes(
         _create_attributes_attenuation(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -297,7 +259,6 @@ def _create_type_specific_attributes(
         _create_attributes_music_random_sequence_container(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -307,7 +268,6 @@ def _create_type_specific_attributes(
         _create_attributes_music_segment(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -317,7 +277,6 @@ def _create_type_specific_attributes(
         _create_attributes_music_switch_container(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -327,7 +286,6 @@ def _create_type_specific_attributes(
         _create_attributes_music_track(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -339,7 +297,6 @@ def _create_type_specific_attributes(
         _create_attributes_sound(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -349,7 +306,6 @@ def _create_type_specific_attributes(
         _create_attributes_switch_container(
             bnk,
             node,
-            properties,
             on_node_changed,
             on_node_selected,
             base_tag=base_tag,
@@ -360,7 +316,6 @@ def _create_type_specific_attributes(
 def _create_attributes_attenuation(
     bnk: Soundbank,
     node: Attenuation,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -417,7 +372,6 @@ def _create_attributes_attenuation(
 def _create_attributes_music_random_sequence_container(
     bnk: Soundbank,
     node: MusicRandomSequenceContainer,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -435,7 +389,6 @@ def _create_attributes_music_random_sequence_container(
 def _create_attributes_music_switch_container(
     bnk: Soundbank,
     node: MusicSwitchContainer,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -444,11 +397,8 @@ def _create_attributes_music_switch_container(
 ) -> None:
     from yonder.gui.dialogs.create_state_path_dialog import create_state_path_dialog
 
-    properties.pop("arguments")
-    properties.pop("tree_depth")
-
     args = node.arguments
-    names = {a: lookup_name(a, f"#{a}") for a in node.arguments}
+    names = {a: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments}
 
     def on_state_path_created(
         sender: str, state_path: list[int], path_node_id: int
@@ -534,7 +484,6 @@ def _create_attributes_music_switch_container(
 def _create_attributes_music_segment(
     bnk: Soundbank,
     node: MusicSegment,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -650,7 +599,6 @@ def _create_attributes_music_segment(
 def _create_attributes_music_track(
     bnk: Soundbank,
     node: MusicTrack,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -756,16 +704,12 @@ def _create_attributes_music_track(
 def _create_attributes_sound(
     bnk: Soundbank,
     node: Sound,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    properties.pop("media_size")
-    properties.pop("source_id")
-
     def on_filepath_selected(sender: str, filepath: Path, sound: Sound) -> None:
         if filepath.name.endswith(".wav"):
             wwise = get_config().locate_wwise()
@@ -796,7 +740,6 @@ def _create_attributes_sound(
 def _create_attributes_switch_container(
     bnk: Soundbank,
     node: SwitchContainer,
-    properties: dict[str, property],
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,

@@ -11,7 +11,7 @@ from .rewwise_base_types import (
     PropBundle,
 )
 from yonder.enums import RtpcType, PropID
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
@@ -43,7 +43,7 @@ class Layer:
 
 
 @dataclass
-class LayerContainer(PropertyMixin, ContainerMixin, HIRCNode):
+class LayerContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

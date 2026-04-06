@@ -14,7 +14,7 @@ from .rewwise_base_types import (
     MusicTransDstRule,
 )
 from yonder.enums import PropID, CurveInterpolation, SyncType
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
@@ -36,7 +36,7 @@ class MusicRanSeqPlaylistItem:
 
 
 @dataclass
-class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
+class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -203,7 +203,7 @@ class MusicRandomSequenceContainer(PropertyMixin, ContainerMixin, HIRCNode):
             self.playlist_items.append(new_item)
 
         if segment_id > 0:
-            self.add_child(segment_id)
+            self.children.add(segment_id)
 
         return new_item
 

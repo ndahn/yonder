@@ -13,11 +13,11 @@ from .rewwise_base_types import (
     Children,
 )
 from yonder.enums import GroupType, DecisionTreeMode, PropID
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
-class MusicSwitchContainer(PropertyMixin, ContainerMixin, HIRCNode):
+class MusicSwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 12
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
@@ -145,7 +145,7 @@ class MusicSwitchContainer(PropertyMixin, ContainerMixin, HIRCNode):
         # Set the node ID on the leaf child
         branch.node_id = node_id
         if node_id > 0:
-            self.add_child(node_id)
+            self.children.add(node_id)
 
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):

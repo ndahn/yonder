@@ -4,11 +4,11 @@ from typing import ClassVar
 from .structure import HIRCNode
 from .rewwise_base_types import NodeBaseParams, Children, PropBundle
 from yonder.enums import PropID
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
-class ActorMixer(PropertyMixin, ContainerMixin, HIRCNode):
+class ActorMixer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

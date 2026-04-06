@@ -6,7 +6,7 @@ from yonder.hash import calc_hash
 from .structure import HIRCNode
 from .rewwise_base_types import MusicNodeParams, PropBundle, Children
 from yonder.enums import PropID
-from .mixins import PropertyMixin, ContainerMixin
+from .mixins import PropertyMixin
 
 
 @dataclass
@@ -18,7 +18,7 @@ class MusicMarkerWwise:
 
 
 @dataclass
-class MusicSegment(PropertyMixin, ContainerMixin, HIRCNode):
+class MusicSegment(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0

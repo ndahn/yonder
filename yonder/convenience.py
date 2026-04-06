@@ -77,7 +77,7 @@ def create_simple_sound(
     sounds = []
     for w in wems:
         snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
-        rsc.add_child(snd)
+        rsc.add_playlist_item(snd)
         sounds.append(snd)
 
     play = Event.new(f"Play_{event_name}")
@@ -102,7 +102,7 @@ def create_simple_sound(
                 )
 
     if isinstance(actor_mixer, HIRCNode):
-        actor_mixer.add_child(rsc)
+        actor_mixer.children.add(rsc)
 
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
     for w in wems:
@@ -176,7 +176,7 @@ def create_boss_bgm(
         boss_phases += [f"HU{i + 1}" for i in range(len(tracks) - 1)]
 
     boss_state_keys = MusicSwitchContainer.parse_state_path(boss_phases)
-    children: list[HIRCNode] = []
+    new_nodes: list[HIRCNode] = []
     phase_masters: list[MusicRandomSequenceContainer] = []
 
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
@@ -204,7 +204,7 @@ def create_boss_bgm(
                     ],
                 )
 
-                intro_seg.add_child(intro_track)
+                intro_seg.children.add(intro_track)
                 intro_seg.duration = intro_track.playlist[0].source_duration
 
                 # Trim track to loop_markers marker
@@ -240,7 +240,7 @@ def create_boss_bgm(
 
         # Add to segment
         track_duration_ms = phase_track.playlist[0].source_duration
-        phase_seg.add_child(phase_track)
+        phase_seg.children.add(phase_track)
         phase_seg.duration = track_duration_ms
 
         # Intro to main track transition rule
@@ -306,10 +306,10 @@ def create_boss_bgm(
         boss_msc.add_branch([phase], phase_mrsc.id)
 
         # Collect the nodes we added
-        children.append(phase_mrsc)
+        new_nodes.append(phase_mrsc)
         if has_intro:
-            children.extend((intro_seg, intro_track))
-        children.extend((phase_seg, phase_track))
+            new_nodes.extend((intro_seg, intro_track))
+        new_nodes.extend((phase_seg, phase_track))
 
     # To disable the boss music, presumably not used by bosses you can't run away from
     if add_nobattle_state:
@@ -345,8 +345,8 @@ def create_boss_bgm(
     master.add_branch(master_state_keys, boss_msc.id)
 
     # Add nodes and wems to soundbank
-    bnk.add_nodes(boss_msc, *children)
+    bnk.add_nodes(boss_msc, *new_nodes)
     for bgm in tracks:
         bnk.add_wem(bgm, SourceType.Streaming)
 
-    return (boss_msc, children)
+    return (boss_msc, new_nodes)

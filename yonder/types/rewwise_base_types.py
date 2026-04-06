@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Iterator
 from dataclasses import dataclass, field
 from field_properties import field_property
 
@@ -686,9 +687,37 @@ class Children:
     def get_count(self) -> int:
         return len(self.items)
 
+    def add(self, item: int) -> None:
+        if item not in self.items:
+            self.items.add(item)
+            self.items.sort()
+
+    def pop(self, item: int, missing_ok: bool = True) -> None:
+        for idx, val in enumerate(self.items):
+            if val == item:
+                del self.items[idx]
+                return
+
+        if not missing_ok:
+            raise ValueError(f"Item {item} not found")
+
+    def clear(self) -> None:
+        self.items.clear()
+
+    def __getitem__(self, idx: int) -> int:
+        return self.items[idx]
+
+    def __setitem__(self, idx: int, item: int) -> int:
+        self.items[idx] = item
+
+    def __delitem__(self, idx: int) -> None:
+        del self.items[idx]
+
+    def __iter__(self) -> Iterator[int]:
+        yield from self.items
+
     def validate(self) -> None:
         self.items = sorted(set(self.items))
-        self.count = len(self.items)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("items", self.items)]
