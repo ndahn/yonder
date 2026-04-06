@@ -573,7 +573,6 @@ def _create_attributes_music_switch_container(
         dpg.add_spacer(height=3)
 
 
-# FIXME
 def _create_attributes_music_segment(
     bnk: Soundbank,
     node: MusicSegment,

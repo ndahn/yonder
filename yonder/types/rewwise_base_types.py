@@ -732,7 +732,7 @@ class Children:
         self.items = sorted(set(self.items))
 
     def get_references(self) -> list[tuple[str, int]]:
-        return [("items", self.items)]
+        return [(f"items:{i}", item) for i, item in enumerate(self.items)]
 
 
 @dataclass
