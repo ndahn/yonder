@@ -1,20 +1,12 @@
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import ClassVar, Any
 from field_properties import field_property
 
 from yonder.hash import calc_hash
 from .structure import HIRCNode
-from .rewwise_base_types import MusicNodeParams, PropBundle, Children
+from .rewwise_base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise
 from yonder.enums import PropID
 from .mixins import PropertyMixin
-
-
-@dataclass
-class MusicMarkerWwise:
-    id: int
-    position: float = 0.0
-    string_length: int = 0
-    string: str = ""
 
 
 @dataclass
@@ -73,7 +65,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
     def get_marker_count(self) -> int:
         return len(self.markers)
 
-    def set_marker(self, mid: int | str, pos: float, update: bool = True) -> None:
+    def set_marker(self, mid: int | str, pos: float, update: bool = True) -> MusicMarkerWwise:
         if isinstance(mid, str):
             label = mid
             mid = calc_hash(mid)
@@ -87,13 +79,36 @@ class MusicSegment(PropertyMixin, HIRCNode):
                 else:
                     raise ValueError(f"Marker {mid} ({label}) already exists")
 
-                break
+                return marker
         else:
-            self.markers.append(
-                MusicMarkerWwise(
+            marker = MusicMarkerWwise(
                     mid,
                     pos,
                     string_length=len(label) + 1 if label else 0,
                     string=label,
                 )
-            )
+            self.markers.append(marker)
+
+        return marker
+
+    def get_marker(self, mid: int | str, default: Any = None) -> MusicMarkerWwise:
+        if isinstance(mid, str):
+            mid = calc_hash(mid)
+
+        for marker in self.markers:
+            if marker.id == mid:
+                return marker
+
+        return default
+
+    def remove_marker(self, mid: int | str, missing_ok: bool = True) -> None:
+        if isinstance(mid, str):
+            mid = calc_hash(mid)
+
+        for idx, marker in enumerate(self.markers):
+            if marker.id == mid:
+                self.markers.pop(idx)
+                return
+
+        if not missing_ok:
+            raise ValueError(f"Marker {mid} not found")

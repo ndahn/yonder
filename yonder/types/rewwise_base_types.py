@@ -3,6 +3,7 @@ from typing import Iterator
 from dataclasses import dataclass, field
 from field_properties import field_property
 
+from yonder.hash import lookup_name
 from yonder.enums import (
     CurveInterpolation,
     ClipAutomationType,
@@ -780,3 +781,33 @@ class MusicTransNodeParams:
     @field_property(transition_rule_count)
     def get_transition_rule_count(self) -> int:
         return len(self.transition_rules)
+
+
+@dataclass
+class MusicRanSeqPlaylistItem:
+    segment_id: int
+    playlist_item_id: int = 0
+    child_count: int = 0
+    ers_type: int = 0
+    loop_base: int = 0
+    loop_min: int = 0
+    loop_max: int = 0
+    weight: int = 50
+    avoid_repeat_count: int = 0
+    use_weight: int = 0
+    shuffle: int = 0
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [("segment_id", self.segment_id)]
+
+
+@dataclass
+class MusicMarkerWwise:
+    id: int
+    position: float = 0.0
+    string_length: int = 0
+    string: str = ""
+
+    @property
+    def name(self) -> str:
+        return lookup_name(self.id)

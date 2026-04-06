@@ -22,7 +22,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
-    continue_playback: int = 0
+    continue_playback: int = 1
     tree_depth: int = field_property(init=False, raw=True)
     arguments: list[GameSync] = field(default_factory=list)
     group_types: list[GroupType] = field(default_factory=list)

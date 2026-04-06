@@ -5,7 +5,7 @@ from field_properties import field_property
 from yonder.hash import global_id_generator
 from .structure import HIRCNode
 from .rewwise_base_types import (
-    MusicNodeParams,
+    MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
     PropBundle,
     Children,
@@ -16,23 +16,6 @@ from .rewwise_base_types import (
 from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin
 
-
-@dataclass
-class MusicRanSeqPlaylistItem:
-    segment_id: int
-    playlist_item_id: int = 0
-    child_count: int = 0
-    ers_type: int = 0
-    loop_base: int = 0
-    loop_min: int = 0
-    loop_max: int = 0
-    weight: int = 50
-    avoid_repeat_count: int = 0
-    use_weight: int = 0
-    shuffle: int = 0
-
-    def get_references(self) -> list[tuple[str, int]]:
-        return [("segment_id", self.segment_id)]
 
 
 @dataclass

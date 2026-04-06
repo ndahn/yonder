@@ -60,7 +60,7 @@ def create_state_path_dialog(
 
         keys: list[str] = []
         for arg in node.arguments:
-            key: str = dpg.get_value(f"{tag}_arg_{arg}")
+            key: str = dpg.get_value(f"{tag}_arg_{arg.group_id}")
             if not key:
                 show_message("Keys must not be empty")
                 return
@@ -85,7 +85,7 @@ def create_state_path_dialog(
         # For these decision trees all branches have the same length,
         # which makes it so much easier for us!
         for i, arg in enumerate(node.arguments):
-            name = lookup_name(arg, f"#{arg}")
+            name = lookup_name(arg.group_id, f"#{arg.group_id}")
             default_val = state_path[i] if state_path else "*"
             dpg.add_input_text(
                 label=name,

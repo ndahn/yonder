@@ -28,6 +28,7 @@ from yonder.types.rewwise_base_types import (
     BankSourceData,
     MusicTransitionRule,
     DecisionTreeNode,
+    MusicMarkerWwise,
 )
 from yonder.enums import (
     SourceType,
@@ -35,6 +36,8 @@ from yonder.enums import (
     CurveParameters,
     ClipAutomationType,
     PropID,
+    DecisionTreeMode,
+    MarkerIds
 )
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
@@ -485,6 +488,10 @@ def _create_attributes_music_switch_container(
         # Regenerate
         on_node_selected(base_tag, node, user_data)
 
+    def on_tree_mode_changed(sender: str, mode: str, cb_user_data: Any) -> None:
+        node.tree_mode = DecisionTreeMode[mode]
+        on_node_changed(base_tag, node, user_data)
+
     def open_context_menu(sender: str, app_data: Any, info: tuple[str, Any]) -> None:
         item, user_data = info
         # TODO allow to edit state values and leaf nodes
@@ -539,6 +546,13 @@ def _create_attributes_music_switch_container(
                     delve(child, level + 1)
 
     with dpg.group():
+        dpg.add_combo(
+            [m.name for m in DecisionTreeMode],
+            default_value=node.tree_mode.name,
+            callback=on_tree_mode_changed,
+            tag=f"{base_tag}_tree_mode",
+        )
+
         with dpg.tree_node(label="Decision Tree", default_open=True):
             for child in node.tree.children:
                 delve(child, 0)
@@ -559,6 +573,7 @@ def _create_attributes_music_switch_container(
         dpg.add_spacer(height=3)
 
 
+# FIXME
 def _create_attributes_music_segment(
     bnk: Soundbank,
     node: MusicSegment,
@@ -575,7 +590,7 @@ def _create_attributes_music_segment(
     ) -> None:
         idx, _ = info
         mid, name = new_name
-        pos = node.markers[idx]["position"]
+        pos = node.markers[idx].position
         node.markers.pop(idx)
         node.set_marker(name or mid, pos)
         on_node_changed(base_tag, node, user_data)
@@ -586,82 +601,79 @@ def _create_attributes_music_segment(
         on_node_changed(base_tag, node, user_data)
 
     def on_marker_added(
-        sender: str, info: tuple[int, list[dict], list[dict]], cb_user_data: Any
+        sender: str, info: tuple[int, list[MusicMarkerWwise], list[MusicMarkerWwise]], cb_user_data: Any
     ) -> None:
         marker = info[1][0]
-        node.set_marker(marker["id"], marker["position"])
+        node.set_marker(marker.id, marker.position)
         on_node_changed(base_tag, node, user_data)
 
     def on_marker_removed(
-        sender: str, info: tuple[int, dict, list[dict]], cb_user_data: Any
+        sender: str, info: tuple[int, MusicMarkerWwise, list[MusicMarkerWwise]], cb_user_data: Any
     ) -> None:
         marker = info[1]
-        node.remove_marker(marker["id"])
+        node.remove_marker(marker.id)
         on_node_changed(base_tag, node, user_data)
 
-    def new_marker() -> dict:
+    def new_marker() -> MusicMarkerWwise:
         mid = node.set_marker(f"m{len(node.markers)}", 0.0)
         return [node.get_marker(mid)]
 
-    def create_row(marker: dict, idx: int) -> None:
+    def create_row(marker: MusicMarkerWwise, idx: int) -> None:
         with dpg.group(horizontal=True):
             add_hash_widget(
-                marker["id"],
+                marker.id,
                 on_marker_renamed,
-                initial_string=marker["string"],
+                initial_string=marker.string,
                 width=200,
                 hash_label=None,
-                user_data=(idx, marker["id"]),
+                user_data=(idx, marker.id),
             )
             dpg.add_input_float(
-                default_value=marker["position"],
+                default_value=marker.position,
                 min_value=0.0,
                 min_clamped=True,
                 callback=on_marker_moved,
-                user_data=(idx, marker["id"]),
+                user_data=(idx, marker.id),
                 width=-1,
             )
-
-    def edit_markers_on_track() -> None:
-        track: MusicTrack = bnk[int(dpg.get_value(f"{base_tag}_child_tracks"))]
-        if not track.sources:
-            logger.warning(f"{track} has no sources")
-            return
-
-        if track.sources[0]["source_type"] == "Embedded":
-            path = track.get_source_path(bnk, 0)
-        else:
-            path = get_sound_path(bnk, track.sources[0])
-
-        edit_markers_dialog(
-            path,
-            node.get_marker(MusicSegment.loop_start_id, 1.0),
-            node.get_marker(MusicSegment.loop_end_id, -1.0),
-            on_loop_changed,
-        )
 
     def on_loop_changed(
         sender: str, loop_info: tuple[float, float, bool], user_data: Any
     ) -> None:
         loop_start, loop_end, loop_enabled = loop_info
-        node.set_marker(MusicSegment.loop_start_id, loop_start)
-        node.set_marker(MusicSegment.loop_end_id, loop_end)
+        node.set_marker(MarkerIds.LoopStart.value, loop_start)
+        node.set_marker(MarkerIds.LoopEnd.value, loop_end)
         # TODO not sure how to enable/disable looping
-        logger.warning("Don't know yet how to enable/disable looping")
 
-    tracks = [cid for cid in node.children if isinstance(bnk.get(cid), MusicTrack)]
-    if tracks:
-        with dpg.group(horizontal=True):
-            dpg.add_combo(
-                [str(t) for t in tracks],
-                tag=f"{base_tag}_child_tracks",
-            )
-            dpg.add_button(
-                label="Edit on Track",
-                callback=edit_markers_on_track,
-            )
-    else:
-        dpg.add_text("Segment has no tracks", color=style.yellow)
+    def edit_markers_on_track() -> None:
+        track_name = dpg.get_value(f"{base_tag}_child_tracks")
+        if not track_name:
+            return
+
+        track_id = int(track_name.split("#")[-1])
+        track: MusicTrack = bnk[track_id]
+        if not track.sources:
+            logger.warning(f"{track} has no sources")
+            return
+
+        if track.sources[0].source_type == SourceType.Embedded:
+            path = track.get_source_path(bnk, 0)
+        else:
+            path = get_sound_path(bnk, track.sources[0])
+
+        loop_start_marker = node.get_marker(MarkerIds.LoopStart.value)
+        loop_start = loop_start_marker.position if loop_start_marker else 1.0
+        loop_end_marker = node.get_marker(MarkerIds.LoopEnd.value)
+        loop_end = loop_end_marker.position if loop_end_marker else -1.0
+
+        edit_markers_dialog(
+            path,
+            accept_on_okay=True,
+            loop_markers_enabled=True,
+            loop_start = loop_start,
+            loop_end = loop_end,
+            on_loop_changed=on_loop_changed,
+        )
 
     add_widget_table(
         node.markers,
@@ -672,6 +684,20 @@ def _create_attributes_music_segment(
         add_item_label="+ Add Marker",
         label="Markers",
     )
+
+    tracks = [cid for cid in node.children if isinstance(bnk.get(cid), MusicTrack)]
+    if tracks:
+        with dpg.group(horizontal=True):
+            dpg.add_combo(
+                [f"Track #{t}" for t in tracks],
+                tag=f"{base_tag}_child_tracks",
+            )
+            dpg.add_button(
+                label="Edit on Track",
+                callback=edit_markers_on_track,
+            )
+    else:
+        dpg.add_text("Segment has no tracks", color=style.yellow)
 
 
 def _create_attributes_music_track(

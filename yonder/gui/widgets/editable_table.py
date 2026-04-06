@@ -248,7 +248,7 @@ def add_player_table(
                 on_trim_marker_changed=on_trim_edit,
                 user_markers_enabled=bool(on_user_marker_changed),
                 user_markers=list(initial_user_markers or []),
-                on_user_marker_changed=on_user_marker_edit,
+                on_user_markers_changed=on_user_marker_edit,
                 show_filepath=True,
                 user_data=idx,
             )
