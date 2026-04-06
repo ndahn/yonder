@@ -27,6 +27,7 @@ from yonder.types.rewwise_base_types import (
     ClipAutomation,
     BankSourceData,
     MusicTransitionRule,
+    DecisionTreeNode,
 )
 from yonder.enums import (
     SourceType,
@@ -72,18 +73,6 @@ def create_attribute_widgets(
         else:
             node.id = nid
 
-    def on_node_properties_changed(
-        sender: str, new_props: dict[PropID, float], node: HIRCNode
-    ) -> None:
-        for prop in list(node.properties):
-            if prop.prop_id not in new_props:
-                node.remove_property(prop.prop_id)
-
-        for key, val in new_props.items():
-            node.set_property(key, val)
-
-        on_node_changed(tag, node, user_data)
-
     loading = loading_indicator("loading...")
     try:
         with dpg.group(tag=tag, parent=parent):
@@ -101,6 +90,11 @@ def create_attribute_widgets(
                 width=-300,
                 tag=f"{tag}_hash",
             )
+
+            if hasattr(node, "properties"):
+                add_node_properties(
+                    node, on_node_changed, base_tag=tag, user_data=user_data
+                )
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
@@ -120,19 +114,39 @@ def create_attribute_widgets(
                 logger.error(f"Error creating node widgets: {e}", exc_info=e)
                 dpg.add_text("Error creating node widgets, check logs", color=style.red)
 
-            if hasattr(node, "properties"):
-                dpg.add_spacer(height=5)
-                with dpg.tree_node(label="Properties"):
-                    add_properties_table(
-                        {p.prop_id: p.value for p in node.properties},
-                        on_node_properties_changed,
-                        label=None,
-                        user_data=node,
-                    )
     finally:
         dpg.delete_item(loading)
 
     return tag
+
+
+def add_node_properties(
+    node: HIRCNode,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = None,
+    user_data: Any = None,
+) -> str:
+
+    def on_node_properties_changed(
+        sender: str, new_props: dict[PropID, float], node: HIRCNode
+    ) -> None:
+        for prop in list(node.properties):
+            if prop.prop_id not in new_props:
+                node.remove_property(prop.prop_id)
+
+        for key, val in new_props.items():
+            node.set_property(key, val)
+
+        on_node_changed(base_tag, node, user_data)
+
+    with dpg.tree_node(label="Properties"):
+        add_properties_table(
+            {p.prop_id: p.value for p in node.properties},
+            on_node_properties_changed,
+            label=None,
+            user_data=node,
+        )
 
 
 def add_node_link(
@@ -460,8 +474,9 @@ def _create_attributes_music_switch_container(
 ) -> None:
     from yonder.gui.dialogs.create_state_path_dialog import create_state_path_dialog
 
-    args = node.arguments
-    names = {a: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments}
+    names = {
+        a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments
+    }
 
     def on_state_path_created(
         sender: str, state_path: list[int], path_node_id: int
@@ -488,20 +503,20 @@ def _create_attributes_music_switch_container(
         )
         dpg.bind_item_handler_registry(tag, registry)
 
-    def get_key(tree_node: dict) -> str:
-        val = tree_node["key"]
+    def get_key(tree_node: DecisionTreeNode) -> str:
+        val = tree_node.key
         if val == 0:
             return "*"
         return lookup_name(val, f"#{val}")
 
-    def delve(tree_node: dict, level: int) -> None:
-        if level == len(args) - 1:
+    def delve(tree_node: DecisionTreeNode, level: int) -> None:
+        if level == len(node.arguments) - 1:
             # Leaf
-            nid = tree_node["node_id"]
+            nid = tree_node.node_id
             leaf_node = bnk.get(nid)
 
-            arg = args[level]
-            arg_name = names[arg]
+            arg = node.arguments[level]
+            arg_name = names[arg.group_id]
             val_name = get_key(tree_node)
 
             with dpg.tree_node(label=f"{arg_name} = {val_name}"):
@@ -514,18 +529,18 @@ def _create_attributes_music_switch_container(
                     dpg.add_text(f"(ext) {nid}")
         else:
             # Branch
-            arg = args[level]
-            arg_name = names[arg]
+            arg = node.arguments[level]
+            arg_name = names[arg.group_id]
             val_name = get_key(tree_node)
 
             # TODO add context menu
             with dpg.tree_node(label=f"{arg_name} = {val_name}"):
-                for child in tree_node["children"]:
+                for child in tree_node.children:
                     delve(child, level + 1)
 
     with dpg.group():
         with dpg.tree_node(label="Decision Tree", default_open=True):
-            for child in node.decision_tree["children"]:
+            for child in node.tree.children:
                 delve(child, 0)
 
         dpg.add_spacer(height=3)
