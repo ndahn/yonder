@@ -44,7 +44,7 @@ def add_transition_matrix(
     color_gen = style.HighContrastColorGenerator(0.4, 0.27, saturation=0.7, value=0.6)
     color_cache = {}
 
-    def get_rule_color(rule: dict, rule_idx: int) -> tuple[int, int, int, int]:
+    def get_rule_color(rule: MusicTransitionRule, rule_idx: int) -> tuple[int, int, int, int]:
         color = color_cache.get(rule_idx)
 
         if not color:
@@ -54,10 +54,10 @@ def add_transition_matrix(
         return color
 
     def find_best_rule(
-        rules: list[dict],
+        rules: list[MusicTransitionRule],
         src_id: int,
         dst_id: int,
-    ) -> tuple[int, dict]:
+    ) -> tuple[int, MusicTransitionRule]:
         # Return the most specific rule for a (src, dst) pair.
         # Specificity:
         #  - exact src + exact dst >
@@ -70,13 +70,10 @@ def add_transition_matrix(
         best_score = -1
 
         for i, rule in enumerate(rules):
-            src_ids = rule.get("source_ids", [-1])
-            dst_ids = rule.get("destination_ids", [-1])
-
-            src_match = src_id in src_ids
-            dst_match = dst_id in dst_ids
-            src_wild = -1 in src_ids
-            dst_wild = -1 in dst_ids
+            src_match = src_id in rule.source_ids
+            dst_match = dst_id in rule.destination_ids
+            src_wild = -1 in rule.source_ids
+            dst_wild = -1 in rule.destination_ids
 
             if src_match and dst_match:
                 score = 3
@@ -102,8 +99,8 @@ def add_transition_matrix(
 
         return str(id)
 
-    def get_cell_label(rule: dict) -> str:
-        return "x" if rule.get("transition_object", {}).get("segment_id", 0) > 0 else ""
+    def get_cell_label(rule: MusicTransitionRule) -> str:
+        return "x" if rule.transition_object.segment_id > 0 else ""
 
     def make_cell_theme(color: tuple[int, int, int, int]) -> int:
         theme_tag = dpg.generate_uuid()
@@ -187,7 +184,7 @@ def add_transition_matrix(
         )
         dpg.bind_item_handler_registry(tag, registry)
 
-    def open_edit_transition_dialog(sender: str, app_data: Any, rule: dict) -> None:
+    def open_edit_transition_dialog(sender: str, app_data: Any, rule: MusicTransitionRule) -> None:
         is_new = not rule
         if is_new:
             rule = deepcopy(_base_transition_rule)
@@ -196,7 +193,7 @@ def add_transition_matrix(
 
     def on_rule_changed(sender: str, rule: dict, is_new: bool) -> None:
         if is_new:
-            node.transition_rules.append(rule)
+            node.music_trans_node_params.transition_rules.append(rule)
 
         if on_transition_rules_changed:
             on_transition_rules_changed(tag, node, user_data)
@@ -230,15 +227,13 @@ def add_transition_matrix(
                 dpg.add_text(id_label(src) + " ")
 
                 for dst in children:
-                    rule_idx, rule = find_best_rule(node.transition_rules, src, dst)
+                    rule_idx, rule = find_best_rule(
+                        node.music_trans_node_params.transition_rules, src, dst
+                    )
 
                     if rule:
-                        src_trans_time = rule["source_transition_rule"][
-                            "transition_time"
-                        ]
-                        dst_trans_time = rule["destination_transition_rule"][
-                            "transition_time"
-                        ]
+                        src_trans_time = rule.source_transition_rule.transition_time
+                        dst_trans_time = rule.destination_transition_rule.transition_time
                         total_time = src_trans_time + dst_trans_time
                         color = get_rule_color(rule, rule_idx)
                         cell_label = get_cell_label(rule)
@@ -260,25 +255,23 @@ def add_transition_matrix(
                     dpg.bind_item_theme(btn, theme_tag)
 
                     if rule:
-                        sources = rule["source_ids"]
-                        if len(sources) == 1:
-                            source_label = id_label(sources[0])
+                        if len(rule.source_ids) == 1:
+                            source_label = id_label(rule.source_ids[0])
                         else:
-                            source_label = f"[{len(sources)}]"
+                            source_label = f"[{len(rule.source_ids)}]"
 
-                        destinations = rule["destination_ids"]
-                        if len(destinations) == 1:
-                            dest_label = id_label(destinations[0])
+                        if len(rule.destination_ids) == 1:
+                            dest_label = id_label(rule.destination_ids[0])
                         else:
-                            dest_label = f"({len(destinations)})"
+                            dest_label = f"({len(rule.destination_ids)})"
 
-                        sync_type = rule["source_transition_rule"]["sync_type"]
+                        sync_type = rule.source_transition_rule.sync_type
 
                         with dpg.tooltip(btn):
                             dpg.add_text(f"Rule #{rule_idx}")
                             dpg.add_text(f"{source_label} -> {dest_label}")
                             dpg.add_text(f"Total transition time: {total_time}ms")
-                            dpg.add_text(f"Sync type: {sync_type}")
+                            dpg.add_text(f"Sync type: {sync_type.name}")
 
         dpg.pop_container_stack()
 

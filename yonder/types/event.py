@@ -41,3 +41,6 @@ class Event(HIRCNode):
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"actions:{i}", aid) for i, aid in enumerate(self.actions)]
+
+    def __str__(self) -> str:
+        return super().__str__()

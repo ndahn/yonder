@@ -819,7 +819,7 @@ class BanksOfYonder:
         finally:
             dpg.delete_item(loading)
 
-    def _create_root_entry(self, node: Event, table: str) -> None:
+    def _create_root_entry(self, node: HIRCNode, table: str) -> None:
         bnk = self.bnk
 
         def register_context_menu(tag: str, node: HIRCNode) -> None:

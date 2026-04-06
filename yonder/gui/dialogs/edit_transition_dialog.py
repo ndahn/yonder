@@ -26,27 +26,6 @@ def edit_transition_dialog(
     src_rule = rule.source_transition_rule
     dst_rule = rule.destination_transition_rule
 
-    def on_src_transition_time_changed(sender: str, new_val: int) -> None:
-        src_rule.transition_time = new_val
-
-    def on_src_fade_offet_changed(sender: str, new_val: int) -> None:
-        src_rule.fade_offet = new_val
-
-    def on_src_fade_curve_changed(sender: str, new_val: str) -> None:
-        src_rule.fade_curve = CurveInterpolation[new_val]
-
-    def on_src_sync_type_changed(sender: str, new_val: str) -> None:
-        src_rule.sync_type = SyncType[new_val]
-
-    def on_dst_transition_time_changed(sender: str, new_val: int) -> None:
-        dst_rule.transition_time = new_val
-
-    def on_dst_fade_offet_changed(sender: str, new_val: int) -> None:
-        dst_rule.fade_offet = new_val
-
-    def on_dst_fade_curve_changed(sender: str, new_val: int) -> None:
-        dst_rule.fade_curve = CurveInterpolation[new_val]
-
     def refresh(table: str, rule_key: str) -> None:
         dpg.delete_item(table, children_only=True, slot=1)
 
@@ -137,7 +116,7 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_src_transition_time",
-            callback=on_src_transition_time_changed,
+            callback=lambda s, a, u: setattr(src_rule, "transition_time", a),
         )
         dpg.add_input_int(
             label="Fade offset (ms)",
@@ -149,21 +128,23 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_src_fade_offset",
-            callback=on_src_fade_offet_changed,
+            callback=lambda s, a, u: setattr(src_rule, "fade_offet", a),
         )
         dpg.add_combo(
             label="Fade curve",
             items=[c.name for c in CurveInterpolation],
             default_value=src_rule.fade_curve.name,
             tag=f"{tag}_src_fade_curve",
-            callback=on_src_fade_curve_changed,
+            callback=lambda s, a, u: setattr(
+                src_rule, "fade_curve", CurveInterpolation[a]
+            ),
         )
         dpg.add_combo(
             label="Sync Type",
             items=[s.name for s in SyncType],
             default_value=src_rule.sync_type.name,
             tag=f"{tag}_sync_type",
-            callback=on_src_sync_type_changed,
+            callback=lambda s, a, u: setattr(src_rule, "sync_type", SyncType[a]),
         )
 
         dpg.add_spacer(height=10)
@@ -180,7 +161,7 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_dst_transition_time",
-            callback=on_dst_transition_time_changed,
+            callback=lambda s, a, u: setattr(dst_rule, "transition_time", a),
         )
         dpg.add_input_int(
             label="Fade offset (ms)",
@@ -190,14 +171,16 @@ def edit_transition_dialog(
             min_clamped=True,
             max_clamped=True,
             tag=f"{tag}_dst_fade_offset",
-            callback=on_dst_fade_offet_changed,
+            callback=lambda s, a, u: setattr(dst_rule, "fade_offet", a),
         )
         dpg.add_combo(
             label="Fade curve",
             items=[c.name for c in CurveInterpolation],
             default_value=dst_rule.fade_curve.name,
             tag=f"{tag}_dst_fade_curve",
-            callback=on_dst_fade_curve_changed,
+            callback=lambda s, a, u: setattr(
+                dst_rule, "fade_curve", CurveInterpolation[a]
+            ),
         )
 
         dpg.add_spacer(height=10)

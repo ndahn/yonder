@@ -724,6 +724,9 @@ class Children:
     def __iter__(self) -> Iterator[int]:
         yield from self.items
 
+    def __len__(self) -> int:
+        return len(self.items)
+
     def validate(self) -> None:
         self.items = sorted(set(self.items))
 

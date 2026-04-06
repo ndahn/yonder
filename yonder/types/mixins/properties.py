@@ -19,10 +19,10 @@ class PropertyMixin:
         float
             Property value, or default if not found.
         """
-        prop: PropBundle
-        for prop in self.properties:
-            if prop.prop_id == property:
-                return prop.value
+        bundle: PropBundle
+        for bundle in self.properties:
+            if bundle.prop_id == property:
+                return bundle.value
         
         return default
 
@@ -38,10 +38,10 @@ class PropertyMixin:
         value : float
             Property value to set.
         """
-        prop: PropBundle
-        for prop in self.properties:
-            if prop.prop_id == property:
-                prop[property] = value
+        bundle: PropBundle
+        for bundle in self.properties:
+            if bundle.prop_id == property:
+                bundle.value = value
                 return
 
         self.properties.append(PropBundle(property, value))
@@ -59,8 +59,9 @@ class PropertyMixin:
         bool
             True if property was removed, False if not found.
         """
-        for i, prop_dict in enumerate(self.properties):
-            if property in prop_dict:
+        bundle: PropBundle
+        for i, bundle in enumerate(self.properties):
+            if bundle.prop_id == property:
                 self.properties.pop(i)
                 return True
         

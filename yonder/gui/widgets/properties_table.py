@@ -15,12 +15,12 @@ def add_properties_table(
     if tag in (None, 0, ""):
         tag = dpg.generate_uuid()
 
-    def get_available_keys(exclude: PropID = None) -> list[str]:
+    def get_available_props(exclude: PropID = None) -> list[PropID]:
         used = set(properties.keys())
         if exclude:
             used.discard(exclude)
 
-        return [k.name for k in PropID if k not in used]
+        return [k for k in PropID if k not in used]
 
     def refresh_table() -> None:
         dpg.delete_item(tag, children_only=True, slot=1)
@@ -53,7 +53,7 @@ def add_properties_table(
         on_value_changed(tag, dict(properties), user_data)
 
     def on_add_clicked() -> None:
-        available = get_available_keys()
+        available = get_available_props()
         if not available:
             return
 
@@ -70,12 +70,15 @@ def add_properties_table(
 
     def sync_combos() -> None:
         for key, (combo_id, _, __) in row_widgets.items():
-            dpg.configure_item(combo_id, items=get_available_keys(exclude=key))
+            dpg.configure_item(
+                combo_id,
+                items=[p.name for p in get_available_props(exclude=key)],
+            )
 
     def add_row(prop: PropID, val: float) -> None:
         with dpg.table_row(parent=tag):
             combo_id = dpg.add_combo(
-                items=get_available_keys(exclude=prop),
+                items=[p.name for p in get_available_props(exclude=prop)],
                 default_value=prop.name,
                 width=-1,
                 callback=on_prop_type_changed,
@@ -86,7 +89,7 @@ def add_properties_table(
                 callback=on_prop_value_changed,
             )
             remove_id = dpg.add_button(label="-", callback=on_remove_clicked)
-            row_widgets[PropID[prop]] = (combo_id, value_id, remove_id)
+            row_widgets[prop] = (combo_id, value_id, remove_id)
 
     def add_footer() -> None:
         with dpg.table_row(parent=tag):
@@ -112,7 +115,7 @@ def add_properties_table(
             label="Value", width_stretch=True, init_width_or_weight=100
         )
         dpg.add_table_column(label="", width_fixed=True)
-        
+
         for prop, val in properties.items():
             add_row(prop, val)
 

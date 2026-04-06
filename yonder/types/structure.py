@@ -313,6 +313,8 @@ class HIRCNode(metaclass=ABCMeta):
         return self.id < other.id
 
     def __str__(self) -> str:
+        if self.name:
+            return self.name
         return f"{self.type_name} #{self.id}"
 
 

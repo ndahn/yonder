@@ -26,6 +26,7 @@ from yonder.types.rewwise_base_types import (
     ConversionTable,
     ClipAutomation,
     BankSourceData,
+    MusicTransitionRule,
 )
 from yonder.enums import (
     SourceType,
@@ -335,7 +336,7 @@ def _create_attributes_attenuation(
             curve_idx = -1
         else:
             curve_idx = int(curve.split("#")[-1])
-            
+
         node.curves_to_use[param_idx] = curve_idx
 
         if on_node_changed:
@@ -394,10 +395,10 @@ def _create_attributes_attenuation(
             dpg.add_input_float(
                 label="outside_volume",
                 default_value=node.cone_params.outside_volume,
-                #min_value=0.0,
-                #min_clamped=True,
-                #max_value=90.0,
-                #max_clamped=True,
+                # min_value=0.0,
+                # min_clamped=True,
+                # max_value=90.0,
+                # max_clamped=True,
                 callback=lambda s, a, u: setattr(node, "outside_volume", a),
                 tag=f"{base_tag}_outside_volume",
             )
@@ -406,8 +407,8 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.low_pass,
                 min_value=0.0,
                 min_clamped=True,
-                #max_value=90.0,
-                #max_clamped=True,
+                # max_value=90.0,
+                # max_clamped=True,
                 callback=lambda s, a, u: setattr(node, "low_pass", a),
                 tag=f"{base_tag}_low_pass",
             )
@@ -416,12 +417,11 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.high_pass,
                 min_value=0.0,
                 min_clamped=True,
-                #max_value=90.0,
-                #max_clamped=True,
+                # max_value=90.0,
+                # max_clamped=True,
                 callback=lambda s, a, u: setattr(node, "high_pass", a),
                 tag=f"{base_tag}_high_pass",
             )
-
 
 
 def _create_attributes_music_random_sequence_container(
@@ -433,8 +433,16 @@ def _create_attributes_music_random_sequence_container(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
+    def on_transition_rule_changed(
+        sender: str, rule: MusicTransitionRule, cb_user_data: Any
+    ) -> None:
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
     with dpg.group():
-        add_transition_matrix(bnk, node, None, user_data=user_data)
+        add_transition_matrix(
+            bnk, node, on_transition_rule_changed, user_data=user_data
+        )
 
         dpg.add_spacer(height=3)
         dpg.add_separator()

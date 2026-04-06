@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterable, TYPE_CHECKING
+from typing import Any, Callable, Iterable, ClassVar, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
 import re
@@ -11,6 +11,7 @@ import logging
 import subprocess
 import shutil
 import networkx as nx
+from field_properties.field_properties import BaseFieldProperty
 
 from yonder.enums import SoundType
 
@@ -154,6 +155,14 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
         for f in fields(obj):
             if f.name not in data:
                 continue
+
+            if hasattr(type(obj), f.name):
+                true_field_type = type(getattr(type(obj), f.name))
+                if issubclass(true_field_type, property):
+                    if not true_field_type.fset:
+                        continue
+                    if issubclass(true_field_type, BaseFieldProperty):
+                        continue
 
             value = data[f.name]
             current = getattr(obj, f.name)
