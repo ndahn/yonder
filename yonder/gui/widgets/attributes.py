@@ -22,12 +22,17 @@ from yonder.types import (
     SwitchContainer,
 )
 from yonder.util import logger
-from yonder.types.rewwise_base_types import ConversionTable, ClipAutomation
+from yonder.types.rewwise_base_types import (
+    ConversionTable,
+    ClipAutomation,
+    BankSourceData,
+)
 from yonder.enums import (
     SourceType,
     CurveScaling,
-    CurveInterpolation,
+    CurveParameters,
     ClipAutomationType,
+    PropID,
 )
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
@@ -67,19 +72,15 @@ def create_attribute_widgets(
             node.id = nid
 
     def on_node_properties_changed(
-        sender: str, new_props: dict[str, float], node: HIRCNode
+        sender: str, new_props: dict[PropID, float], node: HIRCNode
     ) -> None:
-        for key in list(node.properties.keys()):
-            if key not in new_props:
-                node.remove_property(key)
+        for prop in list(node.properties):
+            if prop.prop_id not in new_props:
+                node.remove_property(prop.prop_id)
 
         for key, val in new_props.items():
             node.set_property(key, val)
 
-        on_node_changed(tag, node, user_data)
-
-    def set_property(sender: str, new_value: Any, prop: property):
-        prop.fset(node, new_value)
         on_node_changed(tag, node, user_data)
 
     loading = loading_indicator("loading...")
@@ -154,12 +155,12 @@ def add_node_link(
     return tag
 
 
-def get_sound_path(bnk: Soundbank, source: dict) -> Path:
-    source_id = source["media_information"]["source_id"]
-    source_type = source["source_type"]
+def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
+    source_id = source.media_information.source_id
+    source_type = source.source_type
 
     wem = bnk.bnk_dir / f"{source_id}.wem"
-    if source_type != "PrefetchStreaming" and wem.is_file():
+    if source_type != SourceType.PrefetchStreaming and wem.is_file():
         return wem
 
     # Find the largest external wem (if any)
@@ -172,7 +173,7 @@ def get_sound_path(bnk: Soundbank, source: dict) -> Path:
         return ext_wem
 
     # In case we have a prefetch snippet but no streaming sound
-    if wem.is_file() and source_type == "PrefetchStreaming":
+    if wem.is_file() and source_type == SourceType.PrefetchStreaming:
         logger.warning(
             f"Could not find streamed sound for {source_id}, playing prefetch snippet"
         )
@@ -182,20 +183,22 @@ def get_sound_path(bnk: Soundbank, source: dict) -> Path:
 
 
 def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceType):
+    from yonder.gui.dialogs.choice_dialog import choice_dialog
+
     def copy_wems() -> None:
-        if source_type == "Embedded":
+        if source_type == SourceType.Embedded:
             target = bnk.bnk_dir / wem.name
             if target.is_file():
                 target.unlink()
             shutil.copy(wem, target)
 
-        elif source_type in ("Streaming", "PrefetchStreaming"):
+        elif source_type in (SourceType.Streaming, SourceType.PrefetchStreaming):
             target = bnk.bnk_dir.parent / wem / f"{wem.stem[:2]}" / wem.name
             if target.is_file():
                 target.unlink()
             shutil.copy(wem, target)
 
-            if source_type == "PrefetchStreaming":
+            if source_type == SourceType.PrefetchStreaming:
                 wwise = get_config().locate_wwise()
                 snippet = create_prefetch_snippet(wav)
                 wem_snippet = wav2wem(wwise, snippet, out_dir=bnk.bnk_dir)[0]
@@ -205,26 +208,13 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
             raise ValueError(f"Unknown source_type {source_type}")
 
         logger.info(f"Copied {wem.name} to {target}")
-        dpg.delete_item(dialog)
 
-    with dpg.window(
-        label="Copy?",
-        modal=True,
-        no_saved_settings=True,
-        autosize=True,
-        on_close=lambda: dpg.delete_item(dialog),
-    ) as dialog:
-        dpg.add_text(f"Copy WEMs to soundbank {bnk.name}?")
-        dpg.add_separator()
-        with dpg.group(horizontal=True):
-            dpg.add_button(
-                label="Yes",
-                callback=copy_wems,
-            )
-            dpg.add_button(
-                label="No",
-                callback=lambda: dpg.delete_item(dialog),
-            )
+    choice_dialog(
+        f"Copy WEMs to soundbank {bnk.name}?",
+        ["Yes", "No"],
+        lambda s, a, u: copy_wems(),
+        title="Copy?",
+    )
 
 
 def _create_type_specific_attributes(
@@ -330,43 +320,108 @@ def _create_attributes_attenuation(
 
         node.curves.clear()
         for curve in curves:
-            curve_type = CurveInterpolation[curve.curve_type]
+            curve_type = CurveScaling[curve.curve_type]
             node.curves.append(ConversionTable(curve_type, points=curve.points))
+
+        curve_items = ["-"] + [f"Curve #{i}" for i in range(len(curves))]
+        for i in range(len(node.curves_to_use)):
+            dpg.configure_item(f"{base_tag}_curve_param_{i}", items=curve_items)
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
-    def on_curve_param_changed(sender: str, curve_idx: int, param_idx: int) -> None:
-        node.set_curve_for_parameter(param_idx, curve_idx)
+    def on_curve_param_changed(sender: str, curve: str, param_idx: int) -> None:
+        if curve == "-":
+            curve_idx = -1
+        else:
+            curve_idx = int(curve.split("#")[-1])
+            
+        node.curves_to_use[param_idx] = curve_idx
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
     with dpg.group():
-        dpg.add_text("Curves to use")
-        for i, (param, curve) in enumerate(
-            zip(node.curve_parameters, node.curves_to_use)
-        ):
-            with dpg.group(horizontal=True):
-                dpg.add_input_int(
-                    default_value=curve,
+        with dpg.tree_node(label="Curves to use", default_open=True):
+            for i, curve in enumerate(node.curves_to_use):
+                param = CurveParameters(i).name
+                default_value = f"Curve #{curve}" if curve >= 0 else "-"
+
+                dpg.add_combo(
+                    ["-"] + [f"Curve #{i}" for i in range(len(node.curves))],
+                    default_value=default_value,
                     label=param,
-                    min_value=-1,
-                    min_clamped=True,
-                    max_value=len(node.curves),
-                    max_clamped=True,
                     callback=on_curve_param_changed,
                     user_data=i,
                     tag=f"{base_tag}_curve_param_{i}",
                 )
 
-        dpg.add_spacer(height=5)
-        add_curves_table(
-            [GraphCurve(c.curve_scaling, c.points) for c in node.curves],
-            [c.name for c in CurveScaling],
-            on_curves_changed,
-            curve_type_label="Scaling Type",
-        )
+            dpg.add_spacer(height=5)
+            add_curves_table(
+                [GraphCurve(c.curve_scaling.name, c.points) for c in node.curves],
+                sorted([s.name for s in CurveScaling]),
+                on_curves_changed,
+                curve_type_label="Scaling Type",
+            )
+
+        with dpg.tree_node(label="Cone params"):
+            dpg.add_checkbox(
+                label="Cone enabled",
+                default_value=(node.is_cone_enabled > 0),
+                callback=lambda s, a, u: setattr(node, "is_cone_enabled", int(a)),
+                tag=f"{base_tag}_cone_enabled",
+            )
+            dpg.add_input_float(
+                label="inside_degrees",
+                default_value=node.cone_params.inside_degrees,
+                min_value=0.0,
+                min_clamped=True,
+                max_value=90.0,
+                max_clamped=True,
+                callback=lambda s, a, u: setattr(node, "inside_degrees", a),
+                tag=f"{base_tag}_inside_degrees",
+            )
+            dpg.add_input_float(
+                label="outside_degrees",
+                default_value=node.cone_params.outside_degrees,
+                min_value=0.0,
+                min_clamped=True,
+                max_value=90.0,
+                max_clamped=True,
+                callback=lambda s, a, u: setattr(node, "outside_degrees", a),
+                tag=f"{base_tag}_outside_degrees",
+            )
+            dpg.add_input_float(
+                label="outside_volume",
+                default_value=node.cone_params.outside_volume,
+                #min_value=0.0,
+                #min_clamped=True,
+                #max_value=90.0,
+                #max_clamped=True,
+                callback=lambda s, a, u: setattr(node, "outside_volume", a),
+                tag=f"{base_tag}_outside_volume",
+            )
+            dpg.add_input_float(
+                label="low_pass",
+                default_value=node.cone_params.low_pass,
+                min_value=0.0,
+                min_clamped=True,
+                #max_value=90.0,
+                #max_clamped=True,
+                callback=lambda s, a, u: setattr(node, "low_pass", a),
+                tag=f"{base_tag}_low_pass",
+            )
+            dpg.add_input_float(
+                label="high_pass",
+                default_value=node.cone_params.high_pass,
+                min_value=0.0,
+                min_clamped=True,
+                #max_value=90.0,
+                #max_clamped=True,
+                callback=lambda s, a, u: setattr(node, "high_pass", a),
+                tag=f"{base_tag}_high_pass",
+            )
+
 
 
 def _create_attributes_music_random_sequence_container(
@@ -689,8 +744,8 @@ def _create_attributes_music_track(
             )
 
         add_curves_table(
-            [GraphCurve(c.auto_type, c.graph_points) for c in node.clip_items],
-            [c.name for c in ClipAutomationType],
+            [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items],
+            sorted([c.name for c in ClipAutomationType]),
             on_clips_changed,
             label="Clips",
             add_item_label="+ Add Clip",
@@ -727,7 +782,7 @@ def _create_attributes_sound(
     if node.source_type == "Embedded":
         path = node.get_source_path(bnk)
     else:
-        path = get_sound_path(bnk, node.source_info)
+        path = get_sound_path(bnk, node.bank_source_data)
 
     with dpg.group():
         add_wav_player(path, on_file_changed=on_filepath_selected)

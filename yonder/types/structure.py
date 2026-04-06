@@ -134,9 +134,6 @@ class STIDSectionEntry:
     bnk_id: int = 0
     name_length: int = 0
     name: list[int] = field(default_factory=list)
-    string_encoding: int = 0
-    entry_count: int = 0
-    entries: list[STIDSectionEntry] = field(default_factory=list)
 
 
 @dataclass

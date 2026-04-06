@@ -19,7 +19,6 @@ from .mixins import PropertyMixin
 @dataclass
 class MusicSwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 12
-    music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
@@ -59,19 +58,19 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
     @property
     def parent(self) -> int:
-        return self.music_node_params.node_base_params.direct_parent_id
+        return self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id
 
     @parent.setter
     def parent(self, new_parent: int) -> None:
-        self.music_node_params.node_base_params.direct_parent_id = new_parent
+        self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property
     def children(self) -> Children:
-        return self.music_node_params.children
+        return self.music_trans_node_params.music_node_params.children
 
     @property
     def properties(self) -> list[PropBundle]:
-        return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+        return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
 
     @staticmethod
     def parse_state_path(state_path: list[str]) -> list[int]:

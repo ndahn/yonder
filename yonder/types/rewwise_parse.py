@@ -59,17 +59,9 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
             continue
 
         # Some words like "from" or "except" are valid in wwise but reserved in python
-        key = f.name
-        if keyword.iskeyword(key):
-            key += "_"
-
-        raw_key = f.name.rstrip("_") if key != f.name else f.name
-        if raw_key not in data and f.name not in data:
-            continue  # fall back to field default
-
-        value = data.get(f.name, data.get(raw_key))
+        value = data[f.name.rstrip("_")]
         field_type = hints[f.name]
-        kwargs[key] = _parse_value(field_type, value)
+        kwargs[f.name] = _parse_value(field_type, value)
 
     return target_type(**kwargs)
 

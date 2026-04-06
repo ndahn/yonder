@@ -271,8 +271,8 @@ def add_player_table(
 
 
 def add_curves_table(
-    initial_curves: list[GraphCurve],
-    curve_types: list[str],
+    initial_curves: list[GraphCurve] = None,
+    curve_types: list[str] = None,
     on_curves_changed: Callable[[str, list[GraphCurve], Any], None] = None,
     *,
     label: str = "Curves",
@@ -286,7 +286,7 @@ def add_curves_table(
     if not tag:
         tag = dpg.generate_uuid()
 
-    curves: list[GraphCurve] = list(initial_curves if initial_curves else [])
+    curves: list[GraphCurve] = list(initial_curves or [])
 
     def on_curve_type_changed(sender: str, curve_type: str, curve_idx: int) -> None:
         curves[curve_idx].curve_type = curve_type
@@ -325,7 +325,7 @@ def add_curves_table(
     def new_curve() -> GraphCurve:
         return [
             GraphCurve(
-                curve_types[0],
+                curve_types[0] if curve_types else None,
                 [
                     RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Constant),
                     RTPCGraphPoint(1.0, 1.0, CurveInterpolation.Constant),
@@ -336,13 +336,14 @@ def add_curves_table(
     def create_row(curve: GraphCurve, idx: int):
         with dpg.tree_node(label=f"Curve #{idx}"):
             with dpg.group(horizontal=True):
-                dpg.add_combo(
-                    curve_types,
-                    default_value=curve.curve_type,
-                    label=curve_type_label,
-                    callback=on_curve_type_changed,
-                    user_data=idx,
-                )
+                if curve_types:
+                    dpg.add_combo(
+                        curve_types,
+                        default_value=curve.curve_type,
+                        label=curve_type_label,
+                        callback=on_curve_type_changed,
+                        user_data=idx,
+                    )
             add_interpolation_curve(curve, on_curve_changed, user_data=idx)
 
     with dpg.group(tag=tag):

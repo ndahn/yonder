@@ -497,6 +497,14 @@ class PropBundle:
         if self.prop_id in (PropID.AttachedPluginFXID, PropID.AttenuationID):
             return [("value", int(self.value))]
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "PropBundle":
+        prop_id, value = next(iter(data.items()))
+        return cls(PropID[prop_id], value)
+
+    def to_dict(self) -> dict:
+        return {self.prop_id.name: self.value}
+
 
 @dataclass
 class NodeInitialParams:

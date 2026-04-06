@@ -120,9 +120,9 @@ def add_interpolation_curve(
         p = curve[idx]
         selected = idx
         dpg.set_value(f"{tag}_point_label", f"p{idx}")
-        dpg.set_value(f"{tag}_point_interpolation", p.interpolation)
-        dpg.set_value(f"{tag}_point_x", p.x)
-        dpg.set_value(f"{tag}_point_y", p.y)
+        dpg.set_value(f"{tag}_point_interpolation", p.interpolation.name)
+        dpg.set_value(f"{tag}_point_x", p.from_)
+        dpg.set_value(f"{tag}_point_y", p.to)
 
     def render_curve(sender: str, series_data: list[dict], user_data: Any) -> None:
         nonlocal hovered, dirty
@@ -190,7 +190,7 @@ def add_interpolation_curve(
         dpg.add_custom_series(
             list(curve.x),
             list(curve.y),
-            list(curve.interp),
+            2,
             callback=render_curve,
             tooltip=True,
             parent=f"{tag}_yaxis",
@@ -240,7 +240,7 @@ def add_interpolation_curve(
             dpg.add_text("p0", tag=f"{tag}_point_label")
             dpg.add_combo(
                 [c.name for c in CurveInterpolation],
-                default_value=curve[0].interpolation,
+                default_value=curve[0].interpolation.name,
                 width=100,
                 callback=on_interpolation_changed,
                 tag=f"{tag}_point_interpolation",

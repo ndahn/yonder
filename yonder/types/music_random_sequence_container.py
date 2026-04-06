@@ -38,7 +38,6 @@ class MusicRanSeqPlaylistItem:
 @dataclass
 class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
-    music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
@@ -62,7 +61,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         super().__init__(nid)
         obj = cls(playlist_items=items)
 
-        obj.music_node_params.children.items = [
+        obj.music_trans_node_params.music_node_params.children.items = [
             p.segment_id for p in items if p.segment_id > 0
         ]
 
@@ -75,19 +74,19 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
 
     @property
     def parent(self) -> int:
-        return self.music_node_params.node_base_params.direct_parent_id
+        return self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id
 
     @parent.setter
     def parent(self, new_parent: int) -> None:
-        self.music_node_params.node_base_params.direct_parent_id = new_parent
+        self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property
     def children(self) -> Children:
-        return self.music_node_params.children
+        return self.music_trans_node_params.music_node_params.children
 
     @property
     def properties(self) -> list[PropBundle]:
-        return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+        return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
 
     @field_property(playlist_item_count)
     def get_playlist_item_count(self) -> int:
@@ -96,7 +95,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     def set_playlist(self, items: list, root_ers_type: int = 0) -> None:
         playlist = self.make_playlist(items, root_ers_type)
         self.playlist_items = playlist
-        self.music_node_params.children.items = [
+        self.music_trans_node_params.music_node_params.children.items = [
             p.segment_id for p in playlist if p.segment_id > 0
         ]
 
