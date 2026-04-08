@@ -586,6 +586,9 @@ class Soundbank:
     def __iter__(self) -> Iterator[HIRCNode]:
         yield from self.hirc.objects
 
+    def __len__(self) -> int:
+        return len(self.hirc.objects)
+
     def __contains__(self, key: Any) -> HIRCNode:
         if isinstance(key, HIRCNode):
             key = key.id

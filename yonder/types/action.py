@@ -29,10 +29,9 @@ class Action(HIRCNode):
         if not action_type or action_type == ActionType.Unk2102:
             logger.warning(f"Found action with unknown type {self.action_type}: {self}")
         elif action_type == ActionType.PlayEvent:
-            # Wwise is strange
-            logger.warning(
-                f"Found a PlayEvent action, tell Mana to verify this is correct: {self.params}"
-            )
+            # NOTE rewwise is strange, for PlayEvents params will actually be a string
+            if not isinstance(self.params, str):
+                logger.warning("Found unexpectedly normal PlayEvent")
 
     @classmethod
     def new_play_action(
@@ -82,6 +81,9 @@ class Action(HIRCNode):
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
+
+    def __str__(self) -> str:
+        return f"{self.action_type_enum.name} #{self.id}"
 
 
 @dataclass

@@ -827,7 +827,7 @@ class BanksOfYonder:
             self.regenerate()
             self._set_bnk_menus_enabled(True)
             logger.info(
-                f"Loaded soundbank {self.bnk.name} with {len(self.event_map)} events"
+                f"Loaded soundbank {self.bnk.name} with {len(self.bnk)} nodes"
             )
         finally:
             dpg.delete_item(loading)

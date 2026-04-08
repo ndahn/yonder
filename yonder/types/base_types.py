@@ -827,10 +827,10 @@ class Layer:
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     rtpc_id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
-    associated_children_count: int = field_property(default=0)
+    associated_childen_count: int = field_property(default=0)  # NOTE typo in rewwise
     associated_children: list[AssociatedChildData] = field(default_factory=list)
 
-    @field_property(associated_children_count)
+    @field_property(associated_childen_count)
     def get_associated_children_count(self) -> int:
         return len(self.associated_children)
 
