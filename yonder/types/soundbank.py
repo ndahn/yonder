@@ -84,7 +84,7 @@ class Soundbank:
         return Soundbank(json_path, sections)
 
     def to_dict(self) -> dict:
-        return {"sections": serialize(list(self.sections.values()))}
+        return {"sections": [serialize(sec) for sec in self.sections.values()]}
 
     @property
     def bkhd(self) -> BKHDSection:

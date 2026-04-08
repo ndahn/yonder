@@ -40,7 +40,7 @@ class Section(metaclass=ABCMeta):
         trans = {
             **data.pop("_header"),
             "body": {
-                type(self).__name__: {**data},
+                self.section_name(): {**data},
             },
         }
         return trans

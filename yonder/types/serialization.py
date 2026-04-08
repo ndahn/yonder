@@ -18,23 +18,20 @@ def serialize(obj: Any) -> Any:
 
 
 def _serialize_value(obj: Any) -> Any:
-    if not is_dataclass(obj) and hasattr(obj, "to_dict") and callable(obj.to_dict):
-        return obj.to_dict()
-        
     if is_dataclass(obj) and not isinstance(obj, type):
         result = {}
         for f in fields(obj):
             value = getattr(obj, f.name)
             # Some words like "from" or "except" are valid in wwise but reserved in python
             key = f.name.rstrip("_")
-            result[key] = _serialize_value(value)
+            result[key] = serialize(value)
         return result
 
     if isinstance(obj, list):
-        return [_serialize_value(x) for x in obj]
+        return [serialize(x) for x in obj]
 
     if isinstance(obj, dict):
-        return {k: _serialize_value(v) for k, v in obj.items()}
+        return {k: serialize(v) for k, v in obj.items()}
 
     if isinstance(obj, Enum):
         if isinstance(obj, StrEnum):

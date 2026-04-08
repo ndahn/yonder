@@ -91,12 +91,13 @@ class HIRCNode(metaclass=ABCMeta):
         # rewwise inserts the class name of the node type into the hierarchy
         # (e.g. body: {Sound: ...})
         data = _serialize_value(self)
-        return {
+        trans = {
             **data.pop("_header"),
             "body": {
                 self.type_name: {**data},
             },
         }
+        return trans
 
     @classmethod
     def from_dict(cls, data: dict) -> HIRCNode:
