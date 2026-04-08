@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Callable, Iterable, ClassVar, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
@@ -23,7 +24,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="[%(levelname)s]\t%(message)s",
     handlers=[
-        #logging.FileHandler(logfile),
+        # logging.FileHandler(logfile),
         logging.StreamHandler(),
     ],
 )
@@ -68,7 +69,7 @@ def is_event_name_valid(name: str) -> bool:
     return bool(re.match(rf"{SoundType.values()}[0-9]+"))
 
 
-def format_hierarchy(bnk: "Soundbank", graph: nx.DiGraph) -> str:
+def format_hierarchy(bnk: Soundbank, graph: nx.DiGraph) -> str:
     visited = set()
     ret = ""
 
@@ -82,7 +83,7 @@ def format_hierarchy(bnk: "Soundbank", graph: nx.DiGraph) -> str:
         children = list(graph.successors(nid))
 
         for i, child_id in enumerate(children):
-            is_last = (i == len(children) - 1)
+            is_last = i == len(children) - 1
             branch = "└──" if is_last else "├──"
             node = bnk.get(child_id, f"#{child_id}")
             ret += f"{prefix}{branch} {node}\n"
@@ -186,7 +187,7 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
 
 class PathDict(MutableMapping):
     @classmethod
-    def from_paths(cls, paths: Iterable[tuple[str, Any]]) -> "PathDict":
+    def from_paths(cls, paths: Iterable[tuple[str, Any]]) -> PathDict:
         d = PathDict({})
         for key, val in paths:
             d[key] = val

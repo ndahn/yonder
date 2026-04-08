@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Iterable
 import colorsys
 from dearpygui import dearpygui as dpg
@@ -18,7 +19,7 @@ class Color(tuple):
         return super().__new__(cls, (r, g, b, a))
 
     @classmethod
-    def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> "Color":
+    def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> Color:
         return Color(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
 
     def as_floats(self) -> tuple[float, float, float, float]:
@@ -51,7 +52,7 @@ class Color(tuple):
 
     def but(
         self, *, r: int = None, g: int = None, b: int = None, a: int = None
-    ) -> "Color":
+    ) -> Color:
         if r is None:
             r = self.r
 
@@ -66,19 +67,19 @@ class Color(tuple):
 
         return Color(r, g, b, a)
 
-    def mix(self, other: "tuple | Color", ratio: float = 0.5) -> "Color":
+    def mix(self, other: "tuple | Color", ratio: float = 0.5) -> Color:
         r = ratio * self.r + (1 - ratio) * other[0]
         g = ratio * self.g + (1 - ratio) * other[1]
         b = ratio * self.b + (1 - ratio) * other[2]
         a = ratio * self.a + (1 - ratio) * other[3]
         return Color(r, g, b, a)
 
-    def brightness(self, brightness: int) -> "Color":
+    def brightness(self, brightness: int) -> Color:
         h, s, _ = colorsys.rgb_to_hsv(*self.as_floats()[:3])
         r, g, b = colorsys.hsv_to_rgb(h, s, brightness / 255)
         return Color.from_floats(r, g, b, self.a / 255)
 
-    def __or__(self, other: "tuple | Color") -> "Color":
+    def __or__(self, other: "tuple | Color") -> Color:
         return self.mix(other)
 
     def __str__(self) -> str:

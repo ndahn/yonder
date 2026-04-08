@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+from __future__ import annotations
+from dataclasses import dataclass, field, InitVar
 from typing import ClassVar, TYPE_CHECKING
 from field_properties import field_property
 
-from .structure import HIRCNode
+from .structure import HIRCNode, HIRCNodeHeader, ObjectId
 from .action import ActionType
 
 if TYPE_CHECKING:
@@ -12,15 +13,14 @@ if TYPE_CHECKING:
 @dataclass
 class Event(HIRCNode):
     body_type: ClassVar[int] = 4
-    action_count: int = field_property(init=False, raw=True)
+    action_count: int = field_property(default=0)
     actions: list[int] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: int | str, actions: list[int] = None) -> "Event":
-        super().__init__(nid)
-        return cls(actions=actions or [])
+    def new(cls, nid: int | str, actions: list[int] = None) -> Event:
+        return Event(nid, actions=actions)
 
-    def has_action_type(self, bnk: "Soundbank", val: ActionType | str | int) -> bool:
+    def has_action_type(self, bnk: Soundbank, val: ActionType | str | int) -> bool:
         if isinstance(val, ActionType):
             type_id = val.type_id
         elif isinstance(val, str):

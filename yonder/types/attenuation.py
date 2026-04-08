@@ -1,19 +1,11 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
 from .structure import HIRCNode
-from .base_types import InitialRTPC, ConversionTable
+from .base_types import InitialRTPC, ConversionTable, ConeParams
 from yonder.enums import CurveParameters
-
-
-@dataclass
-class ConeParams:
-    inside_degrees: float = 0.0
-    outside_degrees: float = 0.0
-    outside_volume: float = 0.0
-    low_pass: float = 0.0
-    high_pass: float = 0.0
 
 
 @dataclass
@@ -24,7 +16,7 @@ class Attenuation(HIRCNode):
     curves_to_use: list[int] = field(
         default_factory=lambda: [CurveParameters.None_.value] * 7
     )
-    curve_count: int = field_property(init=False, raw=True)
+    curve_count: int = field_property(default=0)
     curves: list[ConversionTable] = field(default_factory=list)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
 
@@ -34,14 +26,17 @@ class Attenuation(HIRCNode):
         nid: int | str,
         curves_to_use: list[CurveParameters],
         curves: list[ConversionTable],
-    ) -> "Attenuation":
+        cone_params: ConeParams = None,
+    ) -> Attenuation:
         if len(curves_to_use) != 7:
             raise ValueError("Curves to use must be exactly 7 elements")
 
-        super().__init__(nid)
         return cls(
+            nid,
             curves_to_use=[crv.value for crv in curves_to_use],
             curves=curves,
+            is_cone_enabled=bool(cone_params),
+            cone_params=cone_params or ConeParams(),
         )
 
     @field_property(curve_count)

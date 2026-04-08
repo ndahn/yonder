@@ -1,54 +1,21 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
 from .structure import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle
+from .base_types import (
+    NodeBaseParams,
+    Children,
+    PropBundle,
+    SwitchPackage,
+    SwitchNodeParams,
+)
 from yonder.enums import PropID, SWITCH_GROUP_IDS
 from .mixins import PropertyMixin
 
 
-@dataclass
-class SwitchPackage:
-    switch_id: int
-    node_count: int = field_property(init=False, raw=True)
-    nodes: list[int] = field(default_factory=list)
-
-    @field_property(node_count)
-    def get_node_count(self) -> int:
-        return len(self.nodes)
-
-    def get_references(self) -> list[tuple[str, int]]:
-        return [(f"nodes:{i}", nid) for i, nid in enumerate(self.nodes)]
-
-
-@dataclass
-class SwitchNodeParams:
-    node_id: int
-    unk1: bool = False
-    unk2: bool = False
-    unk3: bool = False
-    unk4: bool = False
-    unk5: bool = False
-    unk6: bool = False
-    continue_playback: bool = False
-    is_first_only: bool = False
-    unk9: bool = False
-    unk10: bool = False
-    unk11: bool = False
-    unk12: bool = False
-    unk13: bool = False
-    unk14: bool = False
-    unk15: bool = False
-    unk16: bool = False
-    fade_out_time: int = 0
-    fade_in_time: int = 0
-
-    def get_references(self) -> list[tuple[str, int]]:
-        return [("node_id", self.node_id)]
-
-
-@dataclass
+@dataclass(slots=True)
 class SwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
@@ -57,9 +24,9 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     default_switch: int = 0
     continuous_validation: int = 0
     children: Children = field(default_factory=Children)
-    switch_group_count: int = field_property(init=False, raw=True)
+    switch_group_count: int = field_property(default=0)
     switch_groups: list[SwitchPackage] = field(default_factory=list)
-    switch_param_count: int = field_property(init=False, raw=True)
+    switch_param_count: int = field_property(default=0)
     switch_params: list[SwitchNodeParams] = field(default_factory=list)
 
     @classmethod
@@ -69,9 +36,8 @@ class SwitchContainer(PropertyMixin, HIRCNode):
         switch_groups: list[list[int]],
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "SwitchContainer":
-        super().__init__(nid)
-        obj = cls()
+    ) -> SwitchContainer:
+        obj = cls(nid)
 
         if switch_groups:
             for idx, nodes in enumerate(switch_groups):

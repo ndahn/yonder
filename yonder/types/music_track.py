@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
@@ -22,12 +23,12 @@ from .mixins import PropertyMixin
 class MusicTrack(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0
-    source_count: int = field_property(init=False, raw=True)
+    source_count: int = field_property(default=0)
     sources: list[BankSourceData] = field(default_factory=list)
-    playlist_item_count: int = field_property(init=False, raw=True)
+    playlist_item_count: int = field_property(default=0)
     playlist: list[TrackSrcInfo] = field(default_factory=list)
-    subtrack_count: int = field_property(init=False, raw=True)
-    clip_item_count: int = field_property(init=False, raw=True)
+    subtrack_count: int = field_property(default=0)
+    clip_item_count: int = field_property(default=0)
     clip_items: list[ClipAutomation] = field(default_factory=list)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     track_type: int = 0
@@ -43,9 +44,8 @@ class MusicTrack(PropertyMixin, HIRCNode):
         source_type: SourceType = SourceType.Streaming,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "MusicTrack":
-        super().__init__(nid)
-        obj = cls()
+    ) -> MusicTrack:
+        obj = cls(nid)
 
         if wem:
             obj.add_source_from_wem(wem, begin_trim, end_trim, source_type=source_type)

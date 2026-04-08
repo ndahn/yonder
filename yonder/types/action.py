@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Type, Union, ClassVar
+from typing import Type, ClassVar
 from dataclasses import dataclass, field
 from enum import Enum
 
 from yonder.enums import ValueMeaning
+from yonder.util import logger
 from .base_types import PropBundle, PropRangedModifiers
 from .structure import HIRCNode
 from .serialization import _serialize_value, _deserialize_fields
@@ -19,21 +20,26 @@ class Action(HIRCNode):
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
-    def __post_init__(self):
-        action_type = self.params.action_type
+    def __post_init__(self, nid: int | str):
+        try:
+            action_type = ActionType(self.action_type)
+        except KeyError:
+            action_type = None
 
-        if action_type == ActionType.Unk2102:
-            raise ValueError("Action type (Unk2102) is not supported")
-
-        if action_type == ActionType.PlayEvent:
-            self.params = "PlayEvent"
+        if not action_type or action_type == ActionType.Unk2102:
+            logger.warning(f"Found action with unknown type {self.action_type}: {self}")
+        elif action_type == ActionType.PlayEvent:
+            # Wwise is strange
+            logger.warning(
+                f"Found a PlayEvent action, tell Mana to verify this is correct: {self.params}"
+            )
 
     @classmethod
     def new_play_action(
         cls, nid: int, external_id: int, bank_id: int = 0, fade_curve: int = 4
     ) -> Action:
-        super().__init__(nid)
         return cls(
+            nid,
             external_id,
             is_bus=False,
             params=ActionPlay(ActionType.Play, bank_id, fade_curve),
@@ -58,8 +64,8 @@ class Action(HIRCNode):
         else:
             exc_items = []
 
-        super().__init__(nid)
         return cls(
+            nid,
             external_id,
             is_bus=False,
             params=ActionStop(
@@ -89,7 +95,7 @@ class _ActionParams:
         return {self.action_type.name: data}
 
     @classmethod
-    def from_dict(cls, data: dict) -> "_ActionParams":
+    def from_dict(cls, data: dict) -> _ActionParams:
         action_type = ActionType[next(iter(data.keys()))]
         param_cls = action_type.params_cls
         if not param_cls:
@@ -100,20 +106,20 @@ class _ActionParams:
         return _deserialize_fields(param_cls, param_data)
 
 
-@dataclass
+@dataclass(slots=True)
 class RandomizerModifier:
     base: float = 0.0
     min: float = 0.0
     max: float = 0.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionParamsExceptEntry:
     object_id: int = 0
     is_bus: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionParamsExcept:
     count: int = 0
     exceptions: list[ActionParamsExceptEntry] = field(default_factory=list)
@@ -131,7 +137,7 @@ class ActionSetSwitch(_ActionParams):
     switch_state_id: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionSetGameParameterParams:
     bypass_transition: int = 0
     value_meaning: ValueMeaning = ValueMeaning.Default
@@ -160,7 +166,7 @@ class ActionResume(_ActionParams):
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionSetAkPropParams:
     value_meaning: ValueMeaning = ValueMeaning.Default
     randomizer_modifier: RandomizerModifier = field(default_factory=RandomizerModifier)
@@ -173,7 +179,7 @@ class ActionSetAkProp(_ActionParams):
     fade_curve: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionSeekParams:
     is_seek_relative_to_duration: int = 0
     randomizer_modifier: RandomizerModifier = field(default_factory=RandomizerModifier)
@@ -192,7 +198,7 @@ class ActionPlay(_ActionParams):
     fade_curve: int = 4
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionPauseParams:
     flags: int = 0
 
@@ -204,7 +210,7 @@ class ActionPause(_ActionParams):
     fade_curve: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class ActionStopParams:
     # NOTE: unknown, usually 4 and 6, sometimes 7 and 6
     flags1: int = 4

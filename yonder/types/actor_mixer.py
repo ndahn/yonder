@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -20,9 +21,9 @@ class ActorMixer(PropertyMixin, HIRCNode):
         override_bus_id: int = 0,
         parent: int = 0,
         props: dict[PropID, float] = None,
-    ) -> "ActorMixer":
-        super().__init__(nid)
+    ) -> ActorMixer:
         obj = cls(
+            nid,
             NodeBaseParams(
                 override_bus_id=override_bus_id,
                 direct_parent_id=parent,

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
@@ -17,14 +18,13 @@ from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin
 
 
-
 @dataclass
 class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
     )
-    playlist_item_count: int = field_property(init=False, raw=True)
+    playlist_item_count: int = field_property(default=0)
     playlist_items: list[MusicRanSeqPlaylistItem] = field(default_factory=list)
 
     @classmethod
@@ -35,14 +35,13 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "MusicRandomSequenceContainer":
+    ) -> MusicRandomSequenceContainer:
         if playlist:
             items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
         else:
             items = []
 
-        super().__init__(nid)
-        obj = cls(playlist_items=items)
+        obj = cls(nid, playlist_items=items)
 
         obj.music_trans_node_params.music_node_params.children.items = [
             p.segment_id for p in items if p.segment_id > 0

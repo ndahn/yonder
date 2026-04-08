@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
@@ -17,19 +18,18 @@ from .mixins import PropertyMixin
 class DialogueEvent(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 15
     probability: int = 100
-    tree_depth: int = field_property(init=False, raw=True)
+    tree_depth: int = field_property(default=0)
     arguments: list[GameSync] = field(default_factory=list)
     group_types: list[GroupType] = field(default_factory=list)
-    tree_size: int = field_property(init=False, raw=True)
+    tree_size: int = field_property(default=0)
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
     @classmethod
-    def new(cls, nid: int | str, props: dict[PropID, float]) -> "DialogueEvent":
-        super().__init__(nid)
-        obj = cls()
+    def new(cls, nid: int | str, props: dict[PropID, float]) -> DialogueEvent:
+        obj = cls(nid)
 
         if props:
             for prop, val in props.items():

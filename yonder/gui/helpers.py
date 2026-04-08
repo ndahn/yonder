@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Iterable
 from pathlib import Path
 import tempfile
@@ -55,7 +56,7 @@ def center_window(window: str, parent: str = None) -> None:
 def shorten_path(path: str | Path, maxlen: int = 30) -> str:
     if not path:
         return ""
-    
+
     parts = Path(path).parts
     short = parts[-1]
 
@@ -68,12 +69,12 @@ def shorten_path(path: str | Path, maxlen: int = 30) -> str:
     return str(short)
 
 
-class GraphCurve():
+class GraphCurve:
     def __init__(self, curve_type: Any, points: list[RTPCGraphPoint]):
         self.curve_type = curve_type
         self.points = points
 
-    def copy(self) -> "GraphCurve":
+    def copy(self) -> GraphCurve:
         return deepcopy(self)
 
     @property

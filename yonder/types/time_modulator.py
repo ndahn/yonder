@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -18,9 +19,8 @@ class TimeModulator(HIRCNode):
         cls,
         nid: int | str,
         props: dict[PropID, float] = None,
-    ) -> "TimeModulator":
-        super().__init__(nid)
-        obj = cls()
+    ) -> TimeModulator:
+        obj = cls(nid)
 
         if props:
             for prop, val in props.items():

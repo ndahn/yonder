@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, ClassVar
-from dataclasses import dataclass, field, fields, is_dataclass
 from abc import ABCMeta
+from dataclasses import dataclass, field, fields, is_dataclass, InitVar
 from copy import deepcopy
 import json
 
@@ -19,10 +19,16 @@ from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
 
-@dataclass
+# NOTE IMPORTANT NOTE
+# Don't use slots on dataclasses participating in inheritance, it breaks
+# serialization in subtle ways like duplicate class definitions.
+
+
+@dataclass(slots=True)
 class SectionHeader:
     magic: list[int] = field(default_factory=list)
     size: int = 0
+
 
 @dataclass
 class Section(metaclass=ABCMeta):
@@ -38,12 +44,12 @@ class Section(metaclass=ABCMeta):
             **data.pop("_header"),
             "body": {
                 type(self).__name__: {**data},
-            }
+            },
         }
         return trans
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Section":
+    def from_dict(cls, data: dict) -> Section:
         section_type = next(iter(data["body"].keys()))
         header = {
             "magic": data.pop("magic"),
@@ -57,8 +63,9 @@ class Section(metaclass=ABCMeta):
         for sub in cls.__subclasses__():
             if sub.section_name() == section_type:
                 return _deserialize_fields(sub, trans)
-        
+
         raise ValueError(f"Unknown section type {section_type}")
+
 
 @dataclass
 class ENVSSection(Section):
@@ -94,16 +101,16 @@ class INITSection(Section):
     plugins: list[IAkPlugin] = field(default_factory=list)
 
 
-@dataclass
-class DIDXSection(Section):
-    descriptors: list[DIDXDescriptor] = field(default_factory=list)
-
-
-@dataclass
+@dataclass(slots=True)
 class DIDXDescriptor:
     id: int = 0
     offset: int = 0
     size: int = 0
+
+
+@dataclass
+class DIDXSection(Section):
+    descriptors: list[DIDXDescriptor] = field(default_factory=list)
 
 
 @dataclass
@@ -122,18 +129,18 @@ class TodoSection(Section):
     data: list[int] = field(default_factory=list)
 
 
+@dataclass(slots=True)
+class STIDSectionEntry:
+    bnk_id: int = 0
+    name_length: int = 0
+    name: list[int] = field(default_factory=list)
+
+
 @dataclass
 class STIDSection(Section):
     string_encoding: int = 0
     entry_count: int = 0
     entries: list[STIDSectionEntry] = field(default_factory=list)
-
-
-@dataclass
-class STIDSectionEntry:
-    bnk_id: int = 0
-    name_length: int = 0
-    name: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -151,21 +158,7 @@ class STMGSection(Section):
     textures: list[AcousticTexture] = field(default_factory=list)
 
 
-@dataclass
-class STMGSectionStateGroup:
-    id: int = 0
-    default_transition_time: int = 0
-    state_transition_count: int = 0
-    state_transitions: list[StateTransition] = field(default_factory=list)
-
-
-@dataclass
-class HIRCSection(Section):
-    object_count: int = 0
-    objects: list[HIRCNode] = field(default_factory=list)
-
-
-@dataclass
+@dataclass(slots=True)
 class HIRCNodeHeader:
     # These two are just here to make rewwise happy
     body_type: int = 0
@@ -179,7 +172,7 @@ class HIRCNodeHeader:
         return ser
 
     @classmethod
-    def from_dict(cls, data: dict) -> "HIRCNode":
+    def from_dict(cls, data: dict) -> HIRCNode:
         return _deserialize_fields(cls, data)
 
 
@@ -187,10 +180,8 @@ class HIRCNodeHeader:
 class HIRCNode(metaclass=ABCMeta):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
+    id: InitVar[int]
     _header: HIRCNodeHeader = field(default_factory=HIRCNodeHeader)
-
-    def __init__(self, id: int | str):
-        self._header = HIRCNodeHeader(self.body_type, id)
 
     @property
     def id(self) -> int:
@@ -218,7 +209,7 @@ class HIRCNode(metaclass=ABCMeta):
     def json(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
-    def copy(self) -> "HIRCNode":
+    def copy(self) -> HIRCNode:
         return deepcopy(self)
 
     def glob(self, pattern: str) -> list:
@@ -257,7 +248,7 @@ class HIRCNode(metaclass=ABCMeta):
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "HIRCNode":
+    def from_dict(cls, data: dict) -> HIRCNode:
         node_type = next(iter(data["body"].keys()))
         header = {
             "body_type": data.pop("body_type"),
@@ -284,7 +275,11 @@ class HIRCNode(metaclass=ABCMeta):
             ret = []
 
             # Use get_references() only on objects other than self
-            if obj is not self and hasattr(obj, "get_references") and callable(obj.get_references):
+            if (
+                obj is not self
+                and hasattr(obj, "get_references")
+                and callable(obj.get_references)
+            ):
                 for key, val in obj.get_references():
                     if isinstance(val, int) and val > 0:
                         ret.append((f"{path}/{key}", val))
@@ -316,6 +311,20 @@ class HIRCNode(metaclass=ABCMeta):
         if self.name:
             return self.name
         return f"{self.type_name} #{self.id}"
+
+
+@dataclass
+class HIRCSection(Section):
+    object_count: int = 0
+    objects: list[HIRCNode] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class STMGSectionStateGroup:
+    id: int = 0
+    default_transition_time: int = 0
+    state_transition_count: int = 0
+    state_transitions: list[StateTransition] = field(default_factory=list)
 
 
 NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

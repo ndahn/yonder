@@ -1,8 +1,11 @@
+from __future__ import annotations
 from typing import Any
 from yonder.hash import calc_hash, lookup_name
 
 
 class ObjectId:
+    __slots__ = ("_hash", "_name")
+
     def __init__(self, initial_value: int | str):
         self._hash = 0
         self._name = None
@@ -14,7 +17,7 @@ class ObjectId:
         return {"Hash": self._hash}
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ObjectId":
+    def from_dict(cls, data: dict) -> ObjectId:
         if "String" in data:
             return cls(data["String"])
         return cls(data["Hash"])

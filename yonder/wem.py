@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 from pathlib import Path
 import shutil
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from yonder import Soundbank
 
 
-def import_wems(bnk: "Soundbank", wems: list[Path]) -> None:
+def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
     from yonder import HIRCNode
     from yonder.types.base_types import MediaInformation
 
@@ -49,7 +50,7 @@ def import_wems(bnk: "Soundbank", wems: list[Path]) -> None:
             if isinstance(node, HIRCNode):
                 attr_paths = node.glob("**/media_information")
                 media_info: MediaInformation
-                
+
                 for _, media_info in attr_paths:
                     # Music tracks have multiple sources, so check if this is the right one
                     if media_info.source_id == wem_id:
@@ -154,7 +155,7 @@ def create_prefetch_snippet(
         out_file = wav.parent / f"{wav.stem}_snippet.wav"
 
     audio: AudioSegment = AudioSegment.from_file(str(wav))
-    audio = audio[:int(length)]
+    audio = audio[: int(length)]
     audio.export(str(out_file), format="wav")
     return Path(out_file)
 

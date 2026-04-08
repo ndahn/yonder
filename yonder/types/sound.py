@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
@@ -28,9 +29,8 @@ class Sound(PropertyMixin, HIRCNode):
         source_type: SourceType = SourceType.Embedded,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "Sound":
-        super().__init__(nid)
-        obj = cls()
+    ) -> Sound:
+        obj = cls(nid)
 
         if wem:
             obj.set_source_from_wem(wem, source_type)

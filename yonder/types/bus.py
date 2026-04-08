@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -19,9 +20,9 @@ class Bus(PropertyMixin, HIRCNode):
         override_bus_id: int = 0,
         ducks: list[DuckInfo] = None,
         props: dict[PropID, float] = None,
-    ) -> "Bus":
-        super().__init__(nid)
+    ) -> Bus:
         obj = cls(
+            nid,
             BusInitialValues(
                 override_bus_id=override_bus_id,
                 ducks=ducks or [],

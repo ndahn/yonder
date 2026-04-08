@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Iterable, Generator, Callable, TYPE_CHECKING
 from abc import ABC, abstractmethod
 import re
@@ -73,7 +74,7 @@ Examples:
 
 class _Condition(ABC):
     @abstractmethod
-    def evaluate(self, obj: "HIRCNode") -> bool: ...
+    def evaluate(self, obj: HIRCNode) -> bool: ...
 
 
 class _FieldCondition(_Condition):
@@ -89,7 +90,7 @@ class _FieldCondition(_Condition):
         self.field_path = field_path.strip("\"'")
         self.value = value.strip("\"'")
 
-    def _get_field_values(self, node: "HIRCNode") -> list[str]:
+    def _get_field_values(self, node: HIRCNode) -> list[str]:
         if self.field_path in ("id", "hash"):
             return [node.id]
 
@@ -101,7 +102,7 @@ class _FieldCondition(_Condition):
 
         return [str(v) for _, v in node.glob(self.field_path)]
 
-    def evaluate(self, obj: "HIRCNode") -> bool:
+    def evaluate(self, obj: HIRCNode) -> bool:
         actual_values = self._get_field_values(obj)
         return any(_match_value(val, self.value) for val in actual_values)
 
@@ -113,12 +114,12 @@ class _ValueCondition(_Condition):
     def __init__(self, value: str):
         self.value = value.strip("\"'")
 
-    def _candidates(self, node: "HIRCNode") -> Generator[str, None, None]:
+    def _candidates(self, node: HIRCNode) -> Generator[str, None, None]:
         yield node.id
         yield node.type_name
         yield node.name
 
-    def evaluate(self, obj: "HIRCNode") -> bool:
+    def evaluate(self, obj: HIRCNode) -> bool:
         return any(_match_value(val, self.value) for val in self._candidates(obj))
 
     def __repr__(self):
@@ -129,7 +130,7 @@ class _OrCondition(_Condition):
     def __init__(self, conditions: list[_Condition]):
         self.conditions = conditions
 
-    def evaluate(self, obj: "HIRCNode") -> bool:
+    def evaluate(self, obj: HIRCNode) -> bool:
         return any(c.evaluate(obj) for c in self.conditions)
 
     def __repr__(self):
@@ -140,7 +141,7 @@ class _AndCondition(_Condition):
     def __init__(self, conditions: list[_Condition]):
         self.conditions = conditions
 
-    def evaluate(self, node: "HIRCNode") -> bool:
+    def evaluate(self, node: HIRCNode) -> bool:
         return all(c.evaluate(node) for c in self.conditions)
 
     def __repr__(self):
@@ -151,7 +152,7 @@ class _NotCondition(_Condition):
     def __init__(self, condition: _Condition):
         self.condition = condition
 
-    def evaluate(self, obj: "HIRCNode") -> bool:
+    def evaluate(self, obj: HIRCNode) -> bool:
         # Special-case: NOT on a field requires the field to exist
         if isinstance(self.condition, _FieldCondition):
             vals = self.condition._get_field_values(obj)

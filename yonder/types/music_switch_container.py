@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
@@ -5,7 +6,6 @@ from field_properties import field_property
 from yonder.hash import calc_hash
 from .structure import HIRCNode
 from .base_types import (
-    MusicNodeParams,
     MusicTransNodeParams,
     GameSync,
     DecisionTreeNode,
@@ -23,10 +23,10 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         default_factory=MusicTransNodeParams
     )
     continue_playback: int = 1
-    tree_depth: int = field_property(init=False, raw=True)
+    tree_depth: int = field_property(default=0)
     arguments: list[GameSync] = field(default_factory=list)
     group_types: list[GroupType] = field(default_factory=list)
-    tree_size: int = field_property(init=False, raw=True)
+    tree_size: int = field_property(default=0)
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
 
@@ -38,9 +38,8 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         branches: list[tuple[list[int | str], int]] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "MusicSwitchContainer":
-        super().__init__(nid)
-        obj = cls()
+    ) -> MusicSwitchContainer:
+        obj = cls(nid)
 
         for arg, group_type in arguments:
             obj.add_argument(arg, group_type)

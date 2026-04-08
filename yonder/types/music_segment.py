@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar, Any
 from field_properties import field_property
@@ -14,7 +15,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
-    marker_count: int = field_property(init=False, raw=True)
+    marker_count: int = field_property(default=0)
     markers: list[MusicMarkerWwise] = field(default_factory=list)
 
     @classmethod
@@ -25,9 +26,8 @@ class MusicSegment(PropertyMixin, HIRCNode):
         markers: list[int | str, float] = None,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "MusicSegment":
-        super().__init__(nid)
-        obj = cls()
+    ) -> MusicSegment:
+        obj = cls(nid)
 
         if tracks:
             if isinstance(tracks, int):
@@ -65,7 +65,9 @@ class MusicSegment(PropertyMixin, HIRCNode):
     def get_marker_count(self) -> int:
         return len(self.markers)
 
-    def set_marker(self, mid: int | str, pos: float, update: bool = True) -> MusicMarkerWwise:
+    def set_marker(
+        self, mid: int | str, pos: float, update: bool = True
+    ) -> MusicMarkerWwise:
         if isinstance(mid, str):
             label = mid
             mid = calc_hash(mid)
@@ -82,11 +84,11 @@ class MusicSegment(PropertyMixin, HIRCNode):
                 return marker
         else:
             marker = MusicMarkerWwise(
-                    mid,
-                    pos,
-                    string_length=len(label) + 1 if label else 0,
-                    string=label,
-                )
+                mid,
+                pos,
+                string_length=len(label) + 1 if label else 0,
+                string=label,
+            )
             self.markers.append(marker)
 
         return marker

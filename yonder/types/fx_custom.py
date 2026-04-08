@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -13,6 +14,5 @@ class EffectCustom(HIRCNode):
     )
 
     @classmethod
-    def new(cls, nid: int | str) -> "EffectCustom":
-        super().__init__(nid)
-        return cls()
+    def new(cls, nid: int | str) -> EffectCustom:
+        return cls(nid)

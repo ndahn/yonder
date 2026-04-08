@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
@@ -9,14 +10,13 @@ from .structure import HIRCNode
 @dataclass
 class State(HIRCNode):
     body_type: ClassVar[int] = 1
-    entry_count: int = field_property(init=False, raw=True)
+    entry_count: int = field_property(default=0)
     parameters: list[int] = field(default_factory=list)
     values: list[float] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: int | str, params: dict[int | str, float]) -> "State":
-        super().__init__(nid)
-        obj = cls()
+    def new(cls, nid: int | str, params: dict[int | str, float]) -> State:
+        obj = cls(nid)
 
         for key, val in params.items():
             if isinstance(key, str):

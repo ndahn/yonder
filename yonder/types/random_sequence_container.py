@@ -1,30 +1,11 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
-from field_properties import field_property
 
 from .structure import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle
+from .base_types import NodeBaseParams, Children, PropBundle, Playlist
 from yonder.enums import PropID, RandomMode
 from .mixins import PropertyMixin
-
-
-@dataclass
-class PlaylistItem:
-    play_id: int
-    weight: int = 50000
-
-    def get_references(self) -> list[tuple[str, int]]:
-        return [("play_id", self.play_id)]
-
-
-@dataclass
-class Playlist:
-    count: int = field_property(init=False, raw=True)
-    items: list[PlaylistItem] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.items)
 
 
 @dataclass
@@ -55,9 +36,9 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
         random_mode: RandomMode = RandomMode.Random,
         props: dict[PropID, float] = None,
         parent: int = 0,
-    ) -> "RandomSequenceContainer":
-        super().__init__(nid)
+    ) -> RandomSequenceContainer:
         obj = cls(
+            nid,
             avoid_repeat_count=avoid_repeat_count,
             loop_count=loop_count,
             random_mode=random_mode.value,

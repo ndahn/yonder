@@ -1,6 +1,9 @@
-from typing import Any, Type, get_type_hints, get_origin, get_args
-from dataclasses import is_dataclass, fields
+from __future__ import annotations
+import sys
+from typing import Any, Type, get_origin, get_args
+from dataclasses import is_dataclass, fields, InitVar
 import keyword
+import inspect
 from enum import Enum, StrEnum
 
 
@@ -52,16 +55,25 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
     if not is_dataclass(target_type):
         raise TypeError(f"{target_type} is not a dataclass and has no from_dict method")
 
-    hints = get_type_hints(target_type)
+    hints = _get_hints(target_type)
     kwargs = {}
-    for f in fields(target_type):
-        if not f.init:
-            continue
 
+    if "asda__init__" in target_type.__dict__:
+        sig = inspect.signature(target_type.__init__)
+        # Skip self, *args and **kwargs
+        target_fields = [
+            name for name, param in sig.parameters.items()
+            if name != "self"
+            and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
+        ]
+    else:
+        target_fields = [f.name for f in fields(target_type)]
+
+    for f in target_fields:
         # Some words like "from" or "except" are valid in wwise but reserved in python
-        value = data[f.name.rstrip("_")]
-        field_type = hints[f.name]
-        kwargs[f.name] = _parse_value(field_type, value)
+        value = data[f.rstrip("_")]
+        field_type = hints[f]
+        kwargs[f] = _parse_value(field_type, value)
 
     return target_type(**kwargs)
 
@@ -69,6 +81,9 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
 def _parse_value(target_type: Type, value: Any) -> Any:
     origin = get_origin(target_type) or target_type
     args = get_args(target_type) or [Any, Any]
+
+    if isinstance(origin, InitVar):
+        origin = origin.type
 
     if issubclass(origin, Enum):
         if isinstance(value, str):
@@ -100,3 +115,21 @@ def _parse_value(target_type: Type, value: Any) -> Any:
             return _deserialize_fields(origin, value)
 
     return value
+
+
+def _get_hints(target_type: Type) -> dict[str, Any]:
+    hints = {}
+    for cls in reversed(target_type.__mro__):
+        if cls is object:
+            continue
+        ann = cls.__dict__.get("__annotations__", {})
+        module = sys.modules.get(cls.__module__, None)
+        globalns = getattr(module, "__dict__", {}) if module else {}
+        for name, hint in ann.items():
+            if isinstance(hint, str):
+                try:
+                    hint = eval(hint, globalns)
+                except NameError:
+                    pass  # leave unresolvable hints as strings
+            hints[name] = hint
+    return hints

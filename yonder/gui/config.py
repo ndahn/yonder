@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Generator, TYPE_CHECKING
 import sys
 import yaml
@@ -94,7 +95,9 @@ class Config:
             else:
                 global_hash_dict.update(load_lookup_table(path))
 
-    def find_external_sounds(self, source_id: int, bnk: "Soundbank" = None) -> Generator[Path, None, None]:
+    def find_external_sounds(
+        self, source_id: int, bnk: Soundbank = None
+    ) -> Generator[Path, None, None]:
         bnkdirs = [Path(p) for p in self.bankdirs]
         if bnk:
             # Soundbanks unpacked in the game folder

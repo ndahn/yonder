@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Generator, Iterator
 from pathlib import Path
 from random import randrange
@@ -33,7 +34,7 @@ class Soundbank:
     @classmethod
     def create_empty_soundbank(
         cls, bnk_dir: Path | str, name: str, save: bool = True
-    ) -> "Soundbank":
+    ) -> Soundbank:
         if not bnk_dir.is_dir():
             raise ValueError(f"{bnk_dir} is not a directory")
 
@@ -64,7 +65,7 @@ class Soundbank:
                 table[obj.name] = idx
 
     @classmethod
-    def from_file(cls, bnk_path: Path | str) -> "Soundbank":
+    def from_file(cls, bnk_path: Path | str) -> Soundbank:
         bnk_path: Path = Path(bnk_path).absolute()
         if bnk_path.is_dir():
             json_path = bnk_path / "soundbank.json"
