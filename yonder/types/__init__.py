@@ -17,7 +17,7 @@ from .music_track import MusicTrack
 from .random_sequence_container import RandomSequenceContainer
 from .sound import Sound
 from .state import State
-from .structure import NODE_TYPE_MAP
+from .sections import NODE_TYPE_MAP
 from .switch_container import SwitchContainer
 from .time_modulator import TimeModulator
 from .soundbank import Soundbank

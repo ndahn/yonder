@@ -10,10 +10,11 @@ import networkx as nx
 from yonder.hash import calc_hash
 from yonder.util import logger, resource_data
 from yonder.query import query_nodes
-
-from .structure import Section, BKHDSection, HIRCSection, HIRCNode
-from .serialization import serialize, deserialize
 from yonder.enums import SourceType
+
+from .sections import Section, BKHDSection, HIRCSection
+from .hirc_node import HIRCNode
+from .serialization import serialize, deserialize
 from .action import ActionType
 
 from . import (
