@@ -25,7 +25,7 @@ from yonder.enums import (
     GroupType,
     ClipAutomationType,
     CurveInterpolation,
-    MarkerIds,
+    MarkerId,
 )
 from yonder.util import logger
 
@@ -208,8 +208,8 @@ def create_boss_bgm(
                 intro_seg.duration = intro_track.playlist[0].source_duration
 
                 # Trim track to loop_markers marker
-                intro_seg.set_marker(MarkerIds.LoopStart.value, 0.0)
-                intro_seg.set_marker(MarkerIds.LoopEnd.value, main_loop_start)
+                intro_seg.set_marker(MarkerId.LoopStart.value, 0.0)
+                intro_seg.set_marker(MarkerId.LoopEnd.value, main_loop_start)
                 intro_track.set_trims(0.0, main_loop_start - 1000)
 
                 # Needs a root playlist item first
@@ -271,10 +271,10 @@ def create_boss_bgm(
             loop_start = 0.0
             loop_end = track_duration_ms
 
-        phase_seg.set_marker(MarkerIds.LoopStart.value, loop_start)
+        phase_seg.set_marker(MarkerId.LoopStart.value, loop_start)
         # According to Shion this is probably just for testing
         phase_seg.set_marker("LoopCheck", loop_end - 3000)
-        phase_seg.set_marker(MarkerIds.LoopEnd.value, loop_end)
+        phase_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
         # Don't trim the loop track!
 
         # Add the segment to the music container's playlist

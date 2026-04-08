@@ -54,7 +54,7 @@ def add_widget_table(
     def add_row(val: _T, idx: int) -> None:
         with dpg.table_row(parent=tag):
             create_row(val, idx)
-            dpg.add_button(label="-", callback=on_remove_clicked, user_data=idx)
+            dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
 
     def add_footer() -> None:
         with dpg.table_row(parent=tag):

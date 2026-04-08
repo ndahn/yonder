@@ -37,7 +37,7 @@ from yonder.enums import (
     ClipAutomationType,
     PropID,
     DecisionTreeMode,
-    MarkerIds
+    MarkerId,
 )
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
@@ -611,22 +611,25 @@ def _create_attributes_music_segment(
         on_node_changed(base_tag, node, user_data)
 
     def on_marker_added(
-        sender: str, info: tuple[int, list[MusicMarkerWwise], list[MusicMarkerWwise]], cb_user_data: Any
+        sender: str,
+        info: tuple[int, list[MusicMarkerWwise], list[MusicMarkerWwise]],
+        cb_user_data: Any,
     ) -> None:
         marker = info[1][0]
         node.set_marker(marker.id, marker.position)
         on_node_changed(base_tag, node, user_data)
 
     def on_marker_removed(
-        sender: str, info: tuple[int, MusicMarkerWwise, list[MusicMarkerWwise]], cb_user_data: Any
+        sender: str,
+        info: tuple[int, MusicMarkerWwise, list[MusicMarkerWwise]],
+        cb_user_data: Any,
     ) -> None:
         marker = info[1]
         node.remove_marker(marker.id)
         on_node_changed(base_tag, node, user_data)
 
     def new_marker() -> MusicMarkerWwise:
-        mid = node.set_marker(f"m{len(node.markers)}", 0.0)
-        return [node.get_marker(mid)]
+        return node.set_marker(f"m{len(node.markers)}", 0.0)
 
     def create_row(marker: MusicMarkerWwise, idx: int) -> None:
         with dpg.group(horizontal=True):
@@ -651,8 +654,8 @@ def _create_attributes_music_segment(
         sender: str, loop_info: tuple[float, float, bool], user_data: Any
     ) -> None:
         loop_start, loop_end, loop_enabled = loop_info
-        node.set_marker(MarkerIds.LoopStart.value, loop_start)
-        node.set_marker(MarkerIds.LoopEnd.value, loop_end)
+        node.set_marker(MarkerId.LoopStart, loop_start)
+        node.set_marker(MarkerId.LoopEnd, loop_end)
         # TODO not sure how to enable/disable looping
 
     def edit_markers_on_track() -> None:
@@ -671,17 +674,15 @@ def _create_attributes_music_segment(
         else:
             path = get_sound_path(bnk, track.sources[0])
 
-        loop_start_marker = node.get_marker(MarkerIds.LoopStart.value)
-        loop_start = loop_start_marker.position if loop_start_marker else 1.0
-        loop_end_marker = node.get_marker(MarkerIds.LoopEnd.value)
-        loop_end = loop_end_marker.position if loop_end_marker else -1.0
+        loop_start = node.get_marker_pos(MarkerId.LoopStart, 1000.0)
+        loop_end = node.get_marker_pos(MarkerId.LoopEnd, -1000.0)
 
         edit_markers_dialog(
             path,
             accept_on_okay=True,
             loop_markers_enabled=True,
-            loop_start = loop_start,
-            loop_end = loop_end,
+            loop_start=loop_start,
+            loop_end=loop_end,
             on_loop_changed=on_loop_changed,
         )
 
@@ -745,12 +746,12 @@ def _create_attributes_music_track(
     ) -> None:
         # TODO not sure where to enable or disable looping
         loop_start, loop_end, loop_enabled = loop_info
-        segment.set_marker(MusicSegment.loop_start_id, loop_start * 1000.0)
-        segment.set_marker(MusicSegment.loop_end_id, loop_end * 1000.0)
+        segment.set_marker(MarkerId.LoopStart, loop_start)
+        segment.set_marker(MarkerId.LoopEnd, loop_end)
         on_node_changed(base_tag, node, user_data)
 
     def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
-        node.set_trims(trims[0] * 1000, trims[1] * 1000, idx)
+        node.set_trims(trims[0], trims[1], idx)
         on_node_changed(base_tag, node, user_data)
 
     def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:
@@ -767,11 +768,11 @@ def _create_attributes_music_track(
     markers_enabled = bool(isinstance(segment, MusicSegment))
 
     if markers_enabled:
-        loop_start = segment.get_marker(MusicSegment.loop_start_id)["position"] / 1000.0
-        loop_end = segment.get_marker(MusicSegment.loop_end_id)["position"] / 1000.0
+        loop_start = segment.get_marker_pos(MarkerId.LoopStart)
+        loop_end = segment.get_marker_pos(MarkerId.LoopEnd)
     else:
-        loop_start = 1.0
-        loop_end = -1.0
+        loop_start = 1000.0
+        loop_end = -1000.0
 
     if len(node.sources) > 1:
         dpg.add_text(
@@ -783,12 +784,9 @@ def _create_attributes_music_track(
     # with loop info if that happens, but so far I didn't se that
     with dpg.group():
         for i, source in enumerate(node.sources):
-            if source["source_type"] == "Embedded":
-                path = node.get_source_path(bnk, i)
-            else:
-                path = get_sound_path(bnk, source)
-
+            path = get_sound_path(bnk, source)
             trims = node.get_trims(i)
+
             add_wav_player(
                 path,
                 on_file_changed=on_source_changed,
@@ -798,8 +796,8 @@ def _create_attributes_music_track(
                 loop_start=loop_start,
                 loop_end=loop_end,
                 trim_enabled=True,
-                begin_trim=trims[0] / 1000.0,
-                end_trim=trims[1] / 1000.0,
+                begin_trim=trims[0],
+                end_trim=trims[1],
                 on_trim_marker_changed=set_trims,
                 user_data=i,
             )
@@ -835,15 +833,11 @@ def _create_attributes_sound(
 
         copy_wems_dialog(bnk, wem_path, sound.source_type)
 
-        sound.source_id = int(wem_path.stem)
-        sound.media_size = wem_path.stat().st_size
+        sound.set_source_from_wem(wem_path)
         dpg.set_value(sender, wem_path.stem)
         on_node_changed(base_tag, sound, user_data)
 
-    if node.source_type == "Embedded":
-        path = node.get_source_path(bnk)
-    else:
-        path = get_sound_path(bnk, node.bank_source_data)
+    path = get_sound_path(bnk, node.bank_source_data)
 
     with dpg.group():
         add_wav_player(path, on_file_changed=on_filepath_selected)

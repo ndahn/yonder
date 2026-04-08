@@ -426,6 +426,7 @@ def add_wav_player(
             user_markers_enabled=user_markers_enabled,
             user_markers=user_markers,
             on_user_marker_changed=on_user_marker_edit,
+            markers_in_ms=False,  # already converted to seconds
         )
 
     # RENDERING
@@ -729,7 +730,7 @@ def add_wav_player(
                     callback=on_play_pause,
                 )
 
-                dpg.add_spacer(width=10)
+                dpg.add_text("|")
                 if loop_markers_enabled:
                     dpg.add_checkbox(
                         label="Loop",
@@ -744,7 +745,7 @@ def add_wav_player(
                     )
 
                 if loop_markers_enabled or user_markers_enabled or trim_enabled:
-                    dpg.add_spacer(width=10)
+                    dpg.add_text("|")
                     if edit_markers_inplace:
                         dpg.add_button(
                             label="Markers",
@@ -757,8 +758,8 @@ def add_wav_player(
                             label="Edit",
                             callback=open_edit_markers_dialog,
                         )
+                    dpg.add_text("|")
 
-                dpg.add_spacer(width=10)
                 dpg.add_text("0.000 / 0.000", tag=f"{tag}_progress_value")
 
     with dpg.window(

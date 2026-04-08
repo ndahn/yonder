@@ -4,9 +4,9 @@ from typing import ClassVar, Any
 from field_properties import field_property
 
 from yonder.hash import calc_hash
+from yonder.enums import PropID, MarkerId
 from .hirc_node import HIRCNode
 from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise
-from yonder.enums import PropID
 from .mixins import PropertyMixin
 
 
@@ -66,13 +66,15 @@ class MusicSegment(PropertyMixin, HIRCNode):
         return len(self.markers)
 
     def set_marker(
-        self, mid: int | str, pos: float, update: bool = True
+        self, mid: int | str | MarkerId, pos: float, update: bool = True
     ) -> MusicMarkerWwise:
         if isinstance(mid, str):
             label = mid
             mid = calc_hash(mid)
         else:
             label = ""
+
+        mid = int(mid)
 
         for marker in self.markers:
             if marker.id == mid:
@@ -93,13 +95,15 @@ class MusicSegment(PropertyMixin, HIRCNode):
 
         return marker
 
-    def get_marker(self, mid: int | str, default: Any = None) -> MusicMarkerWwise:
+    def get_marker_pos(self, mid: int | str | MarkerId, default: float = 0.0) -> float:
         if isinstance(mid, str):
             mid = calc_hash(mid)
 
+        mid = int(mid)
+
         for marker in self.markers:
             if marker.id == mid:
-                return marker
+                return marker.position
 
         return default
 

@@ -405,7 +405,7 @@ class PluginId(IntEnum):
     CrankcaseREVModelPlayer = 0x01A01052
 
 
-class MarkerIds(IntEnum):
+class MarkerId(IntEnum):
     # We don't know the string values of these
     LoopStart = 43573010
     LoopEnd = 1539036744

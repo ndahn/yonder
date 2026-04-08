@@ -150,6 +150,9 @@ class MusicTrack(PropertyMixin, HIRCNode):
         self.clip_items.append(clip)
         return clip
 
+    def get_trims(self, idx: int = 0) -> tuple[float, float]:
+        return (self.playlist[idx].begin_trim_offset, self.playlist[idx].end_trim_offset)
+
     def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
         begin_trim = abs(begin_trim)
         self.playlist[idx].begin_trim_offset = begin_trim

@@ -22,6 +22,7 @@ def edit_markers_dialog(
     begin_trim: float = 0.0,
     end_trim: float = 0.0,
     on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
+    markers_in_ms: bool = True,
     tag: str = None,
     user_data: Any = None,
 ) -> str:
@@ -112,6 +113,7 @@ def edit_markers_dialog(
             begin_trim=begin_trim,
             end_trim=end_trim,
             on_trim_marker_changed=dlg_on_trim_marker_changed,
+            markers_in_ms=markers_in_ms,
             max_points=10000,
             width=-1,
             height=-60,
