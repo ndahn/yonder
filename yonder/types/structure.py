@@ -6,7 +6,7 @@ from copy import deepcopy
 import json
 
 from yonder.hash import calc_hash, lookup_name
-from .rewwise_base_types import (
+from .base_types import (
     IAkPlugin,
     ObsConversionTable,
     StateGroup,
@@ -15,7 +15,7 @@ from .rewwise_base_types import (
     AcousticTexture,
     StateTransition,
 )
-from .rewwise_parse import _serialize_value, _deserialize_fields
+from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
 

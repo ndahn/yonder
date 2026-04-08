@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 from copy import deepcopy
 
 from yonder.enums import CurveInterpolation
-from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
 from yonder.gui.helpers import GraphCurve
 from .draw_curve import draw_curve

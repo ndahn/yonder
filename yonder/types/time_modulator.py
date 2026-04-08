@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import HIRCNode
-from .rewwise_base_types import PropBundle, PropRangedModifiers, InitialRTPC
+from .base_types import PropBundle, PropRangedModifiers, InitialRTPC
 from yonder.enums import PropID
 
 

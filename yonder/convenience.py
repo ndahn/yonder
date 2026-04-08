@@ -12,7 +12,7 @@ from yonder.types import (
     MusicSegment,
     MusicTrack,
 )
-from yonder.types.rewwise_base_types import (
+from yonder.types.base_types import (
     MusicFade,
     RTPCGraphPoint,
     MusicTransitionRule,

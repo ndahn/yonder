@@ -3,7 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.enums import CurveInterpolation
-from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui.helpers import shorten_path, GraphCurve
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
 

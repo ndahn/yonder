@@ -3,7 +3,7 @@ from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
-from yonder.types.rewwise_base_types import MusicTransitionRule
+from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import CurveInterpolation, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style

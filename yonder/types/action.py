@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from yonder.enums import ValueMeaning
-from .rewwise_base_types import PropBundle, PropRangedModifiers
+from .base_types import PropBundle, PropRangedModifiers
 from .structure import HIRCNode
-from .rewwise_parse import _serialize_value, _deserialize_fields
+from .serialization import _serialize_value, _deserialize_fields
 
 
 @dataclass

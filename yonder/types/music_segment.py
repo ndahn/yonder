@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from yonder.hash import calc_hash
 from .structure import HIRCNode
-from .rewwise_base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise
+from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise
 from yonder.enums import PropID
 from .mixins import PropertyMixin
 

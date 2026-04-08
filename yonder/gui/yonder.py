@@ -1,5 +1,6 @@
 from typing import Any, Type
 import sys
+import os
 import logging
 import json
 from copy import deepcopy
@@ -19,7 +20,7 @@ from yonder.types import (
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes, query_help_text
 from yonder.gui.config import Config, load_config
-from yonder.gui.helpers import center_window, shorten_path
+from yonder.gui.helpers import center_window, shorten_path, tmp_dir
 from yonder.gui.widgets import (
     create_attribute_widgets,
     loading_indicator,
@@ -246,6 +247,10 @@ class BanksOfYonder:
                 dpg.add_menu_item(
                     label="Settings",
                     callback=self._open_settings_dialog,
+                )
+                dpg.add_menu_item(
+                    label="Open Temp Dir",
+                    callback=lambda s, a, u: os.startfile(tmp_dir.name),
                 )
                 dpg.add_menu_item(
                     label="About",

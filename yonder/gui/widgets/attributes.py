@@ -22,7 +22,7 @@ from yonder.types import (
     SwitchContainer,
 )
 from yonder.util import logger
-from yonder.types.rewwise_base_types import (
+from yonder.types.base_types import (
     ConversionTable,
     ClipAutomation,
     BankSourceData,
@@ -699,6 +699,7 @@ def _create_attributes_music_segment(
         dpg.add_text("Segment has no tracks", color=style.yellow)
 
 
+# FIXME
 def _create_attributes_music_track(
     bnk: Soundbank,
     node: MusicTrack,
@@ -716,7 +717,8 @@ def _create_attributes_music_track(
         else:
             wem_path = filepath
 
-        copy_wems_dialog(bnk, wem_path, source["source_type"])
+        source = node.sources[i]
+        copy_wems_dialog(bnk, wem_path, source.source_type)
 
         source_details = node.sources[source_index]["media_information"]
         source_details["source_id"] = int(wem_path.stem)

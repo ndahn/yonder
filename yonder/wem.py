@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 def import_wems(bnk: "Soundbank", wems: list[Path]) -> None:
     from yonder import HIRCNode
-    from yonder.types.rewwise_base_types import MediaInformation
+    from yonder.types.base_types import MediaInformation
 
     for wem in wems:
         if not wem.name.endswith(".wem"):

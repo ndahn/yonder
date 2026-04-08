@@ -4,7 +4,7 @@ from pathlib import Path
 
 from yonder.wem import get_wem_metadata
 from .structure import HIRCNode
-from .rewwise_base_types import (
+from .base_types import (
     NodeBaseParams,
     BankSourceData,
     PropBundle,

@@ -4,7 +4,7 @@ from field_properties import field_property
 
 from yonder.hash import global_id_generator
 from .structure import HIRCNode
-from .rewwise_base_types import (
+from .base_types import (
     MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
     PropBundle,

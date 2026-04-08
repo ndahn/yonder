@@ -11,7 +11,7 @@ from yonder.util import logger, resource_data
 from yonder.query import query_nodes
 
 from .structure import Section, BKHDSection, HIRCSection, HIRCNode
-from .rewwise_parse import serialize, deserialize
+from .serialization import serialize, deserialize
 from yonder.enums import SourceType
 from .action import ActionType
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .structure import HIRCNode
-from .rewwise_base_types import BusInitialValues, DuckInfo, PropBundle
+from .base_types import BusInitialValues, DuckInfo, PropBundle
 from yonder.enums import PropID
 from .mixins import PropertyMixin
 

@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
-from yonder.types.rewwise_base_types import (
+from yonder.types.base_types import (
     MusicTransitionRule,
     MusicTransSrcRule,
     MusicTransDstRule,

@@ -6,7 +6,7 @@ from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder.util import logger
-from yonder.types.rewwise_base_types import RTPCGraphPoint
+from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import CurveInterpolation
 
 

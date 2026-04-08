@@ -1,4 +1,4 @@
-from yonder.types.rewwise_base_types import PropBundle
+from yonder.types.base_types import PropBundle
 from yonder.enums import PropID
 
 

@@ -3,7 +3,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from .structure import HIRCNode
-from .rewwise_base_types import InitialRTPC, ConversionTable
+from .base_types import InitialRTPC, ConversionTable
 from yonder.enums import CurveParameters
 
 
