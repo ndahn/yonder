@@ -245,12 +245,12 @@ class BanksOfYonder:
                         callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
                     )
                 dpg.add_menu_item(
-                    label="Settings",
-                    callback=self._open_settings_dialog,
-                )
-                dpg.add_menu_item(
                     label="Open Temp Dir",
                     callback=lambda s, a, u: os.startfile(tmp_dir.name),
+                )
+                dpg.add_menu_item(
+                    label="Settings",
+                    callback=self._open_settings_dialog,
                 )
                 dpg.add_menu_item(
                     label="About",
