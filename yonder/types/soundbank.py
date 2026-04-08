@@ -73,7 +73,7 @@ class Soundbank:
         else:
             json_path = bnk_path
 
-        with json_path.open() as f:
+        with json_path.open(encoding="utf-8") as f:
             bnk_data = json.load(f)
 
         return cls.from_dict(json_path, bnk_data)
