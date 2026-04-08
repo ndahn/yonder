@@ -4,7 +4,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from yonder.hash import calc_hash
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .base_types import (
     MusicTransNodeParams,
     GameSync,

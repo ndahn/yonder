@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .base_types import NodeBaseParams, Children, PropBundle, Playlist
 from yonder.enums import PropID, RandomMode
 from .mixins import PropertyMixin

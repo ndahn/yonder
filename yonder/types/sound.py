@@ -4,7 +4,7 @@ from typing import ClassVar
 from pathlib import Path
 
 from yonder.wem import get_wem_metadata
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     BankSourceData,

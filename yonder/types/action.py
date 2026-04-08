@@ -6,7 +6,7 @@ from enum import Enum
 from yonder.enums import ValueMeaning
 from yonder.util import logger
 from .base_types import PropBundle, PropRangedModifiers
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .serialization import _serialize_value, _deserialize_fields
 
 

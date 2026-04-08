@@ -8,6 +8,7 @@ from .dialog_event import DialogueEvent
 from .event import Event
 from .fx_custom import EffectCustom
 from .fx_share_set import EffectShareSet
+from .hirc_node import HIRCNode
 from .layer_container import LayerContainer
 from .music_random_sequence_container import MusicRandomSequenceContainer
 from .music_segment import MusicSegment
@@ -16,7 +17,7 @@ from .music_track import MusicTrack
 from .random_sequence_container import RandomSequenceContainer
 from .sound import Sound
 from .state import State
-from .structure import HIRCNode, NODE_TYPE_MAP
+from .structure import NODE_TYPE_MAP
 from .switch_container import SwitchContainer
 from .time_modulator import TimeModulator
 from .soundbank import Soundbank

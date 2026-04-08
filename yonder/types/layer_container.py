@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from field_properties import field_property
 
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -13,7 +13,6 @@ from .base_types import (
 )
 from yonder.enums import PropID
 from .mixins import PropertyMixin
-
 
 
 @dataclass

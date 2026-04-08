@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 from .base_types import BusInitialValues, DuckInfo, PropBundle
 from yonder.enums import PropID
 from .mixins import PropertyMixin
@@ -26,7 +26,7 @@ class AuxiliaryBus(PropertyMixin, HIRCNode):
             BusInitialValues(
                 override_bus_id=override_bus_id,
                 ducks=ducks or [],
-            )
+            ),
         )
 
         if props:

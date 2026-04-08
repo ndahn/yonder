@@ -1,9 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 from field_properties import field_property
 
-from .structure import HIRCNode, HIRCNodeHeader, ObjectId
+from .hirc_node import HIRCNode
 from .action import ActionType
 
 if TYPE_CHECKING:

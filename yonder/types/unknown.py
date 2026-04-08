@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from .structure import HIRCNode
+from .hirc_node import HIRCNode
 
 
 @dataclass
