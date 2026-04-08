@@ -68,8 +68,8 @@ class BanksOfYonder:
         self.max_list_nodes = 500
         self.language: Localization = English()
         self.bnk: Soundbank = None
-        self.event_map: dict[int, Event] = {}
-        self.globals_map: dict[int, Event] = {}
+        self.event_map: dict[int, str] = {}
+        self.globals_map: dict[int, str] = {}
         self._selected_root: str = None
         self._selected_node: HIRCNode = None
         self._selected_node_backup: dict = None
@@ -289,8 +289,8 @@ class BanksOfYonder:
                 tag=f"{tag}_events_window",
             ):
                 with dpg.child_window(border=True, resizable_y=True, height=500):
-                    with dpg.tab_bar():
-                        with dpg.tab(label="Events"):
+                    with dpg.tab_bar(tag=f"{tag}_tab_bar"):
+                        with dpg.tab(label="Events", tag=f"{tag}_tab_events"):
                             with dpg.group(horizontal=True):
                                 dpg.add_input_text(
                                     hint="Search on enter",
@@ -318,7 +318,8 @@ class BanksOfYonder:
                                 tag=f"{tag}_events_table",
                             ):
                                 dpg.add_table_column(label="Node", width_stretch=True)
-                        with dpg.tab(label="Globals"):
+
+                        with dpg.tab(label="Globals", tag=f"{tag}_tab_globals"):
                             dpg.add_input_text(
                                 hint="Search on enter",
                                 width=-1,
@@ -338,6 +339,12 @@ class BanksOfYonder:
                                 tag=f"{tag}_globals_table",
                             ):
                                 dpg.add_table_column(label="Node", width_stretch=True)
+
+                        with dpg.tab(label="Sections", tag=f"{tag}_tab_sections"):
+                            # TODO populate
+                            dpg.add_text("TODO", color=style.pink)
+                            pass
+
                 with dpg.child_window(autosize_y=True, border=True):
                     dpg.add_text("Pinned Nodes")
                     dpg.add_separator()
@@ -663,7 +670,7 @@ class BanksOfYonder:
             )
             dpg.add_selectable(
                 label="Jump To",
-                callback=lambda s, a, u: self.jump_to_event_node(u),
+                callback=lambda s, a, u: self.jump_to_node(u),
                 user_data=node_id,
             )
 
@@ -825,7 +832,7 @@ class BanksOfYonder:
         finally:
             dpg.delete_item(loading)
 
-    def _create_root_entry(self, node: HIRCNode, table: str) -> None:
+    def _create_root_entry(self, node: HIRCNode, table: str) -> str:
         bnk = self.bnk
 
         def register_context_menu(tag: str, node: HIRCNode) -> None:
@@ -887,6 +894,8 @@ class BanksOfYonder:
             user_data=node,
         )
         register_context_menu(root_row.selectable, node)
+        
+        return root_row.row
 
     def regenerate(self) -> None:
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
@@ -896,7 +905,7 @@ class BanksOfYonder:
         self._regenerate_globals_list()
 
         if self._selected_node:
-            self.jump_to_event_node(self._selected_node)
+            self.jump_to_node(self._selected_node)
 
     def _regenerate_events_list(self) -> None:
         dpg.delete_item(f"{self.tag}_events_table", children_only=True, slot=1)
@@ -980,6 +989,7 @@ class BanksOfYonder:
             with table_tree_node(
                 node_type,
                 table=f"{self.tag}_globals_table",
+                tag=f"{self.tag}_globals_{node_type}",
                 on_click_callback=self._on_node_selected,
             ):
                 for node in nodes:
@@ -1057,40 +1067,64 @@ class BanksOfYonder:
                 self.bnk,
                 node,
                 lambda s, a, u: self.update_json_panel(),
-                lambda s, a, u: self.jump_to_event_node(a),
+                lambda s, a, u: self.jump_to_node(a),
                 tag=f"{self.tag}_attributes_",
                 parent=f"{self.tag}_attributes",
             )
 
-    def jump_to_event_node(self, node: int | HIRCNode) -> None:
+    def jump_to_node(self, node: int | HIRCNode) -> None:
+        if node in (0, None):
+            return
+        
         if isinstance(node, int):
             node_id = node
             node = self.bnk[node_id]
         else:
             node_id = node.id
 
-        if not isinstance(node, Event):
-            for evt, sub in self.bnk.find_event_subgraphs_for(node):
-                if not self._selected_node or self._selected_node.id in sub:
-                    break
-            else:
-                logger.error(f"Could not find an event subgraph containing node {node}")
-                return
+        if node_id in self.event_map:
+            table = f"{self.tag}_events_table"
 
-            path = nx.shortest_path(sub, evt.id, node_id)
+            # Switch to events tab
+            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_events")
+            
+            if not isinstance(node, Event):
+                for evt, sub in self.bnk.find_event_subgraphs_for(node):
+                    if not self._selected_node or self._selected_node.id in sub:
+                        break
+                else:
+                    logger.error(f"Could not find an event subgraph containing node {node}")
+                    return
 
-            for n in path:
-                if n == node_id:
-                    break
+                path = nx.shortest_path(sub, evt.id, node_id)
 
-                row = f"{self.tag}_node_{n}"
-                set_foldable_row_status(row, True)
+                # Unfold the structure
+                for n in path:
+                    if n == node_id:
+                        break
 
-            dpg.split_frame()
+                    row = f"{self.tag}_node_{n}"
+                    set_foldable_row_status(row, True)
 
-        # TODO switch to globals tab if not an event node descendant
+                dpg.split_frame()
+        
+        elif node_id in self.globals_map:
+            table = f"{self.tag}_globals_table"
+
+            # Switch to globals tab
+            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_globals")
+            
+            # Unfold the category
+            # FIXME: make sure the node row actually exists despite count limits!
+            row = f"{self.tag}_globals_{node.type_name}"
+            set_foldable_row_status(row, True)
+        
+        else:
+            logger.warning(f"Could not find node {node}")
+            return
+
         self.select_node(node)
-        self._scroll_to_item(f"{self.tag}_events_table", node)
+        self._scroll_to_item(table, node)
 
     def _scroll_to_item(self, table: str, node: int | HIRCNode) -> None:
         node_id = node.id if isinstance(node, HIRCNode) else node
@@ -1306,7 +1340,7 @@ class BanksOfYonder:
             sender: str, node: int | HIRCNode, user_data: Any
         ) -> None:
             if node in self.bnk:
-                self.jump_to_event_node(node)
+                self.jump_to_node(node)
 
         with dpg.window(
             label=f"{node}",
@@ -1345,7 +1379,7 @@ class BanksOfYonder:
             self.add_pinned_object(play_evt)
             self.add_pinned_object(stop_evt)
             self.regenerate()
-            self.jump_to_event_node(play_evt)
+            self.jump_to_node(play_evt)
 
         create_simple_sound_dialog(self.bnk, on_sound_created, tag=tag)
 
@@ -1364,7 +1398,7 @@ class BanksOfYonder:
                 f"Added new boss track for {bgm_enemy_type}, branch starting at {nodes[0]}"
             )
             self.add_pinned_object(nodes[0])
-            self.jump_to_event_node(nodes[0])
+            self.jump_to_node(nodes[0])
 
         new_boss_track_dialog(self.bnk, on_boss_track_created, tag=tag)
 

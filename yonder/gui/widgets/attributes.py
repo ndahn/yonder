@@ -57,7 +57,7 @@ def create_attribute_widgets(
     bnk: Soundbank,
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
-    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, int | HIRCNode, Any], None],
     *,
     tag: str = 0,
     parent: str = 0,
@@ -93,6 +93,11 @@ def create_attribute_widgets(
                 width=-300,
                 tag=f"{tag}_hash",
             )
+
+            if hasattr(node, "parent"):
+                with dpg.group(horizontal=True):
+                    dpg.add_text("Parent: ")
+                    add_node_link(bnk.get(node.parent, node.parent), on_node_selected)
 
             if hasattr(node, "properties"):
                 add_node_properties(
@@ -153,20 +158,26 @@ def add_node_properties(
 
 
 def add_node_link(
-    node: HIRCNode,
+    target: int | HIRCNode,
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
+    label: str = None,
     tag: str = 0,
     user_data: Any = None,
 ) -> str:
     if not tag:
         tag = dpg.generate_uuid()
 
+    if isinstance(target, HIRCNode):
+        if label is None:
+            label = target.name
+        target = target.id
+
     dpg.add_button(
-        label=str(node),
+        label=label or f"#{target}",
         small=True,
         callback=lambda s, a, u: on_node_selected(tag, u, user_data),
-        user_data=node,
+        user_data=target,
         tag=tag,
     )
     dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
