@@ -484,13 +484,13 @@ class Soundbank:
             nodes.sort(key=lambda n: f"{n.type_name} {n.id:010d}")
             objects.extend(n for n in nodes)
 
-        # Actions are usually placed immediately before their events, but this way
-        # is both easier and more reliable
-        events.sort(key=lambda n: n.id)
-        objects.extend(events)
-
+        # Actions are usually interleaved with their events, but this way
+        # is both easier and more reliable        
         actions.sort(key=lambda n: n.id)
         objects.extend(actions)
+
+        events.sort(key=lambda n: n.id)
+        objects.extend(events)
 
         self.hirc.objects = objects
         logger.info(f"Solved structure for {len(g)} nodes ({len(events)} events)")
