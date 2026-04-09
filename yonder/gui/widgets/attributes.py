@@ -753,7 +753,24 @@ def _create_attributes_music_track(
         node.set_trims(trims[0], trims[1], idx)
         on_node_changed(base_tag, node, user_data)
 
-    def on_clips_changed(sender: str, curves: list[GraphCurve], user_data: Any) -> None:
+    def apply_curves(curves: list[GraphCurve]) -> None:
+        for curve in curves:
+            auto_type = ClipAutomationType[curve.curve_type]
+            for player in players:
+                if auto_type == ClipAutomationType.Volume:
+                    player.set_volume(curve)
+                elif auto_type == ClipAutomationType.LPF:
+                    player.set_lowpass(curve)
+                elif auto_type == ClipAutomationType.HPF:
+                    player.set_highpass(curve)
+                elif auto_type == ClipAutomationType.FadeIn:
+                    player.set_fadein(curve)
+                elif auto_type == ClipAutomationType.FadeOut:
+                    player.set_fadeout(curve)
+                else:
+                    logger.warning(f"Unknown ClipAutomationType {auto_type}")
+
+    def on_clips_changed(sender: str, curves: list[GraphCurve], cb_user_data: Any) -> None:
         node.clear_clips()
         for idx, curve in enumerate(curves):
             auto_type = ClipAutomationType[curve.curve_type]
@@ -761,10 +778,12 @@ def _create_attributes_music_track(
                 ClipAutomation(idx, auto_type, graph_points=curve.points)
             )
 
+        apply_curves(curves)
         on_node_changed(base_tag, node, user_data)
 
     segment: MusicSegment = bnk.get(node.parent)
     markers_enabled = bool(isinstance(segment, MusicSegment))
+    players: list[add_wav_player] = []
 
     if markers_enabled:
         loop_start = segment.get_marker_pos(MarkerId.LoopStart)
@@ -780,13 +799,14 @@ def _create_attributes_music_track(
         )
 
     # Not sure why music tracks can have several sources or what to do
-    # with loop info if that happens, but so far I didn't se that
+    # with loop info if that happens, but so far I didn't see that. 
+    # TODO Otherwise we need a player table here.
     with dpg.group():
         for i, source in enumerate(node.sources):
             path = get_sound_path(bnk, source)
             trims = node.get_trims(i)
 
-            add_wav_player(
+            player = add_wav_player(
                 path,
                 on_file_changed=on_source_changed,
                 loop_markers_enabled=markers_enabled,
@@ -800,6 +820,7 @@ def _create_attributes_music_track(
                 on_trim_marker_changed=set_trims,
                 user_data=i,
             )
+            players.append(player)
 
         add_curves_table(
             [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items],
@@ -812,6 +833,8 @@ def _create_attributes_music_track(
         dpg.add_spacer(height=3)
         dpg.add_separator()
         dpg.add_spacer(height=3)
+
+    apply_curves([GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items])
 
 
 def _create_attributes_sound(
