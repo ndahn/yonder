@@ -14,7 +14,7 @@ from yonder.gui.helpers import tmp_dir, shorten_path
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 
-class WavPlayerWidget:
+class add_wav_player:
     def __init__(
         self,
         initial_file: Path,
@@ -33,7 +33,9 @@ class WavPlayerWidget:
         on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
         user_markers_enabled: bool = False,
         user_markers: dict[int | str, float] = None,
-        on_user_markers_changed: Callable[[str, dict[int | str, float], Any], None] = None,
+        on_user_markers_changed: Callable[
+            [str, dict[int | str, float], Any], None
+        ] = None,
         edit_markers_inplace: bool = False,
         max_points: int = 5000,
         markers_in_ms: bool = True,
@@ -80,7 +82,7 @@ class WavPlayerWidget:
                     mid = calc_hash(mid)
                 else:
                     label = lookup_name(mid, f"#{mid}")
-                
+
                 self.user_markers[mid] = pos
                 self.user_marker_labels[mid] = label
 
@@ -159,7 +161,11 @@ class WavPlayerWidget:
             if self.trim_enabled and use_trims:
                 trims = self.get_trims()
                 begin = self._get_valid_pos(trims[0], False)
-                end = self.player.duration if trims[1] == 0.0 else self._get_valid_pos(trims[1], False)
+                end = (
+                    self.player.duration
+                    if trims[1] == 0.0
+                    else self._get_valid_pos(trims[1], False)
+                )
                 min_pos = max(0.0, min(begin, self.player.duration))
                 max_pos = min(self.player.duration, max(0.0, end))
             else:
@@ -212,7 +218,9 @@ class WavPlayerWidget:
         dpg.set_value(self._t("progress_axis"), pos)
 
         if self.player:
-            dpg.set_value(self._t("progress_value"), f"{pos:.03f} / {self.player.duration:.3f}")
+            dpg.set_value(
+                self._t("progress_value"), f"{pos:.03f} / {self.player.duration:.3f}"
+            )
             self.player.seek(pos)
 
     def _progress_update(self) -> None:
@@ -252,7 +260,9 @@ class WavPlayerWidget:
 
         dpg.set_value(self._t("progress"), pos)
         dpg.set_value(self._t("progress_axis"), pos)
-        dpg.set_value(self._t("progress_value"), f"{pos:.03f} / {self.player.duration:.3f}")
+        dpg.set_value(
+            self._t("progress_value"), f"{pos:.03f} / {self.player.duration:.3f}"
+        )
         dpg.set_frame_callback(dpg.get_frame_count() + 2, self._progress_update)
 
     # -- LOOP MARKERS -------------------------------------------------
@@ -285,7 +295,9 @@ class WavPlayerWidget:
                 loop_start *= 1000
                 loop_end *= 1000
 
-            self.on_loop_changed(self.tag, (loop_start, loop_end, enabled), self.user_data)
+            self.on_loop_changed(
+                self.tag, (loop_start, loop_end, enabled), self.user_data
+            )
 
     def _update_loop_widgets(self) -> None:
         loop_start, loop_end, _ = self.get_loop_state()
@@ -314,7 +326,9 @@ class WavPlayerWidget:
                 loop_start *= 1000
                 loop_end *= 1000
 
-            self.on_loop_changed(self.tag, (loop_start, loop_end, enabled), self.user_data)
+            self.on_loop_changed(
+                self.tag, (loop_start, loop_end, enabled), self.user_data
+            )
 
     # -- TRIMS -------------------------------------------------
 
@@ -344,7 +358,9 @@ class WavPlayerWidget:
                 begin_trim *= 1000
                 end_trim *= 1000
 
-            self.on_trim_marker_changed(self.tag, (begin_trim, end_trim), self.user_data)
+            self.on_trim_marker_changed(
+                self.tag, (begin_trim, end_trim), self.user_data
+            )
 
     def _update_trim_widgets(self) -> None:
         begin_trim, end_trim = self.get_trims()
@@ -379,7 +395,9 @@ class WavPlayerWidget:
                 begin_trim *= 1000
                 end_trim *= 1000
 
-            self.on_trim_marker_changed(self.tag, (begin_trim, end_trim), self.user_data)
+            self.on_trim_marker_changed(
+                self.tag, (begin_trim, end_trim), self.user_data
+            )
 
     # -- USER MARKERS -------------------------------------------------
 
@@ -437,7 +455,9 @@ class WavPlayerWidget:
         self, sender: str, trims: tuple[float, float], user_data: Any
     ) -> None:
         dpg.set_value(self._t("begin_trim"), (-1000, -1, trims[0], 1))
-        dpg.set_value(self._t("end_trim"), (self.player.duration + trims[1], -1, 1000, 1))
+        dpg.set_value(
+            self._t("end_trim"), (self.player.duration + trims[1], -1, 1000, 1)
+        )
         self._on_trim_marker_moved()
 
     def _on_user_marker_edit(
@@ -519,7 +539,9 @@ class WavPlayerWidget:
             except Exception as e:
                 logger.error(f"Error reading file: {e}")
                 dpg.hide_item(self._t("plot_group"))
-                dpg.configure_item(self._t("audio_error"), default_value=str(e), show=True)
+                dpg.configure_item(
+                    self._t("audio_error"), default_value=str(e), show=True
+                )
                 return
 
         dpg.show_item(self._t("plot_group"))
@@ -538,7 +560,9 @@ class WavPlayerWidget:
         # If there are multiple channels we only want the first two (usually FL and FR)
         for i in range(min(self.player.num_channels, 2)):
             signal = samples[:, i].astype(np.float32)
-            t_env, y_env = self._minmax_envelope(signal, time, n_buckets=self.max_points // 2)
+            t_env, y_env = self._minmax_envelope(
+                signal, time, n_buckets=self.max_points // 2
+            )
             y_env = factors[i % 2] * np.abs(y_env)
 
             dpg.add_line_series(
@@ -786,15 +810,23 @@ class WavPlayerWidget:
                         tag=self._t("loop_test"),
                     )
 
-                if self.loop_markers_enabled or self.user_markers_enabled or self.trim_enabled:
+                if (
+                    self.loop_markers_enabled
+                    or self.user_markers_enabled
+                    or self.trim_enabled
+                ):
                     dpg.add_text("|")
                     if self.edit_markers_inplace:
                         dpg.add_button(
                             label="Markers",
-                            callback=lambda s, a, u: dpg.show_item(self._t("markers_popup")),
+                            callback=lambda s, a, u: dpg.show_item(
+                                self._t("markers_popup")
+                            ),
                         )
                     else:
-                        dpg.add_button(label="Edit", callback=self._open_edit_markers_dialog)
+                        dpg.add_button(
+                            label="Edit", callback=self._open_edit_markers_dialog
+                        )
                     dpg.add_text("|")
 
                 dpg.add_text("0.000 / 0.000", tag=self._t("progress_value"))
