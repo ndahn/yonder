@@ -37,6 +37,13 @@ class CurveInterpolation(IntEnum):
     Constant = 0x9
 
 
+class CurveScaling(IntEnum):
+    None_ = 0x0
+    DB = 0x2
+    Log = 0x3
+    DBToLin = 0x4
+
+
 # TODO guessed
 class CurveParameters(IntEnum):
     None_ = -1
@@ -270,13 +277,6 @@ class RtpcType(IntEnum):
     GameParameter = 0x0
     MIDIParameter = 0x1
     Modulator = 0x2
-
-
-class CurveScaling(IntEnum):
-    None_ = 0x0
-    DB = 0x2
-    Log = 0x3
-    DBToLin = 0x4
 
 
 class GroupType(IntEnum):

@@ -23,7 +23,7 @@ class WavPlayer:
         self._lock = threading.Lock()
         self._stream: sd.OutputStream | None = None
         self._playing = False
-        self._fx_volume = 0.0
+        self._fx_volume_rel = 0.0
         self._fx_lowpass = 0.0
         self._fx_highpass = 0.0
 
@@ -45,9 +45,9 @@ class WavPlayer:
             self._cursor += chunk_idx
 
     def _apply_filters(self, chunk: np.ndarray) -> np.ndarray:
-        if self._fx_volume != 0.0:
+        if self._fx_volume_rel != 1.0:
             # dB to linear scale; /20 for amplitude, /10 for power
-            chunk *= 10 ** (self._fx_volume / 20)
+            chunk *= self._fx_volume_rel
 
         if self._fx_lowpass != 0.0 or self._fx_highpass != 0.0:
             # second half of FFT contains mirrored negative frequency terms
@@ -112,15 +112,18 @@ class WavPlayer:
     def _on_finished(self):
         self._playing = False
 
-    def fx_set_volume(self, adjust_db: float) -> None:
+    def fx_set_volume_abs(self, volume_db: float) -> None:
         """Live adjust playback gain. Negative values *increase* volume, positive values decrease it.
 
         Parameters
         ----------
-        adjust_db : float
+        volume_db : float
             How much to adjust the volume in DB.
         """
-        self._fx_volume = adjust_db
+        self._fx_volume_rel = 10 ** (volume_db / 20)
+
+    def fx_set_volume_rel(self, ratio: float) -> None:
+        self._fx_volume_rel = ratio
 
     def fx_set_lowpass(self, threshold_hz: float) -> None:
         """Apply a lowpass filter on the signal during playback.

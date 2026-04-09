@@ -6,10 +6,13 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name
 from yonder.util import logger
-from yonder.gui.config import get_config
+from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
 from yonder.player import WavPlayer
+from yonder.enums import CurveInterpolation
+from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
+from yonder.gui.config import get_config
 from yonder.gui.helpers import tmp_dir, shorten_path
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
@@ -98,6 +101,12 @@ class add_wav_player:
         self.begin_trim = begin_trim
         self.end_trim = end_trim
 
+        self.volume: list[RTPCGraphPoint] = None
+        self.lowpass: list[RTPCGraphPoint] = None
+        self.highpass: list[RTPCGraphPoint] = None
+        self.fadein: list[RTPCGraphPoint] = None
+        self.fadeout: list[RTPCGraphPoint] = None
+
         self._setup_content()
 
         if initial_file:
@@ -109,16 +118,8 @@ class add_wav_player:
 
     # -- PLAYBACK -------------------------------------------------
 
-    def select_file(self) -> None:
-        ret = open_file_dialog(
-            title="Select Audio File",
-            default_file=str(self.audio) if self.audio else None,
-            filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
-        )
-        if not ret:
-            return
-
-        path = Path(ret).absolute()
+    def set_file(self, wav: str | Path) -> None:
+        path = Path(wav).absolute()
         if path == self.audio:
             return
 
@@ -133,6 +134,15 @@ class add_wav_player:
         path_str = shorten_path(path, 40) if self.show_filepath else path.stem
         dpg.set_value(self._t("filepath"), path_str)
         self.regenerate()
+
+    def open_select_wav_dialog(self) -> None:
+        ret = open_file_dialog(
+            title="Select Audio File",
+            default_file=str(self.audio) if self.audio else None,
+            filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
+        )
+        if ret:
+            self.set_file(Path(ret))
 
     def _get_wav_path(self) -> Path:
         if self.audio is None or not self.audio.is_file():
@@ -250,20 +260,109 @@ class add_wav_player:
             elif pos >= loop_start + 3 and pos < loop_end - 3:
                 pos = loop_end - 3.0
                 self.player.seek(pos)
+
         # Use trimming only when not in loop testing mode
         elif self.trim_enabled:
             trims = self.get_trims()
-            if pos < trims[0]:
-                self.player.seek(trims[0])
-            elif pos >= self.player.duration + trims[1]:
-                self.player.seek(trims[0])
+            if pos < trims[0] or pos >= self.player.duration + trims[1]:
+                pos = trims[0]
+                self.player.seek(pos)
+
+        # Apply sfx
+        self.player.fx_set_volume_rel(self.get_volume_at(pos))
+        self.player.fx_set_lowpass(self.get_lowpass_at(pos))
+        self.player.fx_set_highpass(self.get_highpass_at(pos))
 
         dpg.set_value(self._t("progress"), pos)
         dpg.set_value(self._t("progress_axis"), pos)
         dpg.set_value(
             self._t("progress_value"), f"{pos:.03f} / {self.player.duration:.3f}"
         )
+        # TODO update every frame if sfx updates don't seem smooth
         dpg.set_frame_callback(dpg.get_frame_count() + 2, self._progress_update)
+
+    # -- SFX ------------------------------------------------------
+
+    def _interpolate_curve(
+        self, points: list[RTPCGraphPoint], pos: float, default: float = 0.0
+    ) -> float:
+        if not points:
+            return default
+
+        p0 = p1 = None
+        for idx, p in enumerate(points):
+            if p.from_ < pos:
+                p0 = p
+                if idx + 1 < len(points):
+                    p1 = points[idx + 1]
+                break
+
+        if not p0:
+            # Before points[0]: return points[0]
+            return points[0].to
+
+        if not p1:
+            # After points[-1]: return points[-1]
+            return p0.to
+
+        t = (pos - p0.from_) / (p1.from_ - p0.from_)
+        return interpolate(p0.interpolation, t, p0.to, p1.to)
+
+    def get_volume_at(self, pos: float) -> float:
+        vol_db = self._interpolate_curve(self.volume, pos, default=0.0)
+        vol_lin = 10 **(vol_db / 20)
+
+        # TODO Check if this is how wwise actually works
+        # Interpreted as relative strength of the fades, i.e. 1.0 = full effect
+        fadein = self._interpolate_curve(self.fadein, pos, default=1.0)
+        fadeout = 1.0 - self._interpolate_curve(self.fadeout, pos, default=0.0)
+
+        return vol_lin * fadein * fadeout
+
+    def get_lowpass_at(self, pos: float) -> float:
+        return self._interpolate_curve(self.lowpass, pos)
+
+    def get_highpass_at(self, pos: float) -> float:
+        return self._interpolate_curve(self.highpass, pos)
+
+    def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(volume, (float, int)):
+            volume = [RTPCGraphPoint(0.0, volume, CurveInterpolation.Constant)]
+
+        self.volume = volume
+
+    def set_lowpass(self, lowpass: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(lowpass, (float, int)):
+            lowpass = [RTPCGraphPoint(0.0, lowpass, CurveInterpolation.Constant)]
+
+        self.lowpass = lowpass
+
+    def set_highpass(self, highpass: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(highpass, (float, int)):
+            highpass = [RTPCGraphPoint(0.0, highpass, CurveInterpolation.Constant)]
+
+        self.highpass = highpass
+
+    def set_fadein(self, fadein: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(fadein, (float, int)):
+            # Interpret a single value as a duration
+            fadein = [
+                RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Linear),
+                RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+            ]
+
+        self.fadein = fadein
+
+    def set_fadeout(self, fadeout: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(fadeout, (float, int)):
+            # Interpret a single value as a duration
+            duration = self.player.duration if self.player else 100
+            fadeout = [
+                RTPCGraphPoint(duration - fadeout, 0.0, CurveInterpolation.Linear),
+                RTPCGraphPoint(duration, 1.0, CurveInterpolation.Constant),
+            ]
+
+        self.fadeout = fadeout
 
     # -- LOOP MARKERS -------------------------------------------------
 
@@ -609,7 +708,7 @@ class add_wav_player:
                         readonly=True,
                         tag=self._t("filepath"),
                     )
-                    dpg.add_button(label="Browse", callback=self.select_file)
+                    dpg.add_button(label="Browse", callback=self.open_select_wav_dialog)
 
                 if self.label:
                     dpg.add_text(self.label, color=style.pink.mix(style.white))
