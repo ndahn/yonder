@@ -3,7 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
-from yonder.gui.widgets import add_wav_player
+from yonder.gui.widgets import WavPlayerWidget
 
 
 def edit_markers_dialog(
@@ -98,7 +98,7 @@ def edit_markers_dialog(
     ) as window:
         dpg.add_spacer(height=10)
 
-        add_wav_player(
+        WavPlayerWidget(
             sound,
             allow_change_file=False,
             edit_markers_inplace=True,

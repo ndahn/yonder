@@ -47,7 +47,7 @@ from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
-from .wav_player import add_wav_player
+from .wav_player import WavPlayerWidget
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table, add_curves_table
 from .hash_widget import add_hash_widget
@@ -787,7 +787,7 @@ def _create_attributes_music_track(
             path = get_sound_path(bnk, source)
             trims = node.get_trims(i)
 
-            add_wav_player(
+            WavPlayerWidget(
                 path,
                 on_file_changed=on_source_changed,
                 loop_markers_enabled=markers_enabled,
@@ -840,7 +840,7 @@ def _create_attributes_sound(
     path = get_sound_path(bnk, node.bank_source_data)
 
     with dpg.group():
-        add_wav_player(path, on_file_changed=on_filepath_selected)
+        WavPlayerWidget(path, on_file_changed=on_filepath_selected)
 
         dpg.add_spacer(height=3)
         dpg.add_separator()

@@ -166,7 +166,7 @@ def add_player_table(
         tag = dpg.generate_uuid()
 
     from yonder.gui.dialogs.file_dialog import open_file_dialog
-    from .wav_player import add_wav_player
+    from .wav_player import WavPlayerWidget
 
     tracks: list[Path] = list(initial_tracks) if initial_tracks else []
     loop_info: list[tuple[float, float, bool]] = []
@@ -238,7 +238,7 @@ def add_player_table(
 
     def create_row(path: Path, idx: int) -> None:
         with dpg.group(horizontal=True):
-            add_wav_player(
+            WavPlayerWidget(
                 path,
                 label=f" <{get_row_label(idx)}>",
                 on_file_changed=on_path_changed,
