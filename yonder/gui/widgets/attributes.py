@@ -21,7 +21,8 @@ from yonder.types import (
     Sound,
     SwitchContainer,
 )
-from yonder.util import logger
+from yonder.types.action import ActionParams
+from yonder.util import logger, to_typed_dict
 from yonder.types.base_types import (
     ConversionTable,
     ClipAutomation,
@@ -44,7 +45,7 @@ from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
 from .paragraphs import add_paragraphs
-from .generic_input_widget import add_generic_widget
+from .generic_input_widget import add_generic_widget, is_simple_type
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .wav_player import add_wav_player
@@ -255,7 +256,14 @@ def _create_type_specific_attributes(
     user_data: Any = None,
 ) -> None:
     if isinstance(node, Action):
-        pass
+        _create_attributes_action(
+            bnk,
+            node,
+            on_node_changed,
+            on_node_selected,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
     elif isinstance(node, ActorMixer):
         pass
     elif isinstance(node, Attenuation):
@@ -329,6 +337,73 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+
+
+def _create_attributes_action(
+    bnk: Soundbank,
+    node: Action,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    def set_value(path: str, val: Any) -> None:
+        parts = path.split("/")
+
+        sub = node.params
+        for p in parts[:-1]:
+            if ":" in p:
+                p, idx = p.split(":")
+                sub = getattr(sub, p)[idx]
+            else:
+                sub = getattr(sub, p)
+
+        key = parts[-1]
+        if ":" in key:
+            # Set list item
+            p, idx = key.split(":")
+            sub = getattr(sub, p)
+            sub[idx] = val
+        else:
+            # Set regular member
+            setattr(sub, key, val)
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def create_generic_widgets_recursive(
+        d: dict[str, tuple[type, Any]], path: str = ""
+    ) -> None:
+        for key, (tp, val) in d.items():
+            if isinstance(val, dict):
+                val_path = f"{path}/{key}" if path else key
+                create_generic_widgets_recursive(val, val_path)
+
+            elif isinstance(val, list):
+                if is_simple_type(tp):
+                    add_generic_widget(
+                        tp, key, lambda s, a, u: set_value(path, a), default=val
+                    )
+                else:
+                    for idx, item in enumerate(val):
+                        item_path = f"{path}/{key}:{idx}" if path else f"{key}:{idx}"
+                        create_generic_widgets_recursive(item, item_path)
+
+            else:
+                add_generic_widget(
+                    tp,
+                    key,
+                    lambda s, a, u: set_value(path, a),
+                    default=val,
+                    not_supported_ok=True,
+                )
+
+    params = node.params
+    # PlayEvents will have a string here
+    if isinstance(params, ActionParams):
+        data = to_typed_dict(params)
+        create_generic_widgets_recursive(data)
 
 
 def _create_attributes_attenuation(
@@ -770,7 +845,9 @@ def _create_attributes_music_track(
                 else:
                     logger.warning(f"Unknown ClipAutomationType {auto_type}")
 
-    def on_clips_changed(sender: str, curves: list[GraphCurve], cb_user_data: Any) -> None:
+    def on_clips_changed(
+        sender: str, curves: list[GraphCurve], cb_user_data: Any
+    ) -> None:
         node.clear_clips()
         for idx, curve in enumerate(curves):
             auto_type = ClipAutomationType[curve.curve_type]
@@ -799,7 +876,7 @@ def _create_attributes_music_track(
         )
 
     # Not sure why music tracks can have several sources or what to do
-    # with loop info if that happens, but so far I didn't see that. 
+    # with loop info if that happens, but so far I didn't see that.
     # TODO Otherwise we need a player table here.
     with dpg.group():
         for i, source in enumerate(node.sources):
@@ -834,7 +911,9 @@ def _create_attributes_music_track(
         dpg.add_separator()
         dpg.add_spacer(height=3)
 
-    apply_curves([GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items])
+    apply_curves(
+        [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items]
+    )
 
 
 def _create_attributes_sound(

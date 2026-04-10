@@ -12,10 +12,30 @@ from yonder.gui.dialogs.file_dialog import (
 from .flags_widget import add_flag_checkboxes
 
 
+def is_simple_type(value_type: type) -> bool:
+    if value_type is None:
+        return False
+
+    simple_types = (int, float, bool, str, Path, Enum, IntFlag, Literal)
+    if value_type in simple_types:
+        return True
+
+    type_origin = get_origin(value_type) or value_type
+    if type_origin in simple_types:
+        return True
+
+    origin_args = get_args(value_type)
+    # Could support tuples too, but they are not editable and don't appear in json, so...
+    if type_origin is list and origin_args in simple_types:
+        return True
+
+    return False
+
+
 def add_generic_widget(
     value_type: type,
     label: str,
-    callback: Callable[[str, Any, Any], None],
+    callback: Callable[[str, Any, Any], None] = None,
     *,
     default: Any = None,
     choices: list[str | tuple[str | Any]] = None,
@@ -24,6 +44,7 @@ def add_generic_widget(
     accept_on_enter: bool = False,
     file_mode: Literal["open", "save", "folder"] = "open",
     filetypes: dict[str, str] = None,
+    not_supported_ok: bool = False,
     parent: str = 0,
     tag: str = 0,
     user_data: Any = None,
@@ -68,15 +89,18 @@ def add_generic_widget(
             if isinstance(selected, tuple):
                 selected = selected[1]
 
-            orig_callback(sender, selected, user_data)
+            if orig_callback:
+                orig_callback(sender, selected, user_data)
 
         value_type = Literal[tuple(items)]
         callback = new_callback
 
     # The simple types
     type_origin = get_origin(value_type)
+    origin_args = get_args(value_type)
+
     if type_origin == Literal:
-        choices = get_args(value_type)
+        choices = origin_args
         items = [str(c) for c in choices]
 
         if default in choices:
@@ -167,15 +191,21 @@ def add_generic_widget(
 
             if ret:
                 dpg.set_value(tag, shorten_path(ret))
-                callback(tag, Path(ret), user_data)
+                if callback:
+                    callback(tag, Path(ret), user_data)
 
         with dpg.group(horizontal=True, parent=parent):
+
+            def cb(sender: str, new_path: str, user_data):
+                if callback:
+                    callback(sender, Path(new_path), user_data)
+
             dpg.add_input_text(
                 default_value=shorten_path(default) if default else "",
                 decimal=True,
                 readonly=readonly,
                 enabled=not readonly,
-                callback=lambda s, a, u: callback(s, Path(a), u),
+                callback=cb,
                 user_data=user_data,
                 tag=tag,
             )
@@ -186,7 +216,39 @@ def add_generic_widget(
                 callback=select_file,
             )
             dpg.add_text(label)
+    elif type_origin is list and origin_args in (int, float, bool, str, Path):
+        from .editable_table import add_widget_table
+
+        def cb(sender: str, changes: tuple[int, Any, list], user_data):
+            if callback:
+                callback(sender, changes[2], user_data)
+
+        def add_list_item() -> Any:
+            return origin_args()
+
+        def create_list_item_row(item: Any, idx: int) -> None:
+            add_generic_widget(
+                origin_args,
+                f"{label}:{idx}",
+                None,
+                file_mode=file_mode,
+                filetypes=filetypes,
+            )
+
+        add_widget_table(
+            default or [],
+            add_list_item,
+            create_list_item_row,
+            label=label,
+            on_add=cb,
+            on_remove=cb,
+            user_data=user_data,
+            parent=parent,
+            tag=tag,
+        )
     else:
+        if not_supported_ok:
+            return None
         raise ValueError(f"Could not handle type {value_type} for {label}")
 
     return tag

@@ -152,7 +152,7 @@ def get_function_spec(
 
 
 def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
-    def apply_dict(obj, data: dict):
+    def apply_dict(obj, data: dict) -> None:
         for f in fields(obj):
             if f.name not in data:
                 continue
@@ -183,6 +183,26 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
         updates = asdict(updates)
 
     return apply_dict(base, updates)
+
+
+def to_typed_dict(data: dataclass) -> dict[str, tuple[type, Any]]:
+    def delve(d: Any) -> Any:
+        if is_dataclass(d):
+            ret = {}
+            for f in fields(d):
+                val = getattr(d, f.name)
+                ret[f.name] = (f.type, delve(val))
+            return ret
+
+        elif isinstance(d, dict):
+            return {k: delve(v) for k, v in d.items()}
+
+        elif isinstance(d, list):
+            return [delve(x) for x in d]
+
+        return d
+
+    return delve(data)
 
 
 class PathDict(MutableMapping):

@@ -15,7 +15,7 @@ class Action(HIRCNode):
     body_type: ClassVar[int] = 3
     action_type: int = 0
     external_id: int = 0
-    params: _ActionParams = None
+    params: ActionParams = None
     is_bus: int = 0
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
@@ -87,7 +87,7 @@ class Action(HIRCNode):
 
 
 @dataclass
-class _ActionParams:
+class ActionParams:
     action_type: ActionType
 
     def to_dict(self) -> dict:
@@ -97,7 +97,7 @@ class _ActionParams:
         return {self.action_type.name: data}
 
     @classmethod
-    def from_dict(cls, data: dict) -> _ActionParams:
+    def from_dict(cls, data: dict) -> ActionParams:
         action_type = ActionType[next(iter(data.keys()))]
         param_cls = action_type.params_cls
         if not param_cls:
@@ -128,13 +128,13 @@ class ActionParamsExcept:
 
 
 @dataclass
-class ActionSetState(_ActionParams):
+class ActionSetState(ActionParams):
     state_group_id: int = 0
     target_state_id: int = 0
 
 
 @dataclass
-class ActionSetSwitch(_ActionParams):
+class ActionSetSwitch(ActionParams):
     switch_group_id: int = 0
     switch_state_id: int = 0
 
@@ -147,7 +147,7 @@ class ActionSetGameParameterParams:
 
 
 @dataclass
-class ActionSetGameParameter(_ActionParams):
+class ActionSetGameParameter(ActionParams):
     set_game_parameter: ActionSetGameParameterParams = field(
         default_factory=ActionSetGameParameterParams
     )
@@ -156,13 +156,13 @@ class ActionSetGameParameter(_ActionParams):
 
 
 @dataclass
-class ActionMute(_ActionParams):
+class ActionMute(ActionParams):
     fade_curve: int = 0
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
 
 
 @dataclass
-class ActionResume(_ActionParams):
+class ActionResume(ActionParams):
     fade_curve: int = 0
     resume: int = 0
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
@@ -175,7 +175,7 @@ class ActionSetAkPropParams:
 
 
 @dataclass
-class ActionSetAkProp(_ActionParams):
+class ActionSetAkProp(ActionParams):
     set_ak_prop: ActionSetAkPropParams = field(default_factory=ActionSetAkPropParams)
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
     fade_curve: int = 0
@@ -189,13 +189,13 @@ class ActionSeekParams:
 
 
 @dataclass
-class ActionSeek(_ActionParams):
+class ActionSeek(ActionParams):
     seek: ActionSeekParams = field(default_factory=ActionSeekParams)
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
 
 
 @dataclass
-class ActionPlay(_ActionParams):
+class ActionPlay(ActionParams):
     bank_id: int = 0
     fade_curve: int = 4
 
@@ -206,7 +206,7 @@ class ActionPauseParams:
 
 
 @dataclass
-class ActionPause(_ActionParams):
+class ActionPause(ActionParams):
     pause: ActionPauseParams = field(default_factory=ActionPauseParams)
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
     fade_curve: int = 0
@@ -220,16 +220,16 @@ class ActionStopParams:
 
 
 @dataclass
-class ActionStop(_ActionParams):
+class ActionStop(ActionParams):
     stop: ActionStopParams = field(default_factory=ActionStopParams)
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
 
 
 class ActionType(Enum):
     type_id: int
-    params_cls: Type[_ActionParams]
+    params_cls: Type[ActionParams]
 
-    def __new__(cls, type_id: int, params_cls: Type[_ActionParams]):
+    def __new__(cls, type_id: int, params_cls: Type[ActionParams]):
         member = object.__new__(cls)
         member._value_ = type_id
         member.type_id = type_id

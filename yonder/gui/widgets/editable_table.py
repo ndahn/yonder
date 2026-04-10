@@ -20,6 +20,7 @@ def add_widget_table(
     on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     label: str = None,
     add_item_label: str = "+",
+    parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -64,7 +65,7 @@ def add_widget_table(
     if label:
         dpg.add_text(label)
 
-    with dpg.child_window(border=False, autosize_x=True, auto_resize_y=True):
+    with dpg.child_window(border=False, autosize_x=True, auto_resize_y=True, parent=parent):
         with dpg.table(
             header_row=False,
             policy=dpg.mvTable_SizingFixedFit,
@@ -91,6 +92,7 @@ def add_filepaths_table(
     folders: bool = False,
     label: str = "Files",
     filetypes: dict[str, str] = None,
+    parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -127,6 +129,7 @@ def add_filepaths_table(
         on_remove=lambda s, a, u: on_value_changed(tag, a[2], u),
         add_item_label="+ Add Paths" if folders else "+ Add Files",
         label=label,
+        parent=parent,
         tag=tag,
         user_data=user_data,
     )
@@ -159,6 +162,7 @@ def add_player_table(
         [str, tuple[int, tuple[str, float]], Any], None
     ] = None,
     initial_user_markers: list[tuple[str, float]] = None,
+    parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -266,6 +270,7 @@ def add_player_table(
         on_remove=on_track_removed,
         add_item_label=add_item_label,
         label=label,
+        parent=parent,
         tag=tag,
     )
 
@@ -278,6 +283,7 @@ def add_curves_table(
     label: str = "Curves",
     add_item_label: str = "+ Add Curve",
     curve_type_label: str = "Type",
+    parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
@@ -346,7 +352,7 @@ def add_curves_table(
                     )
             add_interpolation_curve(curve, on_curve_changed, user_data=idx)
 
-    with dpg.group(tag=tag):
+    with dpg.group(tag=tag, parent=parent):
         if label:
             dpg.add_text(label)
 
