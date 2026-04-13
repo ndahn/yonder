@@ -1,5 +1,4 @@
 from __future__ import annotations
-from abc import ABCMeta
 from dataclasses import dataclass, field
 
 from yonder.hash import calc_hash, lookup_name
@@ -28,7 +27,7 @@ class SectionHeader:
 
 
 @dataclass
-class Section(metaclass=ABCMeta):
+class Section():
     _header: SectionHeader = field(default_factory=SectionHeader)
 
     @classmethod

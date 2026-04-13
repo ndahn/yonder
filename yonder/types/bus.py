@@ -41,4 +41,4 @@ class Bus(PropertyMixin, HIRCNode):
 
     @property
     def rtpcs(self) -> list[RTPC]:
-        return self.initial_values.initial_rtpc
+        return self.initial_values.initial_rtpc.rtpcs

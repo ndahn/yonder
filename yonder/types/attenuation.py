@@ -49,4 +49,4 @@ class Attenuation(HIRCNode):
 
     @property
     def rtpcs(self) -> list[RTPC]:
-        return self.initial_rtpc
+        return self.initial_rtpc.rtpcs

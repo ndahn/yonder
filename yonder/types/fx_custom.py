@@ -19,4 +19,4 @@ class EffectCustom(HIRCNode):
 
     @property
     def rtpcs(self) -> list[RTPC]:
-        return self.fx_base_initial_values.initial_rtpc
+        return self.fx_base_initial_values.initial_rtpc.rtpcs
