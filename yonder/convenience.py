@@ -218,7 +218,10 @@ def create_boss_bgm(
                 )
                 # Setup playlist item as loop intro
                 phase_mrsc.add_playlist_item(
-                    bnk.new_id(), intro_seg.id, loop_base=True, parent=mrs_playlist_root
+                    bnk.new_id(),
+                    intro_seg.id,
+                    loop_base=True,
+                    parent=mrs_playlist_root,
                 )
             else:
                 logger.warning(

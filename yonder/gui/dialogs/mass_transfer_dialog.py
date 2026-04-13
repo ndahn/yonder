@@ -288,13 +288,14 @@ def mass_transfer_dialog(
                 callback=swap_ids,
             )
 
-        add_paragraphs("""\
+        add_paragraphs(
+            """\
             - Transfer sound structures between soundbanks
             - Specify by full name (Play_x123456789), hash (#102591249), or wwise name (x123456789)
             - Wwise names will be resolved to Play_ and Stop_ events
             - You cannot pair a name/hash with a wwise name
 """,
-        color=style.light_blue
+            color=style.light_blue,
         )
 
         dpg.add_spacer(height=3)

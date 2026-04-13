@@ -32,7 +32,9 @@ def create_state_path_dialog(
 
     leaf_node_id: int = 0
 
-    def on_node_selected(sender: str, leaf_node: int | HIRCNode, user_data: Any) -> None:
+    def on_node_selected(
+        sender: str, leaf_node: int | HIRCNode, user_data: Any
+    ) -> None:
         nonlocal leaf_node_id
         if isinstance(leaf_node, HIRCNode):
             leaf_node = leaf_node.id
@@ -41,7 +43,9 @@ def create_state_path_dialog(
     def get_nodes(filt: str) -> Iterable[HIRCNode]:
         yield from bnk.query(filt)
 
-    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(
+        msg: str = None, color: tuple[int, int, int, int] = style.red
+    ) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return

@@ -168,7 +168,7 @@ def add_node_properties(
 
         on_node_changed(base_tag, node, user_data)
 
-    with dpg.tree_node(label="Properties"):
+    with dpg.tree_node(label="Properties", default_open=bool(node.properties)):
         add_properties_table(
             {p.prop_id: p.value for p in node.properties},
             on_node_properties_changed,
@@ -189,8 +189,8 @@ def add_node_rtpc(
         node.rtpcs[:] = rtpcs
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
-    
-    with dpg.tree_node(label="RTPC"):
+
+    with dpg.tree_node(label="RTPC", default_open=bool(node.rtpcs)):
         add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed, label=None)
 
 
@@ -704,6 +704,7 @@ def _create_attributes_event(
         on_add=on_actions_changed,
         on_remove=on_actions_changed,
         label="Actions",
+        add_item_label="+ Add Action",
         tag=f"{base_tag}_actions",
     )
 
