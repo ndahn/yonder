@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RtpcType, RtpcAccum, CurveScaling
-from yonder.types.base_types import RTPC
+from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
 from .interpolation_curve import add_interpolation_curve
 
@@ -38,7 +38,13 @@ def add_rtpc_table(
         add_footer()
 
     def on_add_clicked() -> None:
-        rtpcs.append(RTPC(id=bnk.new_id(), curve_id=bnk.new_id()))
+        rtpcs.append(
+            RTPC(
+                id=bnk.new_id(),
+                curve_id=bnk.new_id(),
+                graph_points=[RTPCGraphPoint()],
+            )
+        )
         refresh_table()
         on_value_changed(tag, list(rtpcs), user_data)
 
@@ -49,9 +55,10 @@ def add_rtpc_table(
 
     def add_row(idx: int, item: RTPC) -> None:
         label = f"{item.get_name('?')} #{item.id} ({item.param_id})".ljust(50)
-        
+
         with dpg.group(horizontal=True, parent=tag):
-            with dpg.child_window(auto_resize_y=True, width=-50, border=False):
+            with dpg.child_window(auto_resize_y=True, width=-20, border=False):
+                # TODO edit hash
                 with dpg.tree_node(label=label, span_full_width=True):
                     dpg.add_combo(
                         [t.name for t in RtpcType],
@@ -67,8 +74,10 @@ def add_rtpc_table(
                         callback=make_setter(item, "rtpc_accum"),
                         tag=f"{tag}_item_{idx}_rtpc_accum",
                     )
-                    # TODO Apparently the IDs are stored in a Wwise_IDs.h created on soundbank creation
-                    # Maybe we can locate them in ghidra?
+                    # TODO Apparently the IDs are stored in a Wwise_IDs.h created on
+                    # soundbank creation. Maybe we can locate them in ghidra?
+                    # TODO update tree node label
+                    # TODO Figure out what these map to (ParameterId maybe?)
                     dpg.add_input_int(
                         label="Parameter",
                         default_value=item.param_id,
@@ -77,13 +86,15 @@ def add_rtpc_table(
                         callback=make_setter(item, "param_id"),
                         tag=f"{tag}_item_{idx}_param_id",
                     )
-                    
+
                     with dpg.child_window(auto_resize_x=True, auto_resize_y=True):
                         dpg.add_combo(
                             [c.name for c in CurveScaling],
                             label="Curve scaling",
                             default_value=item.curve_scaling.name,
-                            callback=make_setter(item, "curve_scaling", lambda v: CurveScaling[v]),
+                            callback=make_setter(
+                                item, "curve_scaling", lambda v: CurveScaling[v]
+                            ),
                             tag=f"{tag}_item_{idx}_curve_scaling",
                         )
                         add_interpolation_curve(
@@ -91,7 +102,7 @@ def add_rtpc_table(
                             make_setter(item, "graph_points", lambda v: v.points),
                             tag=f"{tag}_item_{idx}_curve",
                         )
-                    
+
                     dpg.add_spacer(height=5)
 
             dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
@@ -103,5 +114,5 @@ def add_rtpc_table(
     if label:
         dpg.add_text(label)
 
-    dpg.add_group(tag=tag)
+    dpg.add_child_window(auto_resize_y=True, tag=tag)
     refresh_table()
