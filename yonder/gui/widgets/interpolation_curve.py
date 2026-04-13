@@ -35,6 +35,7 @@ def add_interpolation_curve(
 
     curve: GraphCurve = deepcopy(initial_curve)
     dirty: bool = True
+    first_draw: bool = True
     drag_points: list[int] = []
     hovered: int = -1
     selected: int = 0
@@ -125,16 +126,18 @@ def add_interpolation_curve(
         dpg.set_value(f"{tag}_point_y", p.to)
 
     def render_curve(sender: str, series_data: list[dict], user_data: Any) -> None:
-        nonlocal hovered, dirty
+        nonlocal hovered, dirty, first_draw
 
         # Save some cpu cycles when no updates are needed
-        if not (
-            dirty
-            or dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
-            or dpg.is_item_hovered(dpg.get_item_parent(f"{tag}_canvas"))
-        ):
-            return
+        if not first_draw:
+            if not (
+                dirty
+                or dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
+                or dpg.is_item_hovered(dpg.get_item_parent(f"{tag}_canvas"))
+            ):
+                return
 
+        first_draw = False
         dirty = False
         helper_data = series_data[0]
         transformed_x = series_data[1]

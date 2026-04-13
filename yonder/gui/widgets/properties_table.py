@@ -29,7 +29,7 @@ def add_properties_table(
 
         add_footer()
 
-    def on_prop_type_changed(sender: int, new_key: str) -> None:
+    def on_prop_type_changed(sender: str, new_key: str) -> None:
         row = dpg.get_item_parent(sender)
         siblings = dpg.get_item_children(row, slot=1)
         value_widget = siblings[1]
@@ -44,7 +44,7 @@ def add_properties_table(
 
         on_value_changed(tag, dict(properties), user_data)
 
-    def on_prop_value_changed(sender: int, new_val: float) -> None:
+    def on_prop_value_changed(sender: str, new_val: float) -> None:
         for key, (_, value_id, _) in row_widgets.items():
             if value_id == sender:
                 properties[key] = new_val
@@ -88,7 +88,7 @@ def add_properties_table(
                 width=-1,
                 callback=on_prop_value_changed,
             )
-            remove_id = dpg.add_button(label="-", callback=on_remove_clicked)
+            remove_id = dpg.add_button(label="x", callback=on_remove_clicked)
             row_widgets[prop] = (combo_id, value_id, remove_id)
 
     def add_footer() -> None:

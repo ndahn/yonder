@@ -39,6 +39,7 @@ from yonder.types.base_types import (
     MusicTransitionRule,
     DecisionTreeNode,
     MusicMarkerWwise,
+    RTPC,
 )
 from yonder.enums import (
     SourceType,
@@ -59,6 +60,7 @@ from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget, is_simple_type
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
+from .rtpc_table import add_rtpc_table
 from .wav_player import add_wav_player
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table, add_curves_table
@@ -112,11 +114,6 @@ def create_attribute_widgets(
                     parent = bnk.get(node.parent, node.parent)
                     add_node_link(str(parent), parent, on_node_selected)
 
-            if hasattr(node, "properties"):
-                add_node_properties(
-                    node, on_node_changed, base_tag=tag, user_data=user_data
-                )
-
             dpg.add_spacer(height=3)
             dpg.add_separator()
             dpg.add_spacer(height=3)
@@ -135,6 +132,17 @@ def create_attribute_widgets(
                 logger.error(f"Error creating node widgets: {e}", exc_info=e)
                 dpg.add_text("Error creating node widgets, check logs", color=style.red)
 
+            dpg.add_spacer(height=5)
+
+            if hasattr(node, "properties"):
+                add_node_properties(
+                    node, on_node_changed, base_tag=tag, user_data=user_data
+                )
+
+            if hasattr(node, "rtpcs"):
+                add_node_rtpc(
+                    bnk, node, on_node_changed, base_tag=tag, user_data=user_data
+                )
     finally:
         dpg.delete_item(loading)
 
@@ -147,7 +155,7 @@ def add_node_properties(
     *,
     base_tag: str = None,
     user_data: Any = None,
-) -> str:
+) -> None:
     def on_node_properties_changed(
         sender: str, new_props: dict[PropID, float], node: HIRCNode
     ) -> None:
@@ -169,7 +177,21 @@ def add_node_properties(
         )
 
 
-# TODO RTCP
+def add_node_rtpc(
+    bnk: Soundbank,
+    node: HIRCNode,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = None,
+    user_data: Any = None,
+) -> None:
+    def on_rtpcs_changed(sender: str, rtpcs: list[RTPC], cb_user_data: Any) -> None:
+        node.rtpcs[:] = rtpcs
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+    
+    with dpg.tree_node(label="RTPC"):
+        add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed)
 
 
 def add_node_link(
@@ -293,7 +315,7 @@ def _create_type_specific_attributes(
     *,
     base_tag: str = 0,
     user_data: Any = None,
-) -> None:
+) -> bool:
     if isinstance(node, Action):
         _create_attributes_action(
             bnk,
@@ -303,9 +325,9 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, ActorMixer):
-        # FIXME
-        add_letmeknow()
+        pass
     elif isinstance(node, Attenuation):
         _create_attributes_attenuation(
             bnk,
@@ -315,8 +337,9 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, Bus):
-        # FIXME
+        # TODO
         add_letmeknow()
     elif isinstance(node, Event):
         _create_attributes_event(
@@ -327,8 +350,9 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, LayerContainer):
-        # FIXME
+        # TODO
         add_letmeknow()
     elif isinstance(node, MusicRandomSequenceContainer):
         _create_attributes_musicrandomsequencecontainer(
@@ -339,6 +363,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, MusicSegment):
         _create_attributes_musicsegment(
             bnk,
@@ -348,6 +373,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, MusicSwitchContainer):
         _create_attributes_musicswitchcontainer(
             bnk,
@@ -357,6 +383,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, MusicTrack):
         _create_attributes_musictrack(
             bnk,
@@ -366,6 +393,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, RandomSequenceContainer):
         _create_attributes_randomsequencecontainer(
             bnk,
@@ -375,6 +403,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, Sound):
         _create_attributes_sound(
             bnk,
@@ -384,6 +413,7 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     elif isinstance(node, SwitchContainer):
         _create_attributes_switchcontainer(
             bnk,
@@ -393,8 +423,11 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+        return True
     else:
         add_letmeknow()
+
+    return False
 
 
 def _create_attributes_action(
@@ -1212,7 +1245,7 @@ def _create_attributes_switchcontainer(
             user_data=node,
         )
 
-        with dpg.tree_node(label="Switches", default_open=True):
+        with dpg.tree_node(label="Switches"):
             for switch in node.switch_groups:
                 name = lookup_name(switch.switch_id, "?")
                 label = f"({len(switch.nodes)}) / {name} (#{switch.switch_id})"

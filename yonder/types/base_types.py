@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterator
+from typing import Any, Iterator
 from dataclasses import dataclass, field
 from field_properties import field_property
 
@@ -454,6 +454,9 @@ class RTPC:
     def get_graph_point_count(self) -> int:
         return len(self.graph_points)
 
+    def get_name(self, default: Any = None) -> str:
+        return lookup_name(self.id, default)    
+
 
 @dataclass(slots=True)
 class InitialRTPC:
@@ -904,6 +907,5 @@ class MusicMarkerWwise:
     string_length: int = 0
     string: str = ""
 
-    @property
-    def name(self) -> str:
-        return lookup_name(self.id)
+    def get_name(self, default: Any = None) -> str:
+        return lookup_name(self.id, default)
