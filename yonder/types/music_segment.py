@@ -6,7 +6,7 @@ from field_properties import field_property
 from yonder.hash import calc_hash
 from yonder.enums import PropID, MarkerId
 from .hirc_node import HIRCNode
-from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise
+from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise, RTPC
 from .mixins import PropertyMixin
 
 
@@ -60,6 +60,10 @@ class MusicSegment(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.music_node_params.node_base_params.initial_rtpc
 
     @field_property(marker_count)
     def get_marker_count(self) -> int:

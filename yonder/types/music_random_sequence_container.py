@@ -13,6 +13,7 @@ from .base_types import (
     MusicTransitionRule,
     MusicTransSrcRule,
     MusicTransDstRule,
+    RTPC,
 )
 from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin
@@ -69,6 +70,10 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc
 
     @field_property(playlist_item_count)
     def get_playlist_item_count(self) -> int:

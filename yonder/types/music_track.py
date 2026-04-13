@@ -14,6 +14,7 @@ from .base_types import (
     PropBundle,
     ClipAutomation,
     TrackSrcInfo,
+    RTPC,
 )
 from yonder.enums import ClipAutomationType, PropID, SourceType
 from .mixins import PropertyMixin
@@ -68,6 +69,10 @@ class MusicTrack(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
 
     @property
     def source_ids(self) -> list[int]:

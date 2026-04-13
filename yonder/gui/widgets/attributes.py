@@ -191,7 +191,7 @@ def add_node_rtpc(
             on_node_changed(base_tag, node, user_data)
     
     with dpg.tree_node(label="RTPC"):
-        add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed)
+        add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed, label=None)
 
 
 def add_node_link(

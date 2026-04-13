@@ -4,7 +4,7 @@ from typing import ClassVar
 from field_properties import field_property
 
 from .hirc_node import HIRCNode
-from .base_types import InitialRTPC, ConversionTable, ConeParams
+from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
 from yonder.enums import CurveParameters
 
 
@@ -46,3 +46,7 @@ class Attenuation(HIRCNode):
     def validate(self) -> None:
         if len(self.curves_to_use) != 7:
             raise ValueError("Curves to use must be exactly 7 elements")
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.initial_rtpc

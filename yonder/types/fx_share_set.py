@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import FxBaseInitialValues
+from .base_types import FxBaseInitialValues, RTPC
 
 
 @dataclass
@@ -16,3 +16,7 @@ class EffectShareSet(HIRCNode):
     @classmethod
     def new(cls, nid: int | str) -> EffectShareSet:
         return cls(nid)
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.fx_base_initial_values.initial_rtpc

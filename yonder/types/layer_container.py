@@ -10,6 +10,7 @@ from .base_types import (
     Layer,
     AssociatedChildData,
     PropBundle,
+    RTPC,
 )
 from yonder.enums import PropID
 from .mixins import PropertyMixin
@@ -56,6 +57,10 @@ class LayerContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
 
     @field_property(layer_count)
     def get_layer_count(self) -> int:

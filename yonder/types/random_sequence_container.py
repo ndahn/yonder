@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle, Playlist, PlaylistItem
+from .base_types import NodeBaseParams, Children, PropBundle, Playlist, PlaylistItem, RTPC
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from .mixins import PropertyMixin
 
@@ -68,6 +68,10 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
 
     @property
     def mode_enum(self) -> PlaybackMode:

@@ -10,6 +10,7 @@ from .base_types import (
     BankSourceData,
     PropBundle,
     MediaInformation,
+    RTPC,
 )
 from yonder.enums import SourceType, PropID
 from .mixins import PropertyMixin
@@ -53,6 +54,10 @@ class Sound(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
 
     @property
     def source_id(self) -> int:

@@ -10,6 +10,7 @@ from .base_types import (
     PropBundle,
     SwitchPackage,
     SwitchNodeParams,
+    RTPC,
 )
 from yonder.enums import PropID, SWITCH_GROUP_IDS
 from .mixins import PropertyMixin
@@ -62,6 +63,10 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
 
     @field_property(switch_group_count)
     def get_switch_group_count(self) -> int:

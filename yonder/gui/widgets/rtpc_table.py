@@ -13,7 +13,7 @@ def add_rtpc_table(
     rtpcs: list[RTPC],
     on_value_changed: Callable[[str, list[RTPC], Any], None],
     *,
-    label: str = "Properties",
+    label: str = "RTPCs",
     tag: str | int = 0,
     user_data: Any = None,
 ) -> None:
@@ -97,7 +97,7 @@ def add_rtpc_table(
             dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
 
     def add_footer() -> None:
-        dpg.add_button(label="+ Add Property", callback=on_add_clicked, parent=tag)
+        dpg.add_button(label="+ Add RTPC", callback=on_add_clicked, parent=tag)
 
     # The actual widgets
     if label:

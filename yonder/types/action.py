@@ -8,10 +8,11 @@ from yonder.util import logger
 from .base_types import PropBundle, PropRangedModifiers
 from .hirc_node import HIRCNode
 from .serialization import _serialize_value, _deserialize_fields
+from .mixins import PropertyMixin
 
 
 @dataclass
-class Action(HIRCNode):
+class Action(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 3
     action_type: int = 0
     external_id: int = 0
@@ -90,6 +91,10 @@ class Action(HIRCNode):
 
         self.action_type = new_type.type_id
         self.params = params
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.prop_bundle
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]

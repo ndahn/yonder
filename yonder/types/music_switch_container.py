@@ -11,6 +11,7 @@ from .base_types import (
     DecisionTreeNode,
     PropBundle,
     Children,
+    RTPC,
 )
 from yonder.enums import GroupType, DecisionTreeMode, PropID
 from .mixins import PropertyMixin
@@ -70,6 +71,10 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc
 
     @staticmethod
     def parse_state_path(state_path: list[str]) -> list[int]:

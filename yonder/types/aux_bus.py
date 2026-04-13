@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import BusInitialValues, DuckInfo, PropBundle
+from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC
 from yonder.enums import PropID
 from .mixins import PropertyMixin
 
@@ -38,3 +38,7 @@ class AuxiliaryBus(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.initial_values.bus_initial_params.prop_bundle
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.initial_values.initial_rtpc

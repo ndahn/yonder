@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import PropBundle, PropRangedModifiers, InitialRTPC
+from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
 from yonder.enums import PropID
 
 
@@ -27,3 +27,7 @@ class TimeModulator(HIRCNode):
                 obj.set_property(prop, val)
 
         return obj
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.initial_rtpc.rtpcs
