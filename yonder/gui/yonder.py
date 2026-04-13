@@ -1050,7 +1050,7 @@ class BanksOfYonder:
             node: HIRCNode = self.bnk[node]
 
         if isinstance(node, HIRCNode):
-            self._selected_node_backup = deepcopy(node)
+            self._selected_node_backup = node.copy()
             dpg.set_value(f"{self.tag}_json", node.json())
         else:
             self._selected_node_backup = None
@@ -1273,12 +1273,13 @@ class BanksOfYonder:
         except json.JSONDecodeError as e:
             raise ValueError("Failed to parse json") from e
 
-        self._selected_node.update(data)
+        tmp = self._selected_node.from_dict(data)
+        self._selected_node.merge(tmp)
         self.regenerate()
 
     def node_reset_json(self) -> None:
         if self._selected_node:
-            self._selected_node.update(self._selected_node_backup)
+            self._selected_node.merge(self._selected_node_backup)
             self.select_node(self._selected_node)
 
     def update_json_panel(self) -> None:

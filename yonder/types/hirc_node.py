@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Any, ClassVar
-from abc import ABCMeta
-from dataclasses import dataclass, field, fields, is_dataclass, InitVar
+from dataclasses import InitVar, dataclass, field, fields, is_dataclass, replace
 from copy import deepcopy
 import json
 
+from yonder.util import deepmerge
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
@@ -28,11 +28,19 @@ class HIRCNodeHeader:
 
 
 @dataclass
-class HIRCNode(metaclass=ABCMeta):
+class HIRCNode:
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
     id: InitVar[int]
-    _header: HIRCNodeHeader = field(default_factory=HIRCNodeHeader)
+    _header: HIRCNodeHeader = field(init=False)
+
+    def __post_init__(self, id: int):
+        if isinstance(id, dict):
+            oid = ObjectId.from_dict(id)
+        else:
+            oid = ObjectId(id)
+
+        self._header = HIRCNodeHeader(self.body_type, 0, oid)
 
     @property
     def id(self) -> int:
@@ -62,7 +70,7 @@ class HIRCNode(metaclass=ABCMeta):
                 obj = getattr(obj, key)[int(idx)]
             else:
                 obj = getattr(obj, part)
-        
+
         return obj
 
     def set_value(self, path: str, new_val: Any, strict: bool = True) -> None:
@@ -76,7 +84,9 @@ class HIRCNode(metaclass=ABCMeta):
         if strict:
             old_val = getattr(obj, key)
             if old_val is not None and type(old_val) is not type(new_val):
-                raise ValueError(f"Cannot set {path}: incompatible types ({old_val}, {new_val})")
+                raise ValueError(
+                    f"Cannot set {path}: incompatible types ({old_val}, {new_val})"
+                )
 
         setattr(obj, key, new_val)
 
@@ -87,7 +97,17 @@ class HIRCNode(metaclass=ABCMeta):
         return json.dumps(self.to_dict(), indent=2)
 
     def copy(self) -> HIRCNode:
-        return deepcopy(self)
+        def delve(obj):
+            if not is_dataclass(obj):
+                return deepcopy(obj)
+
+            repl = {f.name: getattr(obj, f.name) for f in fields(obj) if f.init}
+            return replace(obj, **repl)
+
+        return delve(self)
+
+    def merge(self, other: dict | HIRCNode) -> None:
+        deepmerge(self, other)
 
     def glob(self, pattern: str) -> list:
         segments = pattern.split("/")
@@ -138,9 +158,13 @@ class HIRCNode(metaclass=ABCMeta):
         # and keep the actual node params at root level, so we have to massage the data
         # rewwise spits out a little bit
         trans = {
+            "id": next(iter(header["id"].values())),
             "_header": header,
             **data["body"][node_type],
         }
+
+        if cls.__name__ == node_type:
+            return _deserialize_fields(cls, trans)
 
         for sub in cls.__subclasses__():
             if sub.__name__ == node_type:

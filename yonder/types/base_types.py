@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, Iterator
 from dataclasses import dataclass, field
-from field_properties import field_property
 
 from yonder.hash import lookup_name
 from yonder.enums import (
@@ -85,9 +84,9 @@ class MusicTransDstRule:
 
 @dataclass(slots=True)
 class MusicTransitionRule:
-    source_transition_rule_count: int = field_property(default=0)
+    source_transition_rule_count: int = 0
     source_ids: list[int] = field(default_factory=lambda: [-1])
-    destination_transition_rule_count: int = field_property(default=0)
+    destination_transition_rule_count: int = 0
     destination_ids: list[int] = field(default_factory=lambda: [-1])
     source_transition_rule: MusicTransSrcRule = field(default_factory=MusicTransSrcRule)
     destination_transition_rule: MusicTransDstRule = field(
@@ -97,14 +96,6 @@ class MusicTransitionRule:
     transition_object: MusicTransitionObject = field(
         default_factory=MusicTransitionObject
     )
-
-    @field_property(source_transition_rule_count)
-    def get_source_transition_rule_count(self) -> int:
-        return len(self.source_ids)
-
-    @field_property(destination_transition_rule_count)
-    def get_destination_transition_rule_count(self) -> int:
-        return len(self.destination_ids)
 
     def get_references(self) -> list[tuple[str, int]]:
         refs = []
@@ -132,24 +123,16 @@ class RTPCGraphPoint:
 @dataclass(slots=True)
 class ConversionTable:
     curve_scaling: CurveScaling = CurveScaling.None_
-    point_count: int = field_property(default=0)
+    point_count: int = 0
     points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(point_count)
-    def get_point_count(self) -> int:
-        return len(self.points)
 
 
 @dataclass(slots=True)
 class ObsOccCurve:
     curve_enabled: int = 0
     curve_scaling: int = 0
-    point_count: int = field_property(default=0)
+    point_count: int = 0
     points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(point_count)
-    def get_poin_count(self) -> int:
-        return len(self.points)
 
 
 @dataclass(slots=True)
@@ -182,12 +165,8 @@ class TrackSrcInfo:
 class ClipAutomation:
     clip_index: int = 0
     auto_type: ClipAutomationType = ClipAutomationType.Volume
-    graph_point_count: int = field_property(default=0)
+    graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(graph_point_count)
-    def get_graph_point_count(self) -> int:
-        return len(self.graph_points)
 
 
 @dataclass(slots=True)
@@ -215,12 +194,8 @@ class SwitchGraphPoint:
 class StateGroup:
     id: int = 0
     default_transition_time: int = 0
-    transition_count: int = field_property(default=0)
+    transition_count: int = 0
     transitions: list[StateTransition] = field(default_factory=list)
-
-    @field_property(transition_count)
-    def get_transition_count(self) -> int:
-        return len(self.transitions)
 
 
 @dataclass(slots=True)
@@ -228,12 +203,8 @@ class SwitchGroup:
     id: int = 0
     rtpc_id: int = 0
     rtpc_type: int = 0
-    graph_point_count: int = field_property(default=0)
+    graph_point_count: int = 0
     graph_points: list[SwitchGraphPoint] = field(default_factory=list)
-
-    @field_property(graph_point_count)
-    def get_graph_point_count(self) -> int:
-        return len(self.graph_points)
 
 
 @dataclass(slots=True)
@@ -277,12 +248,8 @@ class PropRangedModifier:
 
 @dataclass(slots=True)
 class PropRangedModifiers:
-    count: int = field_property(default=0)
+    count: int = 0
     entries: list[PropRangedModifier] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.entries)
 
 
 @dataclass(slots=True)
@@ -325,21 +292,13 @@ class PositioningParams:
     )
     path_mode: PathMode = PathMode.StepSequence
     transition_time: int = 0
-    vertex_count: int = field_property(default=0)
+    vertex_count: int = 0
     vertices: list[PathVertex] = field(default_factory=list)
-    path_list_item_count: int = field_property(default=0)
+    path_list_item_count: int = 0
     path_list_item_offsets: list[PathListItemOffset] = field(default_factory=list)
     three_dimensional_automation_params: list[Ak3DAutomationParams] = field(
         default_factory=list
     )
-
-    @field_property(vertex_count)
-    def get_vertex_count(self) -> int:
-        return len(self.vertices)
-
-    @field_property(path_list_item_count)
-    def get_path_list_item_count(self) -> int:
-        return len(self.path_list_item_offsets)
 
 
 @dataclass(slots=True)
@@ -415,28 +374,16 @@ class StatePropertyInfo:
 class StateGroupChunk:
     state_group_id: int = 0
     sync_type: SyncType = SyncType.Immediate
-    state_count: int = field_property(default=0)
+    state_count: int = 0
     states: list[AkState] = field(default_factory=list)
-
-    @field_property(state_count)
-    def get_state_count(self) -> int:
-        return len(self.states)
 
 
 @dataclass(slots=True)
 class StateChunk:
-    state_property_count: int = field_property(default=0)
+    state_property_count: int = 0
     state_property_info: list[StatePropertyInfo] = field(default_factory=list)
-    state_group_count: int = field_property(default=0)
+    state_group_count: int = 0
     state_group_chunks: list[StateGroupChunk] = field(default_factory=list)
-
-    @field_property(state_property_count)
-    def get_state_property_count(self) -> int:
-        return len(self.state_property_info)
-
-    @field_property(state_group_count)
-    def get_state_group_count(self) -> int:
-        return len(self.state_group_chunks)
 
 
 @dataclass(slots=True)
@@ -445,14 +392,10 @@ class RTPC:
     rtpc_type: RtpcType = RtpcType.GameParameter
     rtpc_accum: RtpcAccum = RtpcAccum.None_
     param_id: int = 0
-    curve_id: int = 0  # TODO seems to be a hash?
+    curve_id: int = 0
     curve_scaling: CurveScaling = CurveScaling.None_
-    graph_point_count: int = field_property(default=0)
+    graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(graph_point_count)
-    def get_graph_point_count(self) -> int:
-        return len(self.graph_points)
 
     def get_name(self, default: Any = None) -> str:
         return lookup_name(self.id, default)    
@@ -460,24 +403,16 @@ class RTPC:
 
 @dataclass(slots=True)
 class InitialRTPC:
-    count: int = field_property(default=0)
+    count: int = 0
     rtpcs: list[RTPC] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.rtpcs)
 
 
 @dataclass(slots=True)
 class NodeInitialFxParams:
     is_override_parent_fx: int = 0
-    fx_chunk_count: int = field_property(default=0)
+    fx_chunk_count: int = 0
     fx_bypass_bits: int = 0
     fx_chunks: list[FXChunk] = field(default_factory=list)
-
-    @field_property(fx_chunk_count)
-    def get_fx_chunk_count(self) -> int:
-        return len(self.fx_chunks)
 
 
 @dataclass(slots=True)
@@ -510,13 +445,9 @@ class NodeInitialParams:
 
 @dataclass(slots=True)
 class PropBundleByte:
-    count: int = field_property(default=0)
+    count: int = 0
     types: list[PropID] = field(default_factory=list)
     values: list[float] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.values)
 
     def validate(self) -> None:
         if len(self.types) != len(self.values):
@@ -525,12 +456,8 @@ class PropBundleByte:
 
 @dataclass(slots=True)
 class Children:
-    count: int = field_property(default=0)
+    count: int = 0
     items: list[int] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.items)
 
     def add(self, item: int) -> None:
         if item not in self.items:
@@ -609,12 +536,8 @@ class BankSourceData:
     media_information: MediaInformation = field(
         default_factory=lambda: MediaInformation(source_id=0)
     )
-    params_size: int = field_property(default=0)
+    params_size: int = 0
     params: list[int] = field(default_factory=list)
-
-    @field_property(params_size)
-    def get_params_size(self) -> int:
-        return len(self.params)
 
 
 @dataclass(slots=True)
@@ -643,15 +566,11 @@ class BusInitialParams:
 
 @dataclass(slots=True)
 class BusInitialFxParams:
-    fx_count: int = field_property(default=0)
+    fx_count: int = 0
     fx_bypass: int = 0
     fx: list[FXChunk] = field(default_factory=list)
     fx_id_0: int = 0
     is_share_set_0: int = 0
-
-    @field_property(fx_count)
-    def get_fx_count(self) -> int:
-        return len(self.fx)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("fx_id_0", self.fx_id_0)]
@@ -664,7 +583,7 @@ class BusInitialValues:
     bus_initial_params: BusInitialParams = field(default_factory=BusInitialParams)
     recovery_time: int = 0
     max_duck_volume: float = 0.0
-    duck_count: int = field_property(default=0)
+    duck_count: int = 0
     ducks: list[DuckInfo] = field(default_factory=list)
     bus_initial_fx_params: BusInitialFxParams = field(
         default_factory=BusInitialFxParams
@@ -672,10 +591,6 @@ class BusInitialValues:
     override_attachment_params: int = 0
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     state_chunk: StateChunk = field(default_factory=StateChunk)
-
-    @field_property(duck_count)
-    def get_duck_count(self) -> int:
-        return len(self.ducks)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [
@@ -704,37 +619,21 @@ class PluginPropertyValue:
 @dataclass(slots=True)
 class FxBaseInitialValues:
     fx_id: int = 0
-    params_size: int = field_property(default=0)
+    params_size: int = 0
     params: list[int] = field(default_factory=list)
-    media_count: int = field_property(default=0)
+    media_count: int = 0
     media: list[MediaMap] = field(default_factory=list)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     state_chunk: StateChunk = field(default_factory=StateChunk)
-    property_value_count: int = field_property(default=0)
+    property_value_count: int = 0
     property_values: list[PluginPropertyValue] = field(default_factory=list)
-
-    @field_property(params_size)
-    def get_params_size(self) -> int:
-        return len(self.params)
-
-    @field_property(media_count)
-    def get_media_count(self) -> int:
-        return len(self.media)
-
-    @field_property(property_value_count)
-    def get_property_value_count(self) -> int:
-        return len(self.property_values)
 
 
 @dataclass(slots=True)
 class SwitchPackage:
     switch_id: int
-    node_count: int = field_property(default=0)
+    node_count: int = 0
     nodes: list[int] = field(default_factory=list)
-
-    @field_property(node_count)
-    def get_node_count(self) -> int:
-        return len(self.nodes)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"nodes:{i}", nid) for i, nid in enumerate(self.nodes)]
@@ -794,14 +693,10 @@ class DecisionTreeNode:
     key: int = 0
     node_id: int = 0
     first_child_index: int = 0
-    child_count: int = field_property(default=0)
+    child_count: int = 0
     weight: int = 50
     probability: int = 100
     children: list[DecisionTreeNode] = field(default_factory=list)
-
-    @field_property(child_count)
-    def get_child_count(self) -> int:
-        return len(self.children)
 
     def validate(self) -> None:
         self.children.sort(key=lambda x: x.key)
@@ -813,12 +708,8 @@ class DecisionTreeNode:
 @dataclass(slots=True)
 class AssociatedChildData:
     associated_child_id: int
-    graph_point_count: int = field_property(default=0)
+    graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
-
-    @field_property(graph_point_count)
-    def get_graph_point_count(self) -> int:
-        return len(self.graph_points)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("associated_child_id", self.associated_child_id)]
@@ -830,12 +721,8 @@ class Layer:
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     rtpc_id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
-    associated_childen_count: int = field_property(default=0)  # NOTE typo in rewwise
+    associated_childen_count: int = 0  # NOTE typo in rewwise
     associated_children: list[AssociatedChildData] = field(default_factory=list)
-
-    @field_property(associated_childen_count)
-    def get_associated_children_count(self) -> int:
-        return len(self.associated_children)
 
 
 @dataclass(slots=True)
@@ -849,12 +736,8 @@ class PlaylistItem:
 
 @dataclass(slots=True)
 class Playlist:
-    count: int = field_property(default=0)
+    count: int = 0
     items: list[PlaylistItem] = field(default_factory=list)
-
-    @field_property(count)
-    def get_count(self) -> int:
-        return len(self.items)
 
 
 @dataclass(slots=True)
@@ -863,23 +746,15 @@ class MusicNodeParams:
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
     meter_info: MeterInfo = field(default_factory=MeterInfo)
-    stinger_count: int = field_property(default=0)
+    stinger_count: int = 0
     stingers: list[Stinger] = field(default_factory=list)
-
-    @field_property(stinger_count)
-    def get_stinger_count(self) -> int:
-        return len(self.stingers)
 
 
 @dataclass(slots=True)
 class MusicTransNodeParams:
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
-    transition_rule_count: int = field_property(default=0)
+    transition_rule_count: int = 0
     transition_rules: list[MusicTransitionRule] = field(default_factory=list)
-
-    @field_property(transition_rule_count)
-    def get_transition_rule_count(self) -> int:
-        return len(self.transition_rules)
 
 
 @dataclass(slots=True)

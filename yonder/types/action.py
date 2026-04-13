@@ -22,14 +22,17 @@ class Action(PropertyMixin, HIRCNode):
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
     def __post_init__(self, id: int | str):
-        try:
-            action_type = ActionType(self.action_type)
-        except KeyError:
-            action_type = None
+        super().__post_init__(id)
+        
+        if self.action_type == 0:
+            if self.params == "PlayEvent":
+                self.action_type = ActionType.PlayEvent.type_id
+            else:
+                self.action_type = self.params.action_type.type_id
 
-        if not action_type or action_type == ActionType.Unk2102:
+        if self.action_type == ActionType.Unk2102:
             logger.warning(f"Found action with unknown type {self.action_type}: {self}")
-        elif action_type == ActionType.PlayEvent:
+        elif self.action_type == ActionType.PlayEvent:
             # NOTE rewwise is strange, for PlayEvents params will actually be a string
             if not isinstance(self.params, str):
                 logger.warning("Found unexpectedly normal PlayEvent")

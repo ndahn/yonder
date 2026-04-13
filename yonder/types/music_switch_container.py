@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
-from field_properties import field_property
 
 from yonder.hash import calc_hash
 from .hirc_node import HIRCNode
@@ -24,10 +23,10 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         default_factory=MusicTransNodeParams
     )
     continue_playback: int = 1
-    tree_depth: int = field_property(default=0)
+    tree_depth: int = 0
     arguments: list[GameSync] = field(default_factory=list)
     group_types: list[GroupType] = field(default_factory=list)
-    tree_size: int = field_property(default=0)
+    tree_size: int = 0
     tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
     tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
 
@@ -94,11 +93,6 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
         return keys
 
-    @field_property(tree_depth)
-    def get_tree_depth(self) -> int:
-        return len(self.arguments)
-
-    @field_property(tree_size)
     def get_tree_size(self) -> int:
         num_tree_nodes = 1
         todo = [self.tree]

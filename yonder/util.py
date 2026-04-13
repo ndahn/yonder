@@ -12,7 +12,6 @@ import logging
 import subprocess
 import shutil
 import networkx as nx
-from field_properties.field_properties import BaseFieldProperty
 
 from yonder.enums import SoundType
 
@@ -161,8 +160,6 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
                 true_field_type = type(getattr(type(obj), f.name))
                 if issubclass(true_field_type, property):
                     if not true_field_type.fset:
-                        continue
-                    if issubclass(true_field_type, BaseFieldProperty):
                         continue
 
             value = data[f.name]

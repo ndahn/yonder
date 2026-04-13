@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
-from field_properties import field_property
 
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
@@ -16,7 +15,7 @@ class Attenuation(HIRCNode):
     curves_to_use: list[int] = field(
         default_factory=lambda: [CurveParameters.None_.value] * 7
     )
-    curve_count: int = field_property(default=0)
+    curve_count: int = 0
     curves: list[ConversionTable] = field(default_factory=list)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
 
@@ -38,10 +37,6 @@ class Attenuation(HIRCNode):
             is_cone_enabled=bool(cone_params),
             cone_params=cone_params or ConeParams(),
         )
-
-    @field_property(curve_count)
-    def get_curve_count(self) -> int:
-        return len(self.curves)
 
     def validate(self) -> None:
         if len(self.curves_to_use) != 7:

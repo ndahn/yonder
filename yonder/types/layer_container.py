@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
-from field_properties import field_property
 
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -21,7 +20,7 @@ class LayerContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
-    layer_count: int = field_property(default=0)
+    layer_count: int = 0
     layers: list[Layer] = field(default_factory=list)
     is_continuous_validation: int = 0
 
@@ -61,10 +60,6 @@ class LayerContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
-
-    @field_property(layer_count)
-    def get_layer_count(self) -> int:
-        return len(self.layers)
 
     def add_layer(self, nodes: list[int]) -> Layer:
         self.layers.append(

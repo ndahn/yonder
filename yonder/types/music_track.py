@@ -2,7 +2,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
-from field_properties import field_property
 
 from yonder.wem import get_wem_metadata
 from .hirc_node import HIRCNode
@@ -24,12 +23,12 @@ from .mixins import PropertyMixin
 class MusicTrack(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0
-    source_count: int = field_property(default=0)
+    source_count: int = 0
     sources: list[BankSourceData] = field(default_factory=list)
-    playlist_item_count: int = field_property(default=0)
+    playlist_item_count: int = 0
     playlist: list[TrackSrcInfo] = field(default_factory=list)
-    subtrack_count: int = field_property(default=0)
-    clip_item_count: int = field_property(default=0)
+    subtrack_count: int = 0
+    clip_item_count: int = 0
     clip_items: list[ClipAutomation] = field(default_factory=list)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     track_type: int = 0
@@ -77,23 +76,6 @@ class MusicTrack(PropertyMixin, HIRCNode):
     @property
     def source_ids(self) -> list[int]:
         return [s.media_information.source_id for s in self.sources]
-
-    @field_property(source_count)
-    def get_source_count(self) -> int:
-        return len(self.sources)
-
-    @field_property(playlist_item_count)
-    def get_playlist_item_count(self) -> int:
-        return len(self.playlist)
-
-    @field_property(subtrack_count)
-    def get_subtrack_count(self) -> int:
-        # TODO not clear what to return here
-        return 0
-
-    @field_property(clip_item_count)
-    def get_clip_item_count(self) -> int:
-        return len(self.clip_items)
 
     def add_source_from_wem(
         self,

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
-from field_properties import field_property
 
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -25,9 +24,9 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     default_switch: int = 0
     continuous_validation: int = 0
     children: Children = field(default_factory=Children)
-    switch_group_count: int = field_property(default=0)
+    switch_group_count: int = 0
     switch_groups: list[SwitchPackage] = field(default_factory=list)
-    switch_param_count: int = field_property(default=0)
+    switch_param_count: int = 0
     switch_params: list[SwitchNodeParams] = field(default_factory=list)
 
     @classmethod
@@ -67,13 +66,5 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
-
-    @field_property(switch_group_count)
-    def get_switch_group_count(self) -> int:
-        return len(self.switch_groups)
-
-    @field_property(switch_param_count)
-    def get_switch_param_count(self) -> int:
-        return len(self.switch_params)
 
     # TODO sync up children with switch groups/params

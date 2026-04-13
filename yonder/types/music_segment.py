@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar, Any
-from field_properties import field_property
 
 from yonder.hash import calc_hash
 from yonder.enums import PropID, MarkerId
@@ -15,7 +14,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
-    marker_count: int = field_property(default=0)
+    marker_count: int = 0
     markers: list[MusicMarkerWwise] = field(default_factory=list)
 
     @classmethod
@@ -64,10 +63,6 @@ class MusicSegment(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_node_params.node_base_params.initial_rtpc.rtpcs
-
-    @field_property(marker_count)
-    def get_marker_count(self) -> int:
-        return len(self.markers)
 
     def set_marker(
         self, mid: int | str | MarkerId, pos: float, update: bool = True

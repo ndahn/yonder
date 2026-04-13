@@ -661,7 +661,7 @@ def _create_attributes_event(
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
-    def add_action(done: Callable[[tuple[int, ActionType]], None]) -> None:
+    def add_action(done: Callable[[int], None]) -> None:
         # TODO new action dialog
         action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
         bnk.add_nodes(action)
@@ -670,21 +670,22 @@ def _create_attributes_event(
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
-        return (action.id, action.action_type_enum)
+        done(action.id)
 
-    def get_row_for_action(item: tuple[int, ActionType], idx: int) -> None:
-        aid, action_type = item
+    def get_row_for_action(aid: int, idx: int) -> None:
         with dpg.group(horizontal=True):
             dpg.add_text(str(aid))
-            if action_type:
+            action = bnk.get(aid)
+            if action:
                 action: Action = bnk[aid]
                 dpg.add_combo(
                     [at.name for at in ActionType],
-                    default_value=action_type.name,
-                    width=200,
+                    default_value=action.action_type_enum.name,
+                    width=150,
                     callback=on_action_type_changed,
                     user_data=aid,
                 )
+                dpg.add_text(">")
                 target = bnk.get(action.external_id)
                 if target:
                     add_node_link(str(target), target.id, on_node_selected)
