@@ -198,8 +198,9 @@ def add_node_link(
 
 
 def add_letmeknow() -> None:
-    dpg.add_text("Let me know what you want here!")
-    dpg.add_text("@managarm on ?ServerName?", color=style.light_blue)
+    with dpg.child_window(auto_resize_x=True, auto_resize_y=True):
+        dpg.add_text("Let me know what you want here!")
+        dpg.add_text("Ping @managarm on ?ServerName?", color=style.orange)
 
 
 def make_setter(

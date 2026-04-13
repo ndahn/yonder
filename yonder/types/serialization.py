@@ -36,7 +36,7 @@ def _serialize_value(obj: Any) -> Any:
     if isinstance(obj, Enum):
         if isinstance(obj, StrEnum):
             return obj.value
-        return obj.name
+        return obj.name.rstrip("_")
 
     return obj
 
