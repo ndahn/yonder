@@ -95,6 +95,18 @@ def add_generic_widget(
         value_type = Literal[tuple(items)]
         callback = new_callback
 
+    # dpg.add_input_int only supports numbers up to int32
+    if value_type is int and isinstance(default, int) and default.bit_length() >= 32:
+        orig_callback = callback
+
+        def new_callback(sender: str, app_data: str, cb_user_data: Any) -> None:
+            if orig_callback:
+                orig_callback(sender, int(app_data, user_data))
+
+        value_type = str
+        callback = new_callback
+        kwargs["decimal"] = True
+
     # The simple types
     type_origin = get_origin(value_type)
     origin_args = get_args(value_type)

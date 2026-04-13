@@ -663,8 +663,13 @@ def _create_attributes_event(
 
     def add_action(done: Callable[[tuple[int, ActionType]], None]) -> None:
         # TODO new action dialog
-        action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
+        action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
         bnk.add_nodes(action)
+        node.actions.append(action.id)
+        
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
         return (action.id, action.action_type_enum)
 
     def get_row_for_action(item: tuple[int, ActionType], idx: int) -> None:
