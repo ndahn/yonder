@@ -8,18 +8,27 @@ from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name
 from yonder.types import (
     Action,
+    ActionType,
     ActorMixer,
+    AudioDevice,
+    AuxiliaryBus,
     Attenuation,
     Bus,
+    DialogueEvent,
     Event,
+    EffectCustom,
+    EffectShareSet,
     LayerContainer,
     MusicRandomSequenceContainer,
     MusicSegment,
     MusicSwitchContainer,
     MusicTrack,
     RandomSequenceContainer,
+    Section,
     Sound,
+    State,
     SwitchContainer,
+    TimeModulator,
 )
 from yonder.types.action import ActionParams
 from yonder.util import logger, to_typed_dict
@@ -39,6 +48,8 @@ from yonder.enums import (
     PropID,
     DecisionTreeMode,
     MarkerId,
+    RandomMode,
+    PlaybackMode,
 )
 from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
@@ -98,7 +109,8 @@ def create_attribute_widgets(
             if hasattr(node, "parent"):
                 with dpg.group(horizontal=True):
                     dpg.add_text("Parent: ")
-                    add_node_link(bnk.get(node.parent, node.parent), on_node_selected)
+                    parent = bnk.get(node.parent, node.parent)
+                    add_node_link(str(parent), parent, on_node_selected)
 
             if hasattr(node, "properties"):
                 add_node_properties(
@@ -157,11 +169,14 @@ def add_node_properties(
         )
 
 
+# TODO RTCP
+
+
 def add_node_link(
+    label: str,
     target: int | HIRCNode,
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
-    label: str = None,
     tag: str = 0,
     user_data: Any = None,
 ) -> str:
@@ -169,12 +184,10 @@ def add_node_link(
         tag = dpg.generate_uuid()
 
     if isinstance(target, HIRCNode):
-        if label is None:
-            label = target.name
         target = target.id
 
     dpg.add_button(
-        label=label or f"#{target}",
+        label=label,
         small=True,
         callback=lambda s, a, u: on_node_selected(tag, u, user_data),
         user_data=target,
@@ -182,6 +195,31 @@ def add_node_link(
     )
     dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
     return tag
+
+
+def add_letmeknow() -> None:
+    dpg.add_text("Let me know what you want here!")
+    dpg.add_text("@managarm on ?ServerName?", color=style.light_blue)
+
+
+def make_setter(
+    node: HIRCNode,
+    path: str,
+    sender: str,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    user_data: Any,
+    value_transformer: Callable[[Any], Any] = None,
+):
+    def cb(sender: str, new_value: Any, cb_user_data: Any) -> None:
+        if value_transformer:
+            new_value = value_transformer(new_value)
+
+        node.set_value(path, new_value)
+
+        if on_node_changed:
+            on_node_changed(sender, node, user_data)
+
+    return cb
 
 
 def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
@@ -212,7 +250,7 @@ def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
 
 
 def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceType):
-    from yonder.gui.dialogs.choice_dialog import choice_dialog
+    from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 
     def copy_wems() -> None:
         if source_type == SourceType.Embedded:
@@ -238,7 +276,7 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
 
         logger.info(f"Copied {wem.name} to {target}")
 
-    choice_dialog(
+    simple_choice_dialog(
         f"Copy WEMs to soundbank {bnk.name}?",
         ["Yes", "No"],
         lambda s, a, u: copy_wems(),
@@ -265,7 +303,8 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, ActorMixer):
-        pass
+        # FIXME
+        add_letmeknow()
     elif isinstance(node, Attenuation):
         _create_attributes_attenuation(
             bnk,
@@ -276,13 +315,22 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, Bus):
-        pass
+        # FIXME
+        add_letmeknow()
     elif isinstance(node, Event):
-        pass
+        _create_attributes_event(
+            bnk,
+            node,
+            on_node_changed,
+            on_node_selected,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
     elif isinstance(node, LayerContainer):
-        pass
+        # FIXME
+        add_letmeknow()
     elif isinstance(node, MusicRandomSequenceContainer):
-        _create_attributes_music_random_sequence_container(
+        _create_attributes_musicrandomsequencecontainer(
             bnk,
             node,
             on_node_changed,
@@ -291,7 +339,7 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, MusicSegment):
-        _create_attributes_music_segment(
+        _create_attributes_musicsegment(
             bnk,
             node,
             on_node_changed,
@@ -300,7 +348,7 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, MusicSwitchContainer):
-        _create_attributes_music_switch_container(
+        _create_attributes_musicswitchcontainer(
             bnk,
             node,
             on_node_changed,
@@ -309,7 +357,7 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, MusicTrack):
-        _create_attributes_music_track(
+        _create_attributes_musictrack(
             bnk,
             node,
             on_node_changed,
@@ -318,7 +366,14 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, RandomSequenceContainer):
-        pass
+        _create_attributes_randomsequencecontainer(
+            bnk,
+            node,
+            on_node_changed,
+            on_node_selected,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
     elif isinstance(node, Sound):
         _create_attributes_sound(
             bnk,
@@ -329,7 +384,7 @@ def _create_type_specific_attributes(
             user_data=user_data,
         )
     elif isinstance(node, SwitchContainer):
-        _create_attributes_switch_container(
+        _create_attributes_switchcontainer(
             bnk,
             node,
             on_node_changed,
@@ -337,6 +392,8 @@ def _create_type_specific_attributes(
             base_tag=base_tag,
             user_data=user_data,
         )
+    else:
+        add_letmeknow()
 
 
 def _create_attributes_action(
@@ -402,7 +459,9 @@ def _create_attributes_action(
     params = node.params
     # PlayEvents will have a string here
     if isinstance(params, ActionParams):
-        data = to_typed_dict(params)
+        data = to_typed_dict(params, True)
+        # No changing type, we'd have to exchange the params for that
+        data.pop("action_type")
         create_generic_widgets_recursive(data)
 
 
@@ -471,7 +530,9 @@ def _create_attributes_attenuation(
             dpg.add_checkbox(
                 label="Cone enabled",
                 default_value=(node.is_cone_enabled > 0),
-                callback=lambda s, a, u: setattr(node, "is_cone_enabled", int(a)),
+                callback=make_setter(
+                    node, "is_cone_enabled", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_cone_enabled",
             )
             dpg.add_input_float(
@@ -481,7 +542,9 @@ def _create_attributes_attenuation(
                 min_clamped=True,
                 max_value=90.0,
                 max_clamped=True,
-                callback=lambda s, a, u: setattr(node, "inside_degrees", a),
+                callback=make_setter(
+                    node, "inside_degrees", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_inside_degrees",
             )
             dpg.add_input_float(
@@ -491,7 +554,9 @@ def _create_attributes_attenuation(
                 min_clamped=True,
                 max_value=90.0,
                 max_clamped=True,
-                callback=lambda s, a, u: setattr(node, "outside_degrees", a),
+                callback=make_setter(
+                    node, "outside_degrees", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_outside_degrees",
             )
             dpg.add_input_float(
@@ -501,7 +566,9 @@ def _create_attributes_attenuation(
                 # min_clamped=True,
                 # max_value=90.0,
                 # max_clamped=True,
-                callback=lambda s, a, u: setattr(node, "outside_volume", a),
+                callback=make_setter(
+                    node, "outside_volume", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_outside_volume",
             )
             dpg.add_input_float(
@@ -511,7 +578,9 @@ def _create_attributes_attenuation(
                 min_clamped=True,
                 # max_value=90.0,
                 # max_clamped=True,
-                callback=lambda s, a, u: setattr(node, "low_pass", a),
+                callback=make_setter(
+                    node, "low_pass", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_low_pass",
             )
             dpg.add_input_float(
@@ -521,12 +590,91 @@ def _create_attributes_attenuation(
                 min_clamped=True,
                 # max_value=90.0,
                 # max_clamped=True,
-                callback=lambda s, a, u: setattr(node, "high_pass", a),
+                callback=make_setter(
+                    node, "high_pass", base_tag, on_node_changed, user_data
+                ),
                 tag=f"{base_tag}_high_pass",
             )
 
 
-def _create_attributes_music_random_sequence_container(
+def _create_attributes_event(
+    bnk: Soundbank,
+    node: Event,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    def on_actions_changed(
+        sender: str, info: tuple[int, list, list], cb_user_data: Any
+    ) -> None:
+        node.actions[:] = info[2]
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_action_type_changed(
+        sender: str, action_type_name: str, action_id: int
+    ) -> None:
+        action: Action = bnk[aid]
+        action_type = ActionType[action_type_name]
+        try:
+            action.change_type(action_type)
+        except ValueError:
+            dpg.set_value(sender, action.action_type_enum.name)
+            raise
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def add_action(done: Callable[[tuple[int, ActionType]], None]) -> None:
+        # TODO new action dialog
+        action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
+        bnk.add_nodes(action)
+        return (action.id, action.action_type_enum)
+
+    def get_row_for_action(item: tuple[int, ActionType], idx: int) -> None:
+        aid, action_type = item
+        with dpg.group(horizontal=True):
+            dpg.add_text(str(aid))
+            if action_type:
+                action: Action = bnk[aid]
+                dpg.add_combo(
+                    [at.name for at in ActionType],
+                    default_value=action_type.name,
+                    width=200,
+                    callback=on_action_type_changed,
+                    user_data=aid,
+                )
+                target = bnk.get(action.external_id)
+                if target:
+                    add_node_link(str(target), target.id, on_node_selected)
+                else:
+                    dpg.add_text(f"#{action.external_id} (not found)")
+
+            else:
+                dpg.add_text(f"#{aid} (not found)")
+
+    initial_actions = []
+    for aid in node.actions:
+        action: Action = bnk.get(aid)
+        if action:
+            initial_actions.append((aid, action.action_type_enum))
+        else:
+            initial_actions.append((aid, None))
+
+    add_widget_table(
+        initial_actions,
+        get_row_for_action,
+        new_item=add_action,
+        on_add=on_actions_changed,
+        on_remove=on_actions_changed,
+        label="Actions",
+        tag=f"{base_tag}_actions",
+    )
+
+
+def _create_attributes_musicrandomsequencecontainer(
     bnk: Soundbank,
     node: MusicRandomSequenceContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
@@ -551,7 +699,7 @@ def _create_attributes_music_random_sequence_container(
         dpg.add_spacer(height=3)
 
 
-def _create_attributes_music_switch_container(
+def _create_attributes_musicswitchcontainer(
     bnk: Soundbank,
     node: MusicSwitchContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
@@ -614,11 +762,11 @@ def _create_attributes_music_switch_container(
             with dpg.tree_node(label=f"{arg_name} = {val_name}"):
                 # TODO should be an input field
                 if leaf_node:
-                    add_node_link(leaf_node, on_node_selected, user_data=user_data)
-                elif nid == 0:
-                    dpg.add_text("<None>")
+                    add_node_link(
+                        str(leaf_node), leaf_node, on_node_selected, user_data=user_data
+                    )
                 else:
-                    dpg.add_text(f"(ext) {nid}")
+                    dpg.add_text(f"#{nid} (not found)")
         else:
             # Branch
             arg = node.arguments[level]
@@ -658,7 +806,7 @@ def _create_attributes_music_switch_container(
         dpg.add_spacer(height=3)
 
 
-def _create_attributes_music_segment(
+def _create_attributes_musicsegment(
     bnk: Soundbank,
     node: MusicSegment,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
@@ -686,10 +834,10 @@ def _create_attributes_music_segment(
 
     def on_marker_added(
         sender: str,
-        info: tuple[int, list[MusicMarkerWwise], list[MusicMarkerWwise]],
+        info: tuple[int, MusicMarkerWwise, list[MusicMarkerWwise]],
         cb_user_data: Any,
     ) -> None:
-        marker = info[1][0]
+        marker = info[1]
         node.set_marker(marker.id, marker.position)
         on_node_changed(base_tag, node, user_data)
 
@@ -702,8 +850,8 @@ def _create_attributes_music_segment(
         node.remove_marker(marker.id)
         on_node_changed(base_tag, node, user_data)
 
-    def new_marker() -> MusicMarkerWwise:
-        return node.set_marker(f"m{len(node.markers)}", 0.0)
+    def new_marker(done: Callable[[MusicMarkerWwise], None]) -> None:
+        done(node.set_marker(f"m{len(node.markers)}", 0.0))
 
     def create_row(marker: MusicMarkerWwise, idx: int) -> None:
         with dpg.group(horizontal=True):
@@ -762,8 +910,8 @@ def _create_attributes_music_segment(
 
     add_widget_table(
         node.markers,
-        new_marker,
         create_row,
+        new_item=new_marker,
         on_add=on_marker_added,
         on_remove=on_marker_removed,
         add_item_label="+ Add Marker",
@@ -785,14 +933,12 @@ def _create_attributes_music_segment(
         dpg.add_text("Segment has no tracks", color=style.yellow)
 
 
-# FIXME
-def _create_attributes_music_track(
+def _create_attributes_musictrack(
     bnk: Soundbank,
     node: MusicTrack,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
-    parent: str = 0,
     user_data: Any = None,
     base_tag: str = 0,
 ) -> None:
@@ -916,6 +1062,100 @@ def _create_attributes_music_track(
     )
 
 
+def _create_attributes_randomsequencecontainer(
+    bnk: Soundbank,
+    node: RandomSequenceContainer,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    def create_playlist_row(item: tuple[int, int], idx: int) -> None:
+        target = bnk.get(item[0])
+        if target:
+            add_node_link(str(target), target, on_node_selected)
+        else:
+            dpg.add_text(f"#{item[0]} (not found)")
+
+        dpg.add_input_int(
+            default_value=item[1],
+            min_value=0,
+            min_clamped=True,
+            max_value=100000,
+            callback=make_setter(
+                node,
+                f"playlist/items:{idx}/weight",
+                base_tag,
+                on_node_changed,
+                user_data,
+            ),
+            user_data=idx,
+        )
+
+    with dpg.group():
+        dpg.add_combo(
+            [p.name for p in PlaybackMode],
+            label="Playback mode",
+            default_value=PlaybackMode(node.mode).name,
+            callback=make_setter(
+                node,
+                "mode",
+                base_tag,
+                on_node_changed,
+                user_data,
+                value_transformer=lambda v: PlaybackMode[v].value,
+            ),
+            tag=f"{base_tag}_mode",
+        )
+        dpg.add_combo(
+            [r.name for r in RandomMode],
+            label="Randomization",
+            default_value=RandomMode(node.random_mode).name,
+            callback=make_setter(
+                node,
+                "random_mode",
+                base_tag,
+                on_node_changed,
+                user_data,
+                value_transformer=lambda v: RandomMode[v].value,
+            ),
+            tag=f"{base_tag}_random_mode",
+        )
+        dpg.add_input_int(
+            label="Loop count",
+            default_value=node.loop_count,
+            min_value=0,
+            min_clamped=True,
+            callback=make_setter(
+                node, "loop_count", base_tag, on_node_changed, user_data
+            ),
+            tag=f"{base_tag}_loop_count",
+        )
+        dpg.add_input_int(
+            label="Avoid repetitions",
+            default_value=node.avoid_repeat_count,
+            min_value=0,
+            min_clamped=True,
+            callback=make_setter(
+                node, "avoid_repeat_count", base_tag, on_node_changed, user_data
+            ),
+            tag=f"{base_tag}_avoid_repeat_count",
+        )
+
+        # TODO Allow adding new children (via create object dialog)
+        dpg.add_spacer(height=5)
+        item_weights = [(p.play_id, p.weight) for p in node.playlist.items]
+        add_widget_table(
+            item_weights,
+            create_playlist_row,
+            label="Playlist",
+            header_row=True,
+            columns=("Item", "Weight"),
+            tag=f"{base_tag}_playlist",
+        )
+
+
 def _create_attributes_sound(
     bnk: Soundbank,
     node: Sound,
@@ -948,7 +1188,7 @@ def _create_attributes_sound(
         dpg.add_spacer(height=3)
 
 
-def _create_attributes_switch_container(
+def _create_attributes_switchcontainer(
     bnk: Soundbank,
     node: SwitchContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
@@ -958,10 +1198,9 @@ def _create_attributes_switch_container(
     user_data: Any = None,
 ) -> None:
     def on_show_empty_switches(sender: str, show: bool, node: SwitchContainer) -> None:
-        for switch, nodes in node.switch_mappings.items():
+        for switch in node.switch_groups:
             dpg.configure_item(
-                f"{base_tag}_node_{node.id}_switch_{switch}",
-                show=show or bool(nodes),
+                f"{base_tag}_node_{node.id}_switch_{switch.switch_id}", show=show
             )
 
     with dpg.group():
@@ -972,23 +1211,24 @@ def _create_attributes_switch_container(
             user_data=node,
         )
 
-        with dpg.tree_node(label="Switches"):
-            for switch, nodes in node.switch_mappings.items():
-                label = f"{len(nodes)} - {lookup_name(switch, '?')} ({switch})"
+        with dpg.tree_node(label="Switches", default_open=True):
+            for switch in node.switch_groups:
+                name = lookup_name(switch.switch_id, "?")
+                label = f"({len(switch.nodes)}) / {name} (#{switch.switch_id})"
+
                 with dpg.tree_node(
                     label=label,
-                    show=bool(nodes),
-                    tag=f"{base_tag}_node_{node.id}_switch_{switch}",
+                    show=bool(switch.nodes),
+                    tag=f"{base_tag}_node_{node.id}_switch_{switch.switch_id}",
                 ):
-                    for nid in nodes:
+                    for nid in switch.nodes:
                         switch_node = bnk.get(nid)
                         if switch_node:
                             add_node_link(
-                                switch_node, on_node_selected, user_data=user_data
+                                str(switch_node),
+                                switch_node,
+                                on_node_selected,
+                                user_data=user_data,
                             )
                         else:
-                            dpg.add_text(f"(ext) {nid}")
-
-        dpg.add_spacer(height=3)
-        dpg.add_separator()
-        dpg.add_spacer(height=3)
+                            dpg.add_text(f"#{nid} (not found)")

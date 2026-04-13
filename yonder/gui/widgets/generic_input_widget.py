@@ -223,8 +223,8 @@ def add_generic_widget(
             if callback:
                 callback(sender, changes[2], user_data)
 
-        def add_list_item() -> Any:
-            return origin_args()
+        def add_list_item(done: Callable[[Any], None]) -> Any:
+            done(origin_args())
 
         def create_list_item_row(item: Any, idx: int) -> None:
             add_generic_widget(
@@ -237,9 +237,9 @@ def add_generic_widget(
 
         add_widget_table(
             default or [],
-            add_list_item,
             create_list_item_row,
             label=label,
+            new_item=add_list_item,
             on_add=cb,
             on_remove=cb,
             user_data=user_data,

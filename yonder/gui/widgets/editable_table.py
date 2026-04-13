@@ -13,17 +13,21 @@ _T = TypeVar("_T")
 
 def add_widget_table(
     initial_values: list[_T],
-    new_item: Callable[[], _T | tuple[_T]],
     create_row: Callable[[_T, int], None],
     *,
-    on_add: Callable[[str, tuple[int, list[_T], list[_T]], Any], None] = None,
+    new_item: Callable[[Callable[[list[_T]], None]], None] = None,
+    on_add: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
+    header_row: bool = False,
+    columns: list[str] = ("Value",),
     label: str = None,
     add_item_label: str = "+",
     parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
 ) -> str:
+    # NOTE: if new_item is not set, both adding and removing items is disabled
+
     if tag in (None, 0, ""):
         tag = dpg.generate_uuid()
 
@@ -41,25 +45,29 @@ def add_widget_table(
             on_remove(tag, (idx, prev, current_values), user_data)
         refresh()
 
-    def on_add_clicked() -> None:
-        result = new_item()
+    def on_add_item_done(result: list[_T]) -> None:
         if not result:
             return
 
         pos = len(current_values)
-        current_values.extend(result)
+        current_values.append(result)
         if on_add:
             on_add(tag, (pos, result, current_values), user_data)
         refresh()
 
+    def on_add_clicked() -> None:
+        new_item(on_add_item_done)
+
     def add_row(val: _T, idx: int) -> None:
         with dpg.table_row(parent=tag):
             create_row(val, idx)
-            dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
+            if new_item:
+                dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
 
     def add_footer() -> None:
-        with dpg.table_row(parent=tag):
-            dpg.add_button(label=add_item_label, callback=on_add_clicked)
+        if new_item:
+            with dpg.table_row(parent=tag):
+                dpg.add_button(label=add_item_label, callback=on_add_clicked)
 
     # The actual widgets
     if label:
@@ -67,16 +75,19 @@ def add_widget_table(
 
     with dpg.child_window(border=False, autosize_x=True, auto_resize_y=True, parent=parent):
         with dpg.table(
-            header_row=False,
+            header_row=header_row,
             policy=dpg.mvTable_SizingFixedFit,
             borders_outerH=True,
             borders_outerV=True,
             tag=tag,
         ):
-            dpg.add_table_column(
-                label="Value", width_stretch=True, init_width_or_weight=100
-            )
-            dpg.add_table_column(label="")
+            for col in columns:
+                dpg.add_table_column(
+                    label=col, width_stretch=True, init_width_or_weight=100
+                )
+            
+            if new_item:
+                dpg.add_table_column(label="")
 
             refresh()
 
@@ -99,7 +110,7 @@ def add_filepaths_table(
     if not tag:
         tag = dpg.generate_uuid()
 
-    def add_item() -> Path:
+    def add_item(done: Callable[[Path], None]) -> None:
         if folders:
             res = choose_folder(title=label)
         else:
@@ -107,10 +118,10 @@ def add_filepaths_table(
 
         if res:
             if isinstance(res, list):
-                return [Path(p) for p in res]
-            return [Path(res)]
-
-        return None
+                for p in res:
+                    done(Path(p))
+            else:
+                done(Path(res))
 
     def create_row(path: Path, idx: int):
         txt = dpg.add_input_text(
@@ -123,8 +134,8 @@ def add_filepaths_table(
 
     return add_widget_table(
         initial_paths,
-        add_item,
         create_row,
+        new_item=add_item,
         on_add=lambda s, a, u: on_value_changed(tag, a[2], u),
         on_remove=lambda s, a, u: on_value_changed(tag, a[2], u),
         add_item_label="+ Add Paths" if folders else "+ Add Files",
@@ -180,15 +191,13 @@ def add_player_table(
     if not get_row_label:
         get_row_label = lambda i: f"Track #{i}"
 
-    def new_sound() -> Path:
+    def new_sound(done: Callable[[Path], None]) -> None:
         ret = open_file_dialog(
             title="Select Audio",
             filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
         )
         if ret:
-            return [Path(ret)]
-
-        return None
+            done([Path(ret)])
 
     def on_loop_edit(
         sender: str, new_loop_info: tuple[float, float, bool], idx: int
@@ -212,17 +221,16 @@ def add_player_table(
         on_user_marker_changed(tag, (idx, markers), user_data)
 
     def on_track_added(
-        sender: str, info: tuple[int, list[Path], list[Path]], cb_user_data: Any
+        sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         nonlocal tracks
 
-        pos, new_items, all_items = info
+        pos, _, all_items = info
         tracks[:] = all_items[:]
 
-        for _ in range(len(new_items)):
-            loop_info.insert(pos, (0.0, 1.0, True))
-            user_markers.insert(pos, list(initial_user_markers or []))
-            trims.insert(pos, (0.0, 0.0))
+        loop_info.insert(pos, (0.0, 1.0, True))
+        user_markers.insert(pos, list(initial_user_markers or []))
+        trims.insert(pos, (0.0, 0.0))
 
         data = (all_items, loop_info, trims, user_markers)
         on_filepaths_changed(sender, data, user_data)
@@ -264,8 +272,8 @@ def add_player_table(
 
     return add_widget_table(
         [],
-        new_sound,
         create_row,
+        new_item=new_sound,
         on_add=on_track_added,
         on_remove=on_track_removed,
         add_item_label=add_item_label,
@@ -308,7 +316,7 @@ def add_curves_table(
 
     def on_add_curve(
         sender: str,
-        info: tuple[int, list[GraphCurve], list[GraphCurve]],
+        info: tuple[int, GraphCurve, list[GraphCurve]],
         cb_user_data: Any,
     ) -> None:
         curves.clear()
@@ -328,8 +336,8 @@ def add_curves_table(
         if on_curves_changed:
             on_curves_changed(tag, curves, user_data)
 
-    def new_curve() -> GraphCurve:
-        return [
+    def new_curve(done: Callable[[GraphCurve], None]) -> None:
+        done(
             GraphCurve(
                 curve_types[0] if curve_types else None,
                 [
@@ -337,7 +345,7 @@ def add_curves_table(
                     RTPCGraphPoint(1.0, 1.0, CurveInterpolation.Constant),
                 ],
             )
-        ]
+        )
 
     def create_row(curve: GraphCurve, idx: int):
         with dpg.tree_node(label=f"Curve #{idx}"):
@@ -358,8 +366,8 @@ def add_curves_table(
 
         add_widget_table(
             curves,
-            new_curve,
             create_row,
+            new_item=new_curve,
             on_add=on_add_curve,
             on_remove=on_remove_curve,
             add_item_label=add_item_label,

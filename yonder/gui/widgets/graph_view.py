@@ -117,7 +117,7 @@ def add_graph_widget(
 
             node_r = 10
             node = bnk.get(nid)
-            label = node.type if node else "(external)"
+            label = node.type_name if node else "(not found)"
             # TODO font_size does not match with the font we're using
             pw, ph = estimate_drawn_text_size(len(label), font_size=12)
 

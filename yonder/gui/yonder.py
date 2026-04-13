@@ -37,7 +37,7 @@ from yonder.gui import style
 from yonder.gui.style import themes
 from yonder.gui.localization import Localization, English
 from yonder.gui.dialogs.about_dialog import about_dialog
-from yonder.gui.dialogs.choice_dialog import choice_dialog
+from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 from yonder.gui.dialogs.create_node_dialog import create_node_dialog
 from yonder.gui.dialogs.new_wwise_event_dialog import new_wwise_event_dialog
 from yonder.gui.dialogs.file_dialog import (
@@ -551,7 +551,7 @@ class BanksOfYonder:
         def load_file(sender: str, app_data: Any, path: Path) -> None:
             if self.bnk:
                 # A soundbank is loaded, save before exiting?
-                choice_dialog(
+                simple_choice_dialog(
                     f"Save soundbank f{self.bnk.name} first?",
                     ["Save", "Save as", "|", "Just do it"],
                     load_file_choice,
@@ -781,7 +781,7 @@ class BanksOfYonder:
 
             if unpacked_json.is_file():
                 # Soundbank was already unpacked, ask if we should open the json instead
-                choice_dialog(
+                simple_choice_dialog(
                     f"Soundbank {path.stem} was already unpacked. Open the json instead?",
                     ["Open json", "Unpack again"],
                     on_unpack_choice,
@@ -826,9 +826,7 @@ class BanksOfYonder:
 
             self.regenerate()
             self._set_bnk_menus_enabled(True)
-            logger.info(
-                f"Loaded soundbank {self.bnk.name} with {len(self.bnk)} nodes"
-            )
+            logger.info(f"Loaded soundbank {self.bnk.name} with {len(self.bnk)} nodes")
         finally:
             dpg.delete_item(loading)
 
@@ -894,7 +892,7 @@ class BanksOfYonder:
             user_data=node,
         )
         register_context_menu(root_row.selectable, node)
-        
+
         return root_row.row
 
     def regenerate(self) -> None:
@@ -1075,25 +1073,38 @@ class BanksOfYonder:
     def jump_to_node(self, node: int | HIRCNode) -> None:
         if node in (0, None):
             return
-        
+
         if isinstance(node, int):
             node_id = node
             node = self.bnk[node_id]
         else:
             node_id = node.id
 
-        if node_id in self.event_map:
+        if node_id in self.globals_map:
+            table = f"{self.tag}_globals_table"
+
+            # Switch to globals tab
+            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_globals")
+
+            # Unfold the category
+            # FIXME: make sure the node row actually exists despite count limits!
+            row = f"{self.tag}_globals_{node.type_name}"
+            set_foldable_row_status(row, True)
+
+        else:
             table = f"{self.tag}_events_table"
 
             # Switch to events tab
             dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_events")
-            
+
             if not isinstance(node, Event):
                 for evt, sub in self.bnk.find_event_subgraphs_for(node):
                     if not self._selected_node or self._selected_node.id in sub:
                         break
                 else:
-                    logger.error(f"Could not find an event subgraph containing node {node}")
+                    logger.error(
+                        f"Could not find an event subgraph containing node {node}"
+                    )
                     return
 
                 path = nx.shortest_path(sub, evt.id, node_id)
@@ -1107,21 +1118,6 @@ class BanksOfYonder:
                     set_foldable_row_status(row, True)
 
                 dpg.split_frame()
-        
-        elif node_id in self.globals_map:
-            table = f"{self.tag}_globals_table"
-
-            # Switch to globals tab
-            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_globals")
-            
-            # Unfold the category
-            # FIXME: make sure the node row actually exists despite count limits!
-            row = f"{self.tag}_globals_{node.type_name}"
-            set_foldable_row_status(row, True)
-        
-        else:
-            logger.warning(f"Could not find node {node}")
-            return
 
         self.select_node(node)
         self._scroll_to_item(table, node)

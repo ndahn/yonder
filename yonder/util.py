@@ -185,13 +185,22 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
     return apply_dict(base, updates)
 
 
-def to_typed_dict(data: dataclass) -> dict[str, tuple[type, Any]]:
+def resolve_typehint(hint: str, context_module: str) -> type:
+    module = sys.modules[context_module]
+    return eval(hint, vars(module))
+
+
+def to_typed_dict(data: dataclass, resolve_strings: bool) -> dict[str, tuple[type, Any]]:
     def delve(d: Any) -> Any:
         if is_dataclass(d):
             ret = {}
             for f in fields(d):
                 val = getattr(d, f.name)
-                ret[f.name] = (f.type, delve(val))
+                tp = f.type
+                if resolve_strings and isinstance(tp, str):
+                    tp = resolve_typehint(f.type, d.__module__)
+
+                ret[f.name] = (tp, delve(val))
             return ret
 
         elif isinstance(d, dict):

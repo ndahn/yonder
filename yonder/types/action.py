@@ -79,11 +79,23 @@ class Action(HIRCNode):
         # NOTE "action_type" is already reserved for serialization
         return ActionType(self.action_type)
 
+    def change_type(self, new_type: ActionType) -> None:
+        if not new_type.params_cls:
+            raise ValueError(f"Action type {new_type} is not supported yet")
+
+        if new_type == ActionType.PlayEvent:
+            params = "PlayEvent"
+        else:
+            params = new_type.params_cls(new_type)
+
+        self.action_type = new_type.type_id
+        self.params = params
+
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 
     def __str__(self) -> str:
-        return f"{self.action_type_enum.name} #{self.id}"
+        return f"Action<{self.action_type_enum.name}> #{self.id}"
 
 
 @dataclass

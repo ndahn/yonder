@@ -54,6 +54,32 @@ class HIRCNode(metaclass=ABCMeta):
     def type_name(self) -> str:
         return type(self).__name__
 
+    def get_value(self, path: str) -> Any:
+        obj = self
+        for part in path.split("/"):
+            if ":" in part:
+                key, idx = part.split(":")
+                obj = getattr(obj, key)[int(idx)]
+            else:
+                obj = getattr(obj, part)
+        
+        return obj
+
+    def set_value(self, path: str, new_val: Any, strict: bool = True) -> None:
+        if "/" in path:
+            trail, key = path.rsplit("/", maxsplit=1)
+            obj = self.get_value(trail)
+        else:
+            key = path
+            obj = self
+
+        if strict:
+            old_val = getattr(obj, key)
+            if old_val is not None and type(old_val) is not type(new_val):
+                raise ValueError(f"Cannot set {path}: incompatible types ({old_val}, {new_val})")
+
+        setattr(obj, key, new_val)
+
     def get_name(self, default: str = None) -> str:
         return self._header.id.get_name(default)
 
@@ -158,6 +184,22 @@ class HIRCNode(metaclass=ABCMeta):
 
     def __lt__(self, other: HIRCNode) -> bool:
         return self.id < other.id
+
+    def __contains__(self, item: str) -> bool:
+        if not isinstance(item, str):
+            return False
+
+        try:
+            self.get_value(item)
+            return True
+        except Exception:
+            return False
+
+    def __getitem__(self, path: str) -> Any:
+        return self.get_value(path)
+
+    def __setitem__(self, path: str, val: Any) -> Any:
+        self.set_value(path, val)
 
     def __str__(self) -> str:
         if self.name:

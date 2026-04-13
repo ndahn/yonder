@@ -6,14 +6,19 @@ from yonder.gui.helpers import center_window
 from yonder.gui.widgets import add_paragraphs
 
 
-def choice_dialog(
+_undefined = object()
+
+
+def simple_choice_dialog(
     message: str,
     choices: list[str],
     callback: Callable[[str, str, Any], None],
     *,
+    cancel_val: Any = _undefined,
     title: str = "Pick one",
     text_color: style.Color = style.white,
     close_on_pick: bool = True,
+    modal: bool = True,
     tag: str = None,
     user_data: Any = None,
 ) -> str:
@@ -28,18 +33,24 @@ def choice_dialog(
 
         callback(tag, choice, user_data)
 
+    def on_cancel() -> None:
+        dpg.delete_item(dialog)
+        dpg.split_frame()
+        if cancel_val is not _undefined:
+            callback(tag, cancel_val, user_data)
+
     with dpg.window(
         label=title,
-        modal=True,
-        on_close=lambda: dpg.delete_item(dialog),
+        modal=modal,
+        on_close=on_cancel,
         no_saved_settings=True,
         autosize=True,
         tag=tag,
     ) as dialog:
-        add_paragraphs(message, 40, color=text_color)
-        
-        dpg.add_separator()
-        dpg.add_spacer(height=5)
+        if message:
+            add_paragraphs(message, 40, color=text_color)
+            dpg.add_separator()
+            dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
             for choice in choices:
@@ -60,6 +71,63 @@ def choice_dialog(
                     )
                 else:
                     dpg.add_button(label=choice, callback=on_choice, user_data=choice)
+
+    dpg.split_frame()
+    center_window(dialog)
+
+    return tag
+
+
+def simple_combo_dialog(
+    message: str,
+    choices: list[str],
+    callback: Callable[[str, str, Any], None],
+    *,
+    cancel_val: Any = _undefined,
+    title: str = "Pick one",
+    text_color: style.Color = style.white,
+    modal: bool = True,
+    tag: str = None,
+    user_data: Any = None,
+) -> str:
+    if not tag:
+        tag = dpg.generate_uuid()
+
+    def on_okay() -> None:
+        choice = dpg.get_value(f"{tag}_choice")
+
+        # Delete first, otherwise chaining into other modal dialogs won't work
+        dpg.delete_item(dialog)
+        dpg.split_frame()
+        callback(tag, choice, user_data)
+
+    def on_cancel() -> None:
+        dpg.delete_item(dialog)
+        dpg.split_frame()
+        if cancel_val is not _undefined:
+            callback(tag, cancel_val, user_data)
+
+    with dpg.window(
+        label=title,
+        modal=modal,
+        on_close=on_cancel,
+        no_saved_settings=True,
+        autosize=True,
+        tag=tag,
+    ) as dialog:
+        if message:
+            add_paragraphs(message, 40, color=text_color)
+            dpg.add_separator()
+            dpg.add_spacer(height=5)
+
+        dpg.add_combo(
+            choices,
+            fit_width=True,
+            tag=f"{tag}_choice",
+        )
+
+        with dpg.group(horizontal=True):
+            dpg.add_button(label="Okay", callback=on_okay, tag=f"{tag}_button_okay")
 
     dpg.split_frame()
     center_window(dialog)

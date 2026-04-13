@@ -57,8 +57,13 @@ class CurveParameters(IntEnum):
 
 
 class RandomMode(IntEnum):
-    Random = 0
+    Standard = 0
     Shuffle = 1
+
+
+class PlaybackMode(IntEnum):
+    Random = 0
+    Sequence = 1
 
 
 class PropID(IntEnum):

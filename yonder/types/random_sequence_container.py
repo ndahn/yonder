@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle, Playlist
-from yonder.enums import PropID, RandomMode
+from .base_types import NodeBaseParams, Children, PropBundle, Playlist, PlaylistItem
+from yonder.enums import PropID, RandomMode, PlaybackMode
 from .mixins import PropertyMixin
 
 
@@ -31,17 +31,19 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
         cls,
         nid: int | str,
         nodes: int | list[int],
+        playback_mode: PlaybackMode = PlaybackMode.Random,
+        random_mode: RandomMode = RandomMode.Standard,
+        loop_count: int = 1,
         avoid_repeat_count: int = 0,
-        loop_count: int = 0,
-        random_mode: RandomMode = RandomMode.Random,
         props: dict[PropID, float] = None,
         parent: int = 0,
     ) -> RandomSequenceContainer:
         obj = cls(
             nid,
-            avoid_repeat_count=avoid_repeat_count,
-            loop_count=loop_count,
+            mode=playback_mode.value,
             random_mode=random_mode.value,
+            loop_count=loop_count,
+            avoid_repeat_count=avoid_repeat_count,
         )
 
         if nodes:
@@ -66,6 +68,14 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def mode_enum(self) -> PlaybackMode:
+        return PlaybackMode(self.mode)
+
+    @property
+    def random_mode_enum(self) -> RandomMode:
+        return RandomMode(self.random_mode)
 
     def add_playlist_item(self, child_id: int) -> None:
         self.children.add(child_id)
