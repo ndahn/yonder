@@ -55,7 +55,7 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
     hints = _get_hints(target_type)
     kwargs = {}
 
-    if "asda__init__" in target_type.__dict__:
+    if "__init__" in target_type.__dict__:
         sig = inspect.signature(target_type.__init__)
         # Skip self, *args and **kwargs
         target_fields = [

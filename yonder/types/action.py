@@ -21,7 +21,7 @@ class Action(PropertyMixin, HIRCNode):
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
-    def __post_init__(self, nid: int | str):
+    def __post_init__(self, id: int | str):
         try:
             action_type = ActionType(self.action_type)
         except KeyError:
@@ -39,8 +39,8 @@ class Action(PropertyMixin, HIRCNode):
         cls, nid: int, external_id: int, bank_id: int = 0, fade_curve: int = 4
     ) -> Action:
         return cls(
-            nid,
-            external_id,
+            id=nid,
+            external_id=external_id,
             is_bus=False,
             params=ActionPlay(ActionType.Play, bank_id, fade_curve),
         )
@@ -65,8 +65,8 @@ class Action(PropertyMixin, HIRCNode):
             exc_items = []
 
         return cls(
-            nid,
-            external_id,
+            id=nid,
+            external_id=external_id,
             is_bus=False,
             params=ActionStop(
                 ActionType.StopEO,
