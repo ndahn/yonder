@@ -741,7 +741,7 @@ def _create_attributes_musicswitchcontainer(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    from yonder.gui.dialogs.edit_state_path_dialog import create_state_path_dialog
+    from yonder.gui.dialogs.edit_state_path_dialog import edit_state_path_dialog
 
     names = {
         a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments
@@ -777,9 +777,7 @@ def _create_attributes_musicswitchcontainer(
         label = f"{arg_name} = {val_name}"
         dpg.set_item_label(dpg_item, label)
 
-    def bind_context_menu(
-        item: str, tree_node: DecisionTreeNode, level: int
-    ) -> None:
+    def bind_context_menu(item: str, tree_node: DecisionTreeNode, level: int) -> None:
         arg = node.arguments[level]
         arg_name = names[arg.group_id]
         val_name = get_key(tree_node)
@@ -812,7 +810,10 @@ def _create_attributes_musicswitchcontainer(
                 # TODO should be an input field
                 if leaf_node:
                     add_node_link(
-                        repr(leaf_node), leaf_node, on_node_selected, user_data=user_data
+                        repr(leaf_node),
+                        leaf_node,
+                        on_node_selected,
+                        user_data=user_data,
                     )
                 else:
                     dpg.add_text(f"#{nid} (not found)")
@@ -840,7 +841,7 @@ def _create_attributes_musicswitchcontainer(
         dpg.add_spacer(height=3)
         dpg.add_button(
             label="Add State Path",
-            callback=lambda: create_state_path_dialog(
+            callback=lambda: edit_state_path_dialog(
                 bnk, node, on_state_path_created, raw=True
             ),
         )

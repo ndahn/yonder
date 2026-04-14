@@ -9,7 +9,7 @@ from yonder.gui import style
 from yonder.gui.widgets import add_generic_widget
 
 
-def new_wwise_event_dialog(
+def create_wwise_event_dialog(
     bnk: Soundbank,
     callback: Callable[[list[HIRCNode]], None],
     *,
@@ -21,7 +21,9 @@ def new_wwise_event_dialog(
     elif dpg.does_item_exist(tag):
         dpg.delete_item(tag)
 
-    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(
+        msg: str = None, color: tuple[int, int, int, int] = style.red
+    ) -> None:
         if not msg:
             dpg.hide_item(f"{tag}_notification")
             return
@@ -118,4 +120,6 @@ def new_wwise_event_dialog(
         dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label="Chop chop!", callback=on_okay, tag=f"{tag}_button_okay")
+            dpg.add_button(
+                label="Chop chop!", callback=on_okay, tag=f"{tag}_button_okay"
+            )

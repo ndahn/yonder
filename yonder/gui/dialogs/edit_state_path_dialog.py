@@ -8,7 +8,7 @@ from yonder.gui import style
 from yonder.gui.widgets import add_node_widget
 
 
-def create_state_path_dialog(
+def edit_state_path_dialog(
     bnk: Soundbank,
     node: MusicSwitchContainer,
     callback: Callable[[str, list[str] | list[int], int], None],

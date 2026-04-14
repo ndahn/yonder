@@ -15,10 +15,10 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_player_table,
 )
-from .edit_state_path_dialog import create_state_path_dialog
+from .edit_state_path_dialog import edit_state_path_dialog
 
 
-def new_boss_track_dialog(
+def create_boss_track_dialog(
     bnk: Soundbank,
     on_boss_track_created: Callable[[str, list[HIRCNode]], None],
     *,
@@ -100,7 +100,7 @@ def new_boss_track_dialog(
             show_message("Select MusicSwitchContainer first")
             return
 
-        create_state_path_dialog(
+        edit_state_path_dialog(
             bnk,
             msc,
             on_statepath_selected,
@@ -116,16 +116,20 @@ def new_boss_track_dialog(
         dpg.set_value(f"{tag}_bgm_enemy_type", state_path[bgm_enemy_type_idx])
         show_message()
 
-    def on_bgm_tracks_changed(sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any) -> None:
+    def on_bgm_tracks_changed(
+        sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any
+    ) -> None:
         nonlocal bgm_tracks, bgm_loop_infos, bgm_trim_infos
         bgm_tracks = data[0]
         bgm_loop_infos = data[1]
         bgm_trim_infos = data[2]
 
         if len(bgm_tracks) < len(play_intro_enabled):
-            play_intro_enabled[:] = play_intro_enabled[:len(bgm_tracks)]
+            play_intro_enabled[:] = play_intro_enabled[: len(bgm_tracks)]
         elif len(bgm_tracks) > len(play_intro_enabled):
-            play_intro_enabled.extend([False] * (len(bgm_tracks) - len(play_intro_enabled)))
+            play_intro_enabled.extend(
+                [False] * (len(bgm_tracks) - len(play_intro_enabled))
+            )
 
         regenerate_per_track_widgets()
 
@@ -216,7 +220,9 @@ def new_boss_track_dialog(
 
         # TODO transition rules?
         loop_info = [(li[0] * 1000, li[1] * 1000) for li in bgm_loop_infos]
-        nodes = create_boss_bgm(bnk, msc, current_state_path, bgm_tracks, loop_info, play_intro_enabled)
+        nodes = create_boss_bgm(
+            bnk, msc, current_state_path, bgm_tracks, loop_info, play_intro_enabled
+        )
         if on_boss_track_created:
             on_boss_track_created(bgm_enemy_type, nodes)
 
