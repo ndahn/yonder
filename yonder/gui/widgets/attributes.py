@@ -741,7 +741,7 @@ def _create_attributes_musicswitchcontainer(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    from yonder.gui.dialogs.create_state_path_dialog import create_state_path_dialog
+    from yonder.gui.dialogs.edit_state_path_dialog import create_state_path_dialog
 
     names = {
         a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments

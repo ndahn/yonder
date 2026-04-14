@@ -15,7 +15,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_player_table,
 )
-from .create_state_path_dialog import create_state_path_dialog
+from .edit_state_path_dialog import create_state_path_dialog
 
 
 def new_boss_track_dialog(

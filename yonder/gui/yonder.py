@@ -39,7 +39,7 @@ from yonder.gui.localization import Localization, English
 from yonder.gui.dialogs.about_dialog import about_dialog
 from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 from yonder.gui.dialogs.create_node_dialog import create_node_dialog
-from yonder.gui.dialogs.new_wwise_event_dialog import new_wwise_event_dialog
+from yonder.gui.dialogs.create_wwise_event_dialog import new_wwise_event_dialog
 from yonder.gui.dialogs.file_dialog import (
     open_file_dialog,
     save_file_dialog,
@@ -50,7 +50,7 @@ from yonder.gui.dialogs.calc_hash_dialog import calc_hash_dialog
 from yonder.gui.dialogs.mass_transfer_dialog import mass_transfer_dialog
 from yonder.gui.dialogs.convert_wav_dialog import convert_wavs_dialog
 from yonder.gui.dialogs.settings_dialog import settings_dialog
-from yonder.gui.dialogs.new_boss_track_dialog import new_boss_track_dialog
+from yonder.gui.dialogs.create_boss_track_dialog import new_boss_track_dialog
 from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
 
 
