@@ -16,7 +16,7 @@ from yonder.enums import SourceType, PropID
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class Sound(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 2
     bank_source_data: BankSourceData = field(default_factory=BankSourceData)

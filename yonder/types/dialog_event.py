@@ -13,7 +13,7 @@ from yonder.enums import DecisionTreeMode, GroupType, PropID
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class DialogueEvent(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 15
     probability: int = 100

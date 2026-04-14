@@ -27,7 +27,7 @@ class HIRCNodeHeader:
         return _deserialize_fields(cls, data)
 
 
-@dataclass
+@dataclass(repr=False)
 class HIRCNode:
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
@@ -226,6 +226,8 @@ class HIRCNode:
         self.set_value(path, val)
 
     def __str__(self) -> str:
-        if self.name:
-            return self.name
-        return f"{self.type_name} #{self.id}"
+        name = self.get_name("?")
+        return f"{name} #{self.id}"
+
+    def __repr__(self) -> str:
+        return f"[{type(self).__name__}] {self}"

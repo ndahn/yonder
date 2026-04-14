@@ -8,7 +8,7 @@ from yonder.enums import PropID
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class ActorMixer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)

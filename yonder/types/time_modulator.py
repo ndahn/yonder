@@ -7,7 +7,7 @@ from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
 from yonder.enums import PropID
 
 
-@dataclass
+@dataclass(repr=False)
 class TimeModulator(HIRCNode):
     body_type: ClassVar[int] = 22
     prop_bundle: list[PropBundle] = field(default_factory=list)

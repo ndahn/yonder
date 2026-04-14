@@ -197,7 +197,7 @@ def add_player_table(
             filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
         )
         if ret:
-            done([Path(ret)])
+            done(Path(ret))
 
     def on_loop_edit(
         sender: str, new_loop_info: tuple[float, float, bool], idx: int

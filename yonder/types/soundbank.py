@@ -130,7 +130,7 @@ class Soundbank:
         return wems
 
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
-        if source_type == "Embedded":
+        if source_type == SourceType.Embedded:
             target = self.bnk_dir / f"{wem.stem}.wem"
             if wem.is_file() and target.is_file() and wem.samefile(target):
                 return target
@@ -141,7 +141,7 @@ class Soundbank:
             shutil.copy(wem, target)
             return target
 
-        elif source_type == "Streaming":
+        elif source_type == SourceType.Streaming:
             streaming_dir = self.bnk_dir.parent / "wem" / wem.stem[:2]
             streaming_dir.mkdir(parents=True, exist_ok=True)
 
@@ -155,7 +155,7 @@ class Soundbank:
             shutil.copy(wem, streaming_dir)
             return target
 
-        elif source_type == "PrefetchStreaming":
+        elif source_type == SourceType.PrefetchStreaming:
             # TODO create snippet
             # Sounds in cs_smain are all <= 20kB
             if wem.stat().st_size > 20000:

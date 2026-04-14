@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from .soundbank import Soundbank
 
 
-@dataclass
+@dataclass(repr=False)
 class Event(HIRCNode):
     body_type: ClassVar[int] = 4
     action_count: int = 0
@@ -17,7 +17,7 @@ class Event(HIRCNode):
 
     @classmethod
     def new(cls, nid: int | str, actions: list[int] = None) -> Event:
-        return Event(nid, actions=actions)
+        return Event(nid, actions=actions or [])
 
     def has_action_type(self, bnk: Soundbank, val: ActionType | str | int) -> bool:
         if isinstance(val, ActionType):

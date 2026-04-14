@@ -112,7 +112,7 @@ def create_attribute_widgets(
                 with dpg.group(horizontal=True):
                     dpg.add_text("Parent: ")
                     parent_node = bnk.get(node.parent, node.parent)
-                    add_node_link(str(parent_node), parent_node, on_node_selected)
+                    add_node_link(repr(parent_node), parent_node, on_node_selected)
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
@@ -688,23 +688,15 @@ def _create_attributes_event(
                 dpg.add_text(">")
                 target = bnk.get(action.external_id)
                 if target:
-                    add_node_link(str(target), target.id, on_node_selected)
+                    add_node_link(repr(target), target.id, on_node_selected)
                 else:
                     dpg.add_text(f"#{action.external_id} (not found)")
 
             else:
                 dpg.add_text(f"#{aid} (not found)")
 
-    initial_actions = []
-    for aid in node.actions:
-        action: Action = bnk.get(aid)
-        if action:
-            initial_actions.append((aid, action.action_type_enum))
-        else:
-            initial_actions.append((aid, None))
-
     add_widget_table(
-        initial_actions,
+        node.actions,
         get_row_for_action,
         new_item=add_action,
         on_add=on_actions_changed,
@@ -820,7 +812,7 @@ def _create_attributes_musicswitchcontainer(
                 # TODO should be an input field
                 if leaf_node:
                     add_node_link(
-                        str(leaf_node), leaf_node, on_node_selected, user_data=user_data
+                        repr(leaf_node), leaf_node, on_node_selected, user_data=user_data
                     )
                 else:
                     dpg.add_text(f"#{nid} (not found)")
@@ -1129,7 +1121,7 @@ def _create_attributes_randomsequencecontainer(
     def create_playlist_row(item: tuple[int, int], idx: int) -> None:
         target = bnk.get(item[0])
         if target:
-            add_node_link(str(target), target, on_node_selected)
+            add_node_link(repr(target), target, on_node_selected)
         else:
             dpg.add_text(f"#{item[0]} (not found)")
 

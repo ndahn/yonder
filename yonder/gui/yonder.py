@@ -1372,7 +1372,7 @@ class BanksOfYonder:
             return
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
-            logger.info(f"Added new sound {play_evt.lookup_name()} ({play_evt.id})")
+            logger.info(f"Added new sound {play_evt}")
             self.add_pinned_object(play_evt)
             self.add_pinned_object(stop_evt)
             self.regenerate()
@@ -1411,7 +1411,7 @@ class BanksOfYonder:
 
         def on_ambience_track_created(nodes: list[HIRCNode]) -> None:
             logger.info(
-                f"Added new ambience track {nodes[0].lookup_name()} ({nodes[0].id})"
+                f"Added new ambience track {nodes[0]})"
             )
 
         create_ambience_track_dialog(self.bnk, on_ambience_track_created, tag=tag)

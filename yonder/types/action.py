@@ -11,7 +11,7 @@ from .serialization import _serialize_value, _deserialize_fields
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class Action(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 3
     action_type: int = 0

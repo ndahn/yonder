@@ -6,7 +6,7 @@ from yonder.hash import calc_hash
 from .hirc_node import HIRCNode
 
 
-@dataclass
+@dataclass(repr=False)
 class State(HIRCNode):
     body_type: ClassVar[int] = 1
     entry_count: int = 0

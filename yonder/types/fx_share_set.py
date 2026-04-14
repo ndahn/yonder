@@ -6,7 +6,7 @@ from .hirc_node import HIRCNode
 from .base_types import FxBaseInitialValues, RTPC
 
 
-@dataclass
+@dataclass(repr=False)
 class EffectShareSet(HIRCNode):
     body_type: ClassVar[int] = 16
     fx_base_initial_values: FxBaseInitialValues = field(

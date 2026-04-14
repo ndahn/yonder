@@ -18,7 +18,7 @@ from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_trans_node_params: MusicTransNodeParams = field(

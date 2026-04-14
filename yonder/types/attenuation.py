@@ -7,7 +7,7 @@ from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
 from yonder.enums import CurveParameters
 
 
-@dataclass
+@dataclass(repr=False)
 class Attenuation(HIRCNode):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0

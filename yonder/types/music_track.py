@@ -19,7 +19,7 @@ from yonder.enums import ClipAutomationType, PropID, SourceType
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class MusicTrack(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0

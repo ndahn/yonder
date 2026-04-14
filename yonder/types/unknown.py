@@ -5,7 +5,7 @@ from typing import ClassVar
 from .hirc_node import HIRCNode
 
 
-@dataclass
+@dataclass(repr=False)
 class TodoObject(HIRCNode):
     body_type: ClassVar[int] = 0
     data: list[int] = field(default_factory=list)

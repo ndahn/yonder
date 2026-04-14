@@ -16,7 +16,7 @@ from yonder.enums import GroupType, DecisionTreeMode, PropID
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class MusicSwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 12
     music_trans_node_params: MusicTransNodeParams = field(

@@ -31,7 +31,7 @@ def select_nodes_dialog(
     selected_keys: set[str] = set()
 
     if not get_node_label:
-        get_node_label = lambda n: f"{n.lookup_name('<?>')} ({n.id})"
+        get_node_label = str
 
     def _set_row_highlight(row_tag: int, selected: bool) -> None:
         dpg.highlight_table_row(
@@ -184,7 +184,7 @@ def select_nodes_of_type(
         if not filt:
             return candidates
 
-        return [n for n in candidates if filt in f"{n.lookup_name('')}{n.id}"]
+        return [n for n in candidates if filt in str(n)]
 
     return select_nodes_dialog(
         get_nodes,

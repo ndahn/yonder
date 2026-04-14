@@ -87,7 +87,6 @@ def add_rtpc_table(
     def add_row(idx: int, rtpc: RTPC) -> None:
         with dpg.group(horizontal=True, parent=tag):
             with dpg.child_window(auto_resize_y=True, width=-20, border=False):
-                # TODO edit hash
                 with dpg.tree_node(
                     label=label, span_full_width=True, tag=f"{tag}_tree_node_{idx}"
                 ):

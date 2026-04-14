@@ -9,7 +9,7 @@ from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise,
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class MusicSegment(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)

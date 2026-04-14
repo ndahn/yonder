@@ -460,8 +460,13 @@ class Children:
     items: list[int] = field(default_factory=list)
 
     def add(self, item: int) -> None:
+        from .hirc_node import HIRCNode
+        
+        if isinstance(item, HIRCNode):
+            item = item.id
+
         if item not in self.items:
-            self.items.add(item)
+            self.items.append(item)
             self.items.sort()
 
     def pop(self, item: int, missing_ok: bool = True) -> None:

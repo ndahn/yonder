@@ -15,7 +15,7 @@ from yonder.enums import PropID, SWITCH_GROUP_IDS
 from .mixins import PropertyMixin
 
 
-@dataclass(slots=True)
+@dataclass(repr=False)
 class SwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)

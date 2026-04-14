@@ -82,11 +82,11 @@ def create_simple_sound(
 
     play = Event.new(f"Play_{event_name}")
     play_action = Action.new_play_action(bnk.new_id(), rsc.id, bnk.bank_id)
-    play.add_action(play_action)
+    play.actions.append(play_action.id)
 
     stop = Event.new(f"Stop_{event_name}")
     stop_action = Action.new_stop_action(bnk.new_id(), rsc.id)
-    stop.add_action(stop_action)
+    stop.actions.append(stop_action.id)
 
     # Add the RSC to the actor mixer
     if isinstance(actor_mixer, int):

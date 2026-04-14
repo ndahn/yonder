@@ -8,7 +8,7 @@ from yonder.enums import PropID
 from .mixins import PropertyMixin
 
 
-@dataclass
+@dataclass(repr=False)
 class Bus(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 8
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)
