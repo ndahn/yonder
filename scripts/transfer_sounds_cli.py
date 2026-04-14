@@ -138,8 +138,8 @@ if __name__ == "__main__":
             parser.print_help()
             sys.exit(1)
 
-        src_bnk = Soundbank.load(args.src_bnk)
-        dst_bnk = Soundbank.load(args.dst_bnk)
+        src_bnk = Soundbank.from_file(args.src_bnk)
+        dst_bnk = Soundbank.from_file(args.dst_bnk)
 
         src_ids = []
         dst_ids = []

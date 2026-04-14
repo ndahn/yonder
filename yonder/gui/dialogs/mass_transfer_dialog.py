@@ -29,11 +29,11 @@ def mass_transfer_dialog(
 
     def on_source_bnk_selected(sender: str, path: Path, user_data: Any) -> None:
         nonlocal src_bnk
-        src_bnk = Soundbank.load(path)
+        src_bnk = Soundbank.from_file(path)
 
     def on_dest_bnk_selected(sender: str, path: Path, user_data: Any) -> None:
         nonlocal dst_bnk
-        dst_bnk = Soundbank.load(path)
+        dst_bnk = Soundbank.from_file(path)
 
     def select_nodes() -> None:
         if not src_bnk:

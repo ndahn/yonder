@@ -26,7 +26,7 @@ def export_sounds_dialog(
     def on_soundbank_selected(sender: str, path: Path, user_data: Any) -> None:
         nonlocal bnk
         try:
-            bnk = Soundbank.load(path)
+            bnk = Soundbank.from_file(path)
         except Exception as e:
             show_message(str(e))
 
