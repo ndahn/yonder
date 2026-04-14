@@ -68,7 +68,7 @@ def create_boss_track_dialog(
             return
 
         for i, arg in enumerate(selected_msc.arguments):
-            if arg == bgm_enemy_type_hash:
+            if arg.group_id == bgm_enemy_type_hash:
                 bgm_enemy_type_idx = i
                 break
         else:

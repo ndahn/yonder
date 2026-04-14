@@ -94,7 +94,7 @@ def edit_state_path_dialog(
             dpg.add_input_text(
                 label=name,
                 default_value=default_val,
-                tag=f"{tag}_arg_{arg}",
+                tag=f"{tag}_arg_{arg.group_id}",
             )
 
         dpg.add_spacer(height=3)
