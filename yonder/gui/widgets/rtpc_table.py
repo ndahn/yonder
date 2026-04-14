@@ -6,6 +6,7 @@ from yonder.enums import RtpcType, RtpcAccum, CurveScaling
 from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
 from .interpolation_curve import add_interpolation_curve
+from .hash_widget import add_hash_widget
 
 
 def add_rtpc_table(
@@ -20,12 +21,20 @@ def add_rtpc_table(
     if tag in (None, 0, ""):
         tag = dpg.generate_uuid()
 
-    def make_setter(rtpc: RTPC, field: str, transformer: Callable[[Any], Any] = None):
+    def make_setter(
+        rtpc: RTPC,
+        field: str,
+        transformer: Callable[[Any], Any] = None,
+        callback: Callable[[RTPC, str, Any], None] = None,
+    ):
         def cb(sender: str, new_val: Any, cb_user_data: Any) -> None:
             if transformer:
                 new_val = transformer(new_val)
 
             setattr(rtpc, field, new_val)
+            if callback:
+                callback(sender, (rtpc, field, new_val), cb_user_data)
+
             on_value_changed(tag, list(rtpcs), user_data)
 
         return cb
@@ -53,25 +62,47 @@ def add_rtpc_table(
         refresh_table()
         on_value_changed(tag, list(rtpcs), user_data)
 
-    def add_row(idx: int, item: RTPC) -> None:
-        label = f"{item.get_name('?')} #{item.id} ({item.param_id})".ljust(50)
+    def on_hash_changed(sender: str, info: tuple[int, str], rtpc: RTPC) -> None:
+        rtpc.id = info[0]
+        update_label(sender, (rtpc, "id", info), None)
+        on_value_changed(tag, list(rtpcs), user_data)
 
+    def update_label(sender: str, info: tuple[RTPC, str, Any], user_data: Any) -> None:
+        rtpc = info[0]
+        idx = rtpcs.index(rtpc)
+        label = f"{rtpc.get_name('?')} #{rtpc.id} ({rtpc.param_id})".ljust(50)
+        dpg.set_item_label(f"{tag}_tree_node_{idx}", label)
+
+    def bind_context_menu(item: str, rtpc: RTPC) -> None:
+        with dpg.popup(item, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)):
+            add_hash_widget(
+                rtpc.id,
+                on_hash_changed,
+                horizontal=False,
+                string_label="Name",
+                user_data=rtpc,
+                width=120,
+            )
+
+    def add_row(idx: int, rtpc: RTPC) -> None:
         with dpg.group(horizontal=True, parent=tag):
             with dpg.child_window(auto_resize_y=True, width=-20, border=False):
                 # TODO edit hash
-                with dpg.tree_node(label=label, span_full_width=True):
+                with dpg.tree_node(
+                    label=label, span_full_width=True, tag=f"{tag}_tree_node_{idx}"
+                ):
                     dpg.add_combo(
                         [t.name for t in RtpcType],
                         label="Type",
-                        default_value=item.rtpc_type.name,
-                        callback=make_setter(item, "rtpc_type"),
+                        default_value=rtpc.rtpc_type.name,
+                        callback=make_setter(rtpc, "rtpc_type"),
                         tag=f"{tag}_item_{idx}_rtpc_type",
                     )
                     dpg.add_combo(
                         [a.name for a in RtpcAccum],
                         label="Accumulation",
-                        default_value=item.rtpc_accum.name,
-                        callback=make_setter(item, "rtpc_accum"),
+                        default_value=rtpc.rtpc_accum.name,
+                        callback=make_setter(rtpc, "rtpc_accum"),
                         tag=f"{tag}_item_{idx}_rtpc_accum",
                     )
                     # TODO Apparently the IDs are stored in a Wwise_IDs.h created on
@@ -80,10 +111,10 @@ def add_rtpc_table(
                     # TODO Figure out what these map to (ParameterId maybe?)
                     dpg.add_input_int(
                         label="Parameter",
-                        default_value=item.param_id,
+                        default_value=rtpc.param_id,
                         min_value=0,
                         min_clamped=True,
-                        callback=make_setter(item, "param_id"),
+                        callback=make_setter(rtpc, "param_id", callback=update_label),
                         tag=f"{tag}_item_{idx}_param_id",
                     )
 
@@ -91,21 +122,24 @@ def add_rtpc_table(
                         dpg.add_combo(
                             [c.name for c in CurveScaling],
                             label="Curve scaling",
-                            default_value=item.curve_scaling.name,
+                            default_value=rtpc.curve_scaling.name,
                             callback=make_setter(
-                                item, "curve_scaling", lambda v: CurveScaling[v]
+                                rtpc, "curve_scaling", lambda v: CurveScaling[v]
                             ),
                             tag=f"{tag}_item_{idx}_curve_scaling",
                         )
                         add_interpolation_curve(
-                            GraphCurve(item.curve_scaling, item.graph_points),
-                            make_setter(item, "graph_points", lambda v: v.points),
+                            GraphCurve(rtpc.curve_scaling, rtpc.graph_points),
+                            make_setter(rtpc, "graph_points", lambda v: v.points),
                             tag=f"{tag}_item_{idx}_curve",
                         )
 
                     dpg.add_spacer(height=5)
 
             dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
+            
+            bind_context_menu(f"{tag}_tree_node_{idx}", rtpc)
+            update_label(None, (rtpc, "id", rtpc.id), None)
 
     def add_footer() -> None:
         dpg.add_button(label="+ Add RTPC", callback=on_add_clicked, parent=tag)

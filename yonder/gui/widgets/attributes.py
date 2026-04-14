@@ -111,8 +111,8 @@ def create_attribute_widgets(
             if hasattr(node, "parent"):
                 with dpg.group(horizontal=True):
                     dpg.add_text("Parent: ")
-                    parent = bnk.get(node.parent, node.parent)
-                    add_node_link(str(parent), parent, on_node_selected)
+                    parent_node = bnk.get(node.parent, node.parent)
+                    add_node_link(str(parent_node), parent_node, on_node_selected)
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
@@ -666,7 +666,7 @@ def _create_attributes_event(
         action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
         bnk.add_nodes(action)
         node.actions.append(action.id)
-        
+
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
@@ -766,23 +766,43 @@ def _create_attributes_musicswitchcontainer(
         node.tree_mode = DecisionTreeMode[mode]
         on_node_changed(base_tag, node, user_data)
 
-    def open_context_menu(sender: str, app_data: Any, info: tuple[str, Any]) -> None:
-        item, user_data = info
-        # TODO allow to edit state values and leaf nodes
+    def on_node_key_changed(
+        sender: str, info: tuple[int, str], branch: tuple[DecisionTreeNode, int, str]
+    ) -> None:
+        tree_node = branch[0]
+        tree_node.key = info[0]
+        update_branch_label(sender, branch, None)
 
-    def register_context_menu(tag: str, user_data: Any) -> None:
-        registry = f"{tag}_handlers"
+    def update_branch_label(
+        sender: str, info: tuple[DecisionTreeNode, int, str], cb_user_data: Any
+    ) -> None:
+        tree_node, level, dpg_item = info
 
-        if not dpg.does_item_exist(registry):
-            dpg.add_item_handler_registry(tag=registry)
+        arg = node.arguments[level]
+        arg_name = names[arg.group_id]
+        val_name = get_key(tree_node)
 
-        dpg.add_item_clicked_handler(
-            dpg.mvMouseButton_Right,
-            callback=open_context_menu,
-            user_data=(tag, user_data),
-            parent=registry,
-        )
-        dpg.bind_item_handler_registry(tag, registry)
+        label = f"{arg_name} = {val_name}"
+        dpg.set_item_label(dpg_item, label)
+
+    def bind_context_menu(
+        item: str, tree_node: DecisionTreeNode, level: int
+    ) -> None:
+        arg = node.arguments[level]
+        arg_name = names[arg.group_id]
+        val_name = get_key(tree_node)
+
+        with dpg.popup(item, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)):
+            dpg.add_text(arg_name)
+            add_hash_widget(
+                tree_node.key,
+                on_node_key_changed,
+                horizontal=False,
+                initial_string=val_name,
+                string_label="Value",
+                width=100,
+                user_data=(tree_node, level, item),
+            )
 
     def get_key(tree_node: DecisionTreeNode) -> str:
         val = tree_node.key
@@ -796,11 +816,7 @@ def _create_attributes_musicswitchcontainer(
             nid = tree_node.node_id
             leaf_node = bnk.get(nid)
 
-            arg = node.arguments[level]
-            arg_name = names[arg.group_id]
-            val_name = get_key(tree_node)
-
-            with dpg.tree_node(label=f"{arg_name} = {val_name}"):
+            with dpg.tree_node(span_full_width=True) as dpg_item:
                 # TODO should be an input field
                 if leaf_node:
                     add_node_link(
@@ -810,14 +826,12 @@ def _create_attributes_musicswitchcontainer(
                     dpg.add_text(f"#{nid} (not found)")
         else:
             # Branch
-            arg = node.arguments[level]
-            arg_name = names[arg.group_id]
-            val_name = get_key(tree_node)
-
-            # TODO add context menu
-            with dpg.tree_node(label=f"{arg_name} = {val_name}"):
+            with dpg.tree_node(span_full_width=True) as dpg_item:
                 for child in tree_node.children:
                     delve(child, level + 1)
+
+        bind_context_menu(dpg_item, tree_node, level)
+        update_branch_label(None, (tree_node, level, dpg_item), None)
 
     with dpg.group():
         dpg.add_combo(

@@ -43,8 +43,8 @@ def add_interpolation_curve(
     def on_point_moved(sender: str, app_data: Any, point_idx: int) -> None:
         x, y = dpg.get_value(sender)
         p = curve[point_idx]
-        p.x = x
-        p.y = y
+        p.from_ = x
+        p.to = y
 
         dpg.configure_item(f"{tag}_series", x=list(curve.x), y=list(curve.y))
         on_point_selected(point_idx)
@@ -92,8 +92,13 @@ def add_interpolation_curve(
         else:
             p1 = (p0[0] * 2, p0[1])
 
-        x = (p0[0] + p1[0]) / 2
-        y = (p1[0] + p1[1]) / 2
+        if p0 == p1:
+            x = p0[0] + 1.0
+            y = p0[1]
+        else:
+            x = (p0[0] + p1[0]) / 2
+            y = (p0[1] + p1[1]) / 2
+
         curve.points.insert(selected + 1, RTPCGraphPoint(x, y, CurveInterpolation.Linear))
 
         if on_curve_changed:
@@ -242,7 +247,7 @@ def add_interpolation_curve(
         with dpg.group(horizontal=True):
             dpg.add_text("p0", tag=f"{tag}_point_label")
             dpg.add_combo(
-                [c.name for c in CurveInterpolation],
+                sorted([c.name for c in CurveInterpolation]),
                 default_value=curve[0].interpolation.name,
                 width=100,
                 callback=on_interpolation_changed,
