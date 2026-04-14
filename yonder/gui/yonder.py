@@ -793,6 +793,9 @@ class BanksOfYonder:
         self._load_soundbank(path)
 
     def _load_soundbank(self, path: Path) -> None:
+        if path.is_dir():
+            path = path / "soundbank.json"
+
         if not path.is_file():
             logger.error(f"File not found: {path}")
             self.config.remove_recent_file(path)
@@ -1392,9 +1395,10 @@ class BanksOfYonder:
 
         def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
             logger.info(
-                f"Added new boss track for {bgm_enemy_type}, branch starting at {nodes[0]}"
+                f"Added new boss track for {bgm_enemy_type}, branch starting at {repr(nodes[0])}"
             )
             self.add_pinned_object(nodes[0])
+            self.regenerate()
             self.jump_to_node(nodes[0])
 
         create_boss_track_dialog(self.bnk, on_boss_track_created, tag=tag)
