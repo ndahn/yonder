@@ -45,8 +45,8 @@ def mass_transfer_dialog(
             src_bnk,
             Event,
             on_nodes_selected,
+            get_node_label=lambda n: n.get_name(f"#{n.id}"),
             multiple=True,
-            get_node_label=lambda n: n.get_wwise_id(f"#{n.id}"),
             return_labels=True,
         )
 

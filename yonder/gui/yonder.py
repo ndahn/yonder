@@ -596,7 +596,7 @@ class BanksOfYonder:
         if not isinstance(node, HIRCNode):
             node = self.bnk[node]
 
-        if dpg.does_item_exist(f"{self.tag}_pin_{node}"):
+        if dpg.does_item_exist(f"{self.tag}_pin_{node.id}"):
             # Already pinned
             return
 
@@ -607,7 +607,7 @@ class BanksOfYonder:
         with dpg.table_row(
             # For some reason self.pinned_objects_table doesn't work?
             parent=f"{self.tag}_pinned_objects_table",
-            tag=f"{self.tag}_pin_{node}",
+            tag=f"{self.tag}_pin_{node.id}",
             user_data=node.id,
         ):
             dpg.add_selectable(

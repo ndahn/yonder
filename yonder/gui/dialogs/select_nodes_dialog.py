@@ -172,7 +172,7 @@ def select_nodes_of_type(
     on_node_selected: Callable[[str, list[_T] | list[str], Any], None],
     *,
     get_node_details: Callable[[HIRCNode], list[str]] = None,
-    get_node_label: Callable[[HIRCNode], str] = None,
+    get_node_label: Callable[[HIRCNode], str] = str,
     multiple: bool = False,
     return_labels: bool = False,
     tag: str = 0,

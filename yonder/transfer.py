@@ -81,7 +81,7 @@ def copy_node_structure(
     # Go upwards through the parents chain and see what needs to be transferred
     upchain = src_bnk.get_parent_chain(entrypoint)
     upchain_str = "\n".join(
-        [f" ⤷ {up_id} ({src_bnk[up_id].type})" for up_id in reversed(upchain)]
+        [f" ⤷ {up_id} ({repr(src_bnk[up_id])})" for up_id in reversed(upchain)]
     )
     logger.info(f"\nThe parent chain consists of the following nodes:\n{upchain_str}\n")
 
