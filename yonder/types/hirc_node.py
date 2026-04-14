@@ -3,6 +3,7 @@ from typing import Any, ClassVar
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass, replace
 from copy import deepcopy
 import json
+import re
 
 from yonder.util import deepmerge
 from .serialization import _serialize_value, _deserialize_fields
@@ -109,29 +110,49 @@ class HIRCNode:
     def merge(self, other: dict | HIRCNode) -> None:
         deepmerge(self, other)
 
-    def glob(self, pattern: str) -> list:
-        segments = pattern.split("/")
+    def glob(self, pattern: str) -> list[tuple[str, object]]:
+        segs = re.split(r"/|(?=:)", pattern)
+        results = []
 
-        def match(node: dataclass, segs: list[str]):
-            if not segs:
-                yield node
+        def match(node: Any, seg_idx: int, path: str):
+            if seg_idx == len(segs):
+                results.append((path, node))
                 return
 
-            seg, rest = segs[0], segs[1:]
-            if not is_dataclass(node):
-                return
+            seg = segs[seg_idx]
 
             if seg == "**":
-                yield from match(node, rest)
-                for field in fields(node):
-                    yield from match(getattr(node, field.name), segs)
-            elif seg == "*":
-                for field in fields(node):
-                    yield from match(getattr(node, field.name), rest)
-            elif hasattr(node, seg):
-                yield from match(getattr(node, seg), rest)
+                # Check if this object already matches
+                match(node, seg_idx + 1, path)
 
-        return list(match(self, segments))
+                # Recurse deeper through fields and list items
+                if is_dataclass(node):
+                    for f in fields(node):
+                        child_path = f"{path}/{f.name}" if path else f.name
+                        match(getattr(node, f.name), seg_idx, child_path)
+                
+                elif isinstance(node, list):
+                    for i, child in enumerate(node):
+                        match(child, seg_idx, f"{path}:{i}")
+
+            elif seg.startswith(":"):
+                if not isinstance(node, list):
+                    raise ValueError(f"{pattern} with array access {seg} lead to non-array value")
+                
+                index = seg[1:]
+                indices = range(len(node)) if index == "*" else [int(index)]
+                for i in indices:
+                    child_path = f"{path}:{i}" if path else f":{i}"
+                    match(node[i], seg_idx + 1, child_path)
+
+            elif is_dataclass(node):
+                for f in fields(node):
+                    if seg in ("*", f.name):
+                        child_path = f"{path}/{f.name}" if path else f.name
+                        match(getattr(node, f.name), seg_idx + 1, child_path)
+
+        match(self, 0, "")
+        return results
 
     def to_dict(self) -> dict:
         # rewwise inserts the class name of the node type into the hierarchy

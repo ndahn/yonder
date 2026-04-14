@@ -51,7 +51,7 @@ def create_boss_track_dialog(
         return list(bnk.query(filt))
 
     def get_music_switch_container_details(msc: MusicSwitchContainer) -> list[str]:
-        return [lookup_name(s, f"#{s}") for s in msc.arguments]
+        return [lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments]
 
     def on_music_switch_container_selected(
         sender: str, selected_msc: int | MusicSwitchContainer, user_data: Any
