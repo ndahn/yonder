@@ -19,7 +19,7 @@ class ActorMixer(PropertyMixin, HIRCNode):
         cls,
         nid: int | str,
         override_bus_id: int = 0,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
         props: dict[PropID, float] = None,
     ) -> ActorMixer:
         obj = cls(
@@ -41,7 +41,9 @@ class ActorMixer(PropertyMixin, HIRCNode):
         return self.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.node_base_params.direct_parent_id = new_parent
 
     @property

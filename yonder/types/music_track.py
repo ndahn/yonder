@@ -43,7 +43,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Streaming,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> MusicTrack:
         obj = cls(nid)
 
@@ -62,7 +62,9 @@ class MusicTrack(PropertyMixin, HIRCNode):
         return self.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.node_base_params.direct_parent_id = new_parent
 
     @property
@@ -138,7 +140,10 @@ class MusicTrack(PropertyMixin, HIRCNode):
         return clip
 
     def get_trims(self, idx: int = 0) -> tuple[float, float]:
-        return (self.playlist[idx].begin_trim_offset, self.playlist[idx].end_trim_offset)
+        return (
+            self.playlist[idx].begin_trim_offset,
+            self.playlist[idx].end_trim_offset,
+        )
 
     def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
         begin_trim = abs(begin_trim)

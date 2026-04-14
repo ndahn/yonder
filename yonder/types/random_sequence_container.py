@@ -3,7 +3,14 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from .hirc_node import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle, Playlist, PlaylistItem, RTPC
+from .base_types import (
+    NodeBaseParams,
+    Children,
+    PropBundle,
+    Playlist,
+    PlaylistItem,
+    RTPC,
+)
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from .mixins import PropertyMixin
 
@@ -36,7 +43,7 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
         loop_count: int = 1,
         avoid_repeat_count: int = 0,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> RandomSequenceContainer:
         obj = cls(
             nid,
@@ -62,7 +69,9 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
         return self.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.node_base_params.direct_parent_id = new_parent
 
     @property

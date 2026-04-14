@@ -29,7 +29,7 @@ class Sound(PropertyMixin, HIRCNode):
         wem: Path = None,
         source_type: SourceType = SourceType.Embedded,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> Sound:
         obj = cls(nid)
 
@@ -48,7 +48,9 @@ class Sound(PropertyMixin, HIRCNode):
         return self.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.node_base_params.direct_parent_id = new_parent
 
     @property

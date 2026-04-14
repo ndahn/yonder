@@ -35,7 +35,7 @@ class SwitchContainer(PropertyMixin, HIRCNode):
         nid: int | str,
         switch_groups: list[list[int]],
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> SwitchContainer:
         obj = cls(nid)
 
@@ -58,6 +58,12 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
+
+    @parent.setter
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
+        self.node_base_params.direct_parent_id = new_parent
 
     @property
     def properties(self) -> list[PropBundle]:

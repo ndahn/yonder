@@ -24,7 +24,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
         tracks: int | list[int] = None,
         markers: list[int | str, float] = None,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> MusicSegment:
         obj = cls(nid)
 
@@ -49,7 +49,9 @@ class MusicSegment(PropertyMixin, HIRCNode):
         return self.music_node_params.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property

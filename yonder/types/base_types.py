@@ -398,7 +398,7 @@ class RTPC:
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
     def get_name(self, default: Any = None) -> str:
-        return lookup_name(self.id, default)    
+        return lookup_name(self.id, default)
 
 
 @dataclass(slots=True)
@@ -461,7 +461,7 @@ class Children:
 
     def add(self, item: int) -> None:
         from .hirc_node import HIRCNode
-        
+
         if isinstance(item, HIRCNode):
             item = item.id
 
@@ -759,7 +759,10 @@ class MusicNodeParams:
 class MusicTransNodeParams:
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     transition_rule_count: int = 0
-    transition_rules: list[MusicTransitionRule] = field(default_factory=list)
+    transition_rules: list[MusicTransitionRule] = field(
+        # Should not be empty
+        default_factory=lambda: [MusicTransitionRule()]
+    )
 
 
 @dataclass(slots=True)

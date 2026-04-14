@@ -247,7 +247,7 @@ class HIRCNode:
         self.set_value(path, val)
 
     def __str__(self) -> str:
-        name = self.get_name("?")
+        name = self.get_name("<?>")
         return f"{name} #{self.id}"
 
     def __repr__(self) -> str:

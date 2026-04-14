@@ -34,7 +34,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         playlist: list[int, list[int]] = None,
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> MusicRandomSequenceContainer:
         if playlist:
             items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
@@ -59,7 +59,9 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         return self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property
@@ -127,7 +129,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         avoid_repeat_count: int = 1,
         loop_base: bool = False,
         ers_type: int = 4294967295,
-        parent: int = 0,
+        parent: int | MusicRanSeqPlaylistItem = 0,
     ) -> MusicRanSeqPlaylistItem:
         """Associates a segment with this playlist for random/sequential playback. A playlist is actually a flattened tree structure where children inherit settings from their parents. Use the parent parameter to associate child items to their parents.
 
@@ -148,6 +150,9 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         parent : int, default=0
             Which playlist item to associate the new item with (0 - root).
         """
+        if isinstance(parent, MusicRanSeqPlaylistItem):
+            parent = parent.playlist_item_id
+
         if len(self.playlist_items) == 0:
             if parent > 0:
                 raise ValueError("parent cannot be set for first playlist item")

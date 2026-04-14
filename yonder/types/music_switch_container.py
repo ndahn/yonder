@@ -37,7 +37,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         arguments: list[tuple[int | str, GroupType]],
         branches: list[tuple[list[int | str], int]] = None,
         props: dict[PropID, float] = None,
-        parent: int = 0,
+        parent: int | HIRCNode = 0,
     ) -> MusicSwitchContainer:
         obj = cls(nid)
 
@@ -60,7 +60,9 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         return self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id
 
     @parent.setter
-    def parent(self, new_parent: int) -> None:
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
         self.music_trans_node_params.music_node_params.node_base_params.direct_parent_id = new_parent
 
     @property
