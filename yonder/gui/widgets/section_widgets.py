@@ -17,7 +17,7 @@ from yonder.types import (
 )
 from yonder.gui import style
 from .generic_input_widget import add_generic_widget
-from .hash_widget import add_hash_widget
+from .editable_table import add_widget_table
 
 
 def create_section_widgets(
@@ -47,8 +47,6 @@ def create_section_widgets(
                 base_tag=tag,
                 user_data=user_data,
             )
-        # elif isinstance(section, INITSection):
-        #     _create_widgets_init(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         # elif isinstance(section, DATASection):
         #     _create_widgets_data(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         # elif isinstance(section, DIDXSection):
@@ -63,12 +61,14 @@ def create_section_widgets(
                 base_tag=tag,
                 user_data=user_data,
             )
+        # elif isinstance(section, INITSection):
+        #     _create_widgets_init(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         # elif isinstance(section, PLATSection):
         #    _create_widgets_plat(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         # elif isinstance(section, STIDSection):
         #    _create_widgets_stid(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
-        # elif isinstance(section, STMGSection):
-        #    _create_widgets_stmg(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
+        elif isinstance(section, STMGSection):
+           _create_widgets_stmg(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         else:
             dpg.add_text("TODO", color=style.pink)
 
@@ -119,12 +119,15 @@ def _add_widgets(
                 else:
                     kwargs["default"] = getattr(section, kwargs["label"])
 
+            if "value_type" not in kwargs:
+                kwargs["value_type"] = type(kwargs["default"])
+
             add_generic_widget(callback=make_setter(key), **kwargs)
 
 
 def _create_widgets_bkhd(
     bnk: Soundbank,
-    section: Section,
+    section: BKHDSection,
     on_section_changed: Callable[[str, Section, Any], None] = None,
     *,
     base_tag: str = 0,
@@ -146,10 +149,29 @@ def _create_widgets_bkhd(
 
 def _create_widgets_hirc(
     bnk: Soundbank,
-    section: Section,
+    section: HIRCSection,
     on_section_changed: Callable[[str, Section, Any], None] = None,
     *,
     base_tag: str = 0,
     user_data: Any = None,
 ) -> str:
     dpg.add_text("See Events tab")
+
+
+def _create_widgets_stmg(
+    bnk: Soundbank,
+    section: STMGSection,
+    on_section_changed: Callable[[str, Section, Any], None] = None,
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> str:
+    _add_widgets(section, [
+        "volume_threshold",
+        ("max_voice_instances", {"min_value": 0, "min_clamped": True})
+    ])
+
+    # TODO state_groups
+    # TODO switch_groups
+    # TODO ramping_params
+    # TODO textures

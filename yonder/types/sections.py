@@ -65,11 +65,6 @@ class Section:
 
 
 @dataclass
-class ENVSSection(Section):
-    conversion_table: ObsConversionTable = field(default_factory=ObsConversionTable)
-
-
-@dataclass
 class BKHDSection(Section):
     version: int = 0
     bank_id: int = 0
@@ -92,9 +87,8 @@ class BKHDSection(Section):
 
 
 @dataclass
-class INITSection(Section):
-    plugin_count: int = 0
-    plugins: list[IAkPlugin] = field(default_factory=list)
+class DATASection(Section):
+    data: list[int] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -110,19 +104,26 @@ class DIDXSection(Section):
 
 
 @dataclass
-class DATASection(Section):
-    data: list[int] = field(default_factory=list)
+class ENVSSection(Section):
+    conversion_table: ObsConversionTable = field(default_factory=ObsConversionTable)
+
+
+@dataclass
+class HIRCSection(Section):
+    object_count: int = 0
+    objects: list[HIRCNode] = field(default_factory=list)
+
+
+@dataclass
+class INITSection(Section):
+    plugin_count: int = 0
+    plugins: list[IAkPlugin] = field(default_factory=list)
 
 
 @dataclass
 class PLATSection(Section):
     string_length: int = 0
     string: str = ""
-
-
-@dataclass
-class TodoSection(Section):
-    data: list[int] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -137,6 +138,14 @@ class STIDSection(Section):
     string_encoding: int = 0
     entry_count: int = 0
     entries: list[STIDSectionEntry] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class STMGSectionStateGroup:
+    id: int = 0
+    default_transition_time: int = 0
+    state_transition_count: int = 0
+    state_transitions: list[StateTransition] = field(default_factory=list)
 
 
 @dataclass
@@ -155,14 +164,5 @@ class STMGSection(Section):
 
 
 @dataclass
-class HIRCSection(Section):
-    object_count: int = 0
-    objects: list[HIRCNode] = field(default_factory=list)
-
-
-@dataclass(slots=True)
-class STMGSectionStateGroup:
-    id: int = 0
-    default_transition_time: int = 0
-    state_transition_count: int = 0
-    state_transitions: list[StateTransition] = field(default_factory=list)
+class TodoSection(Section):
+    data: list[int] = field(default_factory=list)
