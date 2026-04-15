@@ -80,16 +80,6 @@ def create_node_widgets(
     if not tag:
         tag = dpg.generate_uuid()
 
-    def update_node_hash(
-        sender: str, new_name: tuple[int, str], user_data: Any
-    ) -> None:
-        nid, name = new_name
-
-        if name:
-            node.name = name
-        else:
-            node.id = nid
-
     loading = loading_indicator("loading...")
     try:
         with dpg.group(tag=tag, parent=parent):
@@ -101,7 +91,9 @@ def create_node_widgets(
 
             add_hash_widget(
                 node.id,
-                update_node_hash,
+                make_setter(
+                    node, "id", tag, on_node_changed, user_data, lambda v: v[0]
+                ),
                 allow_edit_hash=False,
                 allow_edit_name=False,
                 width=-300,

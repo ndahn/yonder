@@ -293,7 +293,7 @@ class BanksOfYonder:
                 tag=f"{tag}_events_window",
             ):
                 with dpg.child_window(border=True, resizable_y=True, height=500):
-                    with dpg.tab_bar(tag=f"{tag}_tab_bar"):
+                    with dpg.tab_bar(tag=f"{tag}_tabs"):
                         with dpg.tab(label="Events", tag=f"{tag}_tab_events"):
                             with dpg.group(horizontal=True):
                                 dpg.add_input_text(
@@ -920,6 +920,8 @@ class BanksOfYonder:
 
         if self._selected_node:
             self.jump_to_node(self._selected_node)
+        elif self._selected_section:
+            self.select_section(self._selected_section)
 
     def _regenerate_events_list(self) -> None:
         dpg.delete_item(f"{self.tag}_events_table", children_only=True, slot=1)
@@ -1037,6 +1039,8 @@ class BanksOfYonder:
     def select_section(self, section: str | Section) -> None:
         sender = None
         if section:
+            # Jump to sections tab
+            dpg.set_value(f"{self.tag}_tabs", f"{self.tag}_tab_sections")
             sec_name = section if isinstance(section, str) else section.name
             sender = f"{self.tag}_sections_{sec_name}"
 
@@ -1147,7 +1151,7 @@ class BanksOfYonder:
             table = f"{self.tag}_globals_table"
 
             # Switch to globals tab
-            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_globals")
+            dpg.set_value(f"{self.tag}_tabs", f"{self.tag}_tab_globals")
 
             # Unfold the category
             # FIXME: make sure the node row actually exists despite count limits!
@@ -1158,7 +1162,7 @@ class BanksOfYonder:
             table = f"{self.tag}_events_table"
 
             # Switch to events tab
-            dpg.set_value(f"{self.tag}_tab_bar", f"{self.tag}_tab_events")
+            dpg.set_value(f"{self.tag}_tabs", f"{self.tag}_tab_events")
 
             if not isinstance(node, Event):
                 for evt, sub in self.bnk.find_event_subgraphs_for(node):
@@ -1358,13 +1362,13 @@ class BanksOfYonder:
         except json.JSONDecodeError as e:
             raise ValueError("Failed to parse json") from e
 
-        # To verify that the data actually makes sense
-        # Convert to the dict so that we can filter out items
-        tmp = item.from_dict(data).to_dict()
+        # Just to verify that the data actually makes sense
+        tmp = item.from_dict(data)
         
         if isinstance(self._selected_section, HIRCSection):
-            # Never replace the HIRC content from json
-            tmp.pop("objects")
+            # Work with the dict so we can avoid replacing the HIRC
+            del data["body"]["HIRC"]["objects"]
+            tmp = data
 
         item.merge(tmp)
         self.regenerate()

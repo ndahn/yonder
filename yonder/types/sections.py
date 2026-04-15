@@ -59,6 +59,9 @@ class Section(DataNode):
             **data["body"][section_type],
         }
 
+        if cls.__name__.startswith(section_type):
+            return _deserialize_fields(cls, trans)
+
         for sub in cls.__subclasses__():
             if sub.__name__.upper().startswith(section_type):
                 return _deserialize_fields(sub, trans)
@@ -116,10 +119,8 @@ class HIRCSection(Section):
     objects: list[HIRCNode] = field(default_factory=list)
 
     def json_short(self) -> str:
-        data = _serialize_value(self._header)
-        data["object_count"] = self.object_count
-        data["objects"] = ["<skipped>"]
-
+        data = self.to_dict()
+        data["body"]["HIRC"]["objects"] = "<skipped>"
         return json.dumps(data, indent=2)
 
 

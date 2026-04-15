@@ -27,8 +27,8 @@ def add_hash_widget(
         if not new_value:
             return
 
-        label = lookup_name(int(new_value), "<?>")
-        dpg.set_value(f"{tag}_string", label)
+        label = lookup_name(int(new_value), None)
+        dpg.set_value(f"{tag}_string", label or "<?>")
         
         if on_hash_changed:
             on_hash_changed(tag, (int(new_value), label), user_data)
