@@ -12,6 +12,7 @@ def add_incomplete_int_enum(
     unknown_label: str,
     on_value_changed: Callable[[str, int, Any], None],
     *,
+    width: int = 280,
     label: str = None,
     sort: bool = True,
     tag: str = 0,
@@ -25,7 +26,7 @@ def add_incomplete_int_enum(
         dpg.set_value(f"{tag}_value", val.value)
         on_value_changed(tag, val.value, user_data)
 
-    def on_value_changed(sender: str, value: int, cb_user_data: Any) -> None:
+    def on_int_changed(sender: str, value: int, cb_user_data: Any) -> None:
         try:
             choice = enum(value).name
         except KeyError:
@@ -44,13 +45,14 @@ def add_incomplete_int_enum(
             default_value=default_value.name,
             callback=on_combo_changed,
             tag=f"{tag}_combo",
-            width=150,
+            width=width / 2,
         )
         dpg.add_input_int(
             default_value=default_value.value,
             label=label,
             min_value=min(e.value for e in enum),
             max_value=max(e.value for e in enum),
-            callback=on_value_changed,
+            callback=on_int_changed,
             tag=f"{tag}_value",
+            width=width / 2,
         )
