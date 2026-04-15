@@ -67,7 +67,7 @@ from .editable_table import add_widget_table, add_curves_table
 from .hash_widget import add_hash_widget
 
 
-def create_attribute_widgets(
+def create_node_widgets(
     bnk: Soundbank,
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],

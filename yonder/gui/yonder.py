@@ -16,6 +16,7 @@ from yonder.types import (
     Action,
     ActorMixer,
     Event,
+    Section,
 )
 
 from yonder.util import logger, unpack_soundbank, repack_soundbank
@@ -23,7 +24,8 @@ from yonder.query import query_nodes, query_help_text
 from yonder.gui.config import Config, load_config
 from yonder.gui.helpers import center_window, shorten_path, tmp_dir
 from yonder.gui.widgets import (
-    create_attribute_widgets,
+    create_node_widgets,
+    create_section_widgets,
     loading_indicator,
     table_tree_node,
     add_lazy_table_tree_node,
@@ -341,9 +343,17 @@ class BanksOfYonder:
                                 dpg.add_table_column(label="Node", width_stretch=True)
 
                         with dpg.tab(label="Sections", tag=f"{tag}_tab_sections"):
-                            # TODO populate
-                            dpg.add_text("TODO", color=style.pink)
-                            pass
+                            with dpg.table(
+                                no_host_extendX=True,
+                                resizable=True,
+                                borders_innerV=True,
+                                policy=dpg.mvTable_SizingFixedFit,
+                                header_row=False,
+                                tag=f"{tag}_sections_table",
+                            ):
+                                dpg.add_table_column(
+                                    label="SectioN", width_stretch=True
+                                )
 
                 with dpg.child_window(autosize_y=True, border=True):
                     dpg.add_text("Pinned Nodes")
@@ -904,6 +914,7 @@ class BanksOfYonder:
 
         self._regenerate_events_list()
         self._regenerate_globals_list()
+        self._regenerate_sections_list()
 
         if self._selected_node:
             self.jump_to_node(self._selected_node)
@@ -991,6 +1002,7 @@ class BanksOfYonder:
                 node_type,
                 table=f"{self.tag}_globals_table",
                 tag=f"{self.tag}_globals_{node_type}",
+                # Callback will deselect since no node will be passed in user_data
                 on_click_callback=self._on_node_selected,
             ):
                 for node in nodes:
@@ -1006,6 +1018,38 @@ class BanksOfYonder:
             f"{self.tag}_globals_count",
             f"Showing {len(self.globals_map)}/{len(global_nodes)} globals",
         )
+
+    def _regenerate_sections_list(self) -> None:
+        dpg.delete_item(f"{self.tag}_sections_table", children_only=True, slot=1)
+        # self.sections_map.clear()
+
+        for sec in self.bnk.sections.values():
+            with dpg.table_row(parent=f"{self.tag}_sections_table"):
+                dpg.add_selectable(
+                    label=sec.name,
+                    span_columns=True,
+                    callback=self._on_section_selected,
+                    user_data=sec.name,
+                    tag=f"{self.tag}_sections_{sec.name}"
+                )
+
+    def _on_section_selected(self, sender: str, selected: bool, sec_name: str) -> None:
+        # Deselect all other sections
+        for sec in self.bnk.sections.values():
+            dpg.set_value(f"{self.tag}_sections_{sec.name}", False)
+        dpg.set_value(f"{self.tag}_sections_{sec_name}", True)
+
+        section = self.bnk.sections.get(sec_name)
+
+        dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
+        if section:
+            create_section_widgets(
+                self.bnk,
+                section,
+                lambda s, a, u: self.update_json_panel(),
+                tag=f"{self.tag}_attributes_",
+                parent=f"{self.tag}_attributes",
+            )
 
     def _open_context_menu(
         self, sender: str, app_data: Any, user_data: tuple[str, HIRCNode]
@@ -1064,7 +1108,7 @@ class BanksOfYonder:
 
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
         if node:
-            create_attribute_widgets(
+            create_node_widgets(
                 self.bnk,
                 node,
                 lambda s, a, u: self.update_json_panel(),

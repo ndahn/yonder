@@ -50,7 +50,7 @@ class Soundbank:
 
     def __init__(self, json_path: Path, sections: list[Section]):
         self.json_path = json_path
-        self.sections = {sec.section_name(): sec for sec in sections}
+        self.sections = {sec.name: sec for sec in sections}
 
         # A helper dict for mapping object IDs to HIRC indices
         self._id2index: dict[int, int] = {}
@@ -104,17 +104,14 @@ class Soundbank:
 
     @property
     def name(self) -> str:
-        return self.bkhd.name
+        return self.bkhd.bank_name
 
     @name.setter
     def name(self, new_name: str) -> None:
-        self.bkhd.name = new_name
+        self.bkhd.bank_name = new_name
 
     def get_name(self, default: str = None) -> str:
-        name = self.bkhd.name
-        if name:
-            return name
-        return default
+        return self.bkhd.get_bank_name(default)
 
     @property
     def bnk_dir(self) -> Path:
@@ -485,7 +482,7 @@ class Soundbank:
             objects.extend(n for n in nodes)
 
         # Actions are usually interleaved with their events, but this way
-        # is both easier and more reliable        
+        # is both easier and more reliable
         actions.sort(key=lambda n: n.id)
         objects.extend(actions)
 

@@ -3,6 +3,7 @@ from enum import Enum, IntFlag
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
+from yonder.types import Hash
 from yonder.gui.helpers import shorten_path
 from yonder.gui.dialogs.file_dialog import (
     save_file_dialog,
@@ -10,6 +11,7 @@ from yonder.gui.dialogs.file_dialog import (
     choose_folder,
 )
 from .flags_widget import add_flag_checkboxes
+from .hash_widget import add_hash_widget
 
 
 def is_simple_type(value_type: type) -> bool:
@@ -126,8 +128,18 @@ def add_generic_widget(
             callback=callback,
             parent=parent,
             tag=tag,
-            **kwargs,
             user_data=user_data,
+            **kwargs,
+        )
+    elif value_type is Hash:
+        add_hash_widget(
+            hash_label=label,
+            default_value=int(default) if default is not None else 0,
+            on_hash_changed=lambda s, a, u: callback(s, a[0], u),
+            parent=parent,
+            tag=tag,
+            user_data=user_data,
+            **kwargs,
         )
     elif value_type is int:
         dpg.add_input_int(

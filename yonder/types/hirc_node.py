@@ -255,3 +255,6 @@ class HIRCNode:
     def __repr__(self) -> str:
         name = self.get_name("<?>")
         return f"[{type(self).__name__}] {name} #{self.id}"
+
+
+NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

@@ -1,4 +1,3 @@
-from .attributes import create_attribute_widgets
 from .draw_curve import draw_curve
 from .editable_table import add_widget_table, add_filepaths_table, add_player_table
 from .flags_widget import add_flag_checkboxes
@@ -7,8 +6,10 @@ from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
 from .interpolation_curve import add_interpolation_curve
 from .loading_indicator import loading_indicator
-from .node_widget import add_node_widget
+from .node_widgets import create_node_widgets
+from .node_reference import add_node_widget
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
+from .section_widgets import create_section_widgets
 from .wav_player import add_wav_player
 from .properties_table import add_properties_table
 from .table_tree_nodes import (

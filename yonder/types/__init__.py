@@ -3,12 +3,13 @@ from .actor_mixer import ActorMixer
 from .attenuation import Attenuation
 from .audio_device import AudioDevice
 from .aux_bus import AuxiliaryBus
+from .base_types import Hash
 from .bus import Bus
 from .dialog_event import DialogueEvent
 from .event import Event
 from .fx_custom import EffectCustom
 from .fx_share_set import EffectShareSet
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, NODE_TYPE_MAP
 from .layer_container import LayerContainer
 from .music_random_sequence_container import MusicRandomSequenceContainer
 from .music_segment import MusicSegment
@@ -18,7 +19,6 @@ from .random_sequence_container import RandomSequenceContainer
 from .sound import Sound
 from .state import State
 from .sections import (
-    NODE_TYPE_MAP,
     Section,
     BKHDSection,
     DATASection,

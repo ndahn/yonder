@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any
 from dataclasses import dataclass, field
 
 from yonder.hash import calc_hash, lookup_name
@@ -27,19 +28,19 @@ class SectionHeader:
 
 
 @dataclass
-class Section():
+class Section:
     _header: SectionHeader = field(default_factory=SectionHeader)
 
-    @classmethod
-    def section_name(cls) -> str:
-        return cls.__name__[:4].upper()
+    @property
+    def name(self) -> str:
+        return type(self).__name__[:4].upper()
 
     def to_dict(self) -> dict:
         data = _serialize_value(self)
         trans = {
             **data.pop("_header"),
             "body": {
-                self.section_name(): {**data},
+                self.name: {**data},
             },
         }
         return trans
@@ -57,7 +58,7 @@ class Section():
         }
 
         for sub in cls.__subclasses__():
-            if sub.section_name() == section_type:
+            if sub.__name__.upper().startswith(section_type):
                 return _deserialize_fields(sub, trans)
 
         raise ValueError(f"Unknown section type {section_type}")
@@ -78,17 +79,16 @@ class BKHDSection(Section):
     padding: list[int] = field(default_factory=list)
 
     @property
-    def name(self) -> str:
+    def bank_name(self) -> str:
         return lookup_name(self.bank_id)
 
-    def set_name(self, new_name: str) -> None:
-        self.bank_id = calc_hash(new_name)
+    @bank_name.setter
+    def bank_name(self, name: str) -> None:
+        self.bank_id = calc_hash(name)
 
-    def get_name(self, default: str = None) -> str:
-        name = self._bank_id.name
-        if name:
-            return name
-        return default
+    def get_bank_name(self, default: Any = None) -> str:
+        name = self.bank_name
+        return name if name else default
 
 
 @dataclass
@@ -166,6 +166,3 @@ class STMGSectionStateGroup:
     default_transition_time: int = 0
     state_transition_count: int = 0
     state_transitions: list[StateTransition] = field(default_factory=list)
-
-
-NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

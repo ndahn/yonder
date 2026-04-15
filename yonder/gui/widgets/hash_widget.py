@@ -15,7 +15,8 @@ def add_hash_widget(
     allow_edit_name: bool = True,
     string_label: str = "String",
     hash_label: str = "Hash",
-    width: int = -1,
+    width: int = 280,
+    parent: str = 0,
     tag: str = 0,
     user_data: Any = None,
 ) -> str:
@@ -26,8 +27,8 @@ def add_hash_widget(
         if not new_value:
             return
 
-        label = lookup_name(int(new_value), None)
-        dpg.set_value(f"{tag}_string", label or "<?>")
+        label = lookup_name(int(new_value), "<?>")
+        dpg.set_value(f"{tag}_string", label)
         
         if on_hash_changed:
             on_hash_changed(tag, (int(new_value), label), user_data)
@@ -52,7 +53,7 @@ def add_hash_widget(
             string_w = 100
             hash_w = 100
 
-        with dpg.group(horizontal=True, tag=tag):
+        with dpg.group(horizontal=True, parent=parent, tag=tag):
             dpg.add_input_text(
                 default_value=str(default_value),
                 decimal=True,
@@ -63,7 +64,7 @@ def add_hash_widget(
                 tag=f"{tag}_hash",
             )
             dpg.add_input_text(
-                default_value=lookup_name(default_value, initial_string),
+                default_value=initial_string,
                 label=hash_label or "",
                 readonly=not allow_edit_name,
                 enabled=allow_edit_name,
@@ -76,9 +77,9 @@ def add_hash_widget(
             txt_w, _ = estimate_drawn_text_size(max(len(string_label), len(hash_label)))
             width = 300 - txt_w
 
-        with dpg.group(tag=tag, width=width):
+        with dpg.group(tag=tag, parent=parent, width=width):
             dpg.add_input_text(
-                default_value=lookup_name(default_value, initial_string),
+                default_value=initial_string,
                 label=string_label or "",
                 readonly=not allow_edit_name,
                 enabled=allow_edit_name,
@@ -96,5 +97,8 @@ def add_hash_widget(
                 callback=on_hash_update,
                 tag=f"{tag}_hash",
             )
+
+    if initial_string is None:
+        on_hash_update(None, default_value, None)
 
     return tag

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator
+from typing import Any, Iterator, NewType
 from dataclasses import dataclass, field
 
 from yonder.hash import lookup_name
@@ -21,6 +21,9 @@ from yonder.enums import (
     SourceType,
     PluginId,
 )
+
+
+Hash = NewType("Hash", int)
 
 
 @dataclass(slots=True)
