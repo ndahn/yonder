@@ -11,6 +11,7 @@ from .fx_custom import EffectCustom
 from .fx_share_set import EffectShareSet
 from .hirc_node import HIRCNode, NODE_TYPE_MAP
 from .layer_container import LayerContainer
+from .mixins import DataNode, PropertyMixin
 from .music_random_sequence_container import MusicRandomSequenceContainer
 from .music_segment import MusicSegment
 from .music_switch_container import MusicSwitchContainer

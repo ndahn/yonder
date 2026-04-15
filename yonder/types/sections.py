@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, field
+import json
 
 from yonder.hash import calc_hash, lookup_name
 from .base_types import (
@@ -13,6 +14,7 @@ from .base_types import (
     StateTransition,
 )
 from .hirc_node import HIRCNode
+from .mixins import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 
 
@@ -28,7 +30,7 @@ class SectionHeader:
 
 
 @dataclass
-class Section:
+class Section(DataNode):
     _header: SectionHeader = field(default_factory=SectionHeader)
 
     @property
@@ -112,6 +114,13 @@ class ENVSSection(Section):
 class HIRCSection(Section):
     object_count: int = 0
     objects: list[HIRCNode] = field(default_factory=list)
+
+    def json_short(self) -> str:
+        data = _serialize_value(self._header)
+        data["object_count"] = self.object_count
+        data["objects"] = ["<skipped>"]
+
+        return json.dumps(data, indent=2)
 
 
 @dataclass

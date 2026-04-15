@@ -17,8 +17,9 @@ from yonder.types import (
     ActorMixer,
     Event,
     Section,
+    HIRCSection,
 )
-
+from yonder.types.mixins import DataNode
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes, query_help_text
 from yonder.gui.config import Config, load_config
@@ -74,7 +75,8 @@ class BanksOfYonder:
         self.globals_map: dict[int, str] = {}
         self._selected_root: str = None
         self._selected_node: HIRCNode = None
-        self._selected_node_backup: dict = None
+        self._selected_section: Section = None
+        self._backup: DataNode = None
 
         self.config: Config = load_config()
 
@@ -392,7 +394,7 @@ class BanksOfYonder:
                 with dpg.group(horizontal=True):
                     dpg.add_button(
                         label="Apply",
-                        callback=self.node_apply_json,
+                        callback=self.apply_json,
                         tag=f"{tag}_json_apply",
                     )
                     dpg.add_button(
@@ -401,7 +403,7 @@ class BanksOfYonder:
                     )
                     dpg.add_button(
                         label="Reset Node",
-                        callback=self.node_reset_json,
+                        callback=self.reset_from_json,
                     )
 
         # Shown now, but will be positioned properly by the welcome message
@@ -1021,7 +1023,6 @@ class BanksOfYonder:
 
     def _regenerate_sections_list(self) -> None:
         dpg.delete_item(f"{self.tag}_sections_table", children_only=True, slot=1)
-        # self.sections_map.clear()
 
         for sec in self.bnk.sections.values():
             with dpg.table_row(parent=f"{self.tag}_sections_table"):
@@ -1033,6 +1034,14 @@ class BanksOfYonder:
                     tag=f"{self.tag}_sections_{sec.name}"
                 )
 
+    def select_section(self, section: str | Section) -> None:
+        sender = None
+        if section:
+            sec_name = section if isinstance(section, str) else section.name
+            sender = f"{self.tag}_sections_{sec_name}"
+
+        self._on_section_selected(sender, True, sec_name)
+
     def _on_section_selected(self, sender: str, selected: bool, sec_name: str) -> None:
         # Deselect all other sections
         for sec in self.bnk.sections.values():
@@ -1040,9 +1049,15 @@ class BanksOfYonder:
         dpg.set_value(f"{self.tag}_sections_{sec_name}", True)
 
         section = self.bnk.sections.get(sec_name)
+        self._selected_section = section
+        self._selected_node = None
+
+        self.update_json_panel()
 
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
         if section:
+            self._backup = section.copy()
+            
             create_section_widgets(
                 self.bnk,
                 section,
@@ -1080,7 +1095,7 @@ class BanksOfYonder:
             desc = get_foldable_row_descriptor(row)
             sender = desc.selectable
 
-        self._on_node_selected(sender, None, node)
+        self._on_node_selected(sender, True, node)
 
     def _on_node_selected(
         self, sender: str, app_data: Any, node: int | HIRCNode
@@ -1097,13 +1112,14 @@ class BanksOfYonder:
             node: HIRCNode = self.bnk[node]
 
         if isinstance(node, HIRCNode):
-            self._selected_node_backup = node.copy()
+            self._backup = node.copy()
             dpg.set_value(f"{self.tag}_json", node.json())
         else:
-            self._selected_node_backup = None
+            self._backup = None
             dpg.set_value(f"{self.tag}_json", "")
 
         self._selected_node = node
+        self._selected_section = None
         self._set_json_highlight(False)
 
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
@@ -1310,8 +1326,30 @@ class BanksOfYonder:
         self._on_node_selected(None, False, None)
         self.regenerate()
 
-    def node_apply_json(self) -> None:
-        if not self._selected_node:
+    def update_json_panel(self) -> None:
+        value = ""
+        if self._selected_node:
+            value = self._selected_node.json()
+        elif self._selected_section:
+            if isinstance(self._selected_section, HIRCSection):
+                value = self._selected_section.json_short()
+            else:
+                value = self._selected_section.json()
+
+        dpg.set_value(f"{self.tag}_json", value)
+        self._set_json_highlight(False)
+
+    def reset_from_json(self) -> None:
+        if self._selected_node:
+            self._selected_node.merge(self._backup)
+            self.select_node(self._selected_node)
+        elif self._selected_section:
+            self._selected_section.merge(self._backup)
+            self.select_section(self._selected_section)
+
+    def apply_json(self) -> None:
+        item = self._selected_node or self._selected_section
+        if not item:
             return
 
         data_str = dpg.get_value(f"{self.tag}_json")
@@ -1320,21 +1358,16 @@ class BanksOfYonder:
         except json.JSONDecodeError as e:
             raise ValueError("Failed to parse json") from e
 
-        tmp = self._selected_node.from_dict(data)
-        self._selected_node.merge(tmp)
+        # To verify that the data actually makes sense
+        # Convert to the dict so that we can filter out items
+        tmp = item.from_dict(data).to_dict()
+        
+        if isinstance(self._selected_section, HIRCSection):
+            # Never replace the HIRC content from json
+            tmp.pop("objects")
+
+        item.merge(tmp)
         self.regenerate()
-
-    def node_reset_json(self) -> None:
-        if self._selected_node:
-            self._selected_node.merge(self._selected_node_backup)
-            self.select_node(self._selected_node)
-
-    def update_json_panel(self) -> None:
-        value = ""
-        if self._selected_node:
-            value = self._selected_node.json()
-        dpg.set_value(f"{self.tag}_json", value)
-        self._set_json_highlight(False)
 
     def _set_json_highlight(self, highlight: bool) -> None:
         self._set_component_highlight(f"{self.tag}_json", highlight)

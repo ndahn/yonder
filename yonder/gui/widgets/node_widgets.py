@@ -233,7 +233,7 @@ def make_setter(
     user_data: Any,
     value_transformer: Callable[[Any], Any] = None,
 ):
-    def cb(sender: str, new_value: Any, cb_user_data: Any) -> None:
+    def setter(cb_sender: str, new_value: Any, cb_user_data: Any) -> None:
         if value_transformer:
             new_value = value_transformer(new_value)
 
@@ -242,7 +242,7 @@ def make_setter(
         if on_node_changed:
             on_node_changed(sender, node, user_data)
 
-    return cb
+    return setter
 
 
 def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:

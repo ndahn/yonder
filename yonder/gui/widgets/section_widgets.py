@@ -2,8 +2,8 @@ from typing import Callable, Any
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.types import (
-    Hash,
+from yonder.types import Hash
+from yonder.types.sections import (
     Section,
     BKHDSection,
     INITSection,
@@ -13,11 +13,13 @@ from yonder.types import (
     HIRCSection,
     PLATSection,
     STIDSection,
+    STIDSectionEntry,
     STMGSection,
 )
 from yonder.gui import style
 from .generic_input_widget import add_generic_widget
 from .editable_table import add_widget_table
+from .hash_widget import add_hash_widget
 
 
 def create_section_widgets(
@@ -34,7 +36,7 @@ def create_section_widgets(
 
     with dpg.group(tag=tag, parent=parent):
         dpg.add_text(section.name)
-        
+
         dpg.add_spacer(height=3)
         dpg.add_separator()
         dpg.add_spacer(height=3)
@@ -65,12 +67,36 @@ def create_section_widgets(
         #     _create_widgets_init(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
         # elif isinstance(section, PLATSection):
         #    _create_widgets_plat(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
-        # elif isinstance(section, STIDSection):
-        #    _create_widgets_stid(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
+        elif isinstance(section, STIDSection):
+            _create_widgets_stid(
+                bnk, section, on_section_changed, base_tag=tag, user_data=user_data
+            )
         elif isinstance(section, STMGSection):
-           _create_widgets_stmg(bnk, section, on_section_changed, base_tag=tag, user_data=user_data)
+            _create_widgets_stmg(
+                bnk, section, on_section_changed, base_tag=tag, user_data=user_data
+            )
         else:
             dpg.add_text("TODO", color=style.pink)
+
+
+def make_setter(
+    section: Section,
+    path: str,
+    on_section_changed,
+    sender: Callable[[str, Section, Any], None] = None,
+    user_data: Any = None,
+    transformer: Callable[[Any], Any] = None,
+) -> Callable:
+    def setter(cb_sender: str, new_val: Any, cb_user_data: Any) -> None:
+        if transformer:
+            new_val = transformer(new_val)
+
+        section.set_value(path, new_val)
+
+        if on_section_changed:
+            on_section_changed(sender, section, user_data)
+
+    return setter
 
 
 def _add_widgets(
@@ -82,14 +108,6 @@ def _add_widgets(
     parent: str = 0,
     user_data: Any,
 ) -> None:
-    def make_setter(key: str) -> Callable:
-        def set_value(sender: str, new_val: Any, cb_user_data: Any) -> None:
-            setattr(section, key, new_val)
-            if on_section_changed:
-                on_section_changed(base_tag, section, user_data)
-
-        return set_value
-
     with dpg.group(tag=f"{base_tag}_attributes", parent=parent):
         for key in attributes:
             kwargs = {}
@@ -122,7 +140,12 @@ def _add_widgets(
             if "value_type" not in kwargs:
                 kwargs["value_type"] = type(kwargs["default"])
 
-            add_generic_widget(callback=make_setter(key), **kwargs)
+            add_generic_widget(
+                callback=make_setter(
+                    section, key, on_section_changed, base_tag, user_data
+                ),
+                **kwargs,
+            )
 
 
 def _create_widgets_bkhd(
@@ -158,6 +181,57 @@ def _create_widgets_hirc(
     dpg.add_text("See Events tab")
 
 
+def _create_widgets_stid(
+    bnk: Soundbank,
+    section: STIDSection,
+    on_section_changed: Callable[[str, Section, Any], None] = None,
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> str:
+    def stid_to_row(entry: STIDSectionEntry, idx: int) -> None:
+        dpg.add_input_text(
+            default_value=str(entry.bnk_id),
+            decimal=True,
+            width=-1,
+            callback=make_setter(
+                section,
+                f"entries:{idx}/bnk_id",
+                on_section_changed,
+                base_tag,
+                user_data,
+            ),
+        )
+        dpg.add_input_text(
+            default_value="".join(entry.name),
+            width=-1,
+            callback=make_setter(
+                section,
+                f"entries:{idx}/name",
+                on_section_changed,
+                base_tag,
+                user_data,
+                list,
+            ),
+        )
+    
+    _add_widgets(
+        section,
+        [("string_encoding", Hash)],
+        on_section_changed,
+        base_tag=base_tag,
+        user_data=user_data,
+    )
+    dpg.add_spacer(height=5)
+    add_widget_table(
+        section.entries,
+        stid_to_row,
+        label="Entries",
+        header_row=True,
+        columns=["Bank ID", "Name"],
+    )
+
+
 def _create_widgets_stmg(
     bnk: Soundbank,
     section: STMGSection,
@@ -166,10 +240,16 @@ def _create_widgets_stmg(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> str:
-    _add_widgets(section, [
-        "volume_threshold",
-        ("max_voice_instances", {"min_value": 0, "min_clamped": True})
-    ])
+    _add_widgets(
+        section,
+        [
+            "volume_threshold",
+            ("max_voice_instances", {"min_value": 0, "min_clamped": True}),
+        ],
+        on_section_changed,
+        base_tag=base_tag,
+        user_data=user_data,
+    )
 
     # TODO state_groups
     # TODO switch_groups

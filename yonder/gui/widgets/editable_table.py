@@ -79,6 +79,7 @@ def add_widget_table(
             policy=dpg.mvTable_SizingFixedFit,
             borders_outerH=True,
             borders_outerV=True,
+            resizable=True,
             tag=tag,
         ):
             for col in columns:
