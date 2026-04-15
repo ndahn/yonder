@@ -104,10 +104,8 @@ def add_rtpc_table(
                         callback=make_setter(rtpc, "rtpc_accum"),
                         tag=f"{tag}_item_{idx}_rtpc_accum",
                     )
-                    # TODO Apparently the IDs are stored in a Wwise_IDs.h created on
-                    # soundbank creation. Maybe we can locate them in ghidra?
                     # TODO update tree node label
-                    # TODO Figure out what these map to (ParameterId maybe?)
+                    # TODO Use RtpcParameter enum
                     dpg.add_input_int(
                         label="Parameter",
                         default_value=rtpc.param_id,
