@@ -38,7 +38,7 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     res = resource_dir() / res_path
     if binary:
         return res.read_bytes()
-    return res.read_text()
+    return res.read_text(encoding="utf8")
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:

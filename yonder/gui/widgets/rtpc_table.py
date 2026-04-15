@@ -3,10 +3,12 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RtpcType, RtpcAccum, CurveScaling
+from yonder.game import GameObjects
 from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
-from .interpolation_curve import add_interpolation_curve
 from .hash_widget import add_hash_widget
+from .incomplete_enum import add_incomplete_int_enum
+from .interpolation_curve import add_interpolation_curve
 
 
 def add_rtpc_table(
@@ -62,15 +64,22 @@ def add_rtpc_table(
         refresh_table()
         on_value_changed(tag, list(rtpcs), user_data)
 
-    def on_hash_changed(sender: str, info: tuple[int, str], rtpc: RTPC) -> None:
-        rtpc.id = info[0]
-        update_label(sender, (rtpc, "id", info), None)
+    def on_hash_changed(sender: str, param_id: int, rtpc: RTPC) -> None:
+        rtpc.id = param_id
+        update_label(sender, (rtpc, "id", param_id), None)
         on_value_changed(tag, list(rtpcs), user_data)
 
     def update_label(sender: str, info: tuple[RTPC, str, Any], user_data: Any) -> None:
         rtpc = info[0]
         idx = rtpcs.index(rtpc)
-        label = f"{rtpc.get_name('?')} #{rtpc.id} ({rtpc.param_id})".ljust(50)
+
+        try:
+            param = GameObjects.RTPCParameter(rtpc.param_id).name
+        except KeyError:
+            param = str(rtpc.param_id)
+
+        name = rtpc.get_name(f"#{rtpc.id}")
+        label = f"{name} ({param})".ljust(50)
         dpg.set_item_label(f"{tag}_tree_node_{idx}", label)
 
     def bind_context_menu(item: str, rtpc: RTPC) -> None:
@@ -104,14 +113,14 @@ def add_rtpc_table(
                         callback=make_setter(rtpc, "rtpc_accum"),
                         tag=f"{tag}_item_{idx}_rtpc_accum",
                     )
-                    # TODO update tree node label
-                    # TODO Use RtpcParameter enum
-                    dpg.add_input_int(
+
+                    add_incomplete_int_enum(
+                        GameObjects.RTPCParameter,
+                        GameObjects.RTPCParameter(rtpc.param_id),
+                        "<unknown>",
+                        make_setter(rtpc, "param_id", callback=update_label),
                         label="Parameter",
-                        default_value=rtpc.param_id,
-                        min_value=0,
-                        min_clamped=True,
-                        callback=make_setter(rtpc, "param_id", callback=update_label),
+                        sort=False,
                         tag=f"{tag}_item_{idx}_param_id",
                     )
 
@@ -134,7 +143,7 @@ def add_rtpc_table(
                     dpg.add_spacer(height=5)
 
             dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
-            
+
             bind_context_menu(f"{tag}_tree_node_{idx}", rtpc)
             update_label(None, (rtpc, "id", rtpc.id), None)
 
