@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import global_id_generator
+from yonder.enums import PropID, CurveInterpolation, SyncType
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicRanSeqPlaylistItem,
@@ -14,7 +16,6 @@ from .base_types import (
     MusicTransDstRule,
     RTPC,
 )
-from yonder.enums import PropID, CurveInterpolation, SyncType
 from .mixins import PropertyMixin
 
 
@@ -262,3 +263,17 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
 
         self.music_trans_node_params.transition_rules.append(rule)
         return rule
+
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if other.parent not in (0, self.id):
+                logger.warning(
+                    f"{other} is already parented to {other.parent} and will be detached"
+                )
+            other.parent = self.id
+            other = other.id
+
+        pid = self.playlist_items[-1] + 1 if self.playlist_items else 0
+        self.add_playlist_item(pid, int(other))
+        
+        logger.warning("Don't forget to adjust the new playlist item details!")

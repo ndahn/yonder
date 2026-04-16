@@ -18,13 +18,14 @@ from yonder.types import (
     Event,
     Section,
     HIRCSection,
+    DataNode,
 )
-from yonder.types.mixins import DataNode
+from yonder.types.serialization import serialize, deserialize
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes, query_help_text
-from yonder.gui.config import Config, load_config
-from yonder.gui.helpers import center_window, shorten_path, tmp_dir
-from yonder.gui.widgets import (
+from .config import Config, load_config
+from .helpers import center_window, shorten_path, tmp_dir
+from .widgets import (
     create_node_widgets,
     create_section_widgets,
     loading_indicator,
@@ -36,25 +37,25 @@ from yonder.gui.widgets import (
     add_graph_widget,
     add_paragraphs,
 )
-from yonder.gui import style
-from yonder.gui.style import themes
-from yonder.gui.localization import Localization, English
-from yonder.gui.dialogs.about_dialog import about_dialog
-from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
-from yonder.gui.dialogs.create_node_dialog import create_node_dialog
-from yonder.gui.dialogs.create_wwise_event_dialog import create_wwise_event_dialog
-from yonder.gui.dialogs.file_dialog import (
+from . import style
+from .style import themes
+from .localization import Localization, English
+from .dialogs.about_dialog import about_dialog
+from .dialogs.choice_dialog import simple_choice_dialog
+from .dialogs.create_node_dialog import create_node_dialog
+from .dialogs.create_wwise_event_dialog import create_wwise_event_dialog
+from .dialogs.file_dialog import (
     open_file_dialog,
     save_file_dialog,
     choose_folder,
 )
-from yonder.gui.dialogs.create_simple_sound_dialog import create_simple_sound_dialog
-from yonder.gui.dialogs.calc_hash_dialog import calc_hash_dialog
-from yonder.gui.dialogs.mass_transfer_dialog import mass_transfer_dialog
-from yonder.gui.dialogs.convert_wav_dialog import convert_wavs_dialog
-from yonder.gui.dialogs.settings_dialog import settings_dialog
-from yonder.gui.dialogs.create_boss_track_dialog import create_boss_track_dialog
-from yonder.gui.dialogs.export_sounds_dialog import export_sounds_dialog
+from .dialogs.create_simple_sound_dialog import create_simple_sound_dialog
+from .dialogs.calc_hash_dialog import calc_hash_dialog
+from .dialogs.mass_transfer_dialog import mass_transfer_dialog
+from .dialogs.convert_wav_dialog import convert_wavs_dialog
+from .dialogs.settings_dialog import settings_dialog
+from .dialogs.create_boss_track_dialog import create_boss_track_dialog
+from .dialogs.export_sounds_dialog import export_sounds_dialog
 
 
 # TODO boss bgm: transition rules
@@ -439,68 +440,41 @@ class BanksOfYonder:
             tag=f"{tag}_context_menu",
         ):
             dpg.add_menu_item(
-                label="New child",
-                callback=self.node_new_child,
-                tag=f"{tag}_context_new_child",
-            )
-            # TODO create action dialog
-            with dpg.menu(label="Add action", tag=f"{tag}_context_add_action"):
-                dpg.add_menu_item(
-                    label="Play",
-                    callback=self.node_add_action_play,
-                    tag=f"{tag}_context_add_action_play",
-                )
-                dpg.add_menu_item(
-                    label="Event",
-                    callback=self.node_add_action_event,
-                    tag=f"{tag}_context_add_action_event",
-                )
-                dpg.add_menu_item(
-                    label="Stop",
-                    callback=self.node_add_action_stop,
-                    tag=f"{tag}_context_add_action_stop",
-                )
-                dpg.add_menu_item(
-                    label="Mute Bus",
-                    callback=self.node_add_action_mute_bus,
-                    tag=f"{tag}_context_add_action_mute_bus",
-                )
-                dpg.add_menu_item(
-                    label="Reset Bus Volume",
-                    callback=self.node_add_action_reset_bus_volume,
-                    tag=f"{tag}_context_add_action_reset_bus",
-                )
-
-            dpg.add_menu_item(
                 label="Show Graph",
                 callback=self._open_node_graph,
                 tag=f"{tag}_context_show_graph",
             )
-
-            dpg.add_separator()
-
             dpg.add_menu_item(
                 label="Pin",
                 callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
                 tag=f"{tag}_context_pin",
             )
-            dpg.add_menu_item(
-                label="Cut",
-                callback=self.node_cut,
-                tag=f"{tag}_context_cut",
-            )
-            dpg.add_menu_item(
-                label="Copy",
-                callback=self.node_copy,
-                tag=f"{tag}_context_copy",
-            )
-            # TODO copy/paste hierarchy
+
             dpg.add_separator()
-            dpg.add_menu_item(
-                label="Paste child",
-                callback=self.node_paste_child,
-                tag=f"{tag}_context_paste_child",
-            )
+
+            with dpg.menu(label="Copy"):
+                dpg.add_menu_item(
+                    label="Node",
+                    callback=self.node_copy,
+                    tag=f"{tag}_context_copy",
+                )
+                dpg.add_menu_item(
+                    label="Hierarchy",
+                    callback=self.node_copy_hierarchy,
+                    tag=f"{tag}_context_copy_hierarchy",
+                )
+
+            with dpg.menu(label="Paste"):
+                dpg.add_menu_item(
+                    label="Attach",
+                    callback=self.node_attach,
+                    tag=f"{tag}_context_paste",
+                )
+                dpg.add_menu_item(
+                    label="New child",
+                    callback=self.node_new_child,
+                    tag=f"{tag}_context_new_child",
+                )
 
             dpg.add_separator()
 
@@ -1076,17 +1050,7 @@ class BanksOfYonder:
         item, node = user_data
         self._on_node_selected(item, app_data, node)
 
-        if "children" in node:
-            dpg.show_item(f"{self.tag}_context_new_child")
-            dpg.show_item(f"{self.tag}_context_paste_child")
-        else:
-            dpg.hide_item(f"{self.tag}_context_new_child")
-            dpg.hide_item(f"{self.tag}_context_paste_child")
-
-        if isinstance(node, Event):
-            dpg.show_item(f"{self.tag}_context_add_action")
-        else:
-            dpg.hide_item(f"{self.tag}_context_add_action")
+        # NOTE hide or show context menu items here if needed
 
         dpg.set_item_pos(f"{self.tag}_context_menu", dpg.get_mouse_pos())
         dpg.show_item(f"{self.tag}_context_menu")
@@ -1231,6 +1195,27 @@ class BanksOfYonder:
         self.bnk.delete_orphans()
         self.regenerate()
 
+    def node_copy(self) -> None:
+        data = {"yonder_nodes": [self._selected_node]}
+        pyperclip.copy(json.dumps(serialize(data), indent=2))
+        logger.info(f"Copied node {self._selected_node} to clipboard")
+
+    def node_copy_hierarchy(self) -> None:
+        g = self.bnk.get_subtree(self._selected_node, include_external=False)
+        nodes = []
+
+        for nid in g:
+            node = self.bnk.get(nid)
+            if not node:
+                logger.warning(f"Subtree has reference to unknown node {nid}")
+                continue
+
+            nodes.append(node)
+        
+        data = {"yonder_nodes": nodes}
+        pyperclip.copy(json.dumps(serialize(data), indent=2))
+        logger.info(f"Copied {self._selected_node} and {len(nodes) - 1} descendants to clipboard")
+
     def node_new_child(self) -> None:
         tag = f"{self.tag}_add_child_to_{self._selected_node.id}"
         if dpg.does_item_exist(tag):
@@ -1250,74 +1235,40 @@ class BanksOfYonder:
         dpg.split_frame()
         center_window(tag)
 
-    def node_add_action_play(self) -> None:
-        act = Action.new_play_action(self.bnk.new_id(), 0)
-        self._selected_node.add_action(act)
-        self.bnk.add_nodes(act)
-        self.regenerate()
-        set_foldable_row_status(f"{self.tag}_event_{self._selected_node.id}", True)
-        self.select_node(act)
+    def node_attach(self) -> None:
+        try:
+            data = json.loads(pyperclip.paste())
+        except json.JSONDecodeError:
+            raise ValueError("Clipboard does not contain a valid hierarchy")
 
-    def node_add_action_event(self) -> None:
-        act = Action.new_event_action(self.bnk.new_id(), 0)
-        self._selected_node.add_action(act)
-        self.bnk.add_nodes(act)
-        self.regenerate()
-        set_foldable_row_status(f"{self.tag}_event_{self._selected_node.id}", True)
-        self.select_node(act)
+        if "yonder_nodes" not in data:
+            raise ValueError("Clipboard does not contain a valid hierarchy")
 
-    def node_add_action_stop(self) -> None:
-        act = Action.new_stop_action(self.bnk.new_id(), 0)
-        self._selected_node.add_action(act)
-        self.bnk.add_nodes(act)
-        self.regenerate()
-        set_foldable_row_status(f"{self.tag}_event_{self._selected_node.id}", True)
-        self.select_node(act)
+        nodes = [HIRCNode.from_dict(n) for n in data["yonder_nodes"]]
+        id_map = {}
 
-    def node_add_action_mute_bus(self) -> None:
-        act = Action.new_mute_bus_action(self.bnk.new_id(), 0)
-        self._selected_node.add_action(act)
-        self.bnk.add_nodes(act)
-        self.regenerate()
-        set_foldable_row_status(f"{self.tag}_event_{self._selected_node.id}", True)
-        self.select_node(act)
+        # Create the ID mappings first
+        for n in reversed(nodes):
+            old_id = n.id
+            new_id = self.bnk.new_id()
+            id_map[old_id] = new_id
+            n.id = new_id
 
-    def node_add_action_reset_bus_volume(self) -> None:
-        act = Action.new_reset_bus_volume_action(self.bnk.new_id(), 0)
-        self._selected_node.add_action(act)
-        self.bnk.add_nodes(act)
-        self.regenerate()
-        set_foldable_row_status(f"{self.tag}_event_{self._selected_node.id}", True)
-        self.select_node(act)
+        # Then update all references, including parent IDs
+        for n in nodes:
+            for path, ref in n.get_references():
+                if ref in id_map:
+                    n.set_value(path, id_map[ref])
 
-    def node_cut(self) -> None:
-        self.node_copy()
-        self.node_delete()
-        logger.info(f"Cut node {self._selected_node} to clipboard")
-        self._on_node_selected(None, False, None)
-        self.regenerate()
+            if not isinstance(n, Action) and n.parent in id_map:
+                n.parent = id_map[n.parent]
 
-    def node_copy(self) -> None:
-        data = self._selected_node.json()
-        pyperclip.copy(data)
-        logger.info(f"Copied node {self._selected_node} to clipboard")
+        self.bnk.add_nodes(*nodes)
+        nodes[0].parent = self._selected_node
+        self._selected_node.attach(nodes[0])  # TODO
 
-    def node_paste_child(self) -> None:
-        data = json.loads(pyperclip.paste())
-        node = HIRCNode.from_dict(data)
-        if not hasattr(node, "parent"):
-            raise ValueError(f"Node {node} cannot be parented")
-
-        if node.id in self.bnk:
-            node.id = self.bnk.new_id()
-            logger.warning(
-                f"ID of pasted node already exists, assigned new ID {node.id}"
-            )
-
-        self.bnk.add_nodes(node)
-        self._selected_node.children.add(node)
         logger.info(
-            f"Pasted node {node} from clipboard as child of {self._selected_node}"
+            f"Attached {nodes[0]} and {len(nodes) - 1} descendants to {self._selected_node}"
         )
         self.regenerate()
 

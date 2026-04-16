@@ -1,8 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
+from random import randint
 
 from yonder.hash import calc_hash
+from yonder.enums import GroupType, DecisionTreeMode, PropID
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicTransNodeParams,
@@ -12,7 +15,6 @@ from .base_types import (
     Children,
     RTPC,
 )
-from yonder.enums import GroupType, DecisionTreeMode, PropID
 from .mixins import PropertyMixin
 
 
@@ -76,6 +78,23 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc.rtpcs
+
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if other.parent not in (0, self.id):
+                logger.warning(
+                    f"{other} is already parented to {other.parent} and will be detached"
+                )
+            other.parent = self.id
+            other = other.id
+
+        state_path = [0] * len(self.arguments)
+        state_path[0] = randint(0, 10**9)
+        self.add_branch(state_path, int(other))
+
+        logger.warning(
+            f"Attached node with state path {state_path}, don't forget to change it as needed!"
+        )
 
     @staticmethod
     def parse_state_path(state_path: list[str]) -> list[int]:

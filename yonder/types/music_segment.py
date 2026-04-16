@@ -4,8 +4,10 @@ from typing import ClassVar, Any
 
 from yonder.hash import calc_hash
 from yonder.enums import PropID, MarkerId
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise, RTPC
+from .music_track import MusicTrack
 from .mixins import PropertyMixin
 
 
@@ -65,6 +67,20 @@ class MusicSegment(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_node_params.node_base_params.initial_rtpc.rtpcs
+
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if not isinstance(other, MusicTrack):
+                logger.warning("Attaching a non-MusicTrack to a MusicSegment is highly unusual and may result in an invalid soundbank!")
+
+            if other.parent not in (0, self.id):
+                logger.warning(
+                    f"{other} is already parented to {other.parent} and will be detached"
+                )
+            other.parent = self.id
+            other = other.id
+
+        self.children.add(other)
 
     def set_marker(
         self, mid: int | str | MarkerId, pos: float, update: bool = True

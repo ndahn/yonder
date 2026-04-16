@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.enums import PropID
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -11,7 +13,6 @@ from .base_types import (
     PropBundle,
     RTPC,
 )
-from yonder.enums import PropID
 from .mixins import PropertyMixin
 
 
@@ -64,8 +65,21 @@ class LayerContainer(PropertyMixin, HIRCNode):
         return self.node_base_params.initial_rtpc.rtpcs
 
     def add_layer(self, nodes: list[int]) -> Layer:
+        # TODO
+        logger.warning("Layer containers have not been properly researched yet, adding layers may lead to invalid soundbanks")
         self.layers.append(
-            Layer(associated_children=[AssociatedChildData(nid) for nid in nodes])
+            Layer(associated_children=[AssociatedChildData(int(nid)) for nid in nodes])
         )
+        for nid in nodes:
+            self.children.add(nid)
 
-    # TODO figure out how to fill children from layer data
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if other.parent not in (0, self.id):
+                logger.warning(
+                    f"{other} is already parented to {other.parent} and will be detached"
+                )
+            other.parent = self.id
+            other = other.id
+
+        self.add_layer([int(other)])

@@ -2,9 +2,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.enums import PropID
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import NodeBaseParams, Children, PropBundle, RTPC
-from yonder.enums import PropID
 from .mixins import PropertyMixin
 
 
@@ -53,3 +54,14 @@ class ActorMixer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if other.parent not in (0, self.id):
+                logger.warning(
+                    f"{other} is already parented to {other.parent} and will be detached"
+                )
+            other.parent = self.id
+            other = other.id
+
+        self.children.add(other)

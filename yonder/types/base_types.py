@@ -468,6 +468,7 @@ class Children:
         if isinstance(item, HIRCNode):
             item = item.id
 
+        item = int(item)
         if item not in self.items:
             self.items.append(item)
             self.items.sort()

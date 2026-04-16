@@ -99,6 +99,20 @@ class Action(PropertyMixin, HIRCNode):
     def properties(self) -> list[PropBundle]:
         return self.prop_bundle
 
+    def attach(self, other: int | HIRCNode) -> None:
+        from .event import Event
+
+        if isinstance(other, HIRCNode):
+            if isinstance(other, Event) and self.action_type_enum != ActionType.PlayEvent:
+                raise ValueError("Cannot attach an event to a non-PlayEvent action")
+            
+            if isinstance(other, Action):
+                raise ValueError("Cannot attach actions to actions")
+
+            other = other.id
+
+        self.external_id = int(other)
+
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 

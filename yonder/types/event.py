@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 
 from .hirc_node import HIRCNode
-from .action import ActionType
+from .action import Action, ActionType
 
 if TYPE_CHECKING:
     from .soundbank import Soundbank
@@ -36,6 +36,18 @@ class Event(HIRCNode):
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"actions:{i}", aid) for i, aid in enumerate(self.actions)]
+
+    def attach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            if not isinstance(other, Action):
+                raise ValueError("Cannot attach non-Actions to events")
+
+            other = other.id
+
+        other = int(other)
+        if other not in self.actions:
+            # Actions are *not* sorted
+            self.actions.append(other)
 
     def __str__(self) -> str:
         return super().__str__()

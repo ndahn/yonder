@@ -12,7 +12,12 @@ from yonder.types.serialization import serialize
 @dataclass
 class DataNode:
     def get_value(self, path: str) -> Any:
+        if path.endswith((":", "/")):
+            raise ValueError(f"Invalid path {path}")
+            
+        path = path.lstrip("/")
         obj = self
+
         for part in path.split("/"):
             if ":" in part:
                 key, idx = part.split(":")
@@ -23,6 +28,11 @@ class DataNode:
         return obj
 
     def set_value(self, path: str, new_val: Any, strict: bool = True) -> None:
+        if path.endswith((":", "/")):
+            raise ValueError(f"Invalid path {path}")
+
+        path = path.lstrip("/")
+        
         if "/" in path:
             trail, key = path.rsplit("/", maxsplit=1)
             obj = self.get_value(trail)
@@ -30,14 +40,25 @@ class DataNode:
             key = path
             obj = self
 
-        if strict:
+        if ":" in key:
+            key, idx = key.split(":")
+            idx = int(idx)
+            obj = getattr(obj, key)
+            old_val = obj[idx]
+        else:
+            idx = None
             old_val = getattr(obj, key)
+
+        if strict:
             if old_val is not None and type(old_val) is not type(new_val):
                 raise ValueError(
                     f"Cannot set {path}: incompatible types ({old_val}, {new_val})"
                 )
 
-        setattr(obj, key, new_val)
+        if idx is None:
+            setattr(obj, key, new_val)
+        else:
+            obj[idx] = new_val
 
     def json(self) -> str:
         return json.dumps(serialize(self), indent=2)
@@ -56,7 +77,10 @@ class DataNode:
         deepmerge(self, other)
 
     def glob(self, pattern: str) -> list[tuple[str, object]]:
-        segs = re.split(r"/|(?=:)", pattern)
+        if pattern.endswith((":", "/")):
+            raise ValueError(f"Invalid path {pattern}")
+
+        segs = re.split(r"/|(?=:)", pattern.lstrip("/"))
         results = []
 
         def match(node: Any, seg_idx: int, path: str):
