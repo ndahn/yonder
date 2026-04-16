@@ -18,10 +18,12 @@ def add_widget_table(
     new_item: Callable[[Callable[[list[_T]], None]], None] = None,
     on_add: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
+    on_select: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
     header_row: bool = False,
     columns: list[str] = ("Value",),
     label: str = None,
     add_item_label: str = "+",
+    show_clear: bool = False,
     parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
@@ -58,16 +60,33 @@ def add_widget_table(
     def on_add_clicked() -> None:
         new_item(on_add_item_done)
 
+    def on_clear_clicked() -> None:
+        current_values.clear()
+        if on_remove:
+            on_remove(tag, (0, None, current_values), user_data)
+        refresh()
+
+    def on_row_selected(sender: str, selected: bool, idx: int) -> None:
+        if selected:
+            on_select(tag, (idx, current_values[idx], current_values), user_data)
+
     def add_row(val: _T, idx: int) -> None:
         with dpg.table_row(parent=tag):
+            if on_select:
+                dpg.add_selectable(span_columns=True, callback=on_row_selected, user_data=idx)
+
             create_row(val, idx)
+
             if new_item:
                 dpg.add_button(label="x", callback=on_remove_clicked, user_data=idx)
 
     def add_footer() -> None:
         if new_item:
             with dpg.table_row(parent=tag):
-                dpg.add_button(label=add_item_label, callback=on_add_clicked)
+                with dpg.group(horizontal=True):
+                    dpg.add_button(label=add_item_label, callback=on_add_clicked)
+                    if show_clear:
+                        dpg.add_button(label="Clear", callback=on_clear_clicked)
 
     # The actual widgets
     if label:
@@ -82,6 +101,9 @@ def add_widget_table(
             resizable=True,
             tag=tag,
         ):
+            if on_select:
+                dpg.add_table_column(label="")
+
             for col in columns:
                 dpg.add_table_column(
                     label=col, width_stretch=True, init_width_or_weight=100
@@ -90,10 +112,10 @@ def add_widget_table(
             if new_item:
                 dpg.add_table_column(label="")
 
-            refresh()
-
+        dpg.add_group(tag=f"{tag}_footer")
         dpg.add_spacer(height=3)
 
+    refresh()
     return tag
 
 
@@ -104,6 +126,8 @@ def add_filepaths_table(
     folders: bool = False,
     label: str = "Files",
     filetypes: dict[str, str] = None,
+    on_select: Callable[[str, Path, Any], None] = None,
+    show_clear: bool = False,
     parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
@@ -133,13 +157,27 @@ def add_filepaths_table(
         )
         return (txt,)
 
+    def _on_add(sender: str, info: tuple[int, Path, list[Path]], user_data: Any) -> None:
+        if on_value_changed:
+            on_value_changed(tag, info[2], user_data)
+
+    def _on_remove(sender: str, info: tuple[int, Path, list[Path]], user_data: Any) -> None:
+        if on_value_changed:
+            on_value_changed(tag, info[2], user_data)
+
+    def _on_select(sender: str, info: tuple[int, Path, list[Path]], user_data: Any) -> None:
+        if on_select:
+            on_select(tag, info[1], user_data)
+
     return add_widget_table(
         initial_paths,
         create_row,
         new_item=add_item,
-        on_add=lambda s, a, u: on_value_changed(tag, a[2], u),
-        on_remove=lambda s, a, u: on_value_changed(tag, a[2], u),
+        on_add=_on_add,
+        on_remove=_on_remove,
+        on_select=_on_select,
         add_item_label="+ Add Paths" if folders else "+ Add Files",
+        show_clear=show_clear,
         label=label,
         parent=parent,
         tag=tag,
@@ -174,6 +212,7 @@ def add_player_table(
         [str, tuple[int, tuple[str, float]], Any], None
     ] = None,
     initial_user_markers: list[tuple[str, float]] = None,
+    show_clear: bool = False,
     parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
@@ -250,7 +289,7 @@ def add_player_table(
         on_filepaths_changed(sender, data, user_data)
 
     def create_row(path: Path, idx: int) -> None:
-        with dpg.group(horizontal=True):
+        with dpg.tree_node(label=path.stem):
             add_wav_player(
                 path,
                 label=f" <{get_row_label(idx)}>",
@@ -278,6 +317,7 @@ def add_player_table(
         on_add=on_track_added,
         on_remove=on_track_removed,
         add_item_label=add_item_label,
+        show_clear=show_clear,
         label=label,
         parent=parent,
         tag=tag,
@@ -292,6 +332,7 @@ def add_curves_table(
     label: str = "Curves",
     add_item_label: str = "+ Add Curve",
     curve_type_label: str = "Type",
+    show_clear: bool = False,
     parent: str | int = 0,
     tag: str | int = 0,
     user_data: Any = None,
@@ -372,6 +413,7 @@ def add_curves_table(
             on_add=on_add_curve,
             on_remove=on_remove_curve,
             add_item_label=add_item_label,
+            show_clear=show_clear,
             tag=tag,
         )
 

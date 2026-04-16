@@ -23,6 +23,9 @@ class SoundType(StrEnum):
     def values(cls) -> str:
         return "".join(s.value for s in cls)
 
+    def __str__(self) -> str:
+        return f"{self.name} ({self.value})"
+
 
 class CurveInterpolation(IntEnum):
     Log3 = 0x0

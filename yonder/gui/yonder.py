@@ -50,6 +50,7 @@ from .dialogs.file_dialog import (
     choose_folder,
 )
 from .dialogs.create_simple_sound_dialog import create_simple_sound_dialog
+from .dialogs.batch_sound_builder import create_batch_sound_builder_dialog
 from .dialogs.calc_hash_dialog import calc_hash_dialog
 from .dialogs.mass_transfer_dialog import mass_transfer_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
@@ -181,6 +182,10 @@ class BanksOfYonder:
                 dpg.add_menu_item(
                     label="Simple Sound",
                     callback=self._open_simple_sound_dialog,
+                )
+                dpg.add_menu_item(
+                    label="Batch Sound Builder",
+                    callback=self._open_batch_sound_builder_dialog,
                 )
                 dpg.add_menu_item(
                     label="Boss Track",
@@ -1417,6 +1422,19 @@ class BanksOfYonder:
 
         dpg.split_frame()
         center_window(tag)
+
+    def _open_batch_sound_builder_dialog(self) -> None:
+        tag = f"{self.tag}_batch_sound_builder_dialog"
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        def on_batch_created(groups: list[tuple[Event, Event]]) -> None:
+            # TODO
+            pass
+
+        create_batch_sound_builder_dialog(self.bnk, on_batch_created, tag=tag)
 
     def _open_boss_track_dialog(self) -> None:
         tag = f"{self.tag}_create_boss_track_dialog"

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 @dataclass
 class Config:
     recent_files: list[str] = field(default_factory=list)
+    language: str = "English"
 
     bnk2json_exe: str = None
     wwise_exe: str = None
