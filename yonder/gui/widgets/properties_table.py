@@ -2,121 +2,177 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.enums import PropID
+from .widget import Widget
 
 
-def add_properties_table(
-    properties: dict[PropID, Any],
-    on_value_changed: Callable[[str, dict[str, Any], Any], None],
-    *,
-    label: str = "Properties",
-    tag: str | int = 0,
-    user_data: Any = None,
-) -> None:
-    if tag in (None, 0, ""):
-        tag = dpg.generate_uuid()
+class add_properties_table(Widget):
+    """An editable key-value table for ``PropID`` properties.
 
-    def get_available_props(exclude: PropID = None) -> list[PropID]:
-        used = set(properties.keys())
+    Each row has a combo to select the property type and a float input for
+    its value. Adding a row picks the first unused ``PropID``; the type combo
+    only shows props not already in use. The passed-in ``properties`` dict is
+    mutated in place; callbacks receive a shallow copy.
+
+    Parameters
+    ----------
+    properties : dict of PropID to float
+        Initial properties; mutated directly by the widget.
+    on_value_changed : callable
+        Fired as ``on_value_changed(tag, props_copy, user_data)`` on any edit.
+    label : str, optional
+        Text label rendered above the table.
+    tag : int or str
+        Explicit tag; auto-generated if 0 or None.
+    user_data : any
+        Passed through to ``on_value_changed``.
+    """
+
+    def __init__(
+        self,
+        properties: dict[PropID, Any],
+        on_value_changed: Callable[[str, dict[PropID, Any], Any], None],
+        *,
+        label: str = "Properties",
+        tag: str | int = 0,
+        user_data: Any = None,
+    ) -> None:
+        super().__init__(tag if tag not in (None, 0, "") else dpg.generate_uuid())
+
+        self._properties = properties
+        self._on_value_changed = on_value_changed
+        self._user_data = user_data
+
+        self._build(label)
+        self._refresh()
+
+    # === Build =========================================================
+
+    def _build(self, label: str) -> None:
+        if label:
+            dpg.add_text(label)
+
+        with dpg.table(
+            header_row=False,
+            policy=dpg.mvTable_SizingFixedFit,
+            borders_outerH=True,
+            borders_outerV=True,
+            tag=self._tag,
+        ):
+            dpg.add_table_column(
+                label="Property", width_stretch=True, init_width_or_weight=100
+            )
+            dpg.add_table_column(
+                label="Value", width_stretch=True, init_width_or_weight=100
+            )
+            dpg.add_table_column(label="", width_fixed=True)
+
+    # === Internal ======================================================
+
+    def _prop_combo_tag(self, prop: PropID) -> str:
+        return self._t(f"combo_{prop.name}")
+
+    def _prop_value_tag(self, prop: PropID) -> str:
+        return self._t(f"value_{prop.name}")
+
+    def _prop_remove_tag(self, prop: PropID) -> str:
+        return self._t(f"remove_{prop.name}")
+
+    def _get_available_props(self, exclude: PropID = None) -> list[PropID]:
+        used = set(self._properties.keys())
         if exclude:
             used.discard(exclude)
-
         return [k for k in PropID if k not in used]
 
-    def refresh_table() -> None:
-        dpg.delete_item(tag, children_only=True, slot=1)
-        for prop, val in properties.items():
-            add_row(prop, val)
+    def _refresh(self) -> None:
+        dpg.delete_item(self._tag, children_only=True, slot=1)
+        for prop, val in self._properties.items():
+            self._add_row(prop, val)
+        self._add_footer()
 
-        add_footer()
-
-    def on_prop_type_changed(sender: str, new_key: str) -> None:
-        row = dpg.get_item_parent(sender)
-        siblings = dpg.get_item_children(row, slot=1)
-        value_widget = siblings[1]
-        old_prop = next(k for k, combo in row_widgets.items() if combo[0] == sender)
-        properties.pop(old_prop)
-
-        new_prop = PropID[new_key]
-        properties[new_prop] = 0.0
-        row_widgets[new_prop] = row_widgets.pop(old_prop)
-        dpg.configure_item(value_widget, default_value=0.0)
-        sync_combos()
-
-        on_value_changed(tag, dict(properties), user_data)
-
-    def on_prop_value_changed(sender: str, new_val: float) -> None:
-        for key, (_, value_id, _) in row_widgets.items():
-            if value_id == sender:
-                properties[key] = new_val
-                break
-
-        on_value_changed(tag, dict(properties), user_data)
-
-    def on_add_clicked() -> None:
-        available = get_available_props()
-        if not available:
-            return
-
-        new_key = available[0]
-        properties[new_key] = 0.0
-        refresh_table()
-        on_value_changed(tag, dict(properties), user_data)
-
-    def on_remove_clicked(sender: int) -> None:
-        key = next(k for k, ids in row_widgets.items() if ids[2] == sender)
-        properties.pop(key)
-        refresh_table()
-        on_value_changed(tag, dict(properties), user_data)
-
-    def sync_combos() -> None:
-        for key, (combo_id, _, __) in row_widgets.items():
+    def _sync_combos(self) -> None:
+        for prop in self._properties:
             dpg.configure_item(
-                combo_id,
-                items=[p.name for p in get_available_props(exclude=key)],
+                self._prop_combo_tag(prop),
+                items=[p.name for p in self._get_available_props(exclude=prop)],
             )
 
-    def add_row(prop: PropID, val: float) -> None:
-        with dpg.table_row(parent=tag):
-            combo_id = dpg.add_combo(
-                items=[p.name for p in get_available_props(exclude=prop)],
+    def _add_row(self, prop: PropID, val: float) -> None:
+        with dpg.table_row(parent=self._tag):
+            dpg.add_combo(
+                items=[p.name for p in self._get_available_props(exclude=prop)],
                 default_value=prop.name,
                 width=-1,
-                callback=on_prop_type_changed,
+                callback=self._on_prop_type_changed,
+                user_data=prop,
+                tag=self._prop_combo_tag(prop),
             )
-            value_id = dpg.add_input_double(
+            dpg.add_input_double(
                 default_value=val,
                 width=-1,
-                callback=on_prop_value_changed,
+                callback=self._on_prop_value_changed,
+                user_data=prop,
+                tag=self._prop_value_tag(prop),
             )
-            remove_id = dpg.add_button(label="x", callback=on_remove_clicked)
-            row_widgets[prop] = (combo_id, value_id, remove_id)
+            dpg.add_button(
+                label="x",
+                callback=self._on_remove_clicked,
+                user_data=prop,
+                tag=self._prop_remove_tag(prop),
+            )
 
-    def add_footer() -> None:
-        with dpg.table_row(parent=tag):
-            dpg.add_button(label="+ Add Property", callback=on_add_clicked)
+    def _add_footer(self) -> None:
+        with dpg.table_row(parent=self._tag):
+            dpg.add_button(label="+ Add Property", callback=self._on_add_clicked)
 
-    row_widgets: dict[PropID, tuple[int, int, int]] = {}
+    # === DPG callbacks =================================================
 
-    # The actual widgets
-    if label:
-        dpg.add_text(label)
+    def _on_prop_type_changed(
+        self, sender: str, new_key: str, old_prop: PropID
+    ) -> None:
+        new_prop = PropID[new_key]
+        val = self._properties.pop(old_prop)
+        self._properties[new_prop] = val
 
-    with dpg.table(
-        header_row=False,
-        policy=dpg.mvTable_SizingFixedFit,
-        borders_outerH=True,
-        borders_outerV=True,
-        tag=tag,
-    ):
-        dpg.add_table_column(
-            label="Property", width_stretch=True, init_width_or_weight=100
+        # Retag the value widget so derived lookups stay consistent
+        dpg.configure_item(
+            self._prop_value_tag(old_prop), tag=self._prop_value_tag(new_prop)
         )
-        dpg.add_table_column(
-            label="Value", width_stretch=True, init_width_or_weight=100
+        dpg.configure_item(
+            self._prop_combo_tag(old_prop),
+            tag=self._prop_combo_tag(new_prop),
+            user_data=new_prop,
         )
-        dpg.add_table_column(label="", width_fixed=True)
+        dpg.configure_item(
+            self._prop_remove_tag(old_prop),
+            tag=self._prop_remove_tag(new_prop),
+            user_data=new_prop,
+        )
+        dpg.configure_item(
+            self._prop_value_tag(new_prop), default_value=0.0, user_data=new_prop
+        )
 
-        for prop, val in properties.items():
-            add_row(prop, val)
+        self._sync_combos()
+        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
-        add_footer()
+    def _on_prop_value_changed(self, sender: str, new_val: float, prop: PropID) -> None:
+        self._properties[prop] = new_val
+        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+
+    def _on_add_clicked(self) -> None:
+        available = self._get_available_props()
+        if not available:
+            return
+        self._properties[available[0]] = 0.0
+        self._refresh()
+        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+
+    def _on_remove_clicked(self, sender: str, app_data: Any, prop: PropID) -> None:
+        self._properties.pop(prop)
+        self._refresh()
+        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+
+    # === Public ========================================================
+
+    @property
+    def properties(self) -> dict[PropID, Any]:
+        return dict(self._properties)
