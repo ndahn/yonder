@@ -3,64 +3,102 @@ from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
+from .widget import Widget
 
 
-def add_node_widget(
-    get_items: Callable[[str], Iterable[HIRCNode]],
-    label: str,
-    callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
-    *,
-    get_node_details: Callable[[HIRCNode], list[str]] = None,
-    multiple: bool = False,
-    default: HIRCNode = None,
-    node_type: Type[HIRCNode] = None,
-    readonly: bool = False,
-    parent: str = 0,
-    tag: str = 0,
-    user_data: Any = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
+class add_node_reference(Widget):
+    def __init__(self, 
+        get_items: Callable[[str], Iterable[HIRCNode]],
+        label: str,
+        callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
+        *,
+        get_node_details: Callable[[HIRCNode], list[str]] = None,
+        multiple: bool = False,
+        default: HIRCNode = None,
+        node_type: Type[HIRCNode] = None,
+        readonly: bool = False,
+        parent: str = 0,
+        tag: str = 0,
+        user_data: Any = None,
+    ) -> str:
+        super().__init__(tag)
 
-    if isinstance(default, HIRCNode):
-        default = default.id
+        self._get_items = get_items
+        self._get_node_details = get_node_details
+        self._callback = callback
+        self._user_data = user_data
+        self.multiple = multiple
+        self.readonly = readonly
+        self.node_type = node_type
 
-    if default is None:
-        default = "0"
+        if isinstance(default, HIRCNode):
+            default = default.id
 
-    default = str(default)
+        if default is None:
+            default = "0"
 
-    def get_nodes(filt: str) -> Iterable[HIRCNode]:
-        for node in get_items(filt):
-            if not node_type or isinstance(node, node_type):
+        default = str(default)
+
+        self._build(label, default, readonly, parent)
+
+    # === Build =================
+
+    def _build(self,
+        label: str,
+        default: HIRCNode,
+        readonly: bool,
+        parent: str):
+        with dpg.group(horizontal=True, parent=parent):
+            dpg.add_input_text(
+                default_value=default,
+                decimal=True,
+                readonly=readonly,
+                enabled=not readonly,
+                callback=lambda s, a, u: self._callback(self._tag, int(a), u),
+                user_data=self._user_data,
+                tag=self._tag,
+            )
+            dpg.add_button(
+                arrow=True,
+                direction=dpg.mvDir_Right,
+                callback=self._select_node,
+            )
+            dpg.add_text(label)
+
+    def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
+        for node in self.get_items(filt):
+            if not self.node_type or isinstance(node, self.node_type):
                 yield node
 
-    def on_node_selected(sender: str, node: HIRCNode, cb_user_data: Any) -> None:
-        dpg.set_value(tag, str(node.id))
-        callback(tag, node, user_data)
+    def _on_node_selected(self, sender: str, node: HIRCNode, user_data: Any) -> None:
+        dpg.set_value(self._tag, str(node.id))
+        self._callback(self._tag, node, user_data)
 
-    def select_node() -> None:
+    def _select_node(self, ) -> None:
         select_nodes_dialog(
-            get_nodes,
-            on_node_selected,
-            get_node_details=get_node_details,
-            multiple=multiple,
-            user_data=user_data,
+            self._get_nodes,
+            self._on_node_selected,
+            get_node_details=self._get_node_details,
+            multiple=self.multiple,
+            user_data=self._user_data,
         )
 
-    with dpg.group(horizontal=True, parent=parent):
-        dpg.add_input_text(
-            default_value=default,
-            decimal=True,
-            readonly=readonly,
-            enabled=not readonly,
-            callback=lambda s, a, u: callback(tag, int(a), u),
-            user_data=user_data,
-            tag=tag,
-        )
-        dpg.add_button(
-            arrow=True,
-            direction=dpg.mvDir_Right,
-            callback=select_node,
-        )
-        dpg.add_text(label)
+    # === Public accessors =================
+
+    @property
+    def selected_node(self) -> int:
+        val = dpg.get_value(self._tag)
+        try:
+            return int(val)
+        except Exception:
+            return None
+
+    @selected_node.setter
+    def selected_node(self, node: int | HIRCNode) -> None:
+        if isinstance(node, HIRCNode):
+            node = node.id
+        
+        if node is not None:
+            node = int(node)
+
+        dpg.set_value(self._tag, node)

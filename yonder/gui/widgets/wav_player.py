@@ -107,10 +107,7 @@ class add_wav_player(Widget):
         parent: int | str = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag else dpg.generate_uuid(), width)
-
-        if not allow_change_file and not initial_file:
-            raise ValueError("allow_change_file is False but no initial_file provided")
+        super().__init__(tag)
 
         # Layout / construction-time settings (fixed for lifetime)
         self._label = label
@@ -170,7 +167,7 @@ class add_wav_player(Widget):
         self.fadein: list[RTPCGraphPoint] = None
         self.fadeout: list[RTPCGraphPoint] = None
 
-        self._setup_content()
+        self._setup_content(width, height)
 
         if initial_file:
             self.regenerate()
@@ -748,7 +745,7 @@ class add_wav_player(Widget):
 
     # === Build =========================================================
 
-    def _setup_content(self) -> None:
+    def _setup_content(self, width: int, height: int) -> None:
         with dpg.group(tag=self._tag, parent=self._parent):
             dpg.add_text(
                 "Audio not found",
@@ -782,8 +779,8 @@ class add_wav_player(Widget):
                     link_all_x=True,
                     link_all_y=True,
                     row_ratios=[0.0001, 1],
-                    width=self._width,
-                    height=self._height,
+                    width=width,
+                    height=height,
                     no_resize=True,
                     no_menus=True,
                     no_title=True,

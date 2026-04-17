@@ -5,7 +5,7 @@ from yonder import Soundbank, HIRCNode
 from yonder.types import MusicSwitchContainer
 from yonder.hash import lookup_name, calc_hash
 from yonder.gui import style
-from yonder.gui.widgets import add_node_widget
+from yonder.gui.widgets import add_node_reference
 
 
 def edit_state_path_dialog(
@@ -99,7 +99,7 @@ def edit_state_path_dialog(
 
         dpg.add_spacer(height=3)
         if not hide_node_id:
-            add_node_widget(
+            add_node_reference(
                 get_nodes,
                 "Node",
                 on_node_selected,

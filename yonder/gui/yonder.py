@@ -39,7 +39,7 @@ from .widgets import (
 )
 from . import style
 from .style import themes
-from .localization import Localization, English
+from .localization_old import Localization, English
 from .dialogs.about_dialog import about_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
 from .dialogs.create_node_dialog import create_node_dialog

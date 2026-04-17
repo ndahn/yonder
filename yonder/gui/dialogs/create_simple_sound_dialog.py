@@ -12,7 +12,7 @@ from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     add_properties_table,
-    add_node_widget,
+    add_node_reference,
     add_player_table,
 )
 
@@ -147,7 +147,7 @@ def create_simple_sound_dialog(
         )
 
         # Actor mixer selector
-        add_node_widget(
+        add_node_reference(
             bnk.query,
             "ActorMixer",
             on_amx_selected,

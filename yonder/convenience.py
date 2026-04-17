@@ -26,6 +26,8 @@ from yonder.enums import (
     ClipAutomationType,
     CurveInterpolation,
     MarkerId,
+    PlaybackMode, 
+    RandomMode,
 )
 from yonder.util import logger
 
@@ -35,7 +37,10 @@ def create_simple_sound(
     event_name: str,
     wems: list[Path] | Path,
     actor_mixer: int | ActorMixer,
-    avoid_repeat_count: int = 1,
+    playback_mode: PlaybackMode = PlaybackMode.Random,
+    random_mode: RandomMode = RandomMode.Standard,
+    loop_count: int = 1,
+    avoid_repeat_count: int = 0,
     properties: dict[PropID, float] = None,
 ) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[Sound]]:
     """Create a new sound structure with one or more sounds in a RandomSequenceContainer controlled by a start and stop event.
@@ -69,6 +74,9 @@ def create_simple_sound(
     rsc = RandomSequenceContainer.new(
         bnk.new_id(),
         None,
+        playback_mode=playback_mode,
+        random_mode=random_mode,
+        loop_count=loop_count,
         avoid_repeat_count=avoid_repeat_count,
         parent=actor_mixer,
         props=properties,

@@ -11,7 +11,7 @@ from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
-    add_node_widget,
+    add_node_reference,
     add_paragraphs,
     add_player_table,
 )
@@ -238,7 +238,7 @@ def create_boss_track_dialog(
         tag=tag,
         on_close=lambda: dpg.delete_item(window),
     ) as window:
-        add_node_widget(
+        add_node_reference(
             get_music_switch_containers,
             "MusicSwitchContainer",
             on_music_switch_container_selected,
