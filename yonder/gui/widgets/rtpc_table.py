@@ -58,14 +58,14 @@ class add_rtpc_table(Widget):
             dpg.add_text(label)
 
         dpg.add_child_window(auto_resize_y=True, tag=self._tag)
-        self._refresh()
+        self.refresh()
 
     # === Internal ======================================================
 
     def _item_tag(self, idx: int, suffix: str) -> str:
         return self._t(f"item_{idx}_{suffix}")
 
-    def _refresh(self) -> None:
+    def refresh(self) -> None:
         dpg.delete_item(self._tag, children_only=True, slot=1)
         for idx, rtpc in enumerate(self._rtpcs):
             self._add_row(idx, rtpc)
@@ -196,12 +196,12 @@ class add_rtpc_table(Widget):
                 graph_points=[RTPCGraphPoint()],
             )
         )
-        self._refresh()
+        self.refresh()
         self._on_value_changed(self._tag, list(self._rtpcs), self._user_data)
 
     def _on_remove_clicked(self, sender: str, app_data: Any, idx: int) -> None:
         self._rtpcs.pop(idx)
-        self._refresh()
+        self.refresh()
         self._on_value_changed(self._tag, list(self._rtpcs), self._user_data)
 
     # === Public ========================================================
@@ -209,3 +209,8 @@ class add_rtpc_table(Widget):
     @property
     def rtpcs(self) -> list[RTPC]:
         return list(self._rtpcs)
+
+    @rtpcs.setter
+    def rtpcs(self, value: list[RTPC]) -> None:
+        self._rtpcs = list(value)
+        self.refresh()

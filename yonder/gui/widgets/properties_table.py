@@ -43,7 +43,7 @@ class add_properties_table(Widget):
         self._user_data = user_data
 
         self._build(label)
-        self._refresh()
+        self.refresh()
 
     # === Build =========================================================
 
@@ -83,7 +83,7 @@ class add_properties_table(Widget):
             used.discard(exclude)
         return [k for k in PropID if k not in used]
 
-    def _refresh(self) -> None:
+    def refresh(self) -> None:
         dpg.delete_item(self._tag, children_only=True, slot=1)
         for prop, val in self._properties.items():
             self._add_row(prop, val)
@@ -163,16 +163,21 @@ class add_properties_table(Widget):
         if not available:
             return
         self._properties[available[0]] = 0.0
-        self._refresh()
+        self.refresh()
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
     def _on_remove_clicked(self, sender: str, app_data: Any, prop: PropID) -> None:
         self._properties.pop(prop)
-        self._refresh()
+        self.refresh()
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
     # === Public ========================================================
 
     @property
-    def properties(self) -> dict[PropID, Any]:
+    def properties(self) -> dict[PropID, float]:
         return dict(self._properties)
+
+    @properties.setter
+    def propertes(self, value: dict[PropID, float]) -> None:
+        self._properties = dict(value)
+        self.refresh()

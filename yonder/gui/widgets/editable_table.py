@@ -83,7 +83,7 @@ class add_widget_table(Widget):
         self._user_data = user_data
 
         self._build(header_row, columns, label, parent)
-        self._refresh()
+        self.refresh()
 
     # === Build =========================================================
 
@@ -122,7 +122,7 @@ class add_widget_table(Widget):
 
     # === Internal row management =======================================
 
-    def _refresh(self) -> None:
+    def refresh(self) -> None:
         dpg.delete_item(self._tag, children_only=True, slot=1)
         for i, val in enumerate(self._values):
             self._add_row(val, i)
@@ -159,7 +159,7 @@ class add_widget_table(Widget):
         prev = self._values.pop(idx)
         if self._on_remove:
             self._on_remove(self._tag, (idx, prev, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
     def _on_add_item_done(self, result: _T) -> None:
         if not result:
@@ -168,7 +168,7 @@ class add_widget_table(Widget):
         self._values.append(result)
         if self._on_add:
             self._on_add(self._tag, (pos, result, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
     def _on_add_clicked(self) -> None:
         self._new_item(self._on_add_item_done)
@@ -177,7 +177,7 @@ class add_widget_table(Widget):
         self._values.clear()
         if self._on_remove:
             self._on_remove(self._tag, (0, None, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
     def _on_row_selected(self, sender: str, selected: bool, idx: int) -> None:
         if selected and self._on_select:
@@ -193,8 +193,8 @@ class add_widget_table(Widget):
         return list(self._values)
 
     def set_items(self, items: list[_T]) -> None:
-        self._values[:] = items
-        self._refresh()
+        self._values = list(items)
+        self.refresh()
 
     def append(self, item: _T, *, fire_callbacks: bool = False) -> None:
         """Append an item and refresh the table."""
@@ -202,21 +202,21 @@ class add_widget_table(Widget):
         self._values.append(item)
         if fire_callbacks and self._on_add:
             self._on_add(self._tag, (pos, item, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
         """Remove the item at ``idx`` and refresh the table."""
         prev = self._values.pop(idx)
         if fire_callbacks and self._on_remove:
             self._on_remove(self._tag, (idx, prev, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
     def clear(self, *, fire_callbacks: bool = False) -> None:
         """Remove all items and refresh the table."""
         self._values.clear()
         if fire_callbacks and self._on_remove:
             self._on_remove(self._tag, (0, None, self._values), self._user_data)
-        self._refresh()
+        self.refresh()
 
 
 # ===========================================================================
