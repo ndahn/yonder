@@ -2,10 +2,12 @@ from dearpygui import dearpygui as dpg
 
 from yonder.util import resource_dir
 from yonder.gui.style import init_themes
+from yonder.gui.localization import load_translations, apply_dpg_decorators
 from yonder.gui.yonder import BanksOfYonder
 
 
 def dpg_init():
+    # Default font
     with dpg.font_registry():
         font_path = resource_dir() / "NotoSansMonoCJKsc-Regular.otf"
         with dpg.font(str(font_path), 18) as default_font:
@@ -14,7 +16,12 @@ def dpg_init():
 
         dpg.bind_font(default_font)
 
+    # Themes
     init_themes()
+
+    # Localization
+    load_translations()
+    apply_dpg_decorators()
 
 
 if __name__ == "__main__":

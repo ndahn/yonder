@@ -4,7 +4,6 @@ import sys
 import os
 import logging
 import json
-from copy import deepcopy
 from pathlib import Path
 import subprocess
 import pyperclip
@@ -20,7 +19,7 @@ from yonder.types import (
     HIRCSection,
     DataNode,
 )
-from yonder.types.serialization import serialize, deserialize
+from yonder.types.serialization import serialize
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes, query_help_text
 from .config import Config, load_config
@@ -39,7 +38,13 @@ from .widgets import (
 )
 from . import style
 from .style import themes
-from .localization_old import Localization, English
+from .localization import (
+    set_active_lang,
+    get_active_lang,
+    translate_dpg_items,
+    get_available_languages,
+    translate as t,
+)
 from .dialogs.about_dialog import about_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
 from .dialogs.create_node_dialog import create_node_dialog
@@ -71,7 +76,6 @@ class BanksOfYonder:
 
         self.tag = tag
         self.max_list_nodes = 500
-        self.language: Localization = English()
         self.bnk: Soundbank = None
         self.event_map: dict[int, str] = {}
         self.globals_map: dict[int, str] = {}
@@ -81,6 +85,7 @@ class BanksOfYonder:
         self._backup: DataNode = None
 
         self.config: Config = load_config()
+        self._change_language(self.config.language)
 
         self._setup_menu()
         self._setup_content()
@@ -113,6 +118,13 @@ class BanksOfYonder:
 
         self.show_notification(str(exc_value), style.red)
         raise exc_value
+
+    def _change_language(self, lang: str) -> None:
+        set_active_lang(lang)
+        main_window = dpg.get_windows()[0]
+        translate_dpg_items(main_window, None)
+        self.config.language = lang
+        self.config.save()
 
     def _setup_menu(self) -> None:
         with dpg.menu_bar():
@@ -224,6 +236,22 @@ class BanksOfYonder:
 
             dpg.add_separator()
             with dpg.menu(label="Yonder"):
+                with dpg.menu(label="Language"):
+                    dpg.add_radio_button(
+                        get_available_languages(True),
+                        default_value=get_active_lang(True),
+                        callback=lambda s, a, u: self._change_language(a),
+                    )
+                dpg.add_menu_item(
+                    label="Settings",
+                    callback=self._open_settings_dialog,
+                )
+                dpg.add_menu_item(
+                    label="Open Temp Dir",
+                    callback=lambda s, a, u: os.startfile(tmp_dir.name),
+                )
+                dpg.add_separator()
+
                 with dpg.menu(label="dearpygui"):
                     dpg.add_menu_item(
                         label="About", callback=lambda: dpg.show_tool(dpg.mvTool_About)
@@ -255,14 +283,6 @@ class BanksOfYonder:
                         label="Stack Tool",
                         callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
                     )
-                dpg.add_menu_item(
-                    label="Open Temp Dir",
-                    callback=lambda s, a, u: os.startfile(tmp_dir.name),
-                )
-                dpg.add_menu_item(
-                    label="Settings",
-                    callback=self._open_settings_dialog,
-                )
                 dpg.add_menu_item(
                     label="About",
                     callback=self._open_about_dialog,
@@ -700,11 +720,10 @@ class BanksOfYonder:
         if not self.bnk:
             return False
 
-        lang = self.language
         path = save_file_dialog(
-            title=lang.save_soundbank,
+            title=t("Save Soundbank", "save_soundbank"),
             default_dir=str(self.bnk.bnk_dir),
-            filetypes={lang.json_files: "*.json"},
+            filetypes={t("JSON", "json"): "*.json"},
         )
         if path:
             loading = loading_indicator("Saving soundbank...")
@@ -745,13 +764,12 @@ class BanksOfYonder:
             self._load_soundbank(bnk.bnk_dir)
 
     def _open_soundbank(self) -> None:
-        lang = self.language
         path = open_file_dialog(
-            title=lang.open,
+            title=t("Open", "open"),
             filetypes={
-                "Soundbank files (.bnk, .json)": ["*.bnk", "*.json"],
-                lang.json_files: "*.json",
-                lang.soundbank_files: "*.bnk",
+                t("Supported files", "supported_files"): ["*.bnk", "*.json"],
+                t("JSON", "json"): "*.json",
+                t("Soundbanks", "soundbank_files"): "*.bnk",
             },
         )
 
@@ -1012,7 +1030,7 @@ class BanksOfYonder:
                     span_columns=True,
                     callback=self._on_section_selected,
                     user_data=sec.name,
-                    tag=f"{self.tag}_sections_{sec.name}"
+                    tag=f"{self.tag}_sections_{sec.name}",
                 )
 
     def select_section(self, section: str | Section) -> None:
@@ -1040,7 +1058,7 @@ class BanksOfYonder:
         dpg.delete_item(f"{self.tag}_attributes", children_only=True, slot=1)
         if section:
             self._backup = section.copy()
-            
+
             create_section_widgets(
                 self.bnk,
                 section,
@@ -1216,10 +1234,12 @@ class BanksOfYonder:
                 continue
 
             nodes.append(node)
-        
+
         data = {"yonder_nodes": nodes}
         pyperclip.copy(json.dumps(serialize(data), indent=2))
-        logger.info(f"Copied {self._selected_node} and {len(nodes) - 1} descendants to clipboard")
+        logger.info(
+            f"Copied {self._selected_node} and {len(nodes) - 1} descendants to clipboard"
+        )
 
     def node_new_child(self) -> None:
         tag = f"{self.tag}_add_child_to_{self._selected_node.id}"
@@ -1320,7 +1340,7 @@ class BanksOfYonder:
 
         # Just to verify that the data actually makes sense
         tmp = item.from_dict(data)
-        
+
         if isinstance(self._selected_section, HIRCSection):
             # Work with the dict so we can avoid replacing the HIRC
             del data["body"]["HIRC"]["objects"]
