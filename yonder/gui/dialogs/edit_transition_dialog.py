@@ -238,7 +238,7 @@ class edit_transition_dialog(DpgItem):
                     label="Cancel", callback=lambda: dpg.delete_item(self._window)
                 )
 
-    # === DPG callbacks =================================================
+    # === DPG Callbacks =================================================
 
     def _on_remove_clicked(
         self, sender: str, app_data: Any, info: tuple[int, str]

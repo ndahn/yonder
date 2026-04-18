@@ -6,125 +6,142 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.wem import wem2wav
 from yonder.gui import style
+from yonder.gui.localization import translate as t
 from yonder.gui.config import get_config
-from yonder.gui.widgets import add_generic_widget, loading_indicator
+from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator
 
 
-def export_sounds_dialog(
-    *,
-    title: str = "Export Soundbank Sounds",
-    tag: str = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
-    elif dpg.does_item_exist(tag):
-        dpg.delete_item(tag)
+class export_sounds_dialog(DpgItem):
+    def __init__(
+        self,
+        *,
+        title: str = "Export Soundbank Sounds",
+        tag: str = None,
+    ) -> str:
+        super().__init__(tag)
 
-    bnk: Soundbank = None
-    output_dir: Path = None
+        self._bnk: Soundbank = None
+        self._output_dir: Path = None
 
-    def on_soundbank_selected(sender: str, path: Path, user_data: Any) -> None:
-        nonlocal bnk
+        self._build(title)
+
+    def _on_soundbank_selected(self, sender: str, path: Path, user_data: Any) -> None:
         try:
-            bnk = Soundbank.from_file(path)
+            self._bnk = Soundbank.from_file(path)
         except Exception as e:
-            show_message(str(e))
+            self.show_message(str(e))
 
-    def on_outputdir_selected(sender: str, path: Path, user_data: Any) -> None:
-        nonlocal output_dir
-        output_dir = path
+    def _on_outputdir_selected(self, sender: str, path: Path, user_data: Any) -> None:
+        self._output_dir = path
 
-    def show_message(msg: str = None, color: tuple[int, int, int, int] = style.red) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         if not msg:
-            dpg.hide_item(f"{tag}_notification")
+            dpg.hide_item(self._t("notification"))
             return
 
         dpg.configure_item(
-            f"{tag}_notification",
+            self._t("notification"),
             default_value=msg,
             color=color,
             show=True,
         )
 
-    def on_okay() -> None:
-        if not bnk:
-            show_message("No soundbank loaded")
+    def _on_okay(self) -> None:
+        if not self._bnk:
+            self.show_message(
+                t("No soundbank loaded", "export_sounds/msg_no_soundbank")
+            )
             return
 
-        if not output_dir or not output_dir.is_dir():
-            show_message("Invalid output directory")
+        if not self._output_dir or not self._output_dir.is_dir():
+            self.show_message(
+                t("Invalid output directory", "export_sounds/msg_invalid_output_dir")
+            )
             return
 
-        show_message()
-        export_full = dpg.get_value(f"{tag}_export_full")
-        convert_to_wav = dpg.get_value(f"{tag}_convert_to_wav")
+        self.show_message()
+        export_full = dpg.get_value(self._t("export_sounds/export_full"))
+        convert_to_wav = dpg.get_value(self._t("export_sounds/convert_to_wav"))
 
-        loading = loading_indicator("Converting...")
+        loading = loading_indicator(t("Converting...", "progress/converting"))
         try:
             config = get_config()
             if export_full:
                 wems = []
-                for w in bnk.wems():
+                for w in self._bnk.wems():
                     path = next(config.find_external_sounds(w), None)
                     if path:
                         wems.append(path)
             else:
-                wems = [bnk.bnk_dir / f"{w}.wem" for w in bnk.wems()]
+                wems = [self._bnk.bnk_dir / f"{w}.wem" for w in self._bnk.wems()]
 
             if convert_to_wav:
                 try:
                     vgmstream = config.locate_vgmstream()
                 except ValueError as e:
-                    show_message(str(e))
+                    self.show_message(str(e))
                     return
 
-                wem2wav(vgmstream, wems, output_dir)
+                wem2wav(vgmstream, wems, self._output_dir)
             else:
                 for w in wems:
-                    shutil.copy(w, output_dir)
+                    shutil.copy(w, self._output_dir)
 
-            show_message("Yay!", color=style.blue)
-            dpg.set_item_label(f"{tag}_button_okay", "Again?")
+            self.show_message("Yay!", color=style.blue)
+            dpg.set_item_label(
+                self._t("export_sounds/button_okay"), t("Again?", "again")
+            )
         finally:
             dpg.delete_item(loading)
 
-    with dpg.window(
-        label=title,
-        width=400,
-        height=400,
-        autosize=True,
-        no_saved_settings=True,
-        tag=tag,
-        on_close=lambda: dpg.delete_item(window),
-    ) as window:
-        add_generic_widget(
-            Path,
-            "Soundbank",
-            on_soundbank_selected,
-            filetypes={"Soundbanks (.bnk, .json)": ["*.bnk", "*.json"]},
-        )
-        add_generic_widget(
-            Path,
-            "Output dir",
-            on_outputdir_selected,
-            file_mode="folder",
-        )
+    def _build(self, title: str):
+        with dpg.window(
+            label=title,
+            width=400,
+            height=400,
+            autosize=True,
+            no_saved_settings=True,
+            tag=self.tag,
+            on_close=lambda: dpg.delete_item(window),
+        ) as window:
+            add_generic_widget(
+                Path,
+                "Soundbank",
+                self._on_soundbank_selected,
+                filetypes={
+                    t("Soundbanks (.bnk, .json)", "soundbank_files"): [
+                        "*.bnk",
+                        "*.json",
+                    ]
+                },
+            )
+            add_generic_widget(
+                Path,
+                "Output dir",
+                self._on_outputdir_selected,
+                file_mode="folder",
+                tag=self._t("export_sounds/output_dir"),
+            )
 
-        dpg.add_spacer(height=5)
+            dpg.add_spacer(height=5)
 
-        dpg.add_checkbox(
-            label="Export full sounds for streamed",
-            default_value=True,
-            tag=f"{tag}_export_full",
-        )
-        dpg.add_checkbox(
-            label="Convert to wav",
-            default_value=True,
-            tag=f"{tag}_convert_to_wav",
-        )
+            dpg.add_checkbox(
+                label="Export full sounds for streamed",
+                default_value=True,
+                tag=self._t("export_sounds/export_full"),
+            )
+            dpg.add_checkbox(
+                label="Convert to wav",
+                default_value=True,
+                tag=self._t("export_sounds/convert_to_wav"),
+            )
 
-        dpg.add_separator()
-        dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
+            dpg.add_separator()
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="Yoink!", callback=on_okay, tag=f"{tag}_button_okay")
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label="Yoink!",
+                    callback=self._on_okay,
+                    tag=self._t("export_sounds/button_okay"),
+                )

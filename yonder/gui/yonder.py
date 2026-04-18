@@ -256,7 +256,7 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_menu_item(
                     label="Mass Transfer",
-                    callback=self._open_transfer_events_dialog,
+                    callback=self._open_mass_transfer_dialog,
                     tag=self._t("menu/mass_transfer"),
                 )
                 dpg.add_menu_item(
@@ -1685,7 +1685,7 @@ class BanksOfYonder(DpgItem):
         dpg.split_frame()
         center_window(tag)
 
-    def _open_transfer_events_dialog(self) -> None:
+    def _open_mass_transfer_dialog(self) -> None:
         tag = self._t("transfer_events_dialog")
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)

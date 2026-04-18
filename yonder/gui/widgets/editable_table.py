@@ -70,7 +70,7 @@ class add_widget_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag not in (None, 0, "") else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._values: list[_T] = list(initial_values)
         self._create_row = create_row
@@ -94,9 +94,8 @@ class add_widget_table(DpgItem):
         label: str,
         parent: str | int,
     ) -> None:
-        tag = self._tag
         if label:
-            dpg.add_text(label, parent=parent)
+            dpg.add_text(label, parent=parent, tag=self.tag)
 
         with dpg.child_window(
             border=False, autosize_x=True, auto_resize_y=True, parent=parent
@@ -106,7 +105,7 @@ class add_widget_table(DpgItem):
                 policy=dpg.mvTable_SizingFixedFit,
                 borders_outerH=True,
                 borders_outerV=True,
-                tag=tag,
+                tag=self._t("table")
             ):
                 if self._on_select:
                     dpg.add_table_column(label="")
@@ -117,19 +116,19 @@ class add_widget_table(DpgItem):
                 if self._new_item:
                     dpg.add_table_column(label="")
 
-            dpg.add_group(tag=f"{tag}_footer")
+            dpg.add_group(tag=self._t("footer"))
             dpg.add_spacer(height=3)
 
     # === Internal row management =======================================
 
     def refresh(self) -> None:
-        dpg.delete_item(self._tag, children_only=True, slot=1)
+        dpg.delete_item(self._t("table"), children_only=True, slot=1)
         for i, val in enumerate(self._values):
             self._add_row(val, i)
         self._add_footer()
 
     def _add_row(self, val: _T, idx: int) -> None:
-        with dpg.table_row(parent=self._tag):
+        with dpg.table_row(parent=self._t("table")):
             if self._on_select:
                 dpg.add_selectable(
                     span_columns=True,
@@ -145,7 +144,7 @@ class add_widget_table(DpgItem):
     def _add_footer(self) -> None:
         if not self._new_item:
             return
-        with dpg.table_row(parent=self._tag):
+        with dpg.table_row(parent=self._t("table")):
             with dpg.group(horizontal=True):
                 dpg.add_button(
                     label=self._add_item_label, callback=self._on_add_clicked
@@ -158,7 +157,7 @@ class add_widget_table(DpgItem):
     def _on_remove_clicked(self, sender: int, app_data: Any, idx: int) -> None:
         prev = self._values.pop(idx)
         if self._on_remove:
-            self._on_remove(self._tag, (idx, prev, self._values), self._user_data)
+            self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
         self.refresh()
 
     def _on_add_item_done(self, result: _T) -> None:
@@ -167,7 +166,7 @@ class add_widget_table(DpgItem):
         pos = len(self._values)
         self._values.append(result)
         if self._on_add:
-            self._on_add(self._tag, (pos, result, self._values), self._user_data)
+            self._on_add(self.tag, (pos, result, self._values), self._user_data)
         self.refresh()
 
     def _on_add_clicked(self) -> None:
@@ -176,13 +175,13 @@ class add_widget_table(DpgItem):
     def _on_clear_clicked(self) -> None:
         self._values.clear()
         if self._on_remove:
-            self._on_remove(self._tag, (0, None, self._values), self._user_data)
+            self._on_remove(self.tag, (0, None, self._values), self._user_data)
         self.refresh()
 
     def _on_row_selected(self, sender: str, selected: bool, idx: int) -> None:
         if selected and self._on_select:
             self._on_select(
-                self._tag, (idx, self._values[idx], self._values), self._user_data
+                self.tag, (idx, self._values[idx], self._values), self._user_data
             )
 
     # === Public ========================================================
@@ -202,21 +201,21 @@ class add_widget_table(DpgItem):
         pos = len(self._values)
         self._values.append(item)
         if fire_callbacks and self._on_add:
-            self._on_add(self._tag, (pos, item, self._values), self._user_data)
+            self._on_add(self.tag, (pos, item, self._values), self._user_data)
         self.refresh()
 
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
         """Remove the item at ``idx`` and refresh the table."""
         prev = self._values.pop(idx)
         if fire_callbacks and self._on_remove:
-            self._on_remove(self._tag, (idx, prev, self._values), self._user_data)
+            self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
         self.refresh()
 
     def clear(self, *, fire_callbacks: bool = False) -> None:
         """Remove all items and refresh the table."""
         self._values.clear()
         if fire_callbacks and self._on_remove:
-            self._on_remove(self._tag, (0, None, self._values), self._user_data)
+            self._on_remove(self.tag, (0, None, self._values), self._user_data)
         self.refresh()
 
 
@@ -268,7 +267,7 @@ class add_filepaths_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._on_value_changed = on_value_changed
         self._on_select_cb = on_select
@@ -288,7 +287,7 @@ class add_filepaths_table(DpgItem):
             show_clear=show_clear,
             label=label,
             parent=parent,
-            tag=self._tag,
+            tag=self.tag,
             user_data=user_data,
         )
 
@@ -319,19 +318,19 @@ class add_filepaths_table(DpgItem):
         self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         if self._on_value_changed:
-            self._on_value_changed(self._tag, info[2], self._user_data)
+            self._on_value_changed(self.tag, info[2], self._user_data)
 
     def _on_remove(
         self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         if self._on_value_changed:
-            self._on_value_changed(self._tag, info[2], self._user_data)
+            self._on_value_changed(self.tag, info[2], self._user_data)
 
     def _on_select(
         self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         if self._on_select_cb:
-            self._on_select_cb(self._tag, info[1], self._user_data)
+            self._on_select_cb(self.tag, info[1], self._user_data)
 
     # === Public ========================================================
 
@@ -422,7 +421,7 @@ class add_player_table(DpgItem):
         self._wav_player_cls = _wav_player
         self._open_file_dialog = open_file_dialog
 
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._on_filepaths_changed = on_filepaths_changed
         self._on_loop_changed = on_loop_changed
@@ -444,7 +443,7 @@ class add_player_table(DpgItem):
             show_clear=show_clear,
             label=label,
             parent=parent,
-            tag=self._tag,
+            tag=self.tag,
         )
 
     # === Helpers =======================================================
@@ -468,22 +467,22 @@ class add_player_table(DpgItem):
 
     def _on_loop_edit(self, sender: str, new_loop: tuple, idx: int) -> None:
         if self._on_loop_changed:
-            self._on_loop_changed(self._tag, (idx, new_loop), self._user_data)
+            self._on_loop_changed(self.tag, (idx, new_loop), self._user_data)
 
     def _on_trim_edit(self, sender: str, new_trim: tuple, idx: int) -> None:
         if self._on_trim_changed:
-            self._on_trim_changed(self._tag, (idx, new_trim), self._user_data)
+            self._on_trim_changed(self.tag, (idx, new_trim), self._user_data)
 
     def _on_user_marker_edit(self, sender: str, new_marker: tuple, idx: int) -> None:
         if self._on_user_marker_changed:
             markers = self.players[idx].get_user_marker_pos()
-            self._on_user_marker_changed(self._tag, (idx, markers), self._user_data)
+            self._on_user_marker_changed(self.tag, (idx, markers), self._user_data)
 
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         # Player was already created by _create_row, just sync the list length
         if self._on_filepaths_changed:
             self._on_filepaths_changed(
-                self._tag, self._collect_state(), self._user_data
+                self.tag, self._collect_state(), self._user_data
             )
 
     def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
@@ -491,13 +490,13 @@ class add_player_table(DpgItem):
         self.players.pop(idx)
         if self._on_filepaths_changed:
             self._on_filepaths_changed(
-                self._tag, self._collect_state(), self._user_data
+                self.tag, self._collect_state(), self._user_data
             )
 
     def _on_path_changed(self, sender: str, new_path: Path, idx: int) -> None:
         if self._on_filepaths_changed:
             self._on_filepaths_changed(
-                self._tag, self._collect_state(), self._user_data
+                self.tag, self._collect_state(), self._user_data
             )
 
     def _create_row(self, path: Path, idx: int) -> None:
@@ -583,19 +582,16 @@ class add_player_table_compact(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from yonder.gui.dialogs.file_dialog import open_file_dialog
         from .wav_player import add_wav_player
 
-        self._open_file_dialog = open_file_dialog
-
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._on_filepaths_changed = on_filepaths_changed
         self._get_row_label = get_row_label or (lambda i: f"Track #{i}")
         self._user_data = user_data
         self.player = None  # single shared add_wav_player instance
 
-        with dpg.group(tag=self._tag, parent=parent):
+        with dpg.group(parent=parent):
             self._table = add_widget_table(
                 list(initial_tracks or []),
                 self._create_row,
@@ -606,6 +602,7 @@ class add_player_table_compact(DpgItem):
                 add_item_label=add_item_label,
                 show_clear=show_clear,
                 label=label,
+                tag=self.tag,
             )
             # Shared player — created empty, loaded on row selection
             self.player = add_wav_player(None, allow_change_file=False)
@@ -613,7 +610,9 @@ class add_player_table_compact(DpgItem):
     # === DPG callbacks =================================================
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
-        ret = self._open_file_dialog(
+        from yonder.gui.dialogs.file_dialog import open_file_dialog
+
+        ret = open_file_dialog(
             title="Select Audio",
             filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
         )
@@ -634,11 +633,11 @@ class add_player_table_compact(DpgItem):
 
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         if self._on_filepaths_changed:
-            self._on_filepaths_changed(self._tag, self._table.items, self._user_data)
+            self._on_filepaths_changed(self.tag, self._table.items, self._user_data)
 
     def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         if self._on_filepaths_changed:
-            self._on_filepaths_changed(self._tag, self._table.items, self._user_data)
+            self._on_filepaths_changed(self.tag, self._table.items, self._user_data)
 
     # === Public ========================================================
 
@@ -707,11 +706,7 @@ class add_curves_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from .interpolation_curve import add_interpolation_curve
-
-        self._interp_curve_cls = add_interpolation_curve
-
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._curves: list[GraphCurve] = list(initial_curves or [])
         self._curve_types = curve_types
@@ -719,43 +714,41 @@ class add_curves_table(DpgItem):
         self._on_curves_changed = on_curves_changed
         self._user_data = user_data
 
-        with dpg.group(tag=self._tag, parent=parent):
-            if label:
-                dpg.add_text(label)
-            self._table = add_widget_table(
-                self._curves,
-                self._create_row,
-                new_item=self._new_curve,
-                on_add=self._on_add_curve,
-                on_remove=self._on_remove_curve,
-                add_item_label=add_item_label,
-                show_clear=show_clear,
-                tag=f"{self._tag}_table",
-            )
+        self._table = add_widget_table(
+            self._curves,
+            self._create_row,
+            new_item=self._new_curve,
+            on_add=self._on_add_curve,
+            on_remove=self._on_remove_curve,
+            add_item_label=add_item_label,
+            show_clear=show_clear,
+            label=label,
+            tag=self.tag,
+        )
 
     # === DPG callbacks =================================================
 
     def _on_curve_type_changed(self, sender: str, curve_type: str, idx: int) -> None:
         self._curves[idx].curve_type = curve_type
         if self._on_curves_changed:
-            self._on_curves_changed(self._tag, self._curves, self._user_data)
+            self._on_curves_changed(self.tag, self._curves, self._user_data)
 
     def _on_curve_changed(self, sender: str, curve: GraphCurve, idx: int) -> None:
         self._curves[idx] = curve
         if self._on_curves_changed:
-            self._on_curves_changed(self._tag, self._curves, self._user_data)
+            self._on_curves_changed(self.tag, self._curves, self._user_data)
 
     def _on_add_curve(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         self._curves.clear()
         self._curves.extend(info[2])
         if self._on_curves_changed:
-            self._on_curves_changed(self._tag, self._curves, self._user_data)
+            self._on_curves_changed(self.tag, self._curves, self._user_data)
 
     def _on_remove_curve(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         self._curves.clear()
         self._curves.extend(info[2])
         if self._on_curves_changed:
-            self._on_curves_changed(self._tag, self._curves, self._user_data)
+            self._on_curves_changed(self.tag, self._curves, self._user_data)
 
     def _new_curve(self, done: Callable[[GraphCurve], None]) -> None:
         done(
@@ -769,6 +762,8 @@ class add_curves_table(DpgItem):
         )
 
     def _create_row(self, curve: GraphCurve, idx: int) -> None:
+        from .interpolation_curve import add_interpolation_curve
+
         with dpg.tree_node(label=f"Curve #{idx}"):
             with dpg.group(horizontal=True):
                 if self._curve_types:
@@ -779,7 +774,7 @@ class add_curves_table(DpgItem):
                         callback=self._on_curve_type_changed,
                         user_data=idx,
                     )
-            self._interp_curve_cls(curve, self._on_curve_changed, user_data=idx)
+            add_interpolation_curve(curve, self._on_curve_changed, user_data=idx)
 
     # === Public ========================================================
 

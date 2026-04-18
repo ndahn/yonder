@@ -156,7 +156,7 @@ class edit_state_path_dialog(DpgItem):
 
     # === Public ========================================================
 
-    def show_message(self, msg: str = None, color: style.Color = style.red) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         """Show or hide the notification label. Pass ``msg=None`` to hide."""
         if not msg:
             dpg.hide_item(self._t("notification"))
