@@ -46,7 +46,7 @@ class simple_choice_dialog(DpgItem):
             on_close=on_cancel,
             no_saved_settings=True,
             autosize=True,
-            tag=tag,
+            tag=self.tag,
         ) as dialog:
             if message:
                 add_paragraphs(message, 40, color=text_color)
@@ -116,7 +116,7 @@ class simple_combo_dialog(DpgItem):
             on_close=on_cancel,
             no_saved_settings=True,
             autosize=True,
-            tag=tag,
+            tag=self.tag,
         ) as dialog:
             if message:
                 add_paragraphs(message, 40, color=text_color)

@@ -21,7 +21,7 @@ class calc_hash_dialog(DpgItem):
             width=320,
             height=130,
             no_saved_settings=True,
-            tag=tag,
+            tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             add_hash_widget(default_value, None, horizontal=False)

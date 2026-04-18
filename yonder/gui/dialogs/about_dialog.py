@@ -28,7 +28,7 @@ class about_dialog(DpgItem):
             no_scrollbar=True,
             no_scroll_with_mouse=True,
             no_resize=True,
-            tag=tag,
+            tag=self.tag,
             **window_args,
         ) as dialog:
             from yonder import __version__
