@@ -26,10 +26,10 @@ def get_available_languages(prefer_native: bool = True) -> list[str]:
 
     for lang in languages.values():
         label = None
-        
+
         if prefer_native:
             label = lang.get("language_native")
-        
+
         if not label:
             label = lang["language"]
 
@@ -71,10 +71,13 @@ def _update_default_dict(path: str, value: str) -> None:
 
     key_dict = languages[ENGLISH]
     for key in keys[1:-1]:
+        # Ignore indices
+        key = key.split(":")[0]
         key_dict = key_dict.setdefault(key, {})
 
-    if keys[-1] not in key_dict:
-        key_dict[keys[-1]] = value
+    trans_key = keys[-1].split(":")[0]
+    if trans_key not in key_dict:
+        key_dict[trans_key] = value
 
 
 def translate(default: str, path: str, lang: str = None, **fmt) -> str:
@@ -95,23 +98,37 @@ def translate(default: str, path: str, lang: str = None, **fmt) -> str:
     if len(keys) == 1:
         # If they do not, don't translate them
         return default
-    
+
     for k in keys[1:-1]:
+        # Ignore indices
+        k = k.split(":")[0]
         lang_dict = lang_dict.get(k)
         if not lang_dict:
             break
     else:
-        trans = lang_dict.get(keys[-1])
+        trans_key = keys[-1].split(":")[0]
+        trans = lang_dict.get(trans_key)
         if isinstance(trans, str):
             # Entire path resolved
             return trans.format(**fmt)
         elif trans is not None:
-            logger.log(_lang_log_level, 
-                f"Translation of {path} led to non-dict entry of type {type(trans)}"
+            logger.log(
+                _lang_log_level,
+                translate(
+                    "Translation of {path} led to non-dict entry of type {result}",
+                    "log_translation_invalid_key",
+                    path=path,
+                    result=type(trans),
+                ),
             )
         else:
-            logger.log(_lang_log_level, f"Failed to translate {path}")
-    
+            logger.log(
+                _lang_log_level,
+                translate(
+                    "Failed to translate {path}", "log_translation_failed", path=path
+                ),
+            )
+
     if isinstance(default, str):
         default = default.format(**fmt)
 
