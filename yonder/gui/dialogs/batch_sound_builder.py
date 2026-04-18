@@ -157,7 +157,7 @@ class create_batch_sound_builder_dialog(Dialog):
         # Custom widgets
         self._w_actormixer.selected_node = g.actormixer
         self._w_properties.properties = g.properties
-        self._w_soundfiles.set_items(g.soundfiles)  # TODO turn into property
+        self._w_soundfiles.audiofiles = g.soundfiles
 
     # === Batch Operations ==========
 

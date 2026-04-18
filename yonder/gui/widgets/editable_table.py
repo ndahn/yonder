@@ -192,7 +192,8 @@ class add_widget_table(Widget):
         """Current item list (read-only copy)."""
         return list(self._values)
 
-    def set_items(self, items: list[_T]) -> None:
+    @items.setter
+    def items(self, items: list[_T]) -> None:
         self._values = list(items)
         self.refresh()
 
@@ -314,18 +315,18 @@ class add_filepaths_table(Widget):
             width=-1,
         )
 
-    def _on_add(self, sender: str, info: tuple[int, Path, list[Path]], ud: Any) -> None:
+    def _on_add(self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any) -> None:
         if self._on_value_changed:
             self._on_value_changed(self._tag, info[2], self._user_data)
 
     def _on_remove(
-        self, sender: str, info: tuple[int, Path, list[Path]], ud: Any
+        self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         if self._on_value_changed:
             self._on_value_changed(self._tag, info[2], self._user_data)
 
     def _on_select(
-        self, sender: str, info: tuple[int, Path, list[Path]], ud: Any
+        self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
         if self._on_select_cb:
             self._on_select_cb(self._tag, info[1], self._user_data)
@@ -336,8 +337,9 @@ class add_filepaths_table(Widget):
     def paths(self) -> list[Path]:
         return self._table.items
 
-    def set_paths(self, items: list[Path]) -> None:
-        self._table.set_items(items)
+    @paths.setter
+    def paths(self, items: list[Path]) -> None:
+        self._table.items = items
 
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)
@@ -475,17 +477,16 @@ class add_player_table(Widget):
             markers = self.players[idx].get_user_marker_pos()
             self._on_user_marker_changed(self._tag, (idx, markers), self._user_data)
 
-    def _on_track_added(self, sender: str, info: tuple, ud: Any) -> None:
-        pos = info[0]
-        # Player was already created by _create_row; just sync the list length
+    def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
+        # Player was already created by _create_row, just sync the list length
         if self._on_filepaths_changed:
             self._on_filepaths_changed(
                 self._tag, self._collect_state(), self._user_data
             )
 
-    def _on_track_removed(self, sender: str, info: tuple, ud: Any) -> None:
-        pos = info[0]
-        self.players.pop(pos)
+    def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
+        idx = info[0]
+        self.players.pop(idx)
         if self._on_filepaths_changed:
             self._on_filepaths_changed(
                 self._tag, self._collect_state(), self._user_data
@@ -518,12 +519,13 @@ class add_player_table(Widget):
     # === Public ========================================================
 
     @property
-    def items(self) -> list[Path]:
+    def audiofiles(self) -> list[Path]:
         return self._table.items
 
-    def set_items(self, items: list[Path]) -> None:
-        self._table.set_items(items)
-    
+    @audiofiles.setter
+    def audiofiles(self, items: list[Path]) -> None:
+        self._table.items = items
+
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)
 
@@ -624,27 +626,28 @@ class add_player_table_compact(Widget):
             width=-1,
         )
 
-    def _on_track_selected(self, sender: str, info: tuple, ud: Any) -> None:
+    def _on_track_selected(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         _, path, _ = info
         self.player.set_file(path)
 
-    def _on_track_added(self, sender: str, info: tuple, ud: Any) -> None:
+    def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         if self._on_filepaths_changed:
             self._on_filepaths_changed(self._tag, self._table.items, self._user_data)
 
-    def _on_track_removed(self, sender: str, info: tuple, ud: Any) -> None:
+    def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         if self._on_filepaths_changed:
             self._on_filepaths_changed(self._tag, self._table.items, self._user_data)
 
     # === Public ========================================================
 
     @property
-    def items(self) -> list[Path]:
+    def audiofiles(self) -> list[Path]:
         return self._table.items
 
-    def set_items(self, items: list[Path]) -> None:
-        self._table.set_items(items)
-    
+    @audiofiles.setter
+    def audiofiles(self, items: list[Path]) -> None:
+        self._table.items = items
+
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)
 
@@ -740,13 +743,13 @@ class add_curves_table(Widget):
         if self._on_curves_changed:
             self._on_curves_changed(self._tag, self._curves, self._user_data)
 
-    def _on_add_curve(self, sender: str, info: tuple, ud: Any) -> None:
+    def _on_add_curve(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         self._curves.clear()
         self._curves.extend(info[2])
         if self._on_curves_changed:
             self._on_curves_changed(self._tag, self._curves, self._user_data)
 
-    def _on_remove_curve(self, sender: str, info: tuple, ud: Any) -> None:
+    def _on_remove_curve(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         self._curves.clear()
         self._curves.extend(info[2])
         if self._on_curves_changed:
@@ -782,13 +785,10 @@ class add_curves_table(Widget):
     def curves(self) -> list[GraphCurve]:
         return list(self._curves)
 
-    @property
-    def items(self) -> list[GraphCurve]:
-        return self._table.items
+    @curves.setter
+    def curves(self, items: list[GraphCurve]) -> None:
+        self._table.items = items
 
-    def set_items(self, items: list[GraphCurve]) -> None:
-        self._table.set_items(items)
-    
     def append(self, curve: GraphCurve, *, fire_callbacks: bool = False) -> None:
         self._table.append(curve, fire_callbacks=fire_callbacks)
 
