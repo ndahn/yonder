@@ -129,12 +129,12 @@ class create_batch_sound_builder_dialog(DpgItem):
             name = name[1:]
 
         if not name.isnumeric():
-            self._show_message(
+            self.show_message(
                 t("Name has non-standard format", "batch_sound_dialog/msg_bad_name"),
                 color=style.yellow,
             )
         else:
-            self._show_message()
+            self.show_message()
 
         g.name = name.strip()
 
@@ -190,8 +190,8 @@ class create_batch_sound_builder_dialog(DpgItem):
 
     # === User Things ===============
 
-    def _show_message(
-        self, msg: str = None, color: tuple[int, int, int, int] = style.red
+    def show_message(
+        self, msg: str = None, color: style.Color = style.red
     ) -> None:
         if not msg:
             dpg.hide_item(self._t("notification"))
@@ -206,7 +206,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self._groups:
-            self._show_message(
+            self.show_message(
                 t("No groups defined", "batch_sound_dialog/msg_no_groups")
             )
             return
@@ -215,7 +215,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
         # Verify all groups are valid
         if not self._groups[0].actormixer:
-            self._show_message(
+            self.show_message(
                 t(
                     "ActorMixer of first group cannot be empty",
                     "batch_sound_dialog/msg_first_actormixer_empty",
@@ -225,7 +225,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
         for idx, g in enumerate(self._groups):
             if not g.soundfiles:
-                self._show_message(
+                self.show_message(
                     t(
                         "Group {name} has no files",
                         "batch_sound_dialog/msg_empty_group",
@@ -253,7 +253,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
             if g.name:
                 if self._make_name("Play_", g.soundtype, g.name) in self._bnk:
-                    self._show_message(
+                    self.show_message(
                         t(
                             "Group {name} already exists in soundbank",
                             "batch_sound_dialog/msg_event_exists",
@@ -285,7 +285,7 @@ class create_batch_sound_builder_dialog(DpgItem):
         # Check for duplicate names
         for g in self._groups:
             if g.name in names_seen:
-                self._show_message(
+                self.show_message(
                     t(
                         "Duplicate group {name}",
                         "batch_sound_dialog/msg_duplicate_group",
@@ -332,9 +332,9 @@ class create_batch_sound_builder_dialog(DpgItem):
         if self._callback:
             self._callback(created_pairs)
 
-        self._show_message(t("Yay!", "yay"), color=style.blue)
+        self.show_message(t("Yay!", "yay"), color=style.blue)
         dpg.set_item_label(
-            self._t("batch_sound_builder/button_okay"), t("Again?", "button_again")
+            self._t("batch_sound_builder/button_okay"), t("Again?", "again")
         )
 
     # === GUI Content =============

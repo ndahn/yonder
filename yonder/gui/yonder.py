@@ -298,7 +298,7 @@ class BanksOfYonder(DpgItem):
                     callback=lambda s, a, u: os.startfile(tmp_dir.name),
                     tag=self._t("menu/open_temp"),
                 )
-                
+
                 dpg.add_separator()
                 with dpg.menu(label="dearpygui"):
                     dpg.add_menu_item(
@@ -806,10 +806,10 @@ class BanksOfYonder(DpgItem):
             filetypes={t("JSON (.json)", "json_files"): "*.json"},
         )
         if path:
-            loading = loading_indicator("Saving soundbank...")
+            loading = loading_indicator(t("Saving soundbank...", "progress/saving_soundbank"))
             try:
                 logger.info(
-                    t("Saving soundbank to {path}", "log_save_soundbank", path=path)
+                    t("Saving soundbank to {name}", "log_save_soundbank", name=path)
                 )
                 self.bnk.save(path)
                 logger.info(t("Don't forget to repack!", "log_reminder_repack"))
@@ -823,7 +823,7 @@ class BanksOfYonder(DpgItem):
         if not self.bnk:
             return
 
-        loading = loading_indicator("Repacking...")
+        loading = loading_indicator(t("Repacking...", "progress/repacking"))
         try:
             logger.info(t("Repacking soundbank", "log_repacking"))
             bnk2json = self.config.locate_bnk2json()
@@ -895,7 +895,7 @@ class BanksOfYonder(DpgItem):
             path = path / "soundbank.json"
 
         if not path.is_file():
-            logger.error(t("File not found: {path}", "log_file_not_found", path=path))
+            logger.error(t("File not found: {name}", "log_file_not_found", name=path))
             self.config.remove_recent_file(path)
             self.config.save()
 
@@ -904,9 +904,9 @@ class BanksOfYonder(DpgItem):
 
         if path.name.endswith(".bnk"):
             logger.info(
-                t("Unpacking soundbank {path}", "log_unpacking_soundbank", path=path)
+                t("Unpacking soundbank {name}", "log_unpacking_soundbank", name=path)
             )
-            loading = loading_indicator(t("Unpacking...", "unpacking"))
+            loading = loading_indicator(t("Unpacking...", "progress/unpacking"))
             try:
                 bnk2json = self.config.locate_bnk2json()
                 unpack_soundbank(bnk2json, path)
@@ -914,12 +914,12 @@ class BanksOfYonder(DpgItem):
                 dpg.delete_item(loading)
                 dpg.split_frame()  # to enable the next modal loading indicator
 
-        logger.info(t("Loading soundbank {path}", "log_loading_soundbank", path=path))
-        loading = loading_indicator(t("Loading soundbank...", "loading_soundbank"))
+        logger.info(t("Loading soundbank {name}", "log_loading_soundbank", name=path))
+        loading = loading_indicator(t("Loading soundbank...", "progress/loading_soundbank"))
         try:
             self.remove_all_pinned_objects()
-            dpg.set_value(self._t("events_filter", ""))
-            dpg.set_value(self._t("globals_filter", ""))
+            dpg.set_value(self._t("events_filter"), "")
+            dpg.set_value(self._t("globals_filter"), "")
 
             self.bnk = Soundbank.from_file(path)
             # NOTE: don't translate to avoid bakemoji on some windows configurations
@@ -1139,7 +1139,7 @@ class BanksOfYonder(DpgItem):
         sender = None
         if section:
             # Jump to sections tab
-            dpg.set_value(self._t("tabs", f"{self.tag}_tab_sections"))
+            dpg.set_value(self._t("tabs", self._t("tab_sections")))
             sec_name = section if isinstance(section, str) else section.name
             sender = self._t(f"sections_{sec_name}")
 
@@ -1240,7 +1240,7 @@ class BanksOfYonder(DpgItem):
             table = self._t("globals_table")
 
             # Switch to globals tab
-            dpg.set_value(self._t("tabs", f"{self.tag}_tab_globals"))
+            dpg.set_value(self._t("tabs", self._t("tab_globals")))
 
             # Unfold the category
             # FIXME: make sure the node row actually exists despite count limits!
@@ -1251,7 +1251,7 @@ class BanksOfYonder(DpgItem):
             table = self._t("events_table")
 
             # Switch to events tab
-            dpg.set_value(self._t("tabs", f"{self.tag}_tab_events"))
+            dpg.set_value(self._t("tabs"), self._t("tab_events"))
 
             if not isinstance(node, Event):
                 for evt, sub in self.bnk.find_event_subgraphs_for(node):
@@ -1310,14 +1310,14 @@ class BanksOfYonder(DpgItem):
         self._on_node_selected(self._selected_root, True, self._selected_node)
 
     def _bank_solve_hirc(self) -> None:
-        loading = loading_indicator(t("Solving...", "loading_solving"))
+        loading = loading_indicator(t("Solving...", "progress/solving"))
         try:
             self.bnk.solve()
         finally:
             dpg.delete_item(loading)
 
     def _bank_verify(self) -> None:
-        loading = loading_indicator(t("Verifying...", "loading_verifying"))
+        loading = loading_indicator(t("Verifying...", "progress/verifying"))
         try:
             self.bnk.verify()
         finally:
@@ -1718,7 +1718,7 @@ class BanksOfYonder(DpgItem):
             dpg.focus_item(tag)
             return
 
-        convert_wavs_dialog(self.config, None, tag=tag)
+        convert_wavs_dialog(None, tag=tag)
 
         dpg.split_frame()
         center_window(tag)

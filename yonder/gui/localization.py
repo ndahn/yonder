@@ -65,6 +65,9 @@ def _update_default_dict(path: str, value: str) -> None:
     if not value:
         return
 
+    if not path or not isinstance(path, str):
+        return
+
     keys = path.split("/")
     if len(keys) == 1:
         return
@@ -81,7 +84,9 @@ def _update_default_dict(path: str, value: str) -> None:
 
 
 def translate(default: str, path: str, lang: str = None, **fmt) -> str:
-    if not path:
+    if not path or not isinstance(path, str):
+        if isinstance(default, str):
+            return default.format(**fmt)
         return default
 
     _update_default_dict(path, default)
@@ -91,12 +96,16 @@ def translate(default: str, path: str, lang: str = None, **fmt) -> str:
 
     lang_dict = languages[lang]
     if not lang_dict:
+        if isinstance(default, str):
+            return default.format(**fmt)
         return default
 
     # Paths will follow the pattern <uid>/[subgroups]/widget_tag
     keys = path.split("/")
     if len(keys) == 1:
         # If they do not, don't translate them
+        if isinstance(default, str):
+            return default.format(**fmt)
         return default
 
     for k in keys[1:-1]:
@@ -115,9 +124,9 @@ def translate(default: str, path: str, lang: str = None, **fmt) -> str:
             logger.log(
                 _lang_log_level,
                 translate(
-                    "Translation of {path} led to non-dict entry of type {result}",
+                    "Translation of {name} led to non-dict entry of type {result}",
                     "log_translation_invalid_key",
-                    path=path,
+                    name=path,
                     result=type(trans),
                 ),
             )
@@ -125,7 +134,7 @@ def translate(default: str, path: str, lang: str = None, **fmt) -> str:
             logger.log(
                 _lang_log_level,
                 translate(
-                    "Failed to translate {path}", "log_translation_failed", path=path
+                    "Failed to translate {name}", "log_translation_failed", name=path
                 ),
             )
 

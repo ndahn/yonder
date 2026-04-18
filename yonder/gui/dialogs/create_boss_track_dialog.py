@@ -9,8 +9,10 @@ from yonder.util import logger
 from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
+from yonder.gui.localization import translate as t
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
+    DpgItem,
     add_node_reference,
     add_paragraphs,
     add_player_table,
@@ -18,288 +20,322 @@ from yonder.gui.widgets import (
 from .edit_state_path_dialog import edit_state_path_dialog
 
 
-def create_boss_track_dialog(
-    bnk: Soundbank,
-    on_boss_track_created: Callable[[str, list[HIRCNode]], None],
-    *,
-    title: str = "New Boss BGM",
-    tag: str = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
-    elif dpg.does_item_exist(tag):
-        dpg.delete_item(tag)
+class create_boss_track_dialog(DpgItem):
+    def __init__(
+        self,
+        bnk: Soundbank,
+        on_boss_track_created: Callable[[str, list[HIRCNode]], None],
+        *,
+        title: str = "New Boss BGM",
+        tag: str = None,
+    ) -> str:
+        if not tag:
+            tag = dpg.generate_uuid()
+        elif dpg.does_item_exist(tag):
+            dpg.delete_item(tag)
 
-    msc: MusicSwitchContainer = None
-    bgm_enemy_type_hash = calc_hash("BgmEnemyType")
-    bgm_enemy_type_idx: int = -1
-    current_state_path: list[str] = []
-    bgm_tracks: list[Path] = []
-    bgm_loop_infos: list[tuple[float, float, bool]] = []
-    bgm_trim_infos: list[tuple[float, float]] = []
-    play_intro_enabled: list[bool] = []
+        self.bnk = bnk
+        self.on_boss_track_created = on_boss_track_created
+        self.msc: MusicSwitchContainer = None
+        self.bgm_enemy_type_hash = calc_hash("BgmEnemyType")
+        self.bgm_enemy_type_idx: int = -1
+        self.current_state_path: list[str] = []
+        self.bgm_tracks: list[Path] = []
+        self.bgm_loop_infos: list[tuple[float, float, bool]] = []
+        self.bgm_trim_infos: list[tuple[float, float]] = []
+        self.play_intro_enabled: list[bool] = []
 
+        self._build(title)
+
+    # === Helpers =================================================
+
+    @staticmethod
     def get_phase_label(phase: int) -> str:
         return f"Heatup {phase}" if phase > 0 else "Normal"
 
-    def get_music_switch_containers(filt: str) -> list[MusicSwitchContainer]:
-        if not bnk:
-            show_message("No soundbank loaded")
-            return []
+    def _get_music_switch_containers(self, filt: str) -> list[MusicSwitchContainer]:
+        filt = f"type=MusicSwitchContainer arguments:*/group_id={self.bgm_enemy_type_hash} {filt}"
+        return list(self.bnk.query(filt))
 
-        filt = f"type=MusicSwitchContainer arguments:*/group_id={bgm_enemy_type_hash} {filt}"
-        return list(bnk.query(filt))
-
-    def get_music_switch_container_details(msc: MusicSwitchContainer) -> list[str]:
+    def _get_music_switch_container_details(
+        self, msc: MusicSwitchContainer
+    ) -> list[str]:
         return [lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments]
 
-    def on_music_switch_container_selected(
-        sender: str, selected_msc: int | MusicSwitchContainer, user_data: Any
-    ) -> None:
-        nonlocal msc
-        nonlocal bgm_enemy_type_idx
-        nonlocal current_state_path
-
-        if isinstance(selected_msc, int):
-            selected_msc = bnk.get(selected_msc)
-
-        if not isinstance(selected_msc, MusicSwitchContainer):
-            show_message("Not a MusicSwitchContainer")
-            return
-
-        for i, arg in enumerate(selected_msc.arguments):
-            if arg.group_id == bgm_enemy_type_hash:
-                bgm_enemy_type_idx = i
-                break
-        else:
-            show_message("MSC does not have a BgmEnemyType argument")
-            return
-
-        msc = selected_msc
-        current_state_path = ["*" for _ in msc.arguments]
-        current_state_path[bgm_enemy_type_idx] = dpg.get_value(f"{tag}_bgm_enemy_type")
-        show_message()
-
-    def on_bgmenemytype_changed(sender: str, value: str, user_data: Any) -> None:
-        if not value or value == "*":
-            show_message("BgmEnemyType must not be empty")
-            return
-
-        if msc:
-            current_state_path[bgm_enemy_type_idx] = value
-
-        dpg.set_value(f"{tag}_bgm_enemy_type", value)
-        show_message()
-
-    def edit_state_path() -> None:
-        if not bnk:
-            show_message("No soundbank loaded")
-            return
-
-        if not msc:
-            show_message("Select MusicSwitchContainer first")
+    def _edit_state_path(self) -> None:
+        if not self.msc:
+            self.show_message(
+                t("Select MusicSwitchContainer first", "boss_bgm/msg_no_msc_selected")
+            )
             return
 
         edit_state_path_dialog(
-            bnk,
-            msc,
-            on_statepath_selected,
-            state_path=current_state_path,
+            self.bnk,
+            self.msc,
+            self._on_statepath_selected,
+            state_path=self.current_state_path,
             hide_node_id=True,
         )
 
-    def on_statepath_selected(
-        sender: str, state_path: list[str], user_data: Any
-    ) -> None:
-        current_state_path.clear()
-        current_state_path.extend(state_path)
-        dpg.set_value(f"{tag}_bgm_enemy_type", state_path[bgm_enemy_type_idx])
-        show_message()
+    def _regenerate_per_track_widgets(self) -> None:
+        dpg.delete_item(self._t("per_track_settings"), children_only=True, slot=0)
+        dpg.delete_item(self._t("per_track_settings"), children_only=True, slot=1)
 
-    def on_bgm_tracks_changed(
-        sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any
-    ) -> None:
-        nonlocal bgm_tracks, bgm_loop_infos, bgm_trim_infos
-        bgm_tracks = data[0]
-        bgm_loop_infos = data[1]
-        bgm_trim_infos = data[2]
-
-        if len(bgm_tracks) < len(play_intro_enabled):
-            play_intro_enabled[:] = play_intro_enabled[: len(bgm_tracks)]
-        elif len(bgm_tracks) > len(play_intro_enabled):
-            play_intro_enabled.extend(
-                [False] * (len(bgm_tracks) - len(play_intro_enabled))
-            )
-
-        regenerate_per_track_widgets()
-
-    def update_loop_infos(
-        sender: str, data: tuple[int, tuple[float, float, bool]], user_data: Any
-    ) -> None:
-        idx, loop_info = data
-        bgm_loop_infos[idx] = loop_info
-
-    def update_trim_infos(
-        sender: str, data: tuple[int, tuple[float, float]], user_data: Any
-    ) -> None:
-        idx, trim = data
-        bgm_trim_infos[idx] = trim
-
-    def update_play_intro(sender: str, enabled: bool, idx: int) -> None:
-        play_intro_enabled[idx] = enabled
-
-    def regenerate_per_track_widgets() -> None:
-        dpg.delete_item(f"{tag}_per_track_settings", children_only=True, slot=0)
-        dpg.delete_item(f"{tag}_per_track_settings", children_only=True, slot=1)
-
-        dpg.push_container_stack(f"{tag}_per_track_settings")
+        dpg.push_container_stack(self._t("per_track_settings"))
 
         dpg.add_table_column(width_fixed=True)
-        for i, _ in enumerate(bgm_tracks):
+        for i, _ in enumerate(self.bgm_tracks):
             dpg.add_table_column(
-                label=get_phase_label(i),
+                label=self.get_phase_label(i),
                 angled_header=True,
                 width_fixed=True,
             )
 
         with dpg.table_row():
-            dpg.add_text("Play intro before loop_start")
-            for i, _ in enumerate(bgm_tracks):
+            dpg.add_text(
+                "Play intro before loop_start", tag=self._t("boss_bgm/intro_enabled")
+            )
+            for i, _ in enumerate(self.bgm_tracks):
                 dpg.add_checkbox(
-                    default_value=play_intro_enabled[i],
-                    callback=update_play_intro,
-                    tag=f"{tag}_play_intro_{i}",
+                    default_value=self.play_intro_enabled[i],
+                    callback=self._update_play_intro,
+                    tag=self._t(f"play_intro:{i}"),
                     user_data=i,
                 )
 
         dpg.pop_container_stack()
 
-    def show_message(
-        msg: str = None, color: tuple[int, int, int, int] = style.red
+    # === DPG callbacks =================================================
+
+    def _on_music_switch_container_selected(
+        self, sender: str, selected_msc: int | MusicSwitchContainer, user_data: Any
     ) -> None:
+        if isinstance(selected_msc, int):
+            selected_msc = self.bnk.get(selected_msc)
+
+        for i, arg in enumerate(selected_msc.arguments):
+            if arg.group_id == self.bgm_enemy_type_hash:
+                bgm_enemy_type_idx = i
+                break
+        else:
+            self.show_message(
+                t(
+                    "MSC does not have a BgmEnemyType argument",
+                    "boss_bgm/msg_msc_no_enemy_state",
+                )
+            )
+            return
+
+        msc = selected_msc
+        current_state_path = ["*" for _ in msc.arguments]
+        current_state_path[bgm_enemy_type_idx] = dpg.get_value(
+            self._t("bgm_enemy_type")
+        )
+        self.show_message()
+
+    def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
+        if not value or value == "*":
+            self.show_message(
+                t("BgmEnemyType not set", "boss_bgm/msg_enemy_type_empty")
+            )
+            return
+
+        if self.msc:
+            self.current_state_path[self.bgm_enemy_type_idx] = value
+
+        dpg.set_value(self._t("bgm_enemy_type"), value)
+        self.show_message()
+
+    def _on_statepath_selected(
+        self, sender: str, state_path: list[str], user_data: Any
+    ) -> None:
+        self.current_state_path.clear()
+        self.current_state_path.extend(state_path)
+        dpg.set_value(self._t("bgm_enemy_type"), state_path[self.bgm_enemy_type_idx])
+        self.show_message()
+
+    def _on_bgm_tracks_changed(
+        self, sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any
+    ) -> None:
+        self.bgm_tracks = data[0]
+        self.bgm_loop_infos = data[1]
+        self.bgm_trim_infos = data[2]
+
+        if len(self.bgm_tracks) < len(self.play_intro_enabled):
+            self.play_intro_enabled[:] = self.play_intro_enabled[: len(self.bgm_tracks)]
+        elif len(self.bgm_tracks) > len(self.play_intro_enabled):
+            self.play_intro_enabled.extend(
+                [False] * (len(self.bgm_tracks) - len(self.play_intro_enabled))
+            )
+
+        self._regenerate_per_track_widgets()
+
+    def _update_loop_infos(
+        self, sender: str, data: tuple[int, tuple[float, float, bool]], user_data: Any
+    ) -> None:
+        idx, loop_info = data
+        self.bgm_loop_infos[idx] = loop_info
+
+    def _update_trim_infos(
+        self, sender: str, data: tuple[int, tuple[float, float]], user_data: Any
+    ) -> None:
+        idx, trim = data
+        self.bgm_trim_infos[idx] = trim
+
+    def _update_play_intro(self, sender: str, enabled: bool, idx: int) -> None:
+        self.play_intro_enabled[idx] = enabled
+
+    def _on_okay(self) -> None:
+        if not self.msc:
+            self.show_message(
+                t("Select MusicSwitchContainer first", "boss_bgm/msg_no_msc_selected")
+            )
+            return
+
+        bgm_enemy_type = dpg.get_value(self._t("bgm_enemy_type"))
+        if not bgm_enemy_type or bgm_enemy_type == "*":
+            self.show_message(
+                t("BgmEnemyType not set", "boss_bgm/msg_enemy_type_empty")
+            )
+            return
+
+        if not self.bgm_tracks:
+            self.show_message(
+                t("Must add at least one BGM track", "boss_bgm/msg_no_tracks")
+            )
+            return
+
+        self.show_message()
+
+        waves = [f for f in self.bgm_tracks if f.name.endswith(".wav")]
+        if waves:
+            logger.info(
+                t(
+                    "Converting {num} wave files to wem",
+                    "log_converting_wav_files",
+                    num=len(waves),
+                )
+            )
+            wwise = get_config().locate_wwise()
+            converted_wavs = wav2wem(wwise, waves)
+            for wem in converted_wavs:
+                for idx, f in enumerate(self.bgm_tracks):
+                    if f.stem == wem.stem:
+                        self.bgm_tracks[idx] = wem
+
+        # TODO transition rules?
+        loop_info = [(li[0] * 1000, li[1] * 1000) for li in self.bgm_loop_infos]
+        nodes = create_boss_bgm(
+            self.bnk,
+            self.msc,
+            self.current_state_path,
+            self.bgm_tracks,
+            loop_info,
+            self.play_intro_enabled,
+        )
+        if self.on_boss_track_created:
+            self.on_boss_track_created(bgm_enemy_type, nodes)
+
+        self.show_message(t("Yay!", "yay"), color=style.blue)
+        dpg.set_item_label(self._t("boss_bgm/button_okay"), t("Again?", "again"))
+
+    # === Build =========================================================
+
+    def _build(self, title: str):
+        with dpg.window(
+            label=title,
+            width=400,
+            height=400,
+            autosize=True,
+            no_saved_settings=True,
+            tag=self.tag,
+            on_close=lambda: dpg.delete_item(window),
+        ) as window:
+            add_node_reference(
+                self._get_music_switch_containers,
+                "MusicSwitchContainer",
+                self._on_music_switch_container_selected,
+                get_node_details=self._get_music_switch_container_details,
+                node_type=MusicSwitchContainer,
+            )
+
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(
+                    callback=self._on_bgmenemytype_changed,
+                    default_value="*",
+                    tag=self._t("bgm_enemy_type"),
+                )
+                dpg.add_combo(
+                    [
+                        "EventBoss_Reserved15",
+                        "EventBoss_Reserved14",
+                        "EventBoss_Reserved13",
+                        "EventBoss_Reserved12",
+                        "EventBoss_Reserved11",
+                        "EventBoss_Reserved10",
+                        "EventBoss_Reserved09",
+                        "EventBoss_Reserved08",
+                        "Reserved",
+                    ],
+                    no_preview=True,
+                    callback=self._on_bgmenemytype_changed,
+                )
+                dpg.add_text("BgmEnemyType")
+            dpg.add_button(
+                label="State Path",
+                callback=self._edit_state_path,
+                tag=self._t("state_path"),
+            )
+
+            add_player_table(
+                [],
+                self._on_bgm_tracks_changed,
+                get_row_label=self.get_phase_label,
+                on_loop_changed=self._update_loop_infos,
+                on_trim_changed=self._update_trim_infos,
+            )
+
+            dpg.add_table(tag=self._t("per_track_settings"))
+
+            dpg.add_separator()
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
+
+            add_paragraphs(
+                t(
+                    """\
+                        - Boss tracks need to be added to cs_smain
+                        - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
+                        - Additional tracks will be used for 'heatup' phases
+                        - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
+                        - Only already existing BgmEnemyType strings can be used!
+                        - BgmBossChrIdConv params mus be 6-digit for EMEVD
+                    """
+                ),
+                color=style.light_blue,
+            )
+            dpg.add_spacer(height=5)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label="Bring the heat!",
+                    callback=self._on_okay,
+                    tag=self._t("boss_bgm/button_okay"),
+                )
+
+    # === Public ========================================================
+
+    def show_message(self, msg: str = None, color: style.Color = style.red) -> None:
+        """Show or hide the notification label below the separator.
+
+        Pass ``msg=None`` to hide it.
+        """
         if not msg:
-            dpg.hide_item(f"{tag}_notification")
+            dpg.hide_item(self._t("notification"))
             return
 
         dpg.configure_item(
-            f"{tag}_notification",
+            self._t("notification"),
             default_value=msg,
             color=color,
             show=True,
         )
-
-    def on_okay() -> None:
-        if not bnk:
-            show_message("No soundbank loaded")
-            return
-
-        if not msc:
-            show_message("Select MusicSwitchContainer first")
-            return
-
-        bgm_enemy_type = dpg.get_value(f"{tag}_bgm_enemy_type")
-        if not bgm_enemy_type or bgm_enemy_type == "*":
-            show_message("BgmEnemyType not set")
-            return
-
-        if not bgm_tracks:
-            show_message("Must add at least one BGM track")
-            return
-
-        show_message()
-
-        waves = [f for f in bgm_tracks if f.name.endswith(".wav")]
-        if waves:
-            logger.info(f"Converting {len(waves)} wave files to wem")
-            wwise = get_config().locate_wwise()
-            converted_wavs = wav2wem(wwise, waves)
-            for wem in converted_wavs:
-                for idx, f in enumerate(bgm_tracks):
-                    if f.stem == wem.stem:
-                        bgm_tracks[idx] = wem
-
-        # TODO transition rules?
-        loop_info = [(li[0] * 1000, li[1] * 1000) for li in bgm_loop_infos]
-        nodes = create_boss_bgm(
-            bnk, msc, current_state_path, bgm_tracks, loop_info, play_intro_enabled
-        )
-        if on_boss_track_created:
-            on_boss_track_created(bgm_enemy_type, nodes)
-
-        show_message("Yay!", color=style.blue)
-        dpg.set_item_label(f"{tag}_button_okay", "Again?")
-
-    with dpg.window(
-        label=title,
-        width=400,
-        height=400,
-        autosize=True,
-        no_saved_settings=True,
-        tag=tag,
-        on_close=lambda: dpg.delete_item(window),
-    ) as window:
-        add_node_reference(
-            get_music_switch_containers,
-            "MusicSwitchContainer",
-            on_music_switch_container_selected,
-            get_node_details=get_music_switch_container_details,
-            node_type=MusicSwitchContainer,
-        )
-
-        with dpg.group(horizontal=True):
-            dpg.add_input_text(
-                callback=on_bgmenemytype_changed,
-                default_value="*",
-                tag=f"{tag}_bgm_enemy_type",
-            )
-            dpg.add_combo(
-                [
-                    "EventBoss_Reserved15",
-                    "EventBoss_Reserved14",
-                    "EventBoss_Reserved13",
-                    "EventBoss_Reserved12",
-                    "EventBoss_Reserved11",
-                    "EventBoss_Reserved10",
-                    "EventBoss_Reserved09",
-                    "EventBoss_Reserved08",
-                    "Reserved",
-                ],
-                no_preview=True,
-                callback=on_bgmenemytype_changed,
-            )
-            dpg.add_text("BgmEnemyType")
-        dpg.add_button(
-            label="State Path",
-            callback=edit_state_path,
-        )
-
-        add_player_table(
-            [],
-            on_bgm_tracks_changed,
-            get_row_label=get_phase_label,
-            on_loop_changed=update_loop_infos,
-            on_trim_changed=update_trim_infos,
-        )
-
-        dpg.add_table(tag=f"{tag}_per_track_settings")
-
-        dpg.add_separator()
-        dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
-
-        add_paragraphs(
-            """\
-            - Boss tracks need to be added to cs_smain
-            - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
-            - Additional tracks will be used for 'heatup' phases
-            - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
-            - Only already existing BgmEnemyType strings can be used!
-            - BgmBossChrIdConv params mus be 6-digit for EMEVD
-""",
-            color=style.light_blue,
-        )
-        dpg.add_spacer(height=5)
-
-        with dpg.group(horizontal=True):
-            dpg.add_button(
-                label="Bring the heat!", callback=on_okay, tag=f"{tag}_button_okay"
-            )

@@ -177,7 +177,9 @@ class add_rtpc_table(DpgItem):
 
     def _add_footer(self) -> None:
         dpg.add_button(
-            label=t("+ Add RTPC", "add_rtpc"), callback=self._on_add_clicked, parent=self._tag
+            label=t("+ Add RTPC", "add_rtpc"),
+            callback=self._on_add_clicked,
+            parent=self._tag,
         )
 
     # === DPG callbacks =================================================
