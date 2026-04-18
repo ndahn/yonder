@@ -241,14 +241,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     # rename files with non-int names using calc_hash
                     new_file = f.parent / (str(calc_hash(f.stem)) + f.suffix)
                     shutil.copy(str(f), str(new_file))
-                    logger.info(
-                        t(
-                            "Renamed {old_name} to {new_name}",
-                            "renamed_file",
-                            old_name=f.name,
-                            new_name=new_file.name,
-                        )
-                    )
+                    logger.info(f"Renamed {f.name} to {new_file.name}")
                     g.soundfiles[idx] = new_file
 
             if g.name:
@@ -271,14 +264,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     sound_id += 1
 
                 g.name = str(sound_id)
-                logger.info(
-                    t(
-                        "Group {idx} has been assigned name {name}",
-                        "batch_sound_dialog/msg_group_autoname",
-                        idx=idx,
-                        name=name,
-                    )
-                )
+                logger.info(f"Group {idx} has been assigned name {name}")
 
             names_seen.add(g.name)
 
@@ -298,13 +284,6 @@ class create_batch_sound_builder_dialog(DpgItem):
         for g in self._groups:
             all_waves.extend([f for f in g.soundfiles if f.suffix.lower() == ".wav"])
         if all_waves:
-            logger.info(
-                t(
-                    "Converting {num} wave files to wem",
-                    "convert_waves",
-                    num=len(all_waves),
-                )
-            )
             wwise = get_config().locate_wwise()
             converted = wav2wem(wwise, all_waves)
             stem2wem = {w.stem: w for w in converted}

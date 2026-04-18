@@ -6,120 +6,125 @@ from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
-from yonder.gui.widgets import add_generic_widget
+from yonder.gui.localization import translate as t
+from yonder.gui.widgets import DpgItem, add_generic_widget
 
 
-def create_wwise_event_dialog(
-    bnk: Soundbank,
-    callback: Callable[[list[HIRCNode]], None],
-    *,
-    title: str = "New Event",
-    tag: str = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
-    elif dpg.does_item_exist(tag):
-        dpg.delete_item(tag)
+class create_wwise_event_dialog(DpgItem):
+    def __init__(self,
+        bnk: Soundbank,
+        callback: Callable[[list[HIRCNode]], None],
+        *,
+        title: str = "New Event",
+        tag: str = None,
+    ) -> str:
+        super().__init__(tag)
 
-    def show_message(
-        msg: str = None, color: tuple[int, int, int, int] = style.red
-    ) -> None:
-        if not msg:
-            dpg.hide_item(f"{tag}_notification")
-            return
+        self._bnk = bnk
+        self._callback = callback
 
-        dpg.configure_item(
-            f"{tag}_notification",
-            default_value=msg,
-            color=color,
-            show=True,
-        )
+        self._build(title)
 
-    def on_okay() -> None:
-        name = dpg.get_value(f"{tag}_name")
+    def _on_okay(self) -> None:
+        name = dpg.get_value(self._t("name"))
         if not name:
-            show_message("Name not specified")
+            self.show_message(t("Name not specified", "create_event/msg_name_not_set"))
             return
 
-        allow_arbitrary_name = dpg.get_value(f"{tag}_allow_arbitrary_name")
+        allow_arbitrary_name = dpg.get_value(self._t("allow_arbitrary_name"))
         if not allow_arbitrary_name:
             valid_chars = "".join(str(s) for s in SoundType)
             if not re.match(rf"[{valid_chars}]\d{4, 10}"):
-                show_message("Name not matching pattern (x123456789)")
+                self.show_message(t("Name not matching pattern (x123456789)", "create_event/msg_invalid_name"))
                 return
 
-        show_message()
+        self.show_message()
 
         new_nodes = []
-        external_id = int(dpg.get_value(f"{tag}_external_id"))
+        external_id = int(dpg.get_value(self._t("external_id")))
 
-        create_play_event = dpg.get_value(f"{tag}_create_play_event")
+        create_play_event = dpg.get_value(self._t("create_play_event"))
         if create_play_event:
             play_evt = Event.new(f"Play_{name}")
             play_action = Action.new_play_action(
-                bnk.new_id(), external_id, bank_id=bnk.id
+                self._bnk.new_id(), external_id, bank_id=self._bnk.bank_id
             )
             play_evt.add_action(play_action)
             new_nodes.extend([play_evt, play_action])
 
-        create_stop_event = dpg.get_value(f"{tag}_create_stop_event")
+        create_stop_event = dpg.get_value(self._t("create_stop_event"))
         if create_stop_event:
             stop_evt = Event.new(f"Stop_{name}")
-            stop_action = Action.new_stop_action(bnk.new_id(), external_id)
+            stop_action = Action.new_stop_action(self._bnk.new_id(), external_id)
             stop_evt.add_action(stop_action)
             new_nodes.extend([stop_evt, stop_action])
 
         if not create_play_event and not create_stop_event:
-            show_message("No events created")
+            self.show_message(t("No events created", "create_event/no_events_created"))
             return
 
-        bnk.add_nodes(new_nodes)
+        self._bnk.add_nodes(new_nodes)
 
-        callback(new_nodes)
-        show_message("Yay!", color=style.blue)
-        dpg.set_item_label(f"{tag}_button_okay", "Again?")
+        self._callback(new_nodes)
+        self.show_message(t("Yay!", "yay"), color=style.blue)
+        dpg.set_item_label(self._t("create_event/button_okay"), "Again?")
 
-    with dpg.window(
-        label=title,
-        width=400,
-        height=400,
-        autosize=True,
-        no_saved_settings=True,
-        tag=tag,
-        on_close=lambda: dpg.delete_item(window),
-    ) as window:
-        dpg.add_input_text(
-            label="Name",
-            tag=f"{tag}_name",
-        )
-        dpg.add_checkbox(
-            label="Allow arbitrary names",
-            default_value=False,
-            tag=f"{tag}_allow_arbitrary_names",
-        )
-
-        add_generic_widget(
-            HIRCNode,
-            "Target node",
-            None,
-            tag=f"{tag}_external_id",
-        )
-
-        dpg.add_checkbox(
-            label="Create play action",
-            default_value=True,
-            tag=f"{tag}_create_play_event",
-        )
-        dpg.add_checkbox(
-            label="Create stop action",
-            default_value=True,
-            tag=f"{tag}_create_stop_event",
-        )
-
-        dpg.add_separator()
-        dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
-
-        with dpg.group(horizontal=True):
-            dpg.add_button(
-                label="Chop chop!", callback=on_okay, tag=f"{tag}_button_okay"
+    def _build(self, title: str):
+        with dpg.window(
+            label=title,
+            width=400,
+            height=400,
+            autosize=True,
+            no_saved_settings=True,
+            tag=self.tag,
+            on_close=lambda: dpg.delete_item(window),
+        ) as window:
+            dpg.add_input_text(
+                label="Name",
+                tag=self._t("name"),
             )
+            dpg.add_checkbox(
+                label="Allow arbitrary names",
+                default_value=False,
+                tag=self._t("create_event/allow_arbitrary_names"),
+            )
+
+            add_generic_widget(
+                HIRCNode,
+                "Target node",
+                None,
+                tag=self._t("create_event/external_id"),
+            )
+
+            dpg.add_checkbox(
+                label="Create play action",
+                default_value=True,
+                tag=self._t("create_event/create_play_event"),
+            )
+            dpg.add_checkbox(
+                label="Create stop action",
+                default_value=True,
+                tag=self._t("create_event/create_stop_event"),
+            )
+
+            dpg.add_separator()
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label="Chop chop!", callback=self._on_okay, tag=self._t("create_event/button_okay")
+                )
+
+    def show_message(self,
+        msg: str = None, color: tuple[int, int, int, int] = style.red
+    ) -> None:
+        if not msg:
+            dpg.hide_item(self._t("notification"))
+            return
+
+        dpg.configure_item(
+            self._t("notification"),
+            default_value=msg,
+            color=color,
+            show=True,
+        )

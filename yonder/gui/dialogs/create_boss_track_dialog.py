@@ -5,7 +5,6 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.types import MusicSwitchContainer
 from yonder.hash import calc_hash, lookup_name
-from yonder.util import logger
 from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
@@ -209,13 +208,6 @@ class create_boss_track_dialog(DpgItem):
 
         waves = [f for f in self.bgm_tracks if f.name.endswith(".wav")]
         if waves:
-            logger.info(
-                t(
-                    "Converting {num} wave files to wem",
-                    "log_converting_wav_files",
-                    num=len(waves),
-                )
-            )
             wwise = get_config().locate_wwise()
             converted_wavs = wav2wem(wwise, waves)
             for wem in converted_wavs:

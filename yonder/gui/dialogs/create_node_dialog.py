@@ -2,9 +2,8 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
-from yonder.util import get_function_spec, logger
+from yonder.util import get_function_spec
 from yonder.gui import style
-from yonder.gui.localization import translate as t
 from yonder.gui.widgets import DpgItem, add_generic_widget
 
 
@@ -93,7 +92,7 @@ class create_node_dialog(DpgItem):
                 dpg.add_button(
                     label="Make!",
                     callback=self._on_okay,
-                    tag=self._t("button_okay"),
+                    tag=self._t("create_node/button_okay"),
                 )
 
     # === DPG callbacks =================================================
@@ -129,8 +128,6 @@ class create_node_dialog(DpgItem):
     def _on_okay(self) -> None:
         self._node_args["nid"] = self._nid
         node = self._node_types[self._selected_type].new(**self._node_args)
-        logger.info(t("Created node {node}", "log_created_node", node=node))
-
         self._callback(node)
         dpg.delete_item(self._window)
 

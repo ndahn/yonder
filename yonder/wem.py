@@ -208,6 +208,8 @@ def wav2wem(
     if not out_dir:
         out_dir = wav_dir
 
+    logger.info(f"Converting {len(waves)} wave files to wem")
+
     source_lines = []
     for wav in waves:
         if not wav.is_file():

@@ -11,12 +11,12 @@ class Color(tuple):
         if isinstance(color_or_r, Iterable):
             if len(color_or_r) == 3:
                 r, g, b = color_or_r
+                a = 255
             else:
-                r, g, b, a = color_or_r
-        else:
-            r = color_or_r
+                r, g, b, a = color_or_r[:4]
+            return super().__new__(cls, (r, g, b, a))
 
-        return super().__new__(cls, (r, g, b, a))
+        return super().__new__(cls, color_or_r)
 
     @classmethod
     def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> Color:
@@ -106,6 +106,17 @@ black = Color(0, 0, 0, 255)
 light_blue = Color(112, 214, 255, 255)
 light_green = Color(112, 255, 162, 255)
 light_red = Color(255, 112, 119)
+
+
+# Section colors
+warm_orange = Color(200, 120,  80, 255)
+cool_blue = Color( 80, 120, 200, 255)
+soft_green = Color( 80, 180, 120, 255)
+muted_purple = Color(140,  90, 180, 255)
+warm_yellow = Color(200, 180,  60, 255)
+light_grey = Color(180, 180, 180, 255)
+teal = Color( 60, 180, 180, 255)
+rose = Color(200,  80, 120, 255)
 
 
 class themes:

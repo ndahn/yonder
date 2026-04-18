@@ -2,7 +2,6 @@ from typing import Any, Callable
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
-from yonder.util import logger
 from yonder.wem import wav2wem, trim_silence, set_volume, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
@@ -75,7 +74,6 @@ class convert_wavs_dialog(DpgItem):
             out_files = list(self.wav_paths)
 
             if dpg.get_value(self._t("trim_silence")):
-                logger.info(t("Trimming silence...", "convert/removing_silence"))
                 dpg.set_value(
                     f"{loading}_label",
                     "Trimming silence...",
@@ -83,6 +81,7 @@ class convert_wavs_dialog(DpgItem):
                 )
                 silence_threshold = dpg.get_value(self._t("silence_threshold"))
 
+                # TODO batch processing
                 for i, wav in enumerate(out_files):
                     trim_silence(
                         wav, silence_threshold, out_file=self.output_dir / wav.name
@@ -90,15 +89,13 @@ class convert_wavs_dialog(DpgItem):
                     out_files[i] = self.output_dir / wav.name
 
             if dpg.get_value(self._t("create_prefetch_snippet")):
-                logger.info(
-                    t("Creating prefetch snippets...", "convert/creating_snippets")
-                )
                 dpg.set_value(
                     f"{loading}_label",
                     t("Creating prefetch snippets...", "convert/creating_snippets"),
                 )
                 snippet_length = dpg.get_value(self._t("snippet_legnth"))
 
+                # TODO batch processing
                 for i, wav in enumerate(out_files):
                     create_prefetch_snippet(
                         wav, snippet_length, out_file=self.output_dir / wav.name
@@ -106,22 +103,18 @@ class convert_wavs_dialog(DpgItem):
                     out_files[i] = self.output_dir / wav.name
 
             if dpg.get_value(self._t("adjust_volume")):
-                logger.info(t("Adjusting volume...", "convert/adjusting_volume"))
                 dpg.set_value(
                     f"{loading}_label",
                     t("Adjusting volume...", "convert/adjusting_volume"),
                 )
                 target_volume = dpg.get_value(self._t("target_volume"))
 
+                # TODO batch processing
                 for i, wav in enumerate(out_files):
                     set_volume(wav, target_volume, out_file=self.output_dir / wav.name)
                     out_files[i] = self.output_dir / wav.name
 
             if dpg.get_value(self._t("convert_to_wem")):
-                logger.info(
-                    t("Converting {num} files...", "convert/converting"),
-                    num=len(out_files),
-                )
                 dpg.set_value(
                     f"{loading}_label",
                     t(

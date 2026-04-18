@@ -141,6 +141,9 @@ def _add_widgets(
             if "value_type" not in kwargs:
                 kwargs["value_type"] = type(kwargs["default"])
 
+            label = kwargs["label"]
+            kwargs["label"] = t(label, "generic_param", param=label)
+
             add_generic_widget(
                 callback=make_setter(
                     section, key, on_section_changed, base_tag, user_data

@@ -1531,9 +1531,9 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
+            logger.info(t("Created node {node}", "log_created_node", node=node))
             self.bnk.add_nodes(node)
             self.add_pinned_object(node)
-            logger.info(t("Created node {node}", "log_created_node", node=node))
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
 
@@ -1605,11 +1605,9 @@ class BanksOfYonder(DpgItem):
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
             logger.info(
-                t(
-                    "Added simple sound {name}",
-                    "log_created_simple_sound",
-                    name=play_evt.get_wwise_name(play_evt),
-                )
+                t("Created new sound {name} with {count} sounds", "log_created_simple_sound"),
+                name=play_evt.get_wwise_name(play_evt),
+                count=len(self._soundfiles),
             )
             self.add_pinned_object(play_evt)
             self.add_pinned_object(stop_evt)

@@ -69,6 +69,14 @@ def shorten_path(path: str | Path, maxlen: int = 30) -> str:
     return str(short)
 
 
+def dpg_section(label: str, color: tuple, first: bool = False) -> None:
+    if not first:
+        dpg.add_spacer(height=10)
+
+    dpg.add_text(label, color=color)
+    dpg.add_separator()
+
+
 class GraphCurve:
     def __init__(self, curve_type: Any, points: list[RTPCGraphPoint]):
         self.curve_type = curve_type
