@@ -108,7 +108,7 @@ class add_hash_widget(DpgItem):
                     enabled=allow_edit_hash,
                     width=half,
                     callback=self._on_hash_update,
-                    tag=f"{tag}_hash",
+                    tag=self._t("hash"),
                 )
                 dpg.add_input_text(
                     default_value=initial_string,
@@ -117,7 +117,7 @@ class add_hash_widget(DpgItem):
                     enabled=allow_edit_name,
                     width=half,
                     callback=self._on_string_update,
-                    tag=f"{tag}_string",
+                    tag=self._t("string"),
                 )
         else:
             field_w = width
@@ -135,7 +135,7 @@ class add_hash_widget(DpgItem):
                     enabled=allow_edit_name,
                     width=field_w,
                     callback=self._on_string_update,
-                    tag=f"{tag}_string",
+                    tag=self._t("string"),
                 )
                 dpg.add_input_text(
                     default_value=str(default_value),
@@ -145,7 +145,7 @@ class add_hash_widget(DpgItem):
                     enabled=allow_edit_hash,
                     width=field_w,
                     callback=self._on_hash_update,
-                    tag=f"{tag}_hash",
+                    tag=self._t("hash"),
                 )
 
     # === DPG callbacks =================
@@ -154,13 +154,13 @@ class add_hash_widget(DpgItem):
         if not new_value:
             return
         label = lookup_name(int(new_value), None)
-        dpg.set_value(f"{self._tag}_string", label or "<?>")
+        dpg.set_value(self._t("string"), label or "<?>")
         if self._on_hash_changed:
             self._on_hash_changed(self._tag, (int(new_value), label), self._user_data)
 
     def _on_string_update(self, sender: str, label: str, cb_user_data: Any) -> None:
         h = calc_hash(label)
-        dpg.set_value(f"{self._tag}_hash", h)
+        dpg.set_value(self._t("hash"), h)
         if self._on_hash_changed:
             self._on_hash_changed(self._tag, (h, label), self._user_data)
 
@@ -168,18 +168,18 @@ class add_hash_widget(DpgItem):
 
     @property
     def hash_value(self) -> int:
-        return int(dpg.get_value(f"{self._tag}_hash"))
+        return int(dpg.get_value(self._t("hash")))
 
     @hash_value.setter
     def hash_value(self, value: int) -> None:
-        dpg.set_value(f"{self._tag}_hash", str(value))
+        dpg.set_value(self._t("hash"), str(value))
         self._on_hash_update(None, str(value), None)
 
     @property
     def string_value(self) -> str:
-        return dpg.get_value(f"{self._tag}_string")
+        return dpg.get_value(self._t("string"))
 
     @string_value.setter
     def string_value(self, value: str) -> None:
-        dpg.set_value(f"{self._tag}_string", value)
+        dpg.set_value(self._t("string"), value)
         self._on_string_update(None, value, None)

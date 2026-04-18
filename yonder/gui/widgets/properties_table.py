@@ -2,6 +2,7 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.enums import PropID
+from yonder.gui.localization import translate as t
 from .dpg_item import DpgItem
 
 
@@ -122,7 +123,7 @@ class add_properties_table(DpgItem):
 
     def _add_footer(self) -> None:
         with dpg.table_row(parent=self._tag):
-            dpg.add_button(label="+ Add Property", callback=self._on_add_clicked)
+            dpg.add_button(label=t("+ Add Property", "add_property"), callback=self._on_add_clicked)
 
     # === DPG callbacks =================================================
 

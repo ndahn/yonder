@@ -6,6 +6,7 @@ from yonder.enums import RtpcType, RtpcAccum, CurveScaling
 from yonder.game import GameObjects
 from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
+from yonder.gui.localization import translate as t
 from .hash_widget import add_hash_widget
 from .incomplete_enum import add_incomplete_int_enum
 from .interpolation_curve import add_interpolation_curve
@@ -63,7 +64,7 @@ class add_rtpc_table(DpgItem):
     # === Internal ======================================================
 
     def _item_tag(self, idx: int, suffix: str) -> str:
-        return self._t(f"item_{idx}_{suffix}")
+        return self._t(f"{suffix}:{idx}")
 
     def refresh(self) -> None:
         dpg.delete_item(self._tag, children_only=True, slot=1)
@@ -110,7 +111,7 @@ class add_rtpc_table(DpgItem):
                 rtpc.id,
                 self._on_hash_changed,
                 horizontal=False,
-                string_label="Name",
+                string_label=t("Name", "name"),
                 user_data=rtpc,
                 width=120,
             )
@@ -176,7 +177,7 @@ class add_rtpc_table(DpgItem):
 
     def _add_footer(self) -> None:
         dpg.add_button(
-            label="+ Add RTPC", callback=self._on_add_clicked, parent=self._tag
+            label=t("+ Add RTPC", "add_rtpc"), callback=self._on_add_clicked, parent=self._tag
         )
 
     # === DPG callbacks =================================================

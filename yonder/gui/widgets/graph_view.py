@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.gui import style
+from yonder.gui.localization import translate as t
 from yonder.gui.helpers import estimate_drawn_text_size
 from .dpg_item import DpgItem
 
@@ -212,7 +213,11 @@ class add_graph_widget(DpgItem):
             py = transformed_y[idx]
 
             node = self._bnk.get(nid)
-            label = node.type_name if node else "(not found)"
+            label = (
+                node.type_name
+                if node
+                else t("(not found)", "graph_view/invalid_node_label", node=node)
+            )
             # TODO font_size does not match with the font we're using
             _, ph = estimate_drawn_text_size(len(label), font_size=12)
 

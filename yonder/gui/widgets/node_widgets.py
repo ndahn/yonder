@@ -56,6 +56,7 @@ from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
+from yonder.gui.localization import translate as t
 from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget, is_simple_type
 from .loading_indicator import loading_indicator
@@ -682,10 +683,10 @@ def _create_attributes_event(
                 if target:
                     add_node_link(str(target), target.id, on_node_selected)
                 else:
-                    dpg.add_text(f"#{action.external_id} (not found)")
+                    dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=action.external_id))
 
             else:
-                dpg.add_text(f"#{aid} (not found)")
+                dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=aid))
 
     add_widget_table(
         node.actions,
@@ -716,7 +717,7 @@ def _create_attributes_musicrandomsequencecontainer(
 
     with dpg.group():
         add_transition_matrix(
-            bnk, node, on_transition_rule_changed, user_data=user_data
+            node, on_transition_rule_changed, user_data=user_data
         )
 
         dpg.add_spacer(height=3)
@@ -808,7 +809,7 @@ def _create_attributes_musicswitchcontainer(
                         user_data=user_data,
                     )
                 else:
-                    dpg.add_text(f"#{nid} (not found)")
+                    dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=nid))
         else:
             # Branch
             with dpg.tree_node(span_full_width=True) as dpg_item:
@@ -839,7 +840,7 @@ def _create_attributes_musicswitchcontainer(
         )
 
         dpg.add_spacer(height=3)
-        add_transition_matrix(bnk, node, None)
+        add_transition_matrix(node, None)
 
         dpg.add_spacer(height=3)
         dpg.add_separator()
@@ -1116,7 +1117,7 @@ def _create_attributes_randomsequencecontainer(
         if target:
             add_node_link(str(target), target, on_node_selected)
         else:
-            dpg.add_text(f"#{item[0]} (not found)")
+            dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=item[0]))
 
         dpg.add_input_int(
             default_value=item[1],
@@ -1271,4 +1272,4 @@ def _create_attributes_switchcontainer(
                                 user_data=user_data,
                             )
                         else:
-                            dpg.add_text(f"#{nid} (not found)")
+                            dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=nid))

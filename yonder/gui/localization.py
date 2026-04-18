@@ -16,7 +16,7 @@ languages: dict[str, dict[str, str]] = {
         "language": ENGLISH,
     }
 }
-_active_lang = "ENGLISH"
+_active_lang = ENGLISH
 _lang_log_level = logging.DEBUG + 5
 logging.addLevelName(_lang_log_level, "I18N")
 
@@ -121,6 +121,8 @@ def translate(default: str, path: str, lang: str = None, **fmt) -> str:
 def _dpg_translate_label(dpg_func):
     @wraps(dpg_func)
     def inner(*args, **kwargs) -> str:
+        # There is a short delay before widgets expose their configuration correctly,
+        # so we work on the arguments instead
         alias = kwargs.get("tag")
         if alias:
             label = kwargs.get("label")
@@ -138,6 +140,8 @@ def _dpg_translate_label(dpg_func):
 def _dpg_translate_value(dpg_func):
     @wraps(dpg_func)
     def inner(*args, **kwargs) -> str:
+        # There is a short delay before widgets expose their configuration correctly,
+        # so we work on the arguments instead
         alias = kwargs.get("tag")
         if alias:
             value = kwargs.get("default_value")

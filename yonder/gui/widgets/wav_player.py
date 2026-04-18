@@ -14,6 +14,7 @@ from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import tmp_dir, shorten_path
+from yonder.gui.localization import translate as t
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 from .dpg_item import DpgItem
 
@@ -197,7 +198,7 @@ class add_wav_player(DpgItem):
         ret = open_file_dialog(
             title="Select Audio File",
             default_file=str(self._audio) if self._audio else None,
-            filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
+            filetypes={t("Audio Files (.wav, .wem)", "audio_files"): ["*.wav", "*.wem"]},
         )
         if ret:
             self.set_file(Path(ret))
@@ -225,21 +226,21 @@ class add_wav_player(DpgItem):
 
     def _get_wav_path(self) -> Path:
         if self._audio is None or not self._audio.is_file():
-            logger.error(f"Audio {self._audio} does not exist")
+            logger.error(t("Audio {file} does not exist", "log_audiofile_not_found", file=self._audio))
             return None
 
         if self._audio.suffix == ".wem":
             wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
             if not wav.is_file():
                 vgmstream = get_config().locate_vgmstream()
-                logger.info(f"Converting {self._audio} to wav for playback")
+                logger.info(t("Converting {file} to wav for playback", "log_converting_wav", file=self._audio.name))
                 wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
             return wav
 
         if self._audio.suffix == ".wav":
             return self._audio
 
-        logger.error(f"Audio must be a wav or wem file ({self._audio})")
+        logger.error(t("Audio {file} is not a wav or wem file", "log_convert_wrong_format", file=self._audio.name))
         return None
 
     def _get_valid_pos(self, pos: float, use_trims: bool = True) -> float:
@@ -673,16 +674,16 @@ class add_wav_player(DpgItem):
             try:
                 self._create_player()
             except FileNotFoundError:
-                logger.error(f"Audio {self._audio} not found")
+                logger.error(t("Audio {file} not found", "log_audiofile_not_found", file=self._audio))
                 dpg.hide_item(self._t("plot_group"))
                 dpg.configure_item(
                     self._t("audio_error"),
-                    default_value=f"Audio {self._audio.name} not found",
+                    default_value=t("Audio {file} not found", "log_audiofile_not_found", file=self._audio.name),
                     show=True,
                 )
                 return
             except Exception as e:
-                logger.error(f"Error reading file: {e}")
+                logger.error(t("Error reading file: {exc}", "log_read_file_error", exc=e))
                 dpg.hide_item(self._t("plot_group"))
                 dpg.configure_item(
                     self._t("audio_error"), default_value=str(e), show=True
@@ -762,7 +763,7 @@ class add_wav_player(DpgItem):
                         readonly=True,
                         tag=self._t("filepath"),
                     )
-                    dpg.add_button(label="Browse", callback=self.open_select_wav_dialog)
+                    dpg.add_button(label="Browse", callback=self.open_select_wav_dialog, tag=self._t("browse"))
 
                 if self._label:
                     dpg.add_text(self._label, color=style.pink.mix(style.white))
@@ -973,10 +974,11 @@ class add_wav_player(DpgItem):
                             callback=lambda s, a, u: dpg.show_item(
                                 self._t("markers_popup")
                             ),
+                            tag=self._tag("markers")
                         )
                     else:
                         dpg.add_button(
-                            label="Edit", callback=self._open_edit_markers_dialog
+                            label="Edit", callback=self._open_edit_markers_dialog, tag=self._tag("edit")
                         )
                     dpg.add_text("|")
 
