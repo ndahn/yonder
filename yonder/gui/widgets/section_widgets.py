@@ -17,6 +17,7 @@ from yonder.types.sections import (
     STMGSection,
 )
 from yonder.gui import style
+from yonder.gui.localization import translate as t
 from .generic_input_widget import add_generic_widget
 from .editable_table import add_widget_table
 from .hash_widget import add_hash_widget
@@ -178,7 +179,7 @@ def _create_widgets_hirc(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> str:
-    dpg.add_text("See Events tab")
+    dpg.add_text(t("See Events tab", "sections/hirc_goto_events"))
 
 
 def _create_widgets_stid(
@@ -214,7 +215,7 @@ def _create_widgets_stid(
                 list,
             ),
         )
-    
+
     _add_widgets(
         section,
         [("string_encoding", Hash)],
@@ -226,9 +227,9 @@ def _create_widgets_stid(
     add_widget_table(
         section.entries,
         stid_to_row,
-        label="Entries",
+        label=t("Entries", "entries"),
         header_row=True,
-        columns=["Bank ID", "Name"],
+        columns=[t("Bank ID", "bank_id"), t("Name", "name")],
     )
 
 

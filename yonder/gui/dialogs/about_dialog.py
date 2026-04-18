@@ -59,7 +59,7 @@ class about_dialog(DpgItem):
                     dpg.add_text(
                         "Find me on ?ServerName? @Managarm!",
                         color=color,
-                        tag=self._t("about/contact2"),
+                        tag=self._t("contact"),
                     )
 
         dpg.bind_item_theme(dialog, style.themes.no_padding)
