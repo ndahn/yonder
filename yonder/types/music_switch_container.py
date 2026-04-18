@@ -18,6 +18,29 @@ from .base_types import (
 from .mixins import PropertyMixin
 
 
+def parse_state_path(state_path: list[str]) -> list[int]:
+    """Convert a string state path to a list of integer hashes.
+
+    ``"*"`` maps to 0 (wildcard), ``"#N"`` is parsed as a raw integer,
+    and any other string is hashed via ``calc_hash``.
+    """
+    keys = []
+    for val in state_path:
+        if isinstance(val, int):
+            keys.append(val)
+        elif val == "*":
+            keys.append(0)
+        elif val.startswith("#"):
+            try:
+                keys.append(int(val[1:]))
+            except ValueError:
+                raise ValueError(f"{val}: value is not a valid hash")
+        else:
+            keys.append(calc_hash(val))
+
+    return keys
+
+
 @dataclass(repr=False)
 class MusicSwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 12
@@ -95,24 +118,6 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         logger.warning(
             f"Attached node with state path {state_path}, don't forget to change it as needed!"
         )
-
-    @staticmethod
-    def parse_state_path(state_path: list[str]) -> list[int]:
-        keys = []
-        for val in state_path:
-            if isinstance(val, int):
-                keys.append(val)
-            elif val == "*":
-                keys.append(0)
-            elif val.startswith("#"):
-                try:
-                    keys.append(int(val[1:]))
-                except ValueError:
-                    raise ValueError(f"{val}: value is not a valid hash")
-            else:
-                keys.append(calc_hash(val))
-
-        return keys
 
     def get_tree_size(self) -> int:
         num_tree_nodes = 1

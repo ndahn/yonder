@@ -8,24 +8,11 @@ from yonder.enums import CurveInterpolation, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style
 from yonder.gui.localization import translate as t
+from yonder.gui.helpers import dpg_section
 from yonder.gui.widgets import DpgItem
 
 
 TransitionNode: TypeAlias = MusicSwitchContainer | MusicRandomSequenceContainer
-
-# Section header colors — use these for visually grouping parameters in dialogs
-# warm orange  style.Color(200, 120,  80, 255)  — source / outgoing
-# cool blue    style.Color( 80, 120, 200, 255)  — destination / incoming
-# soft green   style.Color( 80, 180, 120, 255)  — result / output
-# muted purple style.Color(140,  90, 180, 255)  — modulation / curves
-# warm yellow  style.Color(200, 180,  60, 255)  — timing / sync
-# light grey   style.Color(180, 180, 180, 255)  — neutral / metadata
-# teal         style.Color( 60, 180, 180, 255)  — bidirectional / shared
-# rose         style.Color(200,  80, 120, 255)  — warnings / overrides
-
-_COLOR_SRC = style.RGBA(200, 120, 80, 255)
-_COLOR_DST = style.RGBA(80, 120, 200, 255)
-_COLOR_NEUTRAL = style.RGBA(180, 180, 180, 255)
 
 
 class edit_transition_dialog(DpgItem):
@@ -83,13 +70,6 @@ class edit_transition_dialog(DpgItem):
 
     def _add_item_tag(self, rule_key: str) -> str:
         return self._t(f"{rule_key}_add_item")
-
-    def _section(self, label: str, color: style.RGBA, first: bool = False) -> None:
-        if not first:
-            dpg.add_spacer(height=10)
-
-        dpg.add_text(label, color=color)
-        dpg.add_separator()
 
     # === ID table management ===========================================
 
@@ -160,7 +140,7 @@ class edit_transition_dialog(DpgItem):
             tag=self._tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
-            self._section("Source Transition Rule", style.rose, first=True)
+            dpg_section("Source Transition Rule", style.muted_orange, first=True, tag=self._t("edit_transition/src_transition_rule"))
             dpg.add_input_int(
                 label="Transition time (ms)",
                 default_value=src.transition_time,
@@ -170,8 +150,8 @@ class edit_transition_dialog(DpgItem):
                 step_fast=1000,
                 min_clamped=True,
                 max_clamped=True,
-                tag=self._t("src_transition_time"),
                 callback=lambda s, a, u: setattr(self._src_rule, "transition_time", a),
+                tag=self._t("edit_transition/src_transition_time"),
             )
             dpg.add_input_int(
                 label="Fade offset (ms)",
@@ -182,29 +162,29 @@ class edit_transition_dialog(DpgItem):
                 step_fast=1000,
                 min_clamped=True,
                 max_clamped=True,
-                tag=self._t("src_fade_offset"),
                 callback=lambda s, a, u: setattr(self._src_rule, "fade_offet", a),
+                tag=self._t("edit_transition/src_fade_offset"),
             )
             dpg.add_combo(
                 label="Fade curve",
                 items=[c.name for c in CurveInterpolation],
                 default_value=src.fade_curve.name,
-                tag=self._t("src_fade_curve"),
                 callback=lambda s, a, u: setattr(
                     self._src_rule, "fade_curve", CurveInterpolation[a]
                 ),
+                tag=self._t("edit_transition/src_fade_curve"),
             )
             dpg.add_combo(
                 label="Sync Type",
                 items=[s.name for s in SyncType],
                 default_value=src.sync_type.name,
-                tag=self._t("sync_type"),
                 callback=lambda s, a, u: setattr(
                     self._src_rule, "sync_type", SyncType[a]
                 ),
+                tag=self._t("edit_transition/sync_type"),
             )
 
-            self._section("Destination Transition Rule", style.muted_purple)
+            dpg_section("Destination Transition Rule", style.muted_teal, tag=self._t("edit_transition/dst_transition_rule"))
             dpg.add_input_int(
                 label="Transition time (ms)",
                 default_value=dst.transition_time,
@@ -214,8 +194,8 @@ class edit_transition_dialog(DpgItem):
                 step_fast=1000,
                 min_clamped=True,
                 max_clamped=True,
-                tag=self._t("dst_transition_time"),
                 callback=lambda s, a, u: setattr(self._dst_rule, "transition_time", a),
+                tag=self._t("edit_transition/dst_transition_time"),
             )
             dpg.add_input_int(
                 label="Fade offset (ms)",
@@ -224,28 +204,28 @@ class edit_transition_dialog(DpgItem):
                 max_value=60000,
                 min_clamped=True,
                 max_clamped=True,
-                tag=self._t("dst_fade_offset"),
                 callback=lambda s, a, u: setattr(self._dst_rule, "fade_offet", a),
+                tag=self._t("edit_transition/dst_fade_offset"),
             )
             dpg.add_combo(
                 label="Fade curve",
                 items=[c.name for c in CurveInterpolation],
                 default_value=dst.fade_curve.name,
-                tag=self._t("dst_fade_curve"),
                 callback=lambda s, a, u: setattr(
                     self._dst_rule, "fade_curve", CurveInterpolation[a]
                 ),
+                tag=self._t("edit_transition/dst_fade_curve"),
             )
 
-            self._section("Affected nodes", style.soft_green)
+            dpg_section("Affected nodes", style.light_grey, tag=self._t("edit_transition/affected_nodes"))
             with dpg.group(horizontal=True):
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Source IDs:")
-                    self._build_id_table("source_ids")
+                    self._build_id_table("edit_transition/source_ids")
 
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Destination IDs:")
-                    self._build_id_table("destination_ids")
+                    self._build_id_table("edit_transition/destination_ids")
 
             dpg.add_separator()
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)

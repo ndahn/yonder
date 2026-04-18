@@ -69,11 +69,18 @@ def shorten_path(path: str | Path, maxlen: int = 30) -> str:
     return str(short)
 
 
-def dpg_section(label: str, color: tuple, first: bool = False) -> None:
+def dpg_section(
+    label: str,
+    color: tuple,
+    *,
+    first: bool = False,
+    parent: str = 0,
+    tag: str = 0,
+) -> None:
     if not first:
         dpg.add_spacer(height=10)
 
-    dpg.add_text(label, color=color)
+    dpg.add_text(label, color=color, parent=parent, tag=tag)
     dpg.add_separator()
 
 
