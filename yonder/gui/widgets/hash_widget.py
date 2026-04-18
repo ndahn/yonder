@@ -3,10 +3,10 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name
 from yonder.gui.helpers import estimate_drawn_text_size
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_hash_widget(Widget):
+class add_hash_widget(DpgItem):
     """A paired hash/string input widget for Dear PyGui.
 
     Displays an integer hash field and a human-readable name field side by

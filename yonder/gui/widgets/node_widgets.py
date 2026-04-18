@@ -294,7 +294,7 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
     simple_choice_dialog(
         f"Copy WEMs to soundbank {bnk.name}?",
         ["Yes", "No"],
-        lambda s, a, u: copy_wems(),
+        lambda s, a, u: a == 0 and copy_wems(),
         title="Copy?",
     )
 

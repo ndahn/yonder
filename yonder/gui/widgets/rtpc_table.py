@@ -9,10 +9,10 @@ from yonder.gui.helpers import GraphCurve
 from .hash_widget import add_hash_widget
 from .incomplete_enum import add_incomplete_int_enum
 from .interpolation_curve import add_interpolation_curve
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_rtpc_table(Widget):
+class add_rtpc_table(DpgItem):
     """An editable list of RTPC entries for Dear PyGui.
 
     Each row expands into a tree node showing type, accumulation mode,

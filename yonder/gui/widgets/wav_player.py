@@ -15,10 +15,10 @@ from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import tmp_dir, shorten_path
 from yonder.gui.dialogs.file_dialog import open_file_dialog
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_wav_player(Widget):
+class add_wav_player(DpgItem):
     """An audio waveform player widget for Dear PyGui.
 
     Displays a waveform plot with an interactive playback cursor. Optionally

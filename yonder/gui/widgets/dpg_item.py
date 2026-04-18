@@ -1,9 +1,9 @@
 from dearpygui import dearpygui as dpg
 
 
-class Widget:
+class DpgItem:
     """Base class for Dear PyGui widget wrappers.
- 
+
     Parameters
     ----------
     tag : int or str
@@ -11,17 +11,17 @@ class Widget:
     width : int
         Pixel width of the widget.
     """
- 
+
     def __init__(self, tag: int | str = 0) -> None:
         self._tag = tag if tag else dpg.generate_uuid()
- 
+
     @property
     def tag(self) -> int | str:
         return self._tag
 
     def _t(self, suffix: str) -> str:
-        return f"{self._tag}_{suffix}"
- 
+        return f"{self._tag}/{suffix}"
+
     @property
     def size(self) -> tuple[int, int]:
         return dpg.get_item_rect_size(self._tag)
@@ -29,8 +29,7 @@ class Widget:
     @property
     def width(self) -> int:
         return dpg.get_item_rect_size(self._tag)[0]
- 
+
     @property
     def height(self) -> int:
         return dpg.get_item_rect_size(self._tag)[1]
- 

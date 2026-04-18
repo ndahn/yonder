@@ -16,12 +16,12 @@ from yonder.gui.localization import translate as t
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
+    DpgItem,
     add_widget_table,
     add_properties_table,
     add_player_table_compact,
     add_node_reference,
 )
-from .dialog import Dialog
 from .file_dialog import open_multiple_dialog
 
 
@@ -36,7 +36,7 @@ class BatchGroup:
     soundfiles: list[Path] = field(default_factory=list)
 
 
-class create_batch_sound_builder_dialog(Dialog):
+class create_batch_sound_builder_dialog(DpgItem):
     def __init__(
         self,
         bnk: Soundbank,

@@ -1,7 +1,10 @@
 from __future__ import annotations
+from typing import Any
+import re
 from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 
+from yonder.enums import SoundType
 from .hirc_node import HIRCNode
 from .action import Action, ActionType
 
@@ -18,6 +21,24 @@ class Event(HIRCNode):
     @classmethod
     def new(cls, nid: int | str, actions: list[int] = None) -> Event:
         return Event(nid, actions=actions or [])
+
+    def get_wwise_name(self, default: Any = None) -> str:
+        name = self.name
+        if not name:
+            return default
+
+        parts = name.split("_", maxsplit=1)
+        if len(parts) > 1:
+            return parts[1]
+
+        return default
+
+    def get_soundtype(self) -> SoundType:
+        wwise = self.get_wwise_name()
+        if wwise and re.match(r"\w\d+", wwise):
+            return SoundType(wwise[0])
+
+        return None
 
     def has_action_type(self, bnk: Soundbank, val: ActionType | str | int) -> bool:
         if isinstance(val, ActionType):

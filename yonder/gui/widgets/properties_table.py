@@ -2,10 +2,10 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.enums import PropID
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_properties_table(Widget):
+class add_properties_table(DpgItem):
     """An editable key-value table for ``PropID`` properties.
 
     Each row has a combo to select the property type and a float input for

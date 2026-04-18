@@ -18,7 +18,7 @@ def collect_wems(bnk: Soundbank, event_names: list[str]):
             continue
 
         for act in actions:
-            tree = bnk.get_subtree(act, True)
+            tree = bnk.get_subtree(act, True, False)
             sounds = nx.get_node_attributes(tree, "wem")
             wems.setdefault(evt_name, []).extend(sounds.values())
 

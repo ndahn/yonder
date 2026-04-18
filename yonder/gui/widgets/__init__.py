@@ -1,3 +1,4 @@
+from .dpg_item import DpgItem
 from .draw_curve import draw_curve
 from .editable_table import (
     add_widget_table,

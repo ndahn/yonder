@@ -12,7 +12,7 @@ _undefined = object()
 def simple_choice_dialog(
     message: str,
     choices: list[str],
-    callback: Callable[[str, str, Any], None],
+    callback: Callable[[str, int, Any], None],
     *,
     cancel_val: Any = _undefined,
     title: str = "Pick one",
@@ -25,7 +25,7 @@ def simple_choice_dialog(
     if not tag:
         tag = dpg.generate_uuid()
 
-    def on_choice(sender: str, app_data: Any, choice: str) -> None:
+    def on_choice(sender: str, app_data: Any, choice: int) -> None:
         # Delete first, otherwise chaining into other modal dialogs won't work
         if close_on_pick:
             dpg.delete_item(dialog)
@@ -53,6 +53,7 @@ def simple_choice_dialog(
             dpg.add_spacer(height=5)
 
         with dpg.group(horizontal=True):
+            choice_idx = 0
             for choice in choices:
                 if choice == "|":
                     dpg.add_text("|")
@@ -67,10 +68,12 @@ def simple_choice_dialog(
                         arrow=True,
                         direction=arrows[choice],
                         callback=on_choice,
-                        user_data=choice,
+                        user_data=choice_idx,
                     )
+                    choice_idx += 1
                 else:
-                    dpg.add_button(label=choice, callback=on_choice, user_data=choice)
+                    dpg.add_button(label=choice, callback=on_choice, user_data=choice_idx)
+                    choice_idx += 1
 
     dpg.split_frame()
     center_window(dialog)

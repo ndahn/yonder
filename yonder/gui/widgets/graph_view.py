@@ -5,10 +5,10 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.gui import style
 from yonder.gui.helpers import estimate_drawn_text_size
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_graph_widget(Widget):
+class add_graph_widget(DpgItem):
     """An interactive directed-graph widget for Dear PyGui.
 
     Renders a ``Soundbank`` subtree as a node-edge diagram using a
@@ -253,7 +253,7 @@ class add_graph_widget(Widget):
 
         # TODO could limit the number of nodes, but worst case there are some glitches.
         # Even then the user will quickly realize that a deeper node will be more useful
-        self._g = self._bnk.get_subtree(self._root, self._children_only)
+        self._g = self._bnk.get_subtree(self._root, self._children_only, True)
         self._layout = self._make_layout(self._g)
         _, x, y, w, h, _ = map(list, zip(*self._layout.values()))
         node_indices = {nid: idx for idx, nid in enumerate(self._layout.keys())}

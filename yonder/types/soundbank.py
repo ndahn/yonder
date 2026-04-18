@@ -249,7 +249,8 @@ class Soundbank:
                 # Remove reference from an array
                 parts = path.rsplit("/", maxsplit=1)
                 if ":" in parts[-1]:
-                    parent_value: list[int] = node[parts[0]]
+                    key, _ = parts[-1].split(":")
+                    parent_value: list[int] = node[parts[0] + "/" + key]
                     # Luckily the X_count fields don't matter to rewwise,
                     # otherwise we'd have to update them here, too
                     parent_value.remove(ref)
@@ -275,7 +276,7 @@ class Soundbank:
         self,
         entrypoint: int | HIRCNode,
         children_only: bool = True,
-        include_external: bool = True,
+        include_external: bool = False,
     ) -> nx.DiGraph:
         if isinstance(entrypoint, int):
             entrypoint = self[entrypoint]

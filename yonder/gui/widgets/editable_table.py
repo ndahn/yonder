@@ -6,13 +6,13 @@ from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui.helpers import shorten_path, GraphCurve
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
 _T = TypeVar("_T")
 
 
-class add_widget_table(Widget):
+class add_widget_table(DpgItem):
     """A generic editable table widget for Dear PyGui.
 
     Renders a list of items as table rows via a caller-supplied ``create_row``
@@ -223,7 +223,7 @@ class add_widget_table(Widget):
 # ===========================================================================
 
 
-class add_filepaths_table(Widget):
+class add_filepaths_table(DpgItem):
     """A file/folder path list widget built on ``add_widget_table``.
 
     Provides an add-files (or add-folders) button that opens a native dialog.
@@ -315,7 +315,9 @@ class add_filepaths_table(Widget):
             width=-1,
         )
 
-    def _on_add(self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any) -> None:
+    def _on_add(
+        self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
+    ) -> None:
         if self._on_value_changed:
             self._on_value_changed(self._tag, info[2], self._user_data)
 
@@ -354,7 +356,7 @@ class add_filepaths_table(Widget):
 # ===========================================================================
 
 
-class add_player_table(Widget):
+class add_player_table(DpgItem):
     """A track list widget where each row embeds a full ``add_wav_player``.
 
     Supports per-track loop markers, trim markers, and user markers.
@@ -539,7 +541,7 @@ class add_player_table(Widget):
 # ===========================================================================
 
 
-class add_player_table_compact(Widget):
+class add_player_table_compact(DpgItem):
     """A compact track list with a single shared ``add_wav_player`` below.
 
     Selecting a row loads that track into the shared player without starting
@@ -661,7 +663,7 @@ class add_player_table_compact(Widget):
 # ===========================================================================
 
 
-class add_curves_table(Widget):
+class add_curves_table(DpgItem):
     """A curve list widget where each row embeds an ``add_interpolation_curve``.
 
     Optionally shows a curve-type combo per row. The outer group owns the

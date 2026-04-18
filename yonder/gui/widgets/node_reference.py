@@ -3,11 +3,12 @@ from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
-from .widget import Widget
+from .dpg_item import DpgItem
 
 
-class add_node_reference(Widget):
-    def __init__(self, 
+class add_node_reference(DpgItem):
+    def __init__(
+        self,
         get_items: Callable[[str], Iterable[HIRCNode]],
         label: str,
         callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
@@ -43,11 +44,7 @@ class add_node_reference(Widget):
 
     # === Build =================
 
-    def _build(self,
-        label: str,
-        default: HIRCNode,
-        readonly: bool,
-        parent: str):
+    def _build(self, label: str, default: HIRCNode, readonly: bool, parent: str):
         with dpg.group(horizontal=True, parent=parent):
             dpg.add_input_text(
                 default_value=default,
@@ -74,7 +71,9 @@ class add_node_reference(Widget):
         dpg.set_value(self._tag, str(node.id))
         self._callback(self._tag, node, user_data)
 
-    def _select_node(self, ) -> None:
+    def _select_node(
+        self,
+    ) -> None:
         select_nodes_dialog(
             self._get_nodes,
             self._on_node_selected,
@@ -97,7 +96,7 @@ class add_node_reference(Widget):
     def selected_node(self, node: int | HIRCNode) -> None:
         if isinstance(node, HIRCNode):
             node = node.id
-        
+
         if node is not None:
             node = int(node)
 
