@@ -167,17 +167,24 @@ class create_simple_sound_dialog(DpgItem):
 
         if f"Play_{name}" in self._bnk or f"Stop_{name}" in self._bnk:
             self.show_message(
-                t("An event with this name already exists", "simple_sound/msg_name_duplicate")
+                t(
+                    "An event with this name already exists",
+                    "simple_sound/msg_name_duplicate",
+                )
             )
             return
 
         amx = int(dpg.get_value(self._t("actor_mixer")))
         if amx <= 0:
-            self.show_message(t("ActorMixer not specified", "simple_sound/msg_amx_missing"))
+            self.show_message(
+                t("ActorMixer not specified", "simple_sound/msg_amx_missing")
+            )
             return
 
         if not self._soundfiles:
-            self.show_message(t("No sounds specified", "simple_sound/msg_sounds_missing"))
+            self.show_message(
+                t("No sounds specified", "simple_sound/msg_sounds_missing")
+            )
             return
 
         waves = [f for f in self._soundfiles if f.suffix == ".wav"]
@@ -207,7 +214,7 @@ class create_simple_sound_dialog(DpgItem):
 
     # === Public ========================================================
 
-    def show_message(self, msg: str = None, color: style.Color = style.red) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         """Show or hide the notification label. Pass ``msg=None`` to hide."""
         if not msg:
             dpg.hide_item(self._t("notification"))

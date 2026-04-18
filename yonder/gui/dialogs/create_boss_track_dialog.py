@@ -316,7 +316,7 @@ class create_boss_track_dialog(DpgItem):
 
     # === Public ========================================================
 
-    def show_message(self, msg: str = None, color: style.Color = style.red) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         """Show or hide the notification label below the separator.
 
         Pass ``msg=None`` to hide it.

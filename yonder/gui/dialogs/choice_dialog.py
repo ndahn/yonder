@@ -11,14 +11,15 @@ _undefined = object()
 
 
 class simple_choice_dialog(DpgItem):
-    def __init__(self,
+    def __init__(
+        self,
         message: str,
         choices: list[str],
         callback: Callable[[str, int, Any], None],
         *,
         cancel_val: Any = _undefined,
         title: str = "Pick one",
-        text_color: style.Color = style.white,
+        text_color: style.RGBA = style.white,
         close_on_pick: bool = True,
         modal: bool = True,
         tag: str = None,
@@ -73,7 +74,9 @@ class simple_choice_dialog(DpgItem):
                         )
                         choice_idx += 1
                     else:
-                        dpg.add_button(label=choice, callback=on_choice, user_data=choice_idx)
+                        dpg.add_button(
+                            label=choice, callback=on_choice, user_data=choice_idx
+                        )
                         choice_idx += 1
 
         dpg.split_frame()
@@ -81,14 +84,15 @@ class simple_choice_dialog(DpgItem):
 
 
 class simple_combo_dialog(DpgItem):
-    def __init__(self,
+    def __init__(
+        self,
         message: str,
         choices: list[str],
         callback: Callable[[str, str, Any], None],
         *,
         cancel_val: Any = _undefined,
         title: str = "Pick one",
-        text_color: style.Color = style.white,
+        text_color: style.RGBA = style.white,
         modal: bool = True,
         tag: str = None,
         user_data: Any = None,

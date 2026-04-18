@@ -190,9 +190,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
     # === User Things ===============
 
-    def show_message(
-        self, msg: str = None, color: style.Color = style.red
-    ) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         if not msg:
             dpg.hide_item(self._t("notification"))
             return

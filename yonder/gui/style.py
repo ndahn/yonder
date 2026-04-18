@@ -4,7 +4,7 @@ import colorsys
 from dearpygui import dearpygui as dpg
 
 
-class Color(tuple):
+class RGBA(tuple):
     def __new__(
         cls, color_or_r: int | Iterable[int], g: int = None, b: int = None, a: int = 255
     ):
@@ -16,11 +16,11 @@ class Color(tuple):
                 r, g, b, a = color_or_r[:4]
             return super().__new__(cls, (r, g, b, a))
 
-        return super().__new__(cls, color_or_r)
+        return super().__new__(cls, (color_or_r, g, b, a))
 
     @classmethod
-    def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> Color:
-        return Color(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
+    def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> RGBA:
+        return RGBA(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
 
     def as_floats(self) -> tuple[float, float, float, float]:
         return (self.r / 255, self.g / 255, self.b / 255, self.a / 255)
@@ -52,7 +52,7 @@ class Color(tuple):
 
     def but(
         self, *, r: int = None, g: int = None, b: int = None, a: int = None
-    ) -> Color:
+    ) -> RGBA:
         if r is None:
             r = self.r
 
@@ -65,21 +65,21 @@ class Color(tuple):
         if a is None:
             a = self.a
 
-        return Color(r, g, b, a)
+        return RGBA(r, g, b, a)
 
-    def mix(self, other: "tuple | Color", ratio: float = 0.5) -> Color:
+    def mix(self, other: "tuple | RGBA", ratio: float = 0.5) -> RGBA:
         r = ratio * self.r + (1 - ratio) * other[0]
         g = ratio * self.g + (1 - ratio) * other[1]
         b = ratio * self.b + (1 - ratio) * other[2]
         a = ratio * self.a + (1 - ratio) * other[3]
-        return Color(r, g, b, a)
+        return RGBA(r, g, b, a)
 
-    def brightness(self, brightness: int) -> Color:
+    def brightness(self, brightness: int) -> RGBA:
         h, s, _ = colorsys.rgb_to_hsv(*self.as_floats()[:3])
         r, g, b = colorsys.hsv_to_rgb(h, s, brightness / 255)
-        return Color.from_floats(r, g, b, self.a / 255)
+        return RGBA.from_floats(r, g, b, self.a / 255)
 
-    def __or__(self, other: "tuple | Color") -> Color:
+    def __or__(self, other: "tuple | RGBA") -> RGBA:
         return self.mix(other)
 
     def __str__(self) -> str:
@@ -90,33 +90,32 @@ class Color(tuple):
 
 
 # https://coolors.co/palette/ffbe0b-fb5607-ff006e-8338ec-3a86ff
-yellow = Color(255, 190, 11, 255)
-orange = Color(251, 86, 7, 255)
-red = Color(234, 11, 30, 255)
-pink = Color(255, 0, 110, 255)
-purple = Color(127, 50, 236, 255)
-blue = Color(58, 134, 255, 255)
-green = Color(138, 201, 38, 255)
+yellow = RGBA(255, 190, 11, 255)
+orange = RGBA(251, 86, 7, 255)
+red = RGBA(234, 11, 30, 255)
+pink = RGBA(255, 0, 110, 255)
+purple = RGBA(127, 50, 236, 255)
+blue = RGBA(58, 134, 255, 255)
+green = RGBA(138, 201, 38, 255)
 
-white = Color(255, 255, 255, 255)
-light_grey = Color(151, 151, 151, 255)
-dark_grey = Color(62, 62, 62, 255)
-black = Color(0, 0, 0, 255)
+white = RGBA(255, 255, 255, 255)
+light_grey = RGBA(151, 151, 151, 255)
+dark_grey = RGBA(62, 62, 62, 255)
+black = RGBA(0, 0, 0, 255)
 
-light_blue = Color(112, 214, 255, 255)
-light_green = Color(112, 255, 162, 255)
-light_red = Color(255, 112, 119)
+light_blue = RGBA(112, 214, 255, 255)
+light_green = RGBA(112, 255, 162, 255)
+light_red = RGBA(255, 112, 119)
 
 
 # Section colors
-warm_orange = Color(200, 120,  80, 255)
-cool_blue = Color( 80, 120, 200, 255)
-soft_green = Color( 80, 180, 120, 255)
-muted_purple = Color(140,  90, 180, 255)
-warm_yellow = Color(200, 180,  60, 255)
-light_grey = Color(180, 180, 180, 255)
-teal = Color( 60, 180, 180, 255)
-rose = Color(200,  80, 120, 255)
+muted_orange = RGBA(200, 120, 80, 255)
+muted_blue = RGBA(80, 120, 200, 255)
+muted_green = RGBA(80, 180, 120, 255)
+muted_purple = RGBA(140, 90, 180, 255)
+muted_yellow = RGBA(200, 180, 60, 255)
+muted_teal = RGBA(60, 180, 180, 255)
+muted_rose = RGBA(200, 80, 120, 255)
 
 
 class themes:

@@ -23,9 +23,9 @@ TransitionNode: TypeAlias = MusicSwitchContainer | MusicRandomSequenceContainer
 # teal         style.Color( 60, 180, 180, 255)  — bidirectional / shared
 # rose         style.Color(200,  80, 120, 255)  — warnings / overrides
 
-_COLOR_SRC     = style.Color(200, 120,  80, 255)
-_COLOR_DST     = style.Color( 80, 120, 200, 255)
-_COLOR_NEUTRAL = style.Color(180, 180, 180, 255)
+_COLOR_SRC = style.RGBA(200, 120, 80, 255)
+_COLOR_DST = style.RGBA(80, 120, 200, 255)
+_COLOR_NEUTRAL = style.RGBA(180, 180, 180, 255)
 
 
 class edit_transition_dialog(DpgItem):
@@ -84,7 +84,7 @@ class edit_transition_dialog(DpgItem):
     def _add_item_tag(self, rule_key: str) -> str:
         return self._t(f"{rule_key}_add_item")
 
-    def _section(self, label: str, color: style.Color, first: bool = False) -> None:
+    def _section(self, label: str, color: style.RGBA, first: bool = False) -> None:
         if not first:
             dpg.add_spacer(height=10)
 
@@ -113,7 +113,9 @@ class edit_transition_dialog(DpgItem):
             )
 
     def _add_id_footer(self, table: str, rule_key: str) -> None:
-        missing = sorted(set(self._node.children).difference(getattr(self._rule, rule_key)))
+        missing = sorted(
+            set(self._node.children).difference(getattr(self._rule, rule_key))
+        )
         with dpg.table_row(parent=table):
             dpg.add_combo(missing, width=-1, tag=self._add_item_tag(rule_key))
             dpg.add_button(
@@ -132,7 +134,9 @@ class edit_transition_dialog(DpgItem):
             policy=dpg.mvTable_SizingFixedFit,
             tag=self._table_tag(rule_key),
         ):
-            dpg.add_table_column(label="File", width_stretch=True, init_width_or_weight=100)
+            dpg.add_table_column(
+                label="File", width_stretch=True, init_width_or_weight=100
+            )
             dpg.add_table_column(label="")
 
         self._refresh(rule_key)
@@ -144,7 +148,11 @@ class edit_transition_dialog(DpgItem):
         dst = self._dst_rule
 
         with dpg.window(
-            label=t("Edit Transition ({node_id})", "edit_transition/title", node_id=self._node.id),
+            label=t(
+                "Edit Transition ({node_id})",
+                "edit_transition/title",
+                node_id=self._node.id,
+            ),
             width=400,
             height=400,
             autosize=True,
@@ -152,23 +160,28 @@ class edit_transition_dialog(DpgItem):
             tag=self._tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
-
-            self._section("Source Transition Rule", _COLOR_SRC, first=True)
+            self._section("Source Transition Rule", style.rose, first=True)
             dpg.add_input_int(
                 label="Transition time (ms)",
                 default_value=src.transition_time,
-                min_value=0, max_value=60000,
-                step=500, step_fast=1000,
-                min_clamped=True, max_clamped=True,
+                min_value=0,
+                max_value=60000,
+                step=500,
+                step_fast=1000,
+                min_clamped=True,
+                max_clamped=True,
                 tag=self._t("src_transition_time"),
                 callback=lambda s, a, u: setattr(self._src_rule, "transition_time", a),
             )
             dpg.add_input_int(
                 label="Fade offset (ms)",
                 default_value=src.fade_offet,
-                min_value=-60000, max_value=60000,
-                step=500, step_fast=1000,
-                min_clamped=True, max_clamped=True,
+                min_value=-60000,
+                max_value=60000,
+                step=500,
+                step_fast=1000,
+                min_clamped=True,
+                max_clamped=True,
                 tag=self._t("src_fade_offset"),
                 callback=lambda s, a, u: setattr(self._src_rule, "fade_offet", a),
             )
@@ -177,31 +190,40 @@ class edit_transition_dialog(DpgItem):
                 items=[c.name for c in CurveInterpolation],
                 default_value=src.fade_curve.name,
                 tag=self._t("src_fade_curve"),
-                callback=lambda s, a, u: setattr(self._src_rule, "fade_curve", CurveInterpolation[a]),
+                callback=lambda s, a, u: setattr(
+                    self._src_rule, "fade_curve", CurveInterpolation[a]
+                ),
             )
             dpg.add_combo(
                 label="Sync Type",
                 items=[s.name for s in SyncType],
                 default_value=src.sync_type.name,
                 tag=self._t("sync_type"),
-                callback=lambda s, a, u: setattr(self._src_rule, "sync_type", SyncType[a]),
+                callback=lambda s, a, u: setattr(
+                    self._src_rule, "sync_type", SyncType[a]
+                ),
             )
 
-            self._section("Destination Transition Rule", _COLOR_DST)
+            self._section("Destination Transition Rule", style.muted_purple)
             dpg.add_input_int(
                 label="Transition time (ms)",
                 default_value=dst.transition_time,
-                min_value=0, max_value=60000,
-                step=500, step_fast=1000,
-                min_clamped=True, max_clamped=True,
+                min_value=0,
+                max_value=60000,
+                step=500,
+                step_fast=1000,
+                min_clamped=True,
+                max_clamped=True,
                 tag=self._t("dst_transition_time"),
                 callback=lambda s, a, u: setattr(self._dst_rule, "transition_time", a),
             )
             dpg.add_input_int(
                 label="Fade offset (ms)",
                 default_value=dst.fade_offet,
-                min_value=-60000, max_value=60000,
-                min_clamped=True, max_clamped=True,
+                min_value=-60000,
+                max_value=60000,
+                min_clamped=True,
+                max_clamped=True,
                 tag=self._t("dst_fade_offset"),
                 callback=lambda s, a, u: setattr(self._dst_rule, "fade_offet", a),
             )
@@ -210,10 +232,12 @@ class edit_transition_dialog(DpgItem):
                 items=[c.name for c in CurveInterpolation],
                 default_value=dst.fade_curve.name,
                 tag=self._t("dst_fade_curve"),
-                callback=lambda s, a, u: setattr(self._dst_rule, "fade_curve", CurveInterpolation[a]),
+                callback=lambda s, a, u: setattr(
+                    self._dst_rule, "fade_curve", CurveInterpolation[a]
+                ),
             )
 
-            self._section("Affected nodes", _COLOR_NEUTRAL)
+            self._section("Affected nodes", style.soft_green)
             with dpg.group(horizontal=True):
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Source IDs:")
@@ -227,12 +251,18 @@ class edit_transition_dialog(DpgItem):
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label="Okay",   callback=self._on_okay,   tag=self._t("button_okay"))
-                dpg.add_button(label="Cancel", callback=lambda: dpg.delete_item(self._window))
+                dpg.add_button(
+                    label="Okay", callback=self._on_okay, tag=self._t("button_okay")
+                )
+                dpg.add_button(
+                    label="Cancel", callback=lambda: dpg.delete_item(self._window)
+                )
 
     # === DPG callbacks =================================================
 
-    def _on_remove_clicked(self, sender: str, app_data: Any, info: tuple[int, str]) -> None:
+    def _on_remove_clicked(
+        self, sender: str, app_data: Any, info: tuple[int, str]
+    ) -> None:
         node_id, rule_key = info
         ref_nodes: list[int] = getattr(self._rule, rule_key)
         ref_nodes.remove(node_id)
@@ -260,9 +290,11 @@ class edit_transition_dialog(DpgItem):
 
     # === Public ========================================================
 
-    def show_message(self, msg: str = None, color: style.Color = style.red) -> None:
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         """Show or hide the notification label. Pass ``msg=None`` to hide."""
         if not msg:
             dpg.hide_item(self._t("notification"))
             return
-        dpg.configure_item(self._t("notification"), default_value=msg, color=color, show=True)
+        dpg.configure_item(
+            self._t("notification"), default_value=msg, color=color, show=True
+        )

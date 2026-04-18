@@ -11,7 +11,7 @@ from .dpg_item import DpgItem
 
 
 # Module-level color map — shared across all instances
-interpolation_colors: dict[CurveInterpolation, style.Color] = {
+interpolation_colors: dict[CurveInterpolation, style.RGBA] = {
     CurveInterpolation.Constant: style.light_grey,
     CurveInterpolation.Linear: style.white,
     CurveInterpolation.SCurve: style.light_green,
