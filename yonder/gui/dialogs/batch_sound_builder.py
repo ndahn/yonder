@@ -81,7 +81,7 @@ class create_batch_sound_builder_dialog(DpgItem):
             group_idx = len(self._groups)
 
         if self._bnk.name:
-            parts = re.split(r"c(?=\d{4})")
+            parts = re.split(r"c(?=\d{4})", self._bnk.name)
             if parts[0] != self._bnk.name:
                 base_id = int(parts[-1]) * 10**6 + 10000 + group_idx
                 return f"{base_id:09}"

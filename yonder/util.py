@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, ClassVar, TYPE_CHECKING, get_type_hints
+from typing import Any, Callable, Iterable, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
 import re
@@ -14,6 +14,7 @@ import shutil
 import networkx as nx
 
 from yonder.enums import SoundType
+from yonder.hash import calc_hash
 
 if TYPE_CHECKING:
     from yonder import Soundbank
@@ -217,45 +218,24 @@ def to_typed_dict(data: dataclass, resolve_strings: bool) -> dict[str, tuple[typ
     return delve(data)
 
 
-class PathDict(MutableMapping):
-    @classmethod
-    def from_paths(cls, paths: Iterable[tuple[str, Any]]) -> PathDict:
-        d = PathDict({})
-        for key, val in paths:
-            d[key] = val
+def parse_state_path(state_path: list[str]) -> list[int]:
+    """Convert a string state path to a list of integer hashes.
 
-        return d
-
-    def __init__(self, d: dict):
-        self._d = d
-
-    def __getitem__(self, key: Any) -> Any:
-        if isinstance(key, str) and "/" in key:
-            node = self._d
-            for k in key.split("/"):
-                node = node[k]
-            return node
-
-        return self._d[key]
-
-    def __setitem__(self, key: Any, value: Any) -> None:
-        if isinstance(key, str) and "/" in key:
-            *parts, last = key.split("/")
-            node = self._d
-            for k in parts:
-                node = node[k]
-            node[last] = value
+    ``"*"`` maps to 0 (wildcard), ``"#N"`` is parsed as a raw integer,
+    and any other string is hashed via ``calc_hash``.
+    """
+    keys = []
+    for val in state_path:
+        if isinstance(val, int):
+            keys.append(val)
+        elif val == "*":
+            keys.append(0)
+        elif val.startswith("#"):
+            try:
+                keys.append(int(val[1:]))
+            except ValueError:
+                raise ValueError(f"{val}: value is not a valid hash")
         else:
-            self._d[key] = value
+            keys.append(calc_hash(val))
 
-    def __delitem__(self, key):
-        del self._d[key]
-
-    def __iter__(self):
-        return iter(self._d)
-
-    def __len__(self):
-        return len(self._d)
-
-    def __getattr__(self, name) -> Any:
-        return getattr(self._d, name)
+    return keys

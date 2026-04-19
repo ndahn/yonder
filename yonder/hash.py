@@ -2,8 +2,6 @@ from typing import Any, Container, NewType
 from pathlib import Path
 from random import randrange
 
-from yonder.util import resource_data
-
 
 Hash = NewType("Hash", int)
 global_hash_dict: dict[Hash, str] = {}
@@ -28,6 +26,8 @@ def calc_hash(input: str) -> Hash:
 
 
 def load_lookup_table(path: Path = None) -> dict[Hash, str]:
+    from yonder.util import resource_data
+    
     if not path:
         pairs = resource_data("wwise_ids.txt").splitlines()
     else:

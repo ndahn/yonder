@@ -29,7 +29,7 @@ from yonder.enums import (
     PlaybackMode, 
     RandomMode,
 )
-from yonder.util import logger
+from yonder.util import logger, parse_state_path
 
 
 def create_simple_sound(
@@ -183,7 +183,7 @@ def create_boss_bgm(
     if len(tracks) > 1:
         boss_phases += [f"HU{i + 1}" for i in range(len(tracks) - 1)]
 
-    boss_state_keys = MusicSwitchContainer.parse_state_path(boss_phases)
+    boss_state_keys = parse_state_path(boss_phases)
     new_nodes: list[HIRCNode] = []
     phase_masters: list[MusicRandomSequenceContainer] = []
 
@@ -352,7 +352,7 @@ def create_boss_bgm(
                 apply_fades(rule, *self_transitions[i], SyncType.Immediate)
 
     # Add new bgm decision branch to master
-    master_state_keys: list[int] = MusicSwitchContainer.parse_state_path(state_path)
+    master_state_keys: list[int] = parse_state_path(state_path)
     master.add_branch(master_state_keys, boss_msc.id)
 
     # Add nodes and wems to soundbank

@@ -5,7 +5,7 @@ from random import randint
 
 from yonder.hash import calc_hash, Hash
 from yonder.enums import GroupType, DecisionTreeMode, PropID
-from yonder.util import logger
+from yonder.util import logger, parse_state_path
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicTransNodeParams,
@@ -16,29 +16,6 @@ from .base_types import (
     RTPC,
 )
 from .mixins import PropertyMixin
-
-
-def parse_state_path(state_path: list[str]) -> list[int]:
-    """Convert a string state path to a list of integer hashes.
-
-    ``"*"`` maps to 0 (wildcard), ``"#N"`` is parsed as a raw integer,
-    and any other string is hashed via ``calc_hash``.
-    """
-    keys = []
-    for val in state_path:
-        if isinstance(val, int):
-            keys.append(val)
-        elif val == "*":
-            keys.append(0)
-        elif val.startswith("#"):
-            try:
-                keys.append(int(val[1:]))
-            except ValueError:
-                raise ValueError(f"{val}: value is not a valid hash")
-        else:
-            keys.append(calc_hash(val))
-
-    return keys
 
 
 @dataclass(repr=False)
@@ -156,7 +133,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         if len(path) != len(self.arguments):
             raise ValueError("Path length must be equal to number of tree arguments")
 
-        path: list[int] = MusicSwitchContainer.parse_state_path(path)
+        path: list[int] = parse_state_path(path)
         parent = self.tree
         offset = 0
 

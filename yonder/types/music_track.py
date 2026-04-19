@@ -6,6 +6,7 @@ from pathlib import Path
 from yonder.hash import Hash
 from yonder.wem import get_wem_metadata
 from yonder.enums import ClipAutomationType, PropID, SourceType
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -90,7 +91,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
         wem_id = wem.stem
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
-        duration = meta["duration"]
+        duration = meta["duration"] * 1000
 
         self.add_source(
             wem_id,
@@ -105,11 +106,14 @@ class MusicTrack(PropertyMixin, HIRCNode):
         self,
         source_id: int,
         media_size: int,
-        duration: float,
+        duration_ms: float,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Embedded,
     ) -> BankSourceData:
+        if duration_ms < 500.0:
+            logger.warning(f"{self}: duration of new source {source_id} is very short, not in ms?")
+
         self.sources.append(
             BankSourceData(
                 source_type=source_type,
@@ -123,7 +127,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
                 play_at=-begin_trim,
                 begin_trim_offset=begin_trim,
                 end_trim_offset=-abs(end_trim),
-                source_duration=duration,
+                source_duration=duration_ms,
             )
         )
 

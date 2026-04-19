@@ -2,7 +2,8 @@ from typing import Any, Callable, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
-from yonder.types.music_switch_container import MusicSwitchContainer, parse_state_path
+from yonder.util import parse_state_path
+from yonder.types.music_switch_container import MusicSwitchContainer
 from yonder.hash import lookup_name
 from yonder.gui import style
 from yonder.gui.localization import µ

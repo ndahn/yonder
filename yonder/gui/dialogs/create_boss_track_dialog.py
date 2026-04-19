@@ -109,7 +109,7 @@ class create_boss_track_dialog(DpgItem):
 
         for i, arg in enumerate(selected_msc.arguments):
             if arg.group_id == self.bgm_enemy_type_hash:
-                bgm_enemy_type_idx = i
+                self.bgm_enemy_type_idx = i
                 break
         else:
             self.show_message(
@@ -120,9 +120,9 @@ class create_boss_track_dialog(DpgItem):
             )
             return
 
-        msc = selected_msc
-        current_state_path = ["*" for _ in msc.arguments]
-        current_state_path[bgm_enemy_type_idx] = dpg.get_value(
+        self.msc = selected_msc
+        self.current_state_path = ["*" for _ in self.msc.arguments]
+        self.current_state_path[self.bgm_enemy_type_idx] = dpg.get_value(
             self._t("bgm_enemy_type")
         )
         self.show_message()
