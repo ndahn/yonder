@@ -118,6 +118,10 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
 
-    def add_playlist_item(self, child_id: int) -> None:
+    def add_playlist_item(self, child_id: int | HIRCNode) -> None:
+        if isinstance(child_id, HIRCNode):
+            child_id = child_id.id
+        
+        child_id = int(child_id)
         self.children.add(child_id)
         self.playlist.items.append(PlaylistItem(child_id))

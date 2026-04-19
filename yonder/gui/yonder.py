@@ -1269,7 +1269,7 @@ class BanksOfYonder(DpgItem):
             table = self._t("globals_table")
 
             # Switch to globals tab
-            dpg.set_value(self._t("tabs", self._t("tab_globals")))
+            dpg.set_value(self._t("tabs"), self._t("tab_globals"))
 
             # Unfold the category
             # FIXME: make sure the node row actually exists despite count limits!

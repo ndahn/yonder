@@ -123,7 +123,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     def add_playlist_item(
         self,
         playlist_item_id: int,
-        segment_id: int,
+        segment_id: int | HIRCNode,
         weight: int = 50000,
         use_weight: bool = False,
         shuffle: bool = False,
@@ -153,6 +153,12 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         """
         if isinstance(parent, MusicRanSeqPlaylistItem):
             parent = parent.playlist_item_id
+
+        if isinstance(segment_id, HIRCNode):
+            segment_id = segment_id.id
+
+        parent = int(parent)
+        segment_id = int(segment_id)
 
         if len(self.playlist_items) == 0:
             if parent > 0:
