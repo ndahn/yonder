@@ -113,9 +113,13 @@ def create_node_widgets(
             # Heading
             color = type_colors.get(type(node), style.white)
             dpg.add_text(node.type_name, color=color)
-            if node.__class__.__doc__:
+            doc = doc_parse(type(node).__doc__)
+            if doc.short_description or doc.long_description:
                 with dpg.tooltip(dpg.last_item()):
-                    add_paragraphs(node.__class__.__doc__)
+                    if doc.short_description:
+                        add_paragraphs(doc.short_description)
+                    if doc.long_description:
+                        add_paragraphs(doc.long_description)
 
             add_hash_widget(
                 node.id,
