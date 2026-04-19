@@ -2,7 +2,7 @@ from typing import Callable, Any
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.types import Hash
+from yonder.hash import Hash
 from yonder.types.sections import (
     Section,
     BKHDSection,

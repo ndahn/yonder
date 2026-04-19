@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator, NewType, TypeVar, Generic
+from typing import Any, Iterator, TypeVar, Generic
 from dataclasses import dataclass, field
 
 from yonder.hash import lookup_name
@@ -23,7 +23,6 @@ from yonder.enums import (
 )
 
 
-Hash = NewType("Hash", int)
 _T = TypeVar("_T")
 
 

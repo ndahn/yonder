@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
+from yonder.enums import DecisionTreeMode, GroupType, PropID
 from .hirc_node import HIRCNode
 from .base_types import (
     GameSync,
@@ -9,7 +11,6 @@ from .base_types import (
     PropBundle,
     PropRangedModifiers,
 )
-from yonder.enums import DecisionTreeMode, GroupType, PropID
 from .mixins import PropertyMixin
 
 
@@ -27,7 +28,7 @@ class DialogueEvent(PropertyMixin, HIRCNode):
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
     @classmethod
-    def new(cls, nid: int | str, props: dict[PropID, float]) -> DialogueEvent:
+    def new(cls, nid: Hash, props: dict[PropID, float]) -> DialogueEvent:
         obj = cls(nid)
 
         if props:

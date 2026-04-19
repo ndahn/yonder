@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, calc_hash
+from yonder import Soundbank, Hash, calc_hash
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
 from yonder.query import query_nodes
@@ -88,7 +88,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
         return f"{(group_idx + 1) * 1000:09}"
 
-    def _make_name(self, prefix: str, soundtype: SoundType, name: int | str) -> str:
+    def _make_name(self, prefix: str, soundtype: SoundType, name: Hash) -> str:
         ret = prefix or "" + soundtype.value
 
         if isinstance(name, str) and name.isnumeric():

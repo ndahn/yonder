@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from yonder.hash import global_id_generator
+from yonder.hash import global_id_generator, Hash
 from yonder.enums import PropID, CurveInterpolation, SyncType
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -31,7 +31,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         playlist: list[int, list[int]] = None,
         root_ers_type: int = 0,
         props: dict[PropID, float] = None,
@@ -275,7 +275,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
 
         pid = self.playlist_items[-1] + 1 if self.playlist_items else 0
         self.add_playlist_item(pid, int(other))
-        
+
         logger.warning("Don't forget to adjust the new playlist item details!")
 
     def detach(self, other: int | HIRCNode) -> None:

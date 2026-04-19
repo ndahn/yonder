@@ -1,4 +1,4 @@
-from yonder import Soundbank, HIRCNode
+from yonder import Soundbank, HIRCNode, Hash
 from yonder.types import Event, Action, Sound, MusicTrack
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
@@ -134,7 +134,7 @@ def copy_wems(
 def copy_wwise_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
-    wwise_map: dict[int | str, str],
+    wwise_map: dict[Hash, str],
     save: bool = True,
 ) -> None:
     wems = []

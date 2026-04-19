@@ -2,9 +2,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
+from yonder.enums import CurveParameters
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
-from yonder.enums import CurveParameters
 
 
 @dataclass(repr=False)
@@ -22,7 +23,7 @@ class Attenuation(HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         curves_to_use: list[CurveParameters],
         curves: list[ConversionTable],
         cone_params: ConeParams = None,

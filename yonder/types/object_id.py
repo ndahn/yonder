@@ -1,12 +1,13 @@
 from __future__ import annotations
 from typing import Any
-from yonder.hash import calc_hash, lookup_name
+
+from yonder.hash import calc_hash, lookup_name, Hash
 
 
 class ObjectId:
     __slots__ = ("_hash", "_name")
 
-    def __init__(self, initial_value: int | str):
+    def __init__(self, initial_value: Hash):
         self._hash = 0
         self._name = None
         self.set(initial_value)
@@ -28,7 +29,7 @@ class ObjectId:
                 f"Object hash and name out of sync ({self._hash} vs. ({self._name}))"
             )
 
-    def set(self, value: int | str) -> None:
+    def set(self, value: Hash) -> None:
         if isinstance(value, int):
             self._hash = value
             self._name = lookup_name(value, None)
@@ -36,7 +37,7 @@ class ObjectId:
             self._hash = calc_hash(value)
             self._name = value
 
-    def value(self) -> int | str:
+    def value(self) -> Hash:
         return self._name if self._name else self._hash
 
     @property

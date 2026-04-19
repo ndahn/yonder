@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.gui.localization import µ
-from yonder.util import get_function_spec
+from yonder.util import get_function_spec, logger
 from yonder.gui import style
 from yonder.gui.widgets import DpgItem, add_generic_widget
 
@@ -37,7 +37,7 @@ class create_node_dialog(DpgItem):
         callback: Callable[[HIRCNode], None],
         *,
         title: str = "Create Node",
-        tag: int | str = None,
+        tag: str = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
             dpg.delete_item(tag)
@@ -48,11 +48,11 @@ class create_node_dialog(DpgItem):
         self._callback = callback
         self._nid = bnk.new_id()
         self._node_types: dict[str, type] = {
-            c.__name__: c for c in HIRCNode.__subclasses__()
+            c.__name__: c for c in HIRCNode.__subclasses__() if c.__name__ != "Action"
         }
         self._selected_type: str = next(iter(self._node_types))
         self._node_args: dict[str, Any] = {}
-        self._window: int | str = None
+        self._window: str = None
 
         self._build(title)
         self._on_type_selected(None, self._selected_type, None)
@@ -75,13 +75,6 @@ class create_node_dialog(DpgItem):
                 callback=self._on_type_selected,
                 width=300,
                 tag=self._t("node_type"),
-            )
-            dpg.add_input_text(
-                label=µ("id", "hirc"),
-                readonly=True,
-                enabled=False,
-                default_value=str(self._nid),
-                tag=self._t("node_id"),
             )
             with dpg.child_window(auto_resize_y=True, tag=self._t("node_args")):
                 pass
@@ -112,7 +105,12 @@ class create_node_dialog(DpgItem):
         dpg.delete_item(self._t("node_args"), children_only=True, slot=1)
 
         for name, arg in spec.items():
-            if name in ("nid", "parent"):
+            if not arg.type:
+                logger.debug(
+                    µ("Type of argument {name} is not supported yet", "log").format(
+                        name=name
+                    )
+                )
                 continue
 
             self._node_args[name] = arg.default
@@ -120,6 +118,7 @@ class create_node_dialog(DpgItem):
                 arg.type,
                 name,
                 self._set_arg,
+                not_supported_ok=True,
                 default=arg.default,
                 user_data=name,
                 parent=self._t("node_args"),
@@ -128,7 +127,10 @@ class create_node_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         self._node_args["nid"] = self._nid
-        node = self._node_types[self._selected_type].new(**self._node_args)
+        node_cls = self._node_types[self._selected_type]
+        node = node_cls.new(**self._node_args)
+        
+        self._bnk.add_nodes(node)
         self._callback(node)
         dpg.delete_item(self._window)
 

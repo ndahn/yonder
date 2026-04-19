@@ -3,6 +3,7 @@ from typing import Type, ClassVar
 from dataclasses import dataclass, field
 from enum import Enum
 
+from yonder.hash import Hash
 from yonder.enums import ValueMeaning
 from yonder.util import logger
 from .base_types import PropBundle, PropRangedModifiers
@@ -21,9 +22,9 @@ class Action(PropertyMixin, HIRCNode):
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
-    def __post_init__(self, id: int | str):
+    def __post_init__(self, id: Hash):
         super().__post_init__(id)
-        
+
         if self.action_type == 0:
             if self.params == "PlayEvent":
                 self.action_type = ActionType.PlayEvent.type_id
@@ -103,9 +104,12 @@ class Action(PropertyMixin, HIRCNode):
         from .event import Event
 
         if isinstance(other, HIRCNode):
-            if isinstance(other, Event) and self.action_type_enum != ActionType.PlayEvent:
+            if (
+                isinstance(other, Event)
+                and self.action_type_enum != ActionType.PlayEvent
+            ):
                 raise ValueError("Cannot attach an event to a non-PlayEvent action")
-            
+
             if isinstance(other, Action):
                 raise ValueError("Cannot attach actions to actions")
 
@@ -119,7 +123,7 @@ class Action(PropertyMixin, HIRCNode):
 
         if self.external_id == other:
             self.external_id = 0
-            
+
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 

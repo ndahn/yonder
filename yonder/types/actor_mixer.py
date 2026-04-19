@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
 from yonder.enums import PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -18,7 +19,7 @@ class ActorMixer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         override_bus_id: int = 0,
         parent: int | HIRCNode = 0,
         props: dict[PropID, float] = None,

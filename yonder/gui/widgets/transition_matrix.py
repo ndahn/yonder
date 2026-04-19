@@ -189,7 +189,7 @@ class add_transition_matrix(DpgItem):
         return theme_tag
 
     def _register_context_menu(
-        self, btn: int | str, cell_info: tuple[int, int, int]
+        self, btn: str, cell_info: tuple[int, int, int]
     ) -> None:
         registry = f"{btn}_handlers"
         if not dpg.does_item_exist(registry):

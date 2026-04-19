@@ -43,7 +43,7 @@ class edit_transition_dialog(DpgItem):
         base_rule: MusicTransitionRule,
         on_rule_changed: Callable[[str, dict, Any], None],
         *,
-        tag: int | str = 0,
+        tag: str = 0,
         user_data: Any = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
@@ -58,7 +58,7 @@ class edit_transition_dialog(DpgItem):
         self._dst_rule = self._rule.destination_transition_rule
         self._on_rule_changed = on_rule_changed
         self._user_data = user_data
-        self._window: int | str = None
+        self._window: str = None
 
         self._build()
 

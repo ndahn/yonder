@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -37,7 +38,7 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         nodes: int | list[int],
         playback_mode: PlaybackMode = PlaybackMode.Random,
         random_mode: RandomMode = RandomMode.Standard,
@@ -100,7 +101,7 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
 
         if other in self.children:
             self.children.remove(other)
-            
+
             indices = []
             for idx, item in enumerate((self.playlist)):
                 if item.play_id == other:

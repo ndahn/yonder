@@ -12,15 +12,15 @@ class DpgItem:
         Pixel width of the widget.
     """
 
-    def __init__(self, tag: int | str = 0, ctx: str = None) -> None:
+    def __init__(self, tag: str = 0, ctx: str = None) -> None:
         if not tag:
             tag = dpg.generate_uuid()
-        
+
         self._tag = tag
         self._ctx = ctx
 
     @property
-    def tag(self) -> int | str:
+    def tag(self) -> str:
         return self._tag
 
     def _t(self, suffix: str) -> str:

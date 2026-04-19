@@ -4,7 +4,7 @@ import numpy as np
 
 from dearpygui import dearpygui as dpg
 
-from yonder.hash import calc_hash, lookup_name
+from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.util import logger
 from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
@@ -95,17 +95,15 @@ class add_wav_player(DpgItem):
         end_trim: float = 0.0,
         on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
         user_markers_enabled: bool = False,
-        user_markers: dict[int | str, float] = None,
-        on_user_markers_changed: Callable[
-            [str, dict[int | str, float], Any], None
-        ] = None,
+        user_markers: dict[Hash, float] = None,
+        on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
         edit_markers_inplace: bool = False,
         max_points: int = 5000,
         markers_in_ms: bool = True,
         width: int = -1,
         height: int = 100,
-        tag: int | str = 0,
-        parent: int | str = 0,
+        tag: str = 0,
+        parent: str = 0,
         user_data: Any = None,
     ) -> None:
         super().__init__(tag)
@@ -564,7 +562,7 @@ class add_wav_player(DpgItem):
         """Return all user marker positions ``{id: pos}`` in seconds."""
         return dict(self._user_markers)
 
-    def get_user_marker_pos(self, mid: int | str, default: float = 0.0) -> float:
+    def get_user_marker_pos(self, mid: Hash, default: float = 0.0) -> float:
         """Return a single marker position by ID or name."""
         if isinstance(mid, str):
             mid = calc_hash(mid)
@@ -619,7 +617,7 @@ class add_wav_player(DpgItem):
         self._on_trim_marker_moved()
 
     def _on_user_marker_edit(
-        self, sender: str, markers: dict[int | str, float], ud: Any
+        self, sender: str, markers: dict[Hash, float], ud: Any
     ) -> None:
         for mid, pos in markers.items():
             dpg.set_value(self._t(f"marker_{mid}"), pos)

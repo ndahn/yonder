@@ -291,7 +291,7 @@ def draw_curve(
 
     Returns
     -------
-    int | str
+    Hash
         The DPG item id/tag of the drawn primitive.
     """
     if p1 is None:

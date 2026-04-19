@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
 
+from yonder.hash import Hash
 from yonder.wem import get_wem_metadata
+from yonder.enums import ClipAutomationType, PropID, SourceType
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -15,7 +17,6 @@ from .base_types import (
     TrackSrcInfo,
     RTPC,
 )
-from yonder.enums import ClipAutomationType, PropID, SourceType
 from .mixins import PropertyMixin
 
 
@@ -37,7 +38,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         wem: Path = None,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,

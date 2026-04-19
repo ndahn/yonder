@@ -81,7 +81,7 @@ def is_row_visible(table: str, row: str | int) -> bool:
     return is_row_index_visible(table, desc.level, row_idx)
 
 
-def get_foldable_child_rows(table: str, row: int | str) -> Generator[str, None, None]:
+def get_foldable_child_rows(table: str, row: str) -> Generator[str, None, None]:
     if row in (None, "", 0):
         return
 
@@ -101,7 +101,7 @@ def get_foldable_child_rows(table: str, row: int | str) -> Generator[str, None, 
         yield child_row
 
 
-def get_foldable_row_parent(table: str, row: int | str) -> int:
+def get_foldable_row_parent(table: str, row: str) -> int:
     if isinstance(row, str):
         row = dpg.get_alias_id(row)
 
@@ -149,7 +149,7 @@ def apply_row_indent(
     table: str,
     indent_level: int,
     parent_row: str,
-    until: int | str = 0,
+    until: str = 0,
 ) -> Generator[str, None, None]:
     try:
         yield

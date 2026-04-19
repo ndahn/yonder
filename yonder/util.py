@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, ClassVar, TYPE_CHECKING
+from typing import Any, Callable, Iterable, ClassVar, TYPE_CHECKING, get_type_hints
 from collections.abc import MutableMapping
 import sys
 import re
@@ -135,7 +135,10 @@ def get_function_spec(
             if ptype and isinstance(ptype, str):
                 # If it's a primitive type we can parse it, otherwise ignore it
                 # NOTE use the proper builtins module here, __builtins__ is unreliable
-                ptype = getattr(builtins, ptype, None)
+                if hasattr(builtins, ptype):
+                    ptype = getattr(builtins, ptype)
+                else:
+                    ptype = resolve_typehint(ptype, func.__module__)
 
         if param.default is not inspect.Parameter.empty:
             default = param.default
@@ -182,8 +185,11 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
     return apply_dict(base, updates)
 
 
-def resolve_typehint(hint: str, context_module: str) -> type:
-    module = sys.modules[context_module]
+def resolve_typehint(hint: str, context_module: str | object) -> type:
+    # get_type_hints can have some weird effects I don't want to encounter again,
+    # like two different versions of the same class, so we use a much simpler way
+    if isinstance(context_module, str):
+        module = sys.modules[context_module]
     return eval(hint, vars(module))
 
 

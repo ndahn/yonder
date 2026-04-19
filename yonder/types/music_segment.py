@@ -2,11 +2,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar, Any
 
-from yonder.hash import calc_hash
+from yonder.hash import calc_hash, Hash
 from yonder.enums import PropID, MarkerId
 from yonder.util import logger
 from .hirc_node import HIRCNode
-from .base_types import MusicNodeParams, PropBundle, Children, MusicMarkerWwise, RTPC
+from .base_types import (
+    MusicNodeParams,
+    PropBundle,
+    Children,
+    MusicMarkerWwise,
+    RTPC,
+)
 from .music_track import MusicTrack
 from .mixins import PropertyMixin
 
@@ -22,9 +28,9 @@ class MusicSegment(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         tracks: int | list[int] = None,
-        markers: list[int | str, float] = None,
+        markers: list[Hash, float] = None,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicSegment:
@@ -71,7 +77,9 @@ class MusicSegment(PropertyMixin, HIRCNode):
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if not isinstance(other, MusicTrack):
-                logger.warning("Attaching a non-MusicTrack to a MusicSegment is highly unusual and may result in an invalid soundbank!")
+                logger.warning(
+                    "Attaching a non-MusicTrack to a MusicSegment is highly unusual and may result in an invalid soundbank!"
+                )
 
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -90,7 +98,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
             self.children.remove(other)
 
     def set_marker(
-        self, mid: int | str | MarkerId, pos: float, update: bool = True
+        self, mid: Hash | MarkerId, pos: float, update: bool = True
     ) -> MusicMarkerWwise:
         if isinstance(mid, str):
             label = mid
@@ -119,7 +127,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
 
         return marker
 
-    def get_marker_pos(self, mid: int | str | MarkerId, default: float = 0.0) -> float:
+    def get_marker_pos(self, mid: Hash | MarkerId, default: float = 0.0) -> float:
         if isinstance(mid, str):
             mid = calc_hash(mid)
 
@@ -131,7 +139,7 @@ class MusicSegment(PropertyMixin, HIRCNode):
 
         return default
 
-    def remove_marker(self, mid: int | str, missing_ok: bool = True) -> None:
+    def remove_marker(self, mid: Hash, missing_ok: bool = True) -> None:
         if isinstance(mid, str):
             mid = calc_hash(mid)
 

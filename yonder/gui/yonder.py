@@ -590,15 +590,15 @@ class BanksOfYonder(DpgItem):
                     tag=self._t("context/copy_hierarchy"),
                 )
 
-            with dpg.menu(label=µ("Paste", "menu"), tag=self._t("context/paste")):
+            with dpg.menu(label=µ("Attach", "menu"), tag=self._t("context/attach")):
                 dpg.add_menu_item(
-                    label=µ("Attach", "menu"),
-                    callback=self.node_attach,
+                    label=µ("Paste", "menu"),
+                    callback=self.node_paste,
                     tag=self._t("context/paste_node"),
                 )
                 dpg.add_menu_item(
-                    label=µ("New child", "menu"),
-                    callback=self.node_new_child,
+                    label=µ("New object", "menu"),
+                    callback=self.node_new_object,
                     tag=self._t("context/paste_new"),
                 )
 
@@ -1198,6 +1198,10 @@ class BanksOfYonder(DpgItem):
         self._on_node_selected(item, app_data, node)
 
         # NOTE hide or show context menu items here if needed
+        if hasattr(self._selected_node, "attach"):
+            dpg.show_item(self._t("context/attach"))
+        else:
+            dpg.hide_item(self._t("context/attach"))
 
         dpg.set_item_pos(self._t("context_menu"), dpg.get_mouse_pos())
         dpg.show_item(self._t("context_menu"))
@@ -1379,7 +1383,7 @@ class BanksOfYonder(DpgItem):
             )
         )
 
-    def node_new_child(self) -> None:
+    def node_new_object(self) -> None:
         tag = self._t(f"add_child_to_{self._selected_node.id}")
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)
@@ -1387,13 +1391,14 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
-            self.bnk.add_nodes(node)
-            self._selected_node.children.add(node)
+            self.add_pinned_object(node)
+            self._selected_node.attach(node)
             logger.info(
                 µ("Attached new node {node} to {parent}").format(
                     node=node, parent=self._selected_node
                 )
             )
+
             # TODO no need to regenerate everything
             self.regenerate()
 
@@ -1402,7 +1407,7 @@ class BanksOfYonder(DpgItem):
         dpg.split_frame()
         center_window(tag)
 
-    def node_attach(self) -> None:
+    def node_paste(self) -> None:
         try:
             data = json.loads(pyperclip.paste())
         except json.JSONDecodeError:
@@ -1431,8 +1436,11 @@ class BanksOfYonder(DpgItem):
                 n.parent = id_map[n.parent]
 
         self.bnk.add_nodes(*nodes)
+        for n in nodes:
+            self.add_pinned_object(n)
+        
         nodes[0].parent = self._selected_node
-        self._selected_node.attach(nodes[0])  # TODO
+        self._selected_node.attach(nodes[0])
 
         logger.info(
             µ("Attached {node} and {num} descendants to {parent}").format(
@@ -1524,9 +1532,8 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
-            logger.info(µ("Created node {node}", "log").format(node=node))
-            self.bnk.add_nodes(node)
             self.add_pinned_object(node)
+            logger.info(µ("Created node {node}", "log").format(node=node))
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
 
@@ -1578,6 +1585,9 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_events_created(nodes: list[HIRCNode]) -> None:
+            for n in nodes:
+                self.add_pinned_object(n)
+            
             logger.info(µ("Created new event {node}", "log").format(node=nodes[0]))
             self.regenerate()
             self.select_node(nodes[0])
@@ -1595,13 +1605,15 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
+            self.add_pinned_object(play_evt)
+            self.add_pinned_object(stop_evt)
+
             logger.info(
                 µ("Created new sound {name} with {count} sounds").format(
                     name=play_evt.get_wwise_name(play_evt), count=len(self._soundfiles)
                 )
             )
-            self.add_pinned_object(play_evt)
-            self.add_pinned_object(stop_evt)
+            
             self.regenerate()
             self.jump_to_node(play_evt)
 
@@ -1618,8 +1630,18 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_batch_created(groups: list[tuple[Event, Event]]) -> None:
-            # TODO
-            pass
+            for g in groups:
+                self.add_pinned_object(g[0])
+                self.add_pinned_object(g[1])
+
+            logger.info(
+                µ("Created {num} simple sounds").format(
+                    num=len(groups)
+                )
+            )
+            
+            self.regenerate()
+            self.jump_to_node(groups[0][0])
 
         create_batch_sound_builder_dialog(self.bnk, on_batch_created, tag=tag)
 
@@ -1631,12 +1653,12 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
+            self.add_pinned_object(nodes[0])
             logger.info(
                 µ("Added boss track {bgm_enemy_type}").format(
                     bgm_enemy_type=bgm_enemy_type
                 )
             )
-            self.add_pinned_object(nodes[0])
             self.regenerate()
             self.jump_to_node(nodes[0])
 
@@ -1653,7 +1675,10 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_ambience_track_created(nodes: list[HIRCNode]) -> None:
+            self.add_pinned_object(nodes[0])
             logger.info(µ("Added ambience track {name}", "log").format(name=nodes[0]))
+            self.regenerate()
+            self.jump_to_node(nodes[0])
 
         create_ambience_track_dialog(self.bnk, on_ambience_track_created, tag=tag)
 

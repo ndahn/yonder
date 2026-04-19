@@ -7,7 +7,7 @@ import json
 import shutil
 import networkx as nx
 
-from yonder.hash import calc_hash
+from yonder.hash import calc_hash, Hash
 from yonder.util import logger, resource_data
 from yonder.query import query_nodes
 from yonder.enums import SourceType
@@ -324,7 +324,7 @@ class Soundbank:
 
         if hasattr(node, "parent"):
             return self.get(node.parent, default)
-        
+
         for other in self:
             for _, ref in other.get_references():
                 if ref == node.id:
@@ -593,7 +593,7 @@ class Soundbank:
 
         return severity
 
-    def get(self, nid: int | str, default: Any = None) -> HIRCNode:
+    def get(self, nid: Hash, default: Any = None) -> HIRCNode:
         try:
             return self[nid]
         except (KeyError, IndexError):
@@ -613,7 +613,7 @@ class Soundbank:
 
         return key in self._id2index
 
-    def __getitem__(self, key: int | str) -> HIRCNode:
+    def __getitem__(self, key: Hash) -> HIRCNode:
         if isinstance(key, str):
             if key.startswith("#"):
                 key = int(key[1:])
@@ -623,7 +623,7 @@ class Soundbank:
         idx = self._id2index[key]
         return self.hirc.objects[idx]
 
-    def __delitem__(self, key: int | str | HIRCNode) -> None:
+    def __delitem__(self, key: Hash | HIRCNode) -> None:
         if isinstance(key, HIRCNode):
             key = key.id
         elif isinstance(key, str):

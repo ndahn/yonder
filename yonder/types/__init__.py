@@ -3,7 +3,6 @@ from .actor_mixer import ActorMixer
 from .attenuation import Attenuation
 from .audio_device import AudioDevice
 from .aux_bus import AuxiliaryBus
-from .base_types import Hash
 from .bus import Bus
 from .dialog_event import DialogueEvent
 from .event import Event

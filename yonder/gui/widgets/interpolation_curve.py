@@ -55,7 +55,7 @@ class add_interpolation_curve(DpgItem):
         initial_curve: GraphCurve,
         on_curve_changed: Callable[[str, GraphCurve, Any], None] = None,
         *,
-        tag: int | str = None,
+        tag: str = None,
         user_data: Any = None,
     ) -> None:
         super().__init__(tag)
@@ -70,7 +70,7 @@ class add_interpolation_curve(DpgItem):
         self._drag_points: list[int] = []
         self._hovered: int = -1
         self._selected: int = 0
-        self._handler_reg: int | str = None
+        self._handler_reg: str = None
 
         self._build()
 

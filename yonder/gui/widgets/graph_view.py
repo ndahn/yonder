@@ -48,7 +48,7 @@ class add_graph_widget(DpgItem):
         horizontal: bool = True,
         width: int = 400,
         height: int = 400,
-        tag: int | str = None,
+        tag: str = None,
         user_data: Any = None,
     ) -> None:
         super().__init__(tag)
@@ -64,7 +64,7 @@ class add_graph_widget(DpgItem):
         self._g: nx.DiGraph = None
         self._layout: dict[int, tuple] = {}
         self._current_highlight: int = -1
-        self._handler_reg: int | str = None
+        self._handler_reg: str = None
 
         self._build(width, height)
         self.regenerate()

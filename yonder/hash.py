@@ -1,14 +1,15 @@
-from typing import Any, Container
+from typing import Any, Container, NewType
 from pathlib import Path
 from random import randrange
 
 from yonder.util import resource_data
 
 
-global_hash_dict: dict[int, str] = {}
+Hash = NewType("Hash", int)
+global_hash_dict: dict[Hash, str] = {}
 
 
-def calc_hash(input: str) -> int:
+def calc_hash(input: str) -> Hash:
     # This is the FNV-1a 32-bit hash taken from rewwise
     # https://github.com/vswarte/rewwise/blob/127d665ab5393fb7b58f1cade8e13a46f71e3972/analysis/src/fnv.rs#L6
     FNV_BASE = 2166136261
@@ -26,7 +27,7 @@ def calc_hash(input: str) -> int:
     return result
 
 
-def load_lookup_table(path: Path = None) -> dict[int, str]:
+def load_lookup_table(path: Path = None) -> dict[Hash, str]:
     if not path:
         pairs = resource_data("wwise_ids.txt").splitlines()
     else:
@@ -43,7 +44,7 @@ def load_lookup_table(path: Path = None) -> dict[int, str]:
     return table
 
 
-def lookup_name(h: int, default: Any = None) -> str:
+def lookup_name(h: Hash, default: Any = None) -> str:
     global global_hash_dict
 
     if not global_hash_dict:
@@ -53,13 +54,13 @@ def lookup_name(h: int, default: Any = None) -> str:
 
 
 class UniqueIdGenerator:
-    def __init__(self, invalid_ids: Container[int] = None):
+    def __init__(self, invalid_ids: Container[Hash] = None):
         self.invalid_ids = invalid_ids
 
-    def __call__(self) -> int:
+    def __call__(self) -> Hash:
         return self.new_id()
 
-    def new_id(self) -> int:
+    def new_id(self) -> Hash:
         while True:
             # IDs should be signed 32bit integers, although in practice
             # I've rarely seen any below 1000000 (expected I guess?)

@@ -3,7 +3,7 @@ from enum import Enum, IntFlag
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
-from yonder.types import Hash
+from yonder.hash import Hash
 from yonder.gui.localization import µ
 from yonder.gui.helpers import shorten_path
 from yonder.gui.dialogs.file_dialog import (
@@ -274,6 +274,7 @@ def add_generic_widget(
     else:
         if not_supported_ok:
             return None
+
         raise ValueError(f"Could not handle type {value_type} for {label}")
 
     return tag

@@ -2,6 +2,7 @@ from typing import Any, Callable
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
+from yonder.hash import Hash
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_wav_player
@@ -64,16 +65,14 @@ class edit_markers_dialog(DpgItem):
         loop_end: float = -1.0,
         on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
         user_markers_enabled: bool = False,
-        user_markers: dict[int | str, float] = None,
-        on_user_marker_changed: Callable[
-            [str, dict[int | str, float], Any], None
-        ] = None,
+        user_markers: dict[Hash, float] = None,
+        on_user_marker_changed: Callable[[str, dict[Hash, float], Any], None] = None,
         trim_enabled: bool = False,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
         on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
         markers_in_ms: bool = True,
-        tag: int | str = None,
+        tag: str = None,
         user_data: Any = None,
     ) -> None:
         super().__init__(tag)
@@ -86,15 +85,14 @@ class edit_markers_dialog(DpgItem):
         self._on_user_marker_changed = on_user_marker_changed
         self._on_trim_marker_changed = on_trim_marker_changed
         self._user_data = user_data
+        self._window: str = None
 
         # Buffered state used when accept_on_okay=True
         self._loop_info: tuple[float, float, bool] = (loop_start, loop_end, True)
-        self._user_markers: dict[int | str, float] = (
+        self._user_markers: dict[Hash, float] = (
             dict(user_markers) if user_markers else {}
         )
         self._trims: tuple[float, float] = (begin_trim, end_trim)
-
-        self._window: int | str = None
 
         self._build(
             title, sound, loop_start, loop_end, begin_trim, end_trim, markers_in_ms

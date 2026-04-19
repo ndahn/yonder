@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from yonder.hash import calc_hash
+from yonder.hash import calc_hash, Hash
 from .hirc_node import HIRCNode
 
 
@@ -14,7 +14,7 @@ class State(HIRCNode):
     values: list[float] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: int | str, params: dict[int | str, float]) -> State:
+    def new(cls, nid: Hash, params: dict[Hash, float]) -> State:
         obj = cls(nid)
 
         for key, val in params.items():

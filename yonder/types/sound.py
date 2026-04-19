@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
 
+from yonder.hash import Hash
+from yonder.enums import SourceType, PropID
 from yonder.wem import get_wem_metadata
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -12,7 +14,6 @@ from .base_types import (
     MediaInformation,
     RTPC,
 )
-from yonder.enums import SourceType, PropID
 from .mixins import PropertyMixin
 
 
@@ -25,7 +26,7 @@ class Sound(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         wem: Path = None,
         source_type: SourceType = SourceType.Embedded,
         props: dict[PropID, float] = None,

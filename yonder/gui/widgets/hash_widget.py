@@ -1,7 +1,7 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder.hash import calc_hash, lookup_name
+from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.gui.helpers import estimate_drawn_text_size
 from .dpg_item import DpgItem
 
@@ -45,8 +45,8 @@ class add_hash_widget(DpgItem):
 
     def __init__(
         self,
-        default_value: int = 0,
-        on_hash_changed: Callable[[str, tuple[int, str], Any], None] = None,
+        default_value: Hash = 0,
+        on_hash_changed: Callable[[str, tuple[Hash, str], Any], None] = None,
         *,
         initial_string: str = None,
         horizontal: bool = True,
@@ -55,8 +55,8 @@ class add_hash_widget(DpgItem):
         string_label: str = "String",
         hash_label: str = "Hash",
         width: int = 280,
-        parent: int | str = 0,
-        tag: int | str = 0,
+        parent: str = 0,
+        tag: str = 0,
         user_data: Any = None,
     ) -> None:
         super().__init__(tag)
@@ -83,7 +83,7 @@ class add_hash_widget(DpgItem):
 
     def _build(
         self,
-        default_value: int,
+        default_value: Hash,
         initial_string: str,
         horizontal: bool,
         allow_edit_hash: bool,
@@ -91,7 +91,7 @@ class add_hash_widget(DpgItem):
         string_label: str,
         hash_label: str,
         width: int,
-        parent: int | str,
+        parent: str,
     ) -> None:
         tag = self._tag
 
@@ -164,11 +164,11 @@ class add_hash_widget(DpgItem):
     # === Public accessors =================
 
     @property
-    def hash_value(self) -> int:
+    def hash_value(self) -> Hash:
         return int(dpg.get_value(self._t("hash")))
 
     @hash_value.setter
-    def hash_value(self, value: int) -> None:
+    def hash_value(self, value: Hash) -> None:
         dpg.set_value(self._t("hash"), str(value))
         self._on_hash_update(None, str(value), None)
 

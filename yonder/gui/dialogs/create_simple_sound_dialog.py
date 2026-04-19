@@ -47,7 +47,7 @@ class create_simple_sound_dialog(DpgItem):
         *,
         default_name: str = "s100200300",
         title: str = "Create Simple Sound",
-        tag: int | str = None,
+        tag: str = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
             dpg.delete_item(tag)

@@ -50,7 +50,7 @@ class edit_state_path_dialog(DpgItem):
         node_id: int = None,
         raw: bool = False,
         title: str = "New State Path",
-        tag: int | str = None,
+        tag: str = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
             dpg.delete_item(tag)
@@ -69,7 +69,7 @@ class edit_state_path_dialog(DpgItem):
         self._hide_node_id = hide_node_id
         self._raw = raw
         self._leaf_node_id: int = node_id or 0
-        self._window: int | str = None
+        self._window: str = None
 
         self._build(title, state_path, hide_node_id, node_id)
 

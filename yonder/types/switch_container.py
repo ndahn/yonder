@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
 from yonder.enums import PropID, SWITCH_GROUP_IDS
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -33,7 +34,7 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         switch_groups: list[list[int]],
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,

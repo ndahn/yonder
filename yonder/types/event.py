@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import ClassVar, TYPE_CHECKING
 
+from yonder.hash import Hash
 from yonder.enums import SoundType
 from .hirc_node import HIRCNode
 from .action import Action, ActionType
@@ -19,7 +20,7 @@ class Event(HIRCNode):
     actions: list[int] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: int | str, actions: list[int] = None) -> Event:
+    def new(cls, nid: Hash, actions: list[int] = None) -> Event:
         return Event(nid, actions=actions or [])
 
     def get_wwise_name(self, default: Any = None) -> str:

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 from random import randint
 
-from yonder.hash import calc_hash
+from yonder.hash import calc_hash, Hash
 from yonder.enums import GroupType, DecisionTreeMode, PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -58,9 +58,9 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
-        arguments: list[tuple[int | str, GroupType]],
-        branches: list[tuple[list[int | str], int]] = None,
+        nid: Hash,
+        arguments: list[tuple[Hash, GroupType]],
+        branches: list[tuple[list[Hash], int]] = None,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicSwitchContainer:
@@ -142,7 +142,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
             num_tree_nodes += len(item.children)
             todo.extend(item.children)
 
-    def add_argument(self, argument: int | str, group_type: GroupType) -> None:
+    def add_argument(self, argument: Hash, group_type: GroupType) -> None:
         if argument in self.arguments:
             raise ValueError(f"Argument {argument} already exists")
 
@@ -152,7 +152,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         self.tree_depth = len(self.arguments)
         # TODO we should extend the tree if it's more than just the root
 
-    def add_branch(self, path: list[int | str], node_id: int) -> None:
+    def add_branch(self, path: list[Hash], node_id: int) -> None:
         if len(path) != len(self.arguments):
             raise ValueError("Path length must be equal to number of tree arguments")
 

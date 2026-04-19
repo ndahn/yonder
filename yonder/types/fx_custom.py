@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
 from .hirc_node import HIRCNode
 from .base_types import FxBaseInitialValues, RTPC
 
@@ -14,7 +15,7 @@ class EffectCustom(HIRCNode):
     )
 
     @classmethod
-    def new(cls, nid: int | str) -> EffectCustom:
+    def new(cls, nid: Hash) -> EffectCustom:
         return cls(nid)
 
     @property

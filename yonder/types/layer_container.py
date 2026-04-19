@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from yonder.hash import Hash
 from yonder.enums import PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -28,7 +29,7 @@ class LayerContainer(PropertyMixin, HIRCNode):
     @classmethod
     def new(
         cls,
-        nid: int | str,
+        nid: Hash,
         layer_nodes: list[list[int]] = None,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
@@ -66,7 +67,9 @@ class LayerContainer(PropertyMixin, HIRCNode):
 
     def add_layer(self, nodes: list[int]) -> Layer:
         # TODO
-        logger.warning("Layer containers have not been properly researched yet, adding layers may lead to invalid soundbanks")
+        logger.warning(
+            "Layer containers have not been properly researched yet, adding layers may lead to invalid soundbanks"
+        )
         self.layers.append(
             Layer(associated_children=[AssociatedChildData(int(nid)) for nid in nodes])
         )
