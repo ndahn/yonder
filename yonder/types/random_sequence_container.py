@@ -94,6 +94,21 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
 
         self.children.add(other)
 
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.children:
+            self.children.remove(other)
+            
+            indices = []
+            for idx, item in enumerate((self.playlist)):
+                if item.play_id == other:
+                    indices.append(idx)
+
+            for idx in reversed(indices):
+                self.playlist.pop(idx)
+
     @property
     def mode_enum(self) -> PlaybackMode:
         return PlaybackMode(self.mode)
@@ -105,10 +120,3 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     def add_playlist_item(self, child_id: int) -> None:
         self.children.add(child_id)
         self.playlist.items.append(PlaylistItem(child_id))
-
-    def remove_playlist_item(self, child_id: int) -> None:
-        self.children.pop(child_id, missing_ok=True)
-        for idx, item in enumerate(self.playlist.items):
-            if item.play_id == child_id:
-                self.playlist.items.pop(idx)
-                break

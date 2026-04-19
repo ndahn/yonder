@@ -277,3 +277,18 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         self.add_playlist_item(pid, int(other))
         
         logger.warning("Don't forget to adjust the new playlist item details!")
+
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.children:
+            self.children.remove(other)
+
+            indices = []
+            for idx, item in enumerate(self.playlist_items):
+                if item.segment_id:
+                    indices.append(idx)
+
+            for idx in reversed(indices):
+                self.playlist_items.pop(idx)

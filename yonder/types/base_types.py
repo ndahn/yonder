@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator, NewType
+from typing import Any, Iterator, NewType, TypeVar, Generic
 from dataclasses import dataclass, field
 
 from yonder.hash import lookup_name
@@ -24,6 +24,60 @@ from yonder.enums import (
 
 
 Hash = NewType("Hash", int)
+_T = TypeVar("_T")
+
+
+@dataclass(slots=True)
+class _ItemContainer(Generic[_T]):
+    def add(self, item: int) -> None:
+        from .hirc_node import HIRCNode
+
+        if isinstance(item, HIRCNode):
+            item = item.id
+
+        item = int(item)
+        if item not in self.items:
+            self.items.append(item)
+            self.items.sort()
+
+    def pop(self, idx: int) -> _T:
+        return self.items.pop(idx)
+
+    def remove(self, item: _T, missing_ok: bool = True) -> None:
+        from .hirc_node import HIRCNode
+
+        if isinstance(item, HIRCNode):
+            item = item.id
+        
+        try:
+            self.items.remove(item)
+        except ValueError:
+            if not missing_ok:
+                raise ValueError(f"Item {item} not found")
+
+    def clear(self) -> None:
+        self.items.clear()
+
+    def __contains__(self, item) -> bool:
+        return item in self.items
+
+    def __getitem__(self, idx: int) -> _T:
+        return self.items[idx]
+
+    def __setitem__(self, idx: int, item: _T) -> int:
+        self.items[idx] = item
+
+    def __delitem__(self, idx: int) -> None:
+        del self.items[idx]
+
+    def __iter__(self) -> Iterator[_T]:
+        yield from self.items
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def get_references(self) -> list[tuple[str, int]]:
+        return [(f"items:{i}", item) for i, item in enumerate(self.items)]
 
 
 @dataclass(slots=True)
@@ -458,53 +512,12 @@ class PropBundleByte:
 
 
 @dataclass(slots=True)
-class Children:
+class Children(_ItemContainer[int]):
     count: int = 0
     items: list[int] = field(default_factory=list)
 
-    def add(self, item: int) -> None:
-        from .hirc_node import HIRCNode
-
-        if isinstance(item, HIRCNode):
-            item = item.id
-
-        item = int(item)
-        if item not in self.items:
-            self.items.append(item)
-            self.items.sort()
-
-    def pop(self, item: int, missing_ok: bool = True) -> None:
-        for idx, val in enumerate(self.items):
-            if val == item:
-                del self.items[idx]
-                return
-
-        if not missing_ok:
-            raise ValueError(f"Item {item} not found")
-
-    def clear(self) -> None:
-        self.items.clear()
-
-    def __getitem__(self, idx: int) -> int:
-        return self.items[idx]
-
-    def __setitem__(self, idx: int, item: int) -> int:
-        self.items[idx] = item
-
-    def __delitem__(self, idx: int) -> None:
-        del self.items[idx]
-
-    def __iter__(self) -> Iterator[int]:
-        yield from self.items
-
-    def __len__(self) -> int:
-        return len(self.items)
-
     def validate(self) -> None:
         self.items = sorted(set(self.items))
-
-    def get_references(self) -> list[tuple[str, int]]:
-        return [(f"items:{i}", item) for i, item in enumerate(self.items)]
 
 
 @dataclass(slots=True)
@@ -744,7 +757,7 @@ class PlaylistItem:
 
 
 @dataclass(slots=True)
-class Playlist:
+class Playlist(_ItemContainer[PlaylistItem]):
     count: int = 0
     items: list[PlaylistItem] = field(default_factory=list)
 

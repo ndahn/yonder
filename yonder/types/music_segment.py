@@ -82,6 +82,13 @@ class MusicSegment(PropertyMixin, HIRCNode):
 
         self.children.add(other)
 
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.children:
+            self.children.remove(other)
+
     def set_marker(
         self, mid: int | str | MarkerId, pos: float, update: bool = True
     ) -> MusicMarkerWwise:

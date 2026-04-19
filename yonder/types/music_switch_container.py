@@ -119,6 +119,21 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
             f"Attached node with state path {state_path}, don't forget to change it as needed!"
         )
 
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        def delve(node: DecisionTreeNode):
+            if node.node_id == other:
+                node.node_id = 0
+
+            for child in node.children:
+                delve(child)
+
+        if other in self.children:
+            self.children.remove(other)
+            delve(self.tree)
+
     def get_tree_size(self) -> int:
         num_tree_nodes = 1
         todo = [self.tree]

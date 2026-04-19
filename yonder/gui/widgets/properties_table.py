@@ -69,14 +69,14 @@ class add_properties_table(DpgItem):
 
     # === Internal ======================================================
 
-    def _prop_combo_tag(self, prop: PropID) -> str:
-        return self._t(f"combo_{prop.name}")
+    def _combo_tag(self, idx: int) -> str:
+        return self._t(f"combo_{idx}")
 
-    def _prop_value_tag(self, prop: PropID) -> str:
-        return self._t(f"value_{prop.name}")
+    def _value_tag(self, idx: int) -> str:
+        return self._t(f"value_{idx}")
 
-    def _prop_remove_tag(self, prop: PropID) -> str:
-        return self._t(f"remove_{prop.name}")
+    def _remove_tag(self, idx: int) -> str:
+        return self._t(f"remove_{idx}")
 
     def _get_available_props(self, exclude: PropID = None) -> list[PropID]:
         used = set(self._properties.keys())
@@ -84,41 +84,35 @@ class add_properties_table(DpgItem):
             used.discard(exclude)
         return [k for k in PropID if k not in used]
 
-    def refresh(self) -> None:
-        dpg.delete_item(self._tag, children_only=True, slot=1)
-        for prop, val in self._properties.items():
-            self._add_row(prop, val)
-        self._add_footer()
-
     def _sync_combos(self) -> None:
-        for prop in self._properties:
+        for idx, prop in enumerate(self._properties):
             dpg.configure_item(
-                self._prop_combo_tag(prop),
+                self._combo_tag(idx),
                 items=[p.name for p in self._get_available_props(exclude=prop)],
             )
 
-    def _add_row(self, prop: PropID, val: float) -> None:
+    def _add_row(self, idx: int, prop: PropID, val: float) -> None:
         with dpg.table_row(parent=self._tag):
             dpg.add_combo(
                 items=[p.name for p in self._get_available_props(exclude=prop)],
                 default_value=prop.name,
                 width=-1,
                 callback=self._on_prop_type_changed,
-                user_data=prop,
-                tag=self._prop_combo_tag(prop),
+                user_data=idx,
+                tag=self._combo_tag(idx),
             )
             dpg.add_input_double(
                 default_value=val,
                 width=-1,
                 callback=self._on_prop_value_changed,
-                user_data=prop,
-                tag=self._prop_value_tag(prop),
+                user_data=idx,
+                tag=self._value_tag(idx),
             )
             dpg.add_button(
                 label="x",
                 callback=self._on_remove_clicked,
-                user_data=prop,
-                tag=self._prop_remove_tag(prop),
+                user_data=idx,
+                tag=self._remove_tag(idx),
             )
 
     def _add_footer(self) -> None:
@@ -127,35 +121,26 @@ class add_properties_table(DpgItem):
 
     # === DPG callbacks =================================================
 
-    def _on_prop_type_changed(
-        self, sender: str, new_key: str, old_prop: PropID
-    ) -> None:
+    def _on_prop_type_changed(self, sender: str, new_key: str, idx: int) -> None:
         new_prop = PropID[new_key]
-        val = self._properties.pop(old_prop)
-        self._properties[new_prop] = val
+        props_list = list(self._properties.items())
+        old_prop, val = props_list[idx]
 
-        # Retag the value widget so derived lookups stay consistent
-        dpg.configure_item(
-            self._prop_value_tag(old_prop), tag=self._prop_value_tag(new_prop)
-        )
-        dpg.configure_item(
-            self._prop_combo_tag(old_prop),
-            tag=self._prop_combo_tag(new_prop),
-            user_data=new_prop,
-        )
-        dpg.configure_item(
-            self._prop_remove_tag(old_prop),
-            tag=self._prop_remove_tag(new_prop),
-            user_data=new_prop,
-        )
-        dpg.configure_item(
-            self._prop_value_tag(new_prop), default_value=0.0, user_data=new_prop
-        )
+        # Rebuild the dict preserving insertion order
+        self._properties.clear()
+        for i, (p, v) in enumerate(props_list):
+            self._properties[new_prop if i == idx else p] = v
+
+        # Update value widget: reset to 0 only if the type actually changed
+        if old_prop != new_prop:
+            dpg.set_value(self._value_tag(idx), 0.0)
+            self._properties[new_prop] = 0.0
 
         self._sync_combos()
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
-    def _on_prop_value_changed(self, sender: str, new_val: float, prop: PropID) -> None:
+    def _on_prop_value_changed(self, sender: str, new_val: float, idx: int) -> None:
+        prop = list(self._properties.keys())[idx]
         self._properties[prop] = new_val
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
@@ -167,12 +152,19 @@ class add_properties_table(DpgItem):
         self.refresh()
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
-    def _on_remove_clicked(self, sender: str, app_data: Any, prop: PropID) -> None:
+    def _on_remove_clicked(self, sender: str, app_data: Any, idx: int) -> None:
+        prop = list(self._properties.keys())[idx]
         self._properties.pop(prop)
         self.refresh()
         self._on_value_changed(self._tag, dict(self._properties), self._user_data)
 
     # === Public ========================================================
+
+    def refresh(self) -> None:
+        dpg.delete_item(self._tag, children_only=True, slot=1)
+        for idx, (prop, val) in enumerate(self._properties.items()):
+            self._add_row(idx, prop, val)
+        self._add_footer()
 
     @property
     def properties(self) -> dict[PropID, float]:

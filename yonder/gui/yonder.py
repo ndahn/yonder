@@ -782,6 +782,7 @@ class BanksOfYonder(DpgItem):
             no_move=True,
             no_saved_settings=True,
             autosize=True,
+            on_close=lambda: dpg.delete_item(popup),
         ) as popup:
             dpg.add_selectable(
                 label=µ("Unpin"),
@@ -794,6 +795,7 @@ class BanksOfYonder(DpgItem):
                 callback=self.remove_all_pinned_objects,
                 tag=self._t("pin/unpin_all"),
             )
+            dpg.add_separator()
             dpg.add_selectable(
                 label=µ("Jump To"),
                 callback=lambda s, a, u: self.jump_to_node(u),
@@ -968,7 +970,7 @@ class BanksOfYonder(DpgItem):
         bnk = self.bnk
 
         def register_context_menu(tag: str, node: HIRCNode) -> None:
-            registry = self._t("handlers")
+            registry = self._t(f"ctx_handler_{node.id}")
 
             if not dpg.does_item_exist(registry):
                 dpg.add_item_handler_registry(tag=registry)
@@ -1443,9 +1445,11 @@ class BanksOfYonder(DpgItem):
         if not self._selected_node:
             return
 
+        parent = self.bnk.get_parent(self._selected_node)
         self.bnk.delete_nodes(self._selected_node)
         logger.info(µ("Deleted {node}", "log").format(node=self._selected_node))
-        self._on_node_selected(None, False, None)
+
+        self._on_node_selected(None, True, parent)
         self.regenerate()
 
     def node_delete_tree(self) -> None:
@@ -1453,13 +1457,16 @@ class BanksOfYonder(DpgItem):
             return
 
         g = self.bnk.get_subtree(self._selected_node, True, False)
+        parent = self.bnk.get_parent(self._selected_node)
         self.bnk.delete_nodes(*g.nodes)
+
         logger.info(
             µ("Deleted {node} and {num} children").format(
                 node=self._selected_node, num=len(g) - 1
             )
         )
-        self._on_node_selected(None, False, None)
+
+        self._on_node_selected(None, True, parent)
         self.regenerate()
 
     def update_json_panel(self) -> None:

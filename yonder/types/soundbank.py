@@ -242,21 +242,25 @@ class Soundbank:
 
         # Search for any nodes referencing the deleted nodes and clear those references
         for node in self.hirc.objects:
-            for path, ref in node.get_references(node):
-                if ref not in abandoned:
-                    continue
+            if hasattr(node, "detach"):
+                for ref in abandoned:
+                    node.detach(ref)
+            else:
+                for path, ref in node.get_references():
+                    if ref not in abandoned:
+                        continue
 
-                # Remove reference from an array
-                parts = path.rsplit("/", maxsplit=1)
-                if ":" in parts[-1]:
-                    key, _ = parts[-1].split(":")
-                    parent_value: list[int] = node[parts[0] + "/" + key]
-                    # Luckily the X_count fields don't matter to rewwise,
-                    # otherwise we'd have to update them here, too
-                    parent_value.remove(ref)
-                else:
-                    # Unset reference field
-                    node[path] = 0
+                    # Remove reference from an array
+                    parts = path.rsplit("/", maxsplit=1)
+                    if ":" in parts[-1]:
+                        key, _ = path.rsplit(":", maxsplit=1)
+                        parent_value: list[int] = node[key]
+                        # Luckily the X_count fields don't matter to rewwise,
+                        # otherwise we'd have to update them here, too
+                        parent_value.remove(ref)
+                    else:
+                        # Unset reference field
+                        node[path] = 0
 
         self._regenerate_index_table()
 
@@ -313,6 +317,20 @@ class Soundbank:
                 todo.extend((ref, node_id) for _, ref in node.get_references())
 
         return g
+
+    def get_parent(self, node: int | HIRCNode, default: Any = None) -> HIRCNode:
+        if not isinstance(node, HIRCNode):
+            node = self[node]
+
+        if hasattr(node, "parent"):
+            return self.get(node.parent, default)
+        
+        for other in self:
+            for _, ref in other.get_references():
+                if ref == node.id:
+                    return other
+
+        return default
 
     def get_parent_chain(self, entrypoint: HIRCNode) -> list[int]:
         """Go up in the HIRC from the specified entrypoint and collect all node IDs along the way until we reach the top."""

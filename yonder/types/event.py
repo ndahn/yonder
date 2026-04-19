@@ -70,5 +70,12 @@ class Event(HIRCNode):
             # Actions are *not* sorted
             self.actions.append(other)
 
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.actions:
+            self.actions.remove(other)
+
     def __str__(self) -> str:
         return super().__str__()

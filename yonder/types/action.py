@@ -113,6 +113,13 @@ class Action(PropertyMixin, HIRCNode):
 
         self.external_id = int(other)
 
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if self.external_id == other:
+            self.external_id = 0
+            
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 

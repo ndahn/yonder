@@ -83,3 +83,13 @@ class LayerContainer(PropertyMixin, HIRCNode):
             other = other.id
 
         self.add_layer([int(other)])
+
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.children:
+            self.children.remove(other)
+            for layer in self.layers:
+                if other in layer.associated_children:
+                    layer.associated_children.remove(other)

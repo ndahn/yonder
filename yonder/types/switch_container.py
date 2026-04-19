@@ -84,3 +84,10 @@ class SwitchContainer(PropertyMixin, HIRCNode):
             other = other.id
 
         self.children.add(other)
+
+    def detach(self, other: int | HIRCNode) -> None:
+        if isinstance(other, HIRCNode):
+            other = other.id
+
+        if other in self.children:
+            self.children.remove(other)
