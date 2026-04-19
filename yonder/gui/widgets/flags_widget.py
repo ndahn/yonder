@@ -69,11 +69,9 @@ def add_flag_checkboxes(
             active_flags = flag_type(active_flags)
         except ValueError:
             logger.error(
-                µ(
-                    "{active_flags} is not valid for flag type {type}",
-                    "log"
-                ).format(flag=active_flags,
-                    type=flag_type.__name__)
+                µ("{active_flags} is not valid for flag type {type}", "log").format(
+                    flag=active_flags, type=flag_type.__name__
+                )
             )
             active_flags = 0
 

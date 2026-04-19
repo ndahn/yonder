@@ -175,7 +175,9 @@ class select_nodes_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label=µ("Okay", "button"), callback=self._on_okay, tag=self._t("button_okay")
+                    label=µ("Okay", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("button_okay"),
                 )
                 dpg.add_button(
                     label=µ("Cancel", "button"),

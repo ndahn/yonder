@@ -186,10 +186,7 @@ class mass_transfer_dialog(DpgItem):
             src_play_id = self._line_to_hash(line)
             if src_play_id not in self._src_bnk:
                 self.show_message(
-                    µ(
-                        "{name} not found in source bank", "msg"
-                        
-                    ).format(name=line)
+                    µ("{name} not found in source bank", "msg").format(name=line)
                 )
                 return
 
@@ -206,10 +203,9 @@ class mass_transfer_dialog(DpgItem):
             dst_play_id = self._line_to_hash(line)
             if dst_play_id in self._dst_bnk:
                 self.show_message(
-                    µ(
-                        "{name} already exists in destination bank",
-                        "msg"
-                    ).format(name=line)
+                    µ("{name} already exists in destination bank", "msg").format(
+                        name=line
+                    )
                 )
                 return
 
@@ -275,14 +271,18 @@ class mass_transfer_dialog(DpgItem):
                 Path,
                 µ("Source Soundbank"),
                 self._on_source_bnk_selected,
-                filetypes={µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]},
+                filetypes={
+                    µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
+                },
                 tag=self._t("mass_transfer/source_bnk"),
             )
             add_generic_widget(
                 Path,
                 µ("Destination Soundbank"),
                 self._on_dest_bnk_selected,
-                filetypes={µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]},
+                filetypes={
+                    µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
+                },
                 tag=self._t("mass_transfer/dest_bnk"),
             )
 

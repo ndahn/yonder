@@ -151,7 +151,9 @@ class add_widget_table(DpgItem):
                     label=self._add_item_label, callback=self._on_add_clicked
                 )
                 if self._show_clear:
-                    dpg.add_button(label=µ("Clear", "button"), callback=self._on_clear_clicked)
+                    dpg.add_button(
+                        label=µ("Clear", "button"), callback=self._on_clear_clicked
+                    )
 
     # === DPG callbacks =================================================
 
@@ -429,7 +431,9 @@ class add_player_table(DpgItem):
         self._on_trim_changed = on_trim_changed
         self._on_user_marker_changed = on_user_marker_changed
         self._initial_user_markers = list(initial_user_markers or [])
-        self._get_row_label = get_row_label or (lambda i: µ("Track #{idx}").format(idx=i))
+        self._get_row_label = get_row_label or (
+            lambda i: µ("Track #{idx}").format(idx=i)
+        )
         self._user_data = user_data
 
         self.players: list = []  # add_wav_player instances, one per track
@@ -582,7 +586,9 @@ class add_player_table_compact(DpgItem):
         super().__init__(tag)
 
         self._on_filepaths_changed = on_filepaths_changed
-        self._get_row_label = get_row_label or (lambda i: µ("Track #{idx}").format(idx=i))
+        self._get_row_label = get_row_label or (
+            lambda i: µ("Track #{idx}").format(idx=i)
+        )
         self._user_data = user_data
         self.player = None  # single shared add_wav_player instance
 

@@ -227,10 +227,7 @@ class add_wav_player(DpgItem):
     def _get_wav_path(self) -> Path:
         if self._audio is None or not self._audio.is_file():
             logger.error(
-                µ(
-                    "Audio {file} does not exist",
-                    "log"
-                ).format(file=self._audio)
+                µ("Audio {file} does not exist", "log").format(file=self._audio)
             )
             return None
 
@@ -239,10 +236,9 @@ class add_wav_player(DpgItem):
             if not wav.is_file():
                 vgmstream = get_config().locate_vgmstream()
                 logger.info(
-                    µ(
-                        "Converting {file} to wav for playback",
-                        "log"
-                    ).format(file=self._audio.name)
+                    µ("Converting {file} to wav for playback", "log").format(
+                        file=self._audio.name
+                    )
                 )
                 wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
             return wav
@@ -251,10 +247,9 @@ class add_wav_player(DpgItem):
             return self._audio
 
         logger.error(
-            µ(
-                "Audio {file} is not a wav or wem file",
-                "log"
-            ).format(file=self._audio.name)
+            µ("Audio {file} is not a wav or wem file", "log").format(
+                file=self._audio.name
+            )
         )
         return None
 
@@ -690,18 +685,14 @@ class add_wav_player(DpgItem):
                 self._create_player()
             except FileNotFoundError:
                 logger.error(
-                    µ(
-                        "Audio {file} not found",
-                        "msg"
-                    ).format(file=self._audio)
+                    µ("Audio {file} not found", "msg").format(file=self._audio)
                 )
                 dpg.hide_item(self._t("plot_group"))
                 dpg.configure_item(
                     self._t("audio_error"),
-                    default_value=µ(
-                        "Audio {file} not found",
-                        "msg"
-                    ).format(file=self._audio.name),
+                    default_value=µ("Audio {file} not found", "msg").format(
+                        file=self._audio.name
+                    ),
                     show=True,
                 )
                 return

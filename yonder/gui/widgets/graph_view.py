@@ -213,11 +213,7 @@ class add_graph_widget(DpgItem):
             py = transformed_y[idx]
 
             node = self._bnk.get(nid)
-            label = (
-                node.type_name
-                if node
-                else µ("(not found)", node=node)
-            )
+            label = node.type_name if node else µ("(not found)", node=node)
             # TODO font_size does not match with the font we're using
             _, ph = estimate_drawn_text_size(len(label), font_size=12)
 

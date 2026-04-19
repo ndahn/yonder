@@ -128,9 +128,7 @@ class edit_transition_dialog(DpgItem):
         dst = self._dst_rule
 
         with dpg.window(
-            label=µ(
-                "Edit Transition ({node_id})"
-            ).format(node_id=self._node.id),
+            label=µ("Edit Transition ({node_id})").format(node_id=self._node.id),
             width=400,
             height=400,
             autosize=True,
@@ -243,10 +241,13 @@ class edit_transition_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label=µ("Okay", "button"), callback=self._on_okay, tag=self._t("button_okay")
+                    label=µ("Okay", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("button_okay"),
                 )
                 dpg.add_button(
-                    label=µ("Cancel", "button"), callback=lambda: dpg.delete_item(self._window)
+                    label=µ("Cancel", "button"),
+                    callback=lambda: dpg.delete_item(self._window),
                 )
 
     # === DPG Callbacks =================================================

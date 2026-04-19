@@ -135,7 +135,9 @@ class simple_combo_dialog(DpgItem):
             )
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label=µ("Okay", "button"), callback=on_okay, tag=self._t("okay"))
+                dpg.add_button(
+                    label=µ("Okay", "button"), callback=on_okay, tag=self._t("okay")
+                )
 
         dpg.split_frame()
         center_window(dialog)

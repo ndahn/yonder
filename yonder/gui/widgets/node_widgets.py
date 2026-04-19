@@ -266,7 +266,7 @@ def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
         logger.warning(
             µ(
                 "Could not find streamed sound for {sound}, playing prefetch snippet",
-                "log"
+                "log",
             ).format(sound=source_id)
         )
         return wem
@@ -295,10 +295,9 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
                 snippet = create_prefetch_snippet(wav)
                 wem_snippet = wav2wem(wwise, snippet, out_dir=bnk.bnk_dir)[0]
                 logger.info(
-                    µ(
-                        "Placed prefetch snippet in {file}",
-                        "log"
-                    ).format(file=wem_snippet)
+                    µ("Placed prefetch snippet in {file}", "log").format(
+                        file=wem_snippet
+                    )
                 )
 
         else:
@@ -711,9 +710,7 @@ def _create_attributes_event(
                     add_node_link(str(target), target.id, on_node_selected)
                 else:
                     dpg.add_text(
-                        µ(
-                            "#{node} (not found)"
-                        ).format(node=action.external_id)
+                        µ("#{node} (not found)").format(node=action.external_id)
                     )
 
             else:
@@ -1070,10 +1067,9 @@ def _create_attributes_musictrack(
                     player.set_fadeout(curve)
                 else:
                     logger.warning(
-                        µ(
-                            "Unknown clip automation type {type}",
-                            "log"
-                        ).format(type=auto_type)
+                        µ("Unknown clip automation type {type}", "log").format(
+                            type=auto_type
+                        )
                     )
 
     def on_clips_changed(
@@ -1299,7 +1295,8 @@ def _create_attributes_switchcontainer(
         )
 
         with dpg.tree_node(
-            label=µ("Switches", "SwitchContainer"), tag=f"{base_tag}/switchcontainer/switches"
+            label=µ("Switches", "SwitchContainer"),
+            tag=f"{base_tag}/switchcontainer/switches",
         ):
             for switch in node.switch_groups:
                 name = lookup_name(switch.switch_id, "?")

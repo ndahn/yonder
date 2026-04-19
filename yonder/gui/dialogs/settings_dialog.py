@@ -133,7 +133,9 @@ class settings_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label=µ("Save", "button"), callback=self._on_okay, tag=self._t("button_save")
+                    label=µ("Save", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("button_save"),
                 )
 
     def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:

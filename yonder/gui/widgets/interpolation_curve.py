@@ -120,7 +120,9 @@ class add_interpolation_curve(DpgItem):
                 )
                 dpg.add_text("|")
                 dpg.add_button(
-                    label=µ("Add", "button"), callback=self._on_add_point, tag=self._t("add")
+                    label=µ("Add", "button"),
+                    callback=self._on_add_point,
+                    tag=self._t("add"),
                 )
                 dpg.add_button(
                     label=µ("Remove", "button"),

@@ -112,9 +112,7 @@ class convert_wavs_dialog(DpgItem):
             if dpg.get_value(self._t("convert_to_wem")):
                 dpg.set_value(
                     f"{loading}_label",
-                    µ(
-                        "Converting {num} files..."
-                    ).format(num=len(out_files)),
+                    µ("Converting {num} files...").format(num=len(out_files)),
                 )
                 out_files = wav2wem(wwise_exe, out_files, out_dir=self.output_dir)
         finally:

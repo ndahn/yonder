@@ -7,7 +7,7 @@ def loading_indicator(
     label: str, color: tuple[int, int, int, int] = style.light_blue
 ) -> str:
     dpg.split_frame()
-    
+
     with dpg.window(
         modal=True,
         min_size=(50, 20),

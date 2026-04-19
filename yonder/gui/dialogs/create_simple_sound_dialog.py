@@ -166,11 +166,7 @@ class create_simple_sound_dialog(DpgItem):
             return
 
         if f"Play_{name}" in self._bnk or f"Stop_{name}" in self._bnk:
-            self.show_message(
-                µ(
-                    "An event with this name already exists"
-                , "msg")
-            )
+            self.show_message(µ("An event with this name already exists", "msg"))
             return
 
         amx = int(dpg.get_value(self._t("actor_mixer")))

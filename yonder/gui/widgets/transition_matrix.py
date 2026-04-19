@@ -89,9 +89,7 @@ class add_transition_matrix(DpgItem):
 
         # TODO consider using a heatmap for better performance instead
         if label:
-            dpg.add_text(
-                label, parent=parent, tag=self._t("transition_matrix/title")
-            )
+            dpg.add_text(label, parent=parent, tag=self._t("transition_matrix/title"))
         dpg.add_table(
             header_row=True,
             no_pad_innerX=True,
@@ -330,21 +328,18 @@ class add_transition_matrix(DpgItem):
                         )
                         with dpg.tooltip(btn):
                             dpg.add_text(
-                                µ(
-                                    "Rule #{rule_idx}").format(
+                                µ("Rule #{rule_idx}").format(
                                     rule_idx=rule_idx,
                                 )
                             )
                             dpg.add_text(f"{source_label} -> {dest_label}")
                             dpg.add_text(
-                                µ(
-                                    "Total transition time: {time}ms").format(
+                                µ("Total transition time: {time}ms").format(
                                     time=total_time,
                                 )
                             )
                             dpg.add_text(
-                                µ(
-                                    "Sync type: {sync_type}").format(
+                                µ("Sync type: {sync_type}").format(
                                     sync_type=rule.source_transition_rule.sync_type.name,
                                 )
                             )

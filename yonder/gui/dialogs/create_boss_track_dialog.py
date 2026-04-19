@@ -292,7 +292,7 @@ class create_boss_track_dialog(DpgItem):
                         - Only already existing BgmEnemyType strings can be used!
                         - BgmBossChrIdConv params mus be 6-digit for EMEVD
                     """,
-                    "tips"
+                    "tips",
                 ),
                 color=style.light_blue,
             )
