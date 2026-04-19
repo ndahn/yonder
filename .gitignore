@@ -2,10 +2,12 @@ test/
 todo/
 /test.py
 tmp/
+*.tmp
 *.pdb
 dpg_demo.py
 **/config.yaml
 yonder_v*
+resources/localization/gettext
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
