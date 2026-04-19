@@ -88,7 +88,7 @@ class BanksOfYonder(DpgItem):
         self._set_bnk_menus_enabled(False)
 
         # Call late to get all created items translated
-        #self._change_language(self.config.language)
+        # self._change_language(self.config.language)
 
         class LogHandler(logging.Handler):
             def emit(this, record: logging.LogRecord):
@@ -305,6 +305,11 @@ class BanksOfYonder(DpgItem):
                     label=µ("Open Temp Dir", "menu"),
                     callback=lambda s, a, u: os.startfile(tmp_dir.name),
                     tag=self._t("menu/open_temp"),
+                )
+                dpg.add_menu_item(
+                    label=(µ("Force Refresh", "menu")),
+                    callback=self.regenerate,
+                    tag=self._t("menu/force_refresh"),
                 )
 
                 dpg.add_separator()
@@ -1436,7 +1441,7 @@ class BanksOfYonder(DpgItem):
         self.bnk.add_nodes(*nodes)
         for n in nodes:
             self.add_pinned_object(n)
-        
+
         nodes[0].parent = self._selected_node
         self._selected_node.attach(nodes[0])
 
@@ -1585,7 +1590,7 @@ class BanksOfYonder(DpgItem):
         def on_events_created(nodes: list[HIRCNode]) -> None:
             for n in nodes:
                 self.add_pinned_object(n)
-            
+
             logger.info(µ("Created new event {node}", "log").format(node=nodes[0]))
             self.regenerate()
             self.select_node(nodes[0])
@@ -1607,11 +1612,11 @@ class BanksOfYonder(DpgItem):
             self.add_pinned_object(stop_evt)
 
             logger.info(
-                µ("Created new sound {name} with {count} sounds").format(
-                    name=play_evt.get_wwise_name(play_evt), count=len(self._soundfiles)
+                µ("Created new simple sound {name}").format(
+                    name=play_evt.get_wwise_name(play_evt)
                 )
             )
-            
+
             self.regenerate()
             self.jump_to_node(play_evt)
 
@@ -1632,12 +1637,8 @@ class BanksOfYonder(DpgItem):
                 self.add_pinned_object(g[0])
                 self.add_pinned_object(g[1])
 
-            logger.info(
-                µ("Created {num} simple sounds").format(
-                    num=len(groups)
-                )
-            )
-            
+            logger.info(µ("Created {num} simple sounds").format(num=len(groups)))
+
             self.regenerate()
             self.jump_to_node(groups[0][0])
 
