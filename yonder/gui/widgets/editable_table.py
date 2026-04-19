@@ -611,14 +611,15 @@ class add_player_table_compact(DpgItem):
     # === DPG callbacks =================================================
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
-        from yonder.gui.dialogs.file_dialog import open_file_dialog
+        from yonder.gui.dialogs.file_dialog import open_multiple_dialog
 
-        ret = open_file_dialog(
+        ret = open_multiple_dialog(
             title=µ("Select Audio"),
             filetypes={µ("Audio (.wem, .wav)", "filetypes"): ["*.wem", "*.wav"]},
         )
         if ret:
-            done(Path(ret))
+            for f in ret:
+                done(Path(f))
 
     def _create_row(self, path: Path, idx: int) -> None:
         dpg.add_input_text(

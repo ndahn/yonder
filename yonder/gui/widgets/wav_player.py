@@ -187,8 +187,11 @@ class add_wav_player(DpgItem):
             self._player = None
 
         self._audio = path
-        path_str = shorten_path(path, 40) if self._show_filepath else path.stem
-        dpg.set_value(self._t("filepath"), path_str)
+
+        if self._allow_change_file:
+            path_str = shorten_path(path, 40) if self._show_filepath else path.stem
+            dpg.set_value(self._t("filepath"), path_str)
+
         self.regenerate()
 
     def open_select_wav_dialog(self) -> None:
@@ -676,7 +679,7 @@ class add_wav_player(DpgItem):
 
     def regenerate(self) -> None:
         """Rebuild the waveform plot from the current audio file."""
-        dpg.delete_item(self._t("yaxis"), children_only=True)
+        dpg.delete_item(self._t("xaxis"), children_only=True)
 
         if not self._player:
             try:
