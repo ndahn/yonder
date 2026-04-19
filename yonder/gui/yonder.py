@@ -88,7 +88,7 @@ class BanksOfYonder(DpgItem):
         self._set_bnk_menus_enabled(False)
 
         # Call late to get all created items translated
-        self._change_language(self.config.language)
+        #self._change_language(self.config.language)
 
         class LogHandler(logging.Handler):
             def emit(this, record: logging.LogRecord):
@@ -128,10 +128,8 @@ class BanksOfYonder(DpgItem):
                 raise ValueError(f"Unknown language {lang}")
 
         set_active_language(lang)
-        lang = get_active_language()
-
         for win in dpg.get_windows():
-            translate_dpg_item(win, lang)
+            translate_dpg_item(win)
 
         # Only save if changing the language didn't cause any issues
         self.config.language = lang
@@ -286,7 +284,7 @@ class BanksOfYonder(DpgItem):
                 ):
                     dpg.add_radio_button(
                         list(get_available_languages().values()),
-                        default_value=get_active_language(),
+                        default_value=get_active_language(True),
                         callback=lambda s, a, u: self._change_language(a),
                     )
                     # dpg.add_separator()

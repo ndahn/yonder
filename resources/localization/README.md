@@ -13,14 +13,14 @@ pip install Babel
 pybabel.exe extract --keyword=µ:1,1t --keyword=µ:1,2c,2t --output-file=template.pot --sort-by-file --input-dirs=../../yonder/gui
 ```
 
-3. Copy the `template.pot` file to `yonder.po` and translate it.
+3. Copy the `template.pot` file and translate it.
 
 4. Compile your translations (`<lang>` should be an ISO639 country code):
 ```bash
-pybabel.exe compile --domain=yonder --locale=<lang> --input-file=yonder.po
+pybabel.exe compile --domain=yonder --locale=<lang> --input-file=<yourfile>.po --output-file=yonder.mo
 ```
 
-5. Verify the previous command created the file `<lang>/LC_MESSAGES/yonder.mo`.
+5. Copy the created `yonder.mo` file to `<lang>/LC_MESSAGES/yonder.mo`.
 
 6. Add an entry in the `_languages` dict in `yonder/gui/localization.py`. 
 

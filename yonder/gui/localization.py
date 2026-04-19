@@ -26,7 +26,9 @@ def get_available_languages() -> dict[str, str]:
     return dict(_languages)
 
 
-def get_active_language() -> str:
+def get_active_language(long: bool = False) -> str:
+    if long:
+        return _languages.get(_active_lang, _active_lang)
     return _active_lang
 
 
@@ -44,7 +46,9 @@ def µ(msg: str, ctx: str = None) -> str:
     else:
         trans = _translation.gettext(msg)
 
-    _reverse_map[trans] = (msg, ctx)
+    if ctx or trans != msg:
+        _reverse_map[trans] = (msg, ctx)
+
     return trans
 
 
@@ -72,5 +76,6 @@ def translate_dpg_item(tag: str, recursive: bool = True) -> None:
                 dpg.set_item_label(tag, trans)
 
     if recursive:
-        for child in dpg.get_item_children(tag, slot=1):
-            translate_dpg_item(child, True)
+        for children in dpg.get_item_children(tag).values():
+            for child in children:
+                translate_dpg_item(child, True)
