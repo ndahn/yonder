@@ -64,17 +64,14 @@ class add_hash_widget(DpgItem):
         self._on_hash_changed = on_hash_changed
         self._user_data = user_data
 
-        string_label = string_label or ""
-        hash_label = hash_label or ""
-
         self._build(
             default_value,
             initial_string,
             horizontal,
             allow_edit_hash,
             allow_edit_name,
-            string_label,
-            hash_label,
+            string_label or "",
+            hash_label or "",
             width,
             parent,
         )

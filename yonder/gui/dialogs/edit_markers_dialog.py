@@ -76,7 +76,7 @@ class edit_markers_dialog(DpgItem):
         tag: int | str = None,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._accept_on_okay = accept_on_okay
         self._loop_markers_enabled = loop_markers_enabled

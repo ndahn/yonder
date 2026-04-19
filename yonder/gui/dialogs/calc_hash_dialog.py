@@ -18,7 +18,7 @@ class calc_hash_dialog(DpgItem):
 
         with dpg.window(
             label=title,
-            width=320,
+            width=340,
             height=130,
             no_saved_settings=True,
             tag=self.tag,
@@ -31,5 +31,3 @@ class calc_hash_dialog(DpgItem):
                 color=style.blue,
                 tag=self._t("calc_hash/tips"),
             )
-
-        return tag

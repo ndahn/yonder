@@ -68,7 +68,7 @@ class add_transition_matrix(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._node = node
         self._on_transition_rules_changed = on_transition_rules_changed

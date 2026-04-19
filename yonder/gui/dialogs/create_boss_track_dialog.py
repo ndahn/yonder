@@ -28,10 +28,7 @@ class create_boss_track_dialog(DpgItem):
         title: str = "New Boss BGM",
         tag: str = None,
     ) -> str:
-        if not tag:
-            tag = dpg.generate_uuid()
-        elif dpg.does_item_exist(tag):
-            dpg.delete_item(tag)
+        super().__init__(tag)
 
         self.bnk = bnk
         self.on_boss_track_created = on_boss_track_created

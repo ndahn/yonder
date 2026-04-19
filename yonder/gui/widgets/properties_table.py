@@ -37,7 +37,7 @@ class add_properties_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag not in (None, 0, "") else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._properties = properties
         self._on_value_changed = on_value_changed
@@ -179,6 +179,6 @@ class add_properties_table(DpgItem):
         return dict(self._properties)
 
     @properties.setter
-    def propertes(self, value: dict[PropID, float]) -> None:
+    def properties(self, value: dict[PropID, float]) -> None:
         self._properties = dict(value)
         self.refresh()

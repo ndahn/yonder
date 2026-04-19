@@ -48,7 +48,7 @@ class add_rtpc_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag not in (None, 0, "") else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._bnk = bnk
         self._rtpcs = rtpcs

@@ -58,7 +58,7 @@ class add_interpolation_curve(DpgItem):
         tag: int | str = None,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._curve: GraphCurve = deepcopy(initial_curve)
         self._on_curve_changed = on_curve_changed

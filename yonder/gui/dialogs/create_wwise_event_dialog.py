@@ -7,7 +7,7 @@ from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_generic_widget
+from yonder.gui.widgets import DpgItem, add_node_reference
 
 
 class create_wwise_event_dialog(DpgItem):
@@ -19,7 +19,7 @@ class create_wwise_event_dialog(DpgItem):
         title: str = "New Event",
         tag: str = None,
     ) -> str:
-        super().__init__(tag)
+        super().__init__(tag, "create_event")
 
         self._bnk = bnk
         self._callback = callback
@@ -73,7 +73,7 @@ class create_wwise_event_dialog(DpgItem):
 
         self._callback(new_nodes)
         self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("create_event/button_okay"), "Again?")
+        dpg.set_item_label(self._t("button_okay"), "Again?")
 
     def _build(self, title: str):
         with dpg.window(
@@ -92,25 +92,25 @@ class create_wwise_event_dialog(DpgItem):
             dpg.add_checkbox(
                 label=µ("Allow arbitrary names"),
                 default_value=False,
-                tag=self._t("create_event/allow_arbitrary_names"),
+                tag=self._t("allow_arbitrary_names"),
             )
 
-            add_generic_widget(
-                HIRCNode,
-                "Target node",
+            add_node_reference(
+                self._bnk.query,
+                µ("Target node"),
                 None,
-                tag=self._t("create_event/external_id"),
+                tag=self._t("external_id"),
             )
 
             dpg.add_checkbox(
                 label=µ("Create play action"),
                 default_value=True,
-                tag=self._t("create_event/create_play_event"),
+                tag=self._t("create_play_event"),
             )
             dpg.add_checkbox(
                 label=µ("Create stop action"),
                 default_value=True,
-                tag=self._t("create_event/create_stop_event"),
+                tag=self._t("create_stop_event"),
             )
 
             dpg.add_separator()
@@ -120,7 +120,7 @@ class create_wwise_event_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Chop chop!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("create_event/button_okay"),
+                    tag=self._t("button_okay"),
                 )
 
     def show_message(

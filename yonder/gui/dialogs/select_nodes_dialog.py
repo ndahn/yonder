@@ -24,10 +24,7 @@ class select_nodes_dialog(DpgItem):
         tag: str = 0,
         user_data: Any = None,
     ) -> str:
-        if not tag:
-            tag = dpg.generate_uuid()
-        elif dpg.does_item_exist(tag):
-            dpg.delete_item(tag)
+        super().__init__(tag)
 
         if not get_node_label:
             get_node_label = str

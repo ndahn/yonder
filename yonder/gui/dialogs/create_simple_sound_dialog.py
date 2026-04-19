@@ -52,7 +52,7 @@ class create_simple_sound_dialog(DpgItem):
         if tag and dpg.does_item_exist(tag):
             dpg.delete_item(tag)
 
-        super().__init__(tag if tag else dpg.generate_uuid())
+        super().__init__(tag)
 
         self._bnk = bnk
         self._callback = callback

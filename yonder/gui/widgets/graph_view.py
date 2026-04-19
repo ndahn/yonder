@@ -51,7 +51,7 @@ class add_graph_widget(DpgItem):
         tag: int | str = None,
         user_data: Any = None,
     ) -> None:
-        super().__init__(tag or dpg.generate_uuid())
+        super().__init__(tag)
 
         self._bnk = bnk
         self._root = root

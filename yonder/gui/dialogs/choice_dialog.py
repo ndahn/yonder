@@ -98,8 +98,7 @@ class simple_combo_dialog(DpgItem):
         tag: str = None,
         user_data: Any = None,
     ) -> str:
-        if not tag:
-            tag = dpg.generate_uuid()
+        super().__init__(tag)
 
         def on_okay() -> None:
             choice = dpg.get_value(self._t("choice"))

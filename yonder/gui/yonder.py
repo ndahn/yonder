@@ -753,7 +753,9 @@ class BanksOfYonder(DpgItem):
         dpg.delete_item(self._t("pinned_objects_table"), children_only=True, slot=1)
 
     def pin_lost_objects(self) -> None:
-        for node in self.bnk.find_orphans():
+        orphans = self.bnk.find_orphans()
+        logger.info(µ("Found {num} orphaned nodes").format(len(orphans)))
+        for node in orphans:
             self.add_pinned_object(node)
 
     def on_pin_selected(self, sender: str, app_data: str, user_data: Any) -> None:

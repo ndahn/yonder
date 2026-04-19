@@ -23,10 +23,7 @@ class convert_wavs_dialog(DpgItem):
         title: str = "Convert Wave Files",
         tag: str = None,
     ) -> str:
-        if not tag:
-            tag = dpg.generate_uuid()
-        elif dpg.does_item_exist(tag):
-            dpg.delete_item(tag)
+        super().__init__(tag)
 
         self.output_dir: Path = None
         self.wav_paths: list[Path] = []
