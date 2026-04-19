@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui.helpers import shorten_path, GraphCurve
+from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
 from .dpg_item import DpgItem
 
@@ -105,7 +106,7 @@ class add_widget_table(DpgItem):
                 policy=dpg.mvTable_SizingFixedFit,
                 borders_outerH=True,
                 borders_outerV=True,
-                tag=self._t("table")
+                tag=self._t("table"),
             ):
                 if self._on_select:
                     dpg.add_table_column(label="")
@@ -150,7 +151,7 @@ class add_widget_table(DpgItem):
                     label=self._add_item_label, callback=self._on_add_clicked
                 )
                 if self._show_clear:
-                    dpg.add_button(label="Clear", callback=self._on_clear_clicked)
+                    dpg.add_button(label=µ("Clear", "button"), callback=self._on_clear_clicked)
 
     # === DPG callbacks =================================================
 
@@ -283,7 +284,7 @@ class add_filepaths_table(DpgItem):
             on_add=self._on_add,
             on_remove=self._on_remove,
             on_select=self._on_select if on_select else None,
-            add_item_label="+ Add Paths" if folders else "+ Add Files",
+            add_item_label=µ("+ Add Paths") if folders else µ("+ Add Files"),
             show_clear=show_clear,
             label=label,
             parent=parent,
@@ -428,7 +429,7 @@ class add_player_table(DpgItem):
         self._on_trim_changed = on_trim_changed
         self._on_user_marker_changed = on_user_marker_changed
         self._initial_user_markers = list(initial_user_markers or [])
-        self._get_row_label = get_row_label or (lambda i: f"Track #{i}")
+        self._get_row_label = get_row_label or (lambda i: µ("Track #{idx}").format(idx=i))
         self._user_data = user_data
 
         self.players: list = []  # add_wav_player instances, one per track
@@ -459,8 +460,8 @@ class add_player_table(DpgItem):
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
         ret = self._open_file_dialog(
-            title="Select Audio",
-            filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
+            title=µ("Select Audio"),
+            filetypes={µ("Audio (.wem, .wav)", "filetypes"): ["*.wem", "*.wav"]},
         )
         if ret:
             done(Path(ret))
@@ -481,23 +482,17 @@ class add_player_table(DpgItem):
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         # Player was already created by _create_row, just sync the list length
         if self._on_filepaths_changed:
-            self._on_filepaths_changed(
-                self.tag, self._collect_state(), self._user_data
-            )
+            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
 
     def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         idx = info[0]
         self.players.pop(idx)
         if self._on_filepaths_changed:
-            self._on_filepaths_changed(
-                self.tag, self._collect_state(), self._user_data
-            )
+            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
 
     def _on_path_changed(self, sender: str, new_path: Path, idx: int) -> None:
         if self._on_filepaths_changed:
-            self._on_filepaths_changed(
-                self.tag, self._collect_state(), self._user_data
-            )
+            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
 
     def _create_row(self, path: Path, idx: int) -> None:
         with dpg.tree_node(label=path.stem):
@@ -587,7 +582,7 @@ class add_player_table_compact(DpgItem):
         super().__init__(tag)
 
         self._on_filepaths_changed = on_filepaths_changed
-        self._get_row_label = get_row_label or (lambda i: f"Track #{i}")
+        self._get_row_label = get_row_label or (lambda i: µ("Track #{idx}").format(idx=i))
         self._user_data = user_data
         self.player = None  # single shared add_wav_player instance
 
@@ -613,8 +608,8 @@ class add_player_table_compact(DpgItem):
         from yonder.gui.dialogs.file_dialog import open_file_dialog
 
         ret = open_file_dialog(
-            title="Select Audio",
-            filetypes={"Audio (.wem, .wav)": ["*.wem", "*.wav"]},
+            title=µ("Select Audio"),
+            filetypes={µ("Audio (.wem, .wav)", "filetypes"): ["*.wem", "*.wav"]},
         )
         if ret:
             done(Path(ret))

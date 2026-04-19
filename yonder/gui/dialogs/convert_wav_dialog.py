@@ -11,7 +11,7 @@ from yonder.gui.widgets import (
     loading_indicator,
 )
 from yonder.gui.helpers import shorten_path
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
 
 
@@ -49,35 +49,30 @@ class convert_wavs_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self.wav_paths:
-            self.show_message(
-                t("No wave files selected", "convert/no_files_to_convert")
-            )
+            self.show_message(µ("No wave files selected", "msg"))
             return
 
         if not self.output_dir or not self.output_dir.is_dir():
-            self.show_message(
-                t("Invalid output directory", "convert/invalid_output_dir")
-            )
+            self.show_message(µ("Invalid output directory", "msg"))
             return
 
         if dpg.get_value(self._t("convert_to_wem")):
             try:
                 wwise_exe = get_config().locate_wwise()
             except Exception:
-                self.show_message(t("Wwise exe not found", "wwise_not_found"))
+                self.show_message(µ("Wwise exe not found", "msg"))
                 return
 
         self.show_message()
 
-        loading = loading_indicator(t("Converting...", "progress/converting"))
+        loading = loading_indicator(µ("Converting..."))
         try:
             out_files = list(self.wav_paths)
 
             if dpg.get_value(self._t("trim_silence")):
                 dpg.set_value(
                     f"{loading}_label",
-                    "Trimming silence...",
-                    "convert/removing_silence",
+                    µ("Trimming silence..."),
                 )
                 silence_threshold = dpg.get_value(self._t("silence_threshold"))
 
@@ -91,7 +86,7 @@ class convert_wavs_dialog(DpgItem):
             if dpg.get_value(self._t("create_prefetch_snippet")):
                 dpg.set_value(
                     f"{loading}_label",
-                    t("Creating prefetch snippets...", "convert/creating_snippets"),
+                    µ("Creating prefetch snippets..."),
                 )
                 snippet_length = dpg.get_value(self._t("snippet_legnth"))
 
@@ -105,7 +100,7 @@ class convert_wavs_dialog(DpgItem):
             if dpg.get_value(self._t("adjust_volume")):
                 dpg.set_value(
                     f"{loading}_label",
-                    t("Adjusting volume...", "convert/adjusting_volume"),
+                    µ("Adjusting volume..."),
                 )
                 target_volume = dpg.get_value(self._t("target_volume"))
 
@@ -117,11 +112,9 @@ class convert_wavs_dialog(DpgItem):
             if dpg.get_value(self._t("convert_to_wem")):
                 dpg.set_value(
                     f"{loading}_label",
-                    t(
-                        "Converting {num} files...",
-                        "convert/converting",
-                        num=len(out_files),
-                    ),
+                    µ(
+                        "Converting {num} files..."
+                    ).format(num=len(out_files)),
                 )
                 out_files = wav2wem(wwise_exe, out_files, out_dir=self.output_dir)
         finally:
@@ -130,8 +123,8 @@ class convert_wavs_dialog(DpgItem):
         if self.callback:
             self.callback(out_files)
 
-        self.show_message("Yay!", color=style.blue)
-        dpg.set_item_label(self._t("convert/button_okay"), t("Again?", "again"))
+        self.show_message(µ("Yay!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("convert/button_okay"), µ("Again?"))
 
     # === Build ========================================================
 
@@ -148,8 +141,8 @@ class convert_wavs_dialog(DpgItem):
             add_filepaths_table(
                 [],
                 self._on_wavs_changed,
-                label="Wave files",
-                filetypes={t("Wave (.wav)", "wave_files"): "*.wav"},
+                label=µ("Wave files"),
+                filetypes={µ("Wave (.wav)", "filetypes"): "*.wav"},
                 tag=self._t("wavs_table"),
             )
 
@@ -172,7 +165,7 @@ class convert_wavs_dialog(DpgItem):
                     tag=self._t("adjust_volume"),
                 )
                 dpg.add_slider_float(
-                    label="Target volume",
+                    label=µ("Target volume"),
                     default_value=-3.0,
                     min_value=-96.0,
                     max_value=96.0,
@@ -186,7 +179,7 @@ class convert_wavs_dialog(DpgItem):
                     tag=self._t("trim_silence"),
                 )
                 dpg.add_slider_float(
-                    label="Silence threshold",
+                    label=µ("Silence threshold"),
                     default_value=0.0,
                     min_value=-10.0,
                     max_value=10.0,
@@ -200,7 +193,7 @@ class convert_wavs_dialog(DpgItem):
                     tag=self._t("create_prefetch_snippet"),
                 )
                 dpg.add_slider_float(
-                    label="Snippet length",
+                    label=µ("Snippet length"),
                     default_value=1.0,
                     min_value=-0.5,
                     max_value=10.0,
@@ -210,7 +203,7 @@ class convert_wavs_dialog(DpgItem):
             dpg.add_spacer(height=5)
 
             dpg.add_checkbox(
-                label="Convert to .wem",
+                label=µ("Convert to .wem"),
                 default_value=True,
                 tag=self._t("convert_to_wem"),
             )
@@ -220,7 +213,7 @@ class convert_wavs_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Beat it!",
+                    label=µ("Beat it!", "button"),
                     callback=self._on_okay,
                     tag=self._t("convert/button_okay"),
                 )

@@ -1,7 +1,7 @@
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets.hash_widget import add_hash_widget
 from yonder.gui.widgets import DpgItem
 
@@ -27,7 +27,7 @@ class calc_hash_dialog(DpgItem):
             add_hash_widget(default_value, None, horizontal=False)
             dpg.add_separator()
             dpg.add_text(
-                "Calculates an FNV-1a 32bit hash",
+                µ("Calculates an FNV-1a 32bit hash"),
                 color=style.blue,
                 tag=self._t("calc_hash/tips"),
             )

@@ -56,7 +56,7 @@ from yonder.wem import wav2wem, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from .paragraphs import add_paragraphs
 from .generic_input_widget import add_generic_widget, is_simple_type
 from .loading_indicator import loading_indicator
@@ -81,7 +81,7 @@ def create_node_widgets(
     if not tag:
         tag = dpg.generate_uuid()
 
-    loading = loading_indicator(t("loading...", "progress/loading"))
+    loading = loading_indicator(µ("loading...", "loading"))
     try:
         with dpg.group(tag=tag, parent=parent):
             # Heading
@@ -162,7 +162,7 @@ def add_node_properties(
         on_node_changed(base_tag, node, user_data)
 
     with dpg.tree_node(
-        label="Properties",
+        label=µ("Properties"),
         default_open=bool(node.properties),
         tag=f"{base_tag}/properties",
     ):
@@ -188,7 +188,7 @@ def add_node_rtpc(
             on_node_changed(base_tag, node, user_data)
 
     with dpg.tree_node(
-        label="RTPC", default_open=bool(node.rtpcs), tag=f"{base_tag}/rtpc"
+        label=µ("RTPC"), default_open=bool(node.rtpcs), tag=f"{base_tag}/rtpc"
     ):
         add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed, label=None)
 
@@ -220,10 +220,8 @@ def add_node_link(
 
 def add_letmeknow() -> None:
     with dpg.child_window(auto_resize_x=True, auto_resize_y=True):
-        dpg.add_text(t("Let me know what you want here!", "let_me_know"))
-        dpg.add_text(
-            t("Find me on ?ServerName? @managarm", "contact"), color=style.orange
-        )
+        dpg.add_text(µ("Let me know what you want here!"))
+        dpg.add_text(µ("Find me on ?ServerName? @managarm"), color=style.orange)
 
 
 def make_setter(
@@ -266,11 +264,10 @@ def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
     # In case we have a prefetch snippet but no streaming sound
     if wem.is_file() and source_type == SourceType.PrefetchStreaming:
         logger.warning(
-            t(
+            µ(
                 "Could not find streamed sound for {sound}, playing prefetch snippet",
-                "log_full_sound_missing",
-                sound=source_id,
-            )
+                "log"
+            ).format(sound=source_id)
         )
         return wem
 
@@ -298,25 +295,22 @@ def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceTy
                 snippet = create_prefetch_snippet(wav)
                 wem_snippet = wav2wem(wwise, snippet, out_dir=bnk.bnk_dir)[0]
                 logger.info(
-                    t(
+                    µ(
                         "Placed prefetch snippet in {file}",
-                        "log_created_snippet",
-                        file=wem_snippet,
-                    )
+                        "log"
+                    ).format(file=wem_snippet)
                 )
 
         else:
             raise ValueError(f"Unknown source_type {source_type}")
 
-        logger.info(
-            t("Copied {file} to {target}", "log_file_coped", file=wem.name, dest=target)
-        )
+        logger.info(µ("Copied {file} to {target}", file=wem.name, dest=target))
 
     simple_choice_dialog(
-        t("Copy WEMs to soundbank {bank}?", "ask_copy_wems", bank=bnk.name),
-        [t("Yes", "yes"), t("No", "no")],
+        µ("Copy WEMs to soundbank {bank}?", bank=bnk.name),
+        [µ("Yes"), µ("No")],
         lambda s, a, u: a == 0 and copy_wems(),
-        title=t("Copy?", "ask_copy"),
+        title=µ("Copy?"),
     )
 
 
@@ -497,7 +491,7 @@ def _create_attributes_action(
             else:
                 add_generic_widget(
                     tp,
-                    t(key, f"action/{path}"),
+                    µ(key, tp),
                     lambda s, a, u: set_value(path, a),
                     default=val,
                     not_supported_ok=True,
@@ -526,9 +520,9 @@ def _create_attributes_attenuation(
     ) -> None:
         if len(curves) < len(node.curves):
             logger.warning(
-                t(
+                µ(
                     "Don't forget to update the parameter curve indices!",
-                    "log_reminder_attenuation_curves",
+                    "log",
                 )
             )
 
@@ -537,10 +531,7 @@ def _create_attributes_attenuation(
             curve_type = CurveScaling[curve.curve_type]
             node.curves.append(ConversionTable(curve_type, points=curve.points))
 
-        curve_items = ["-"] + [
-            t("Curve #{idx}", "attenuation/curve_label", idx=i)
-            for i in range(len(curves))
-        ]
+        curve_items = ["-"] + [µ("Curve #{idx}", idx=i) for i in range(len(curves))]
         for i in range(len(node.curves_to_use)):
             dpg.configure_item(
                 f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
@@ -562,24 +553,16 @@ def _create_attributes_attenuation(
 
     with dpg.group():
         with dpg.tree_node(
-            label="Curves to use",
+            label=µ("Curves to use"),
             default_open=True,
             tag=f"{base_tag}/attenuation/curves_to_use",
         ):
             for i, curve in enumerate(node.curves_to_use):
                 param = CurveParameters(i).name
-                default_value = (
-                    t("Curve #{idx}", "attenuation/curve_label", idx=curve)
-                    if curve >= 0
-                    else "-"
-                )
+                default_value = µ("Curve #{idx}", idx=curve) if curve >= 0 else "-"
 
                 dpg.add_combo(
-                    ["-"]
-                    + [
-                        t("Curve #{idx}", "attenuation/curve_label", idx=i)
-                        for i in range(len(node.curves))
-                    ],
+                    ["-"] + [µ("Curve #{idx}", idx=i) for i in range(len(node.curves))],
                     default_value=default_value,
                     label=param,
                     callback=on_curve_param_changed,
@@ -592,14 +575,14 @@ def _create_attributes_attenuation(
                 [GraphCurve(c.curve_scaling.name, c.points) for c in node.curves],
                 sorted([s.name for s in CurveScaling]),
                 on_curves_changed,
-                curve_type_label=t("Scaling Type", "scaling_type"),
+                curve_type_label=µ("Scaling Type"),
             )
 
         with dpg.tree_node(
-            label="Cone params", tag=f"{base_tag}/atttenuation/cone_params"
+            label=µ("Cone params"), tag=f"{base_tag}/atttenuation/cone_params"
         ):
             dpg.add_checkbox(
-                label="Cone enabled",
+                label=µ("Cone enabled"),
                 default_value=(node.is_cone_enabled > 0),
                 callback=make_setter(
                     node, "is_cone_enabled", base_tag, on_node_changed, user_data
@@ -607,7 +590,7 @@ def _create_attributes_attenuation(
                 tag=f"{base_tag}/atttenuation/cone_enabled",
             )
             dpg.add_input_float(
-                label="inside_degrees",
+                label=µ("inside_degrees", "Attenuation"),
                 default_value=node.cone_params.inside_degrees,
                 min_value=0.0,
                 min_clamped=True,
@@ -619,7 +602,7 @@ def _create_attributes_attenuation(
                 tag=f"{base_tag}/atttenuation/inside_degrees",
             )
             dpg.add_input_float(
-                label="outside_degrees",
+                label=µ("outside_degrees", "Attenuation"),
                 default_value=node.cone_params.outside_degrees,
                 min_value=0.0,
                 min_clamped=True,
@@ -631,7 +614,7 @@ def _create_attributes_attenuation(
                 tag=f"{base_tag}/atttenuation/outside_degrees",
             )
             dpg.add_input_float(
-                label="outside_volume",
+                label=µ("outside_volume", "Attenuation"),
                 default_value=node.cone_params.outside_volume,
                 # min_value=0.0,
                 # min_clamped=True,
@@ -643,7 +626,7 @@ def _create_attributes_attenuation(
                 tag=f"{base_tag}/atttenuation/outside_volume",
             )
             dpg.add_input_float(
-                label="low_pass",
+                label=µ("low_pass", "Attenuation"),
                 default_value=node.cone_params.low_pass,
                 min_value=0.0,
                 min_clamped=True,
@@ -655,7 +638,7 @@ def _create_attributes_attenuation(
                 tag=f"{base_tag}/atttenuation/low_pass",
             )
             dpg.add_input_float(
-                label="high_pass",
+                label=µ("high_pass", "Attenuation"),
                 default_value=node.cone_params.high_pass,
                 min_value=0.0,
                 min_clamped=True,
@@ -728,15 +711,13 @@ def _create_attributes_event(
                     add_node_link(str(target), target.id, on_node_selected)
                 else:
                     dpg.add_text(
-                        t(
-                            "#{node} (not found)",
-                            "invalid_node_label",
-                            node=action.external_id,
-                        )
+                        µ(
+                            "#{node} (not found)"
+                        ).format(node=action.external_id)
                     )
 
             else:
-                dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=aid))
+                dpg.add_text(µ("#{node} (not found)").format(node=aid))
 
     add_widget_table(
         node.actions,
@@ -744,8 +725,8 @@ def _create_attributes_event(
         new_item=add_action,
         on_add=on_actions_changed,
         on_remove=on_actions_changed,
-        label="Actions",
-        add_item_label=t("+ Add Action", "event/add_action"),
+        label=µ("Actions"),
+        add_item_label=µ("+ Add Action"),
         tag=f"{base_tag}/event/actions",
     )
 
@@ -830,7 +811,7 @@ def _create_attributes_musicswitchcontainer(
                 on_node_key_changed,
                 horizontal=False,
                 initial_string=val_name,
-                string_label=t("Value", "value"),
+                string_label=µ("Value"),
                 width=100,
                 user_data=(tree_node, level, item),
             )
@@ -857,9 +838,7 @@ def _create_attributes_musicswitchcontainer(
                         user_data=user_data,
                     )
                 else:
-                    dpg.add_text(
-                        t("#{node} (not found)", "invalid_node_label", node=nid)
-                    )
+                    dpg.add_text(µ("#{node} (not found)").format(node=nid))
         else:
             # Branch
             with dpg.tree_node(span_full_width=True) as dpg_item:
@@ -878,7 +857,7 @@ def _create_attributes_musicswitchcontainer(
         )
 
         with dpg.tree_node(
-            label="Decision Tree",
+            label=µ("Decision Tree"),
             default_open=True,
             tag=f"{base_tag}/musicswitchconainer/decision_tree",
         ):
@@ -887,7 +866,7 @@ def _create_attributes_musicswitchcontainer(
 
         dpg.add_spacer(height=3)
         dpg.add_button(
-            label="Add State Path",
+            label=µ("Add State Path", "button"),
             callback=lambda: edit_state_path_dialog(
                 bnk, node, on_state_path_created, raw=True
             ),
@@ -1010,19 +989,19 @@ def _create_attributes_musicsegment(
         new_item=new_marker,
         on_add=on_marker_added,
         on_remove=on_marker_removed,
-        add_item_label=t("+ Add Marker", "add_marker"),
-        label=t("Markers", "markers"),
+        add_item_label=µ("+ Add Marker"),
+        label=µ("Markers"),
     )
 
     tracks = [cid for cid in node.children if isinstance(bnk.get(cid), MusicTrack)]
     if tracks:
         with dpg.group(horizontal=True):
             dpg.add_combo(
-                [f"Track #{t}" for t in tracks],
+                [µ("Track #{idx}").format(idx=t) for t in tracks],
                 tag=f"{base_tag}/child_tracks",
             )
             dpg.add_button(
-                label="Edit",
+                label=µ("Edit", "button"),
                 callback=edit_markers_on_track,
                 tag=f"{base_tag}/edit",
             )
@@ -1091,11 +1070,10 @@ def _create_attributes_musictrack(
                     player.set_fadeout(curve)
                 else:
                     logger.warning(
-                        t(
+                        µ(
                             "Unknown clip automation type {type}",
-                            "log_unknown_clip_automation",
-                            type=auto_type,
-                        )
+                            "log"
+                        ).format(type=auto_type)
                     )
 
     def on_clips_changed(
@@ -1124,7 +1102,7 @@ def _create_attributes_musictrack(
 
     if len(node.sources) > 1:
         dpg.add_text(
-            "Track has multiple sources, might not be handled correctly",
+            µ("Track has multiple sources, might not be handled correctly"),
             color=style.yellow,
             tag=f"{base_tag}/musictrack/multiple_tracks",
         )
@@ -1157,8 +1135,8 @@ def _create_attributes_musictrack(
             [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items],
             sorted([c.name for c in ClipAutomationType]),
             on_clips_changed,
-            label=t("Clips", "clips"),
-            add_item_label=t("+ Add Clip", "add_clip"),
+            label=µ("Clips"),
+            add_item_label=µ("+ Add Clip"),
         )
 
         dpg.add_spacer(height=3)
@@ -1184,7 +1162,7 @@ def _create_attributes_randomsequencecontainer(
         if target:
             add_node_link(str(target), target, on_node_selected)
         else:
-            dpg.add_text(t("#{node} (not found)", "invalid_node_label", node=item[0]))
+            dpg.add_text(µ("#{node} (not found)").format(node=item[0]))
 
         dpg.add_input_int(
             default_value=item[1],
@@ -1204,7 +1182,7 @@ def _create_attributes_randomsequencecontainer(
     with dpg.group():
         dpg.add_combo(
             [p.name for p in PlaybackMode],
-            label="Playback mode",
+            label=µ("Playback mode", "RandomSequenceContainer"),
             default_value=PlaybackMode(node.mode).name,
             callback=make_setter(
                 node,
@@ -1218,7 +1196,7 @@ def _create_attributes_randomsequencecontainer(
         )
         dpg.add_combo(
             [r.name for r in RandomMode],
-            label="Randomization",
+            label=µ("Randomization", "RandomSequenceContainer"),
             default_value=RandomMode(node.random_mode).name,
             callback=make_setter(
                 node,
@@ -1231,7 +1209,7 @@ def _create_attributes_randomsequencecontainer(
             tag=f"{base_tag}/randomsequencecontainer/random_mode",
         )
         dpg.add_input_int(
-            label="Loop count",
+            label=µ("Loop count", "RandomSequenceContainer"),
             default_value=node.loop_count,
             min_value=0,
             min_clamped=True,
@@ -1241,7 +1219,7 @@ def _create_attributes_randomsequencecontainer(
             tag=f"{base_tag}/randomsequencecontainer/loop_count",
         )
         dpg.add_input_int(
-            label="Avoid repetitions",
+            label=µ("Avoid repetitions", "RandomSequenceContainer"),
             default_value=node.avoid_repeat_count,
             min_value=0,
             min_clamped=True,
@@ -1257,9 +1235,9 @@ def _create_attributes_randomsequencecontainer(
         add_widget_table(
             item_weights,
             create_playlist_row,
-            label="Playlist",
+            label=µ("Playlist", "RandomSequenceContainer"),
             header_row=True,
-            columns=(t("Item", "item"), t("Weight", "weight")),
+            columns=(µ("Item", "table"), µ("Weight", "table")),
             tag=f"{base_tag}/randomsequencecontainer/playlist",
         )
 
@@ -1313,7 +1291,7 @@ def _create_attributes_switchcontainer(
 
     with dpg.group():
         dpg.add_checkbox(
-            label="Show empty switches",
+            label=µ("Show empty switches"),
             callback=on_show_empty_switches,
             default_value=False,
             user_data=node,
@@ -1321,7 +1299,7 @@ def _create_attributes_switchcontainer(
         )
 
         with dpg.tree_node(
-            label="Switches", tag=f"{base_tag}/switchcontainer/switches"
+            label=µ("Switches", "SwitchContainer"), tag=f"{base_tag}/switchcontainer/switches"
         ):
             for switch in node.switch_groups:
                 name = lookup_name(switch.switch_id, "?")
@@ -1342,6 +1320,4 @@ def _create_attributes_switchcontainer(
                                 user_data=user_data,
                             )
                         else:
-                            dpg.add_text(
-                                t("#{node} (not found)", "invalid_node_label", node=nid)
-                            )
+                            dpg.add_text(µ("#{node} (not found)").format(node=nid))

@@ -8,7 +8,7 @@ from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
 from yonder.util import repack_soundbank
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
@@ -52,15 +52,11 @@ class mass_transfer_dialog(DpgItem):
 
     def _swap_banks(self) -> None:
         if not self._src_bnk:
-            self.show_message(
-                t("No source bank selected", "mass_transfer/msg_no_src_bank")
-            )
+            self.show_message(µ("No source bank selected", "msg"))
             return
 
         if not self._dst_bnk:
-            self.show_message(
-                t("No destination bank selected", "mass_transfer/msg_no_dst_bank")
-            )
+            self.show_message(µ("No destination bank selected", "msg"))
             return
 
         self.show_message()
@@ -163,31 +159,25 @@ class mass_transfer_dialog(DpgItem):
         dpg.hide_item(self._t("button_repack"))
 
         if not self._src_bnk:
-            self.show_message(
-                t("No source bank selected", "mass_transfer/msg_no_src_bank")
-            )
+            self.show_message(µ("No source bank selected", "msg"))
             return
 
         if not self._dst_bnk:
-            self.show_message(
-                t("No destination bank selected", "mass_transfer/msg_no_dst_bank")
-            )
+            self.show_message(µ("No destination bank selected", "msg"))
             return
 
         src_ids = self._prune_ids(dpg.get_value(self._t("source_ids")).splitlines())
         dst_ids = self._prune_ids(dpg.get_value(self._t("dest_ids")).splitlines())
 
         if not src_ids:
-            self.show_message(
-                t("No source IDs selected", "mass_transfer/msg_no_src_ids")
-            )
+            self.show_message(µ("No source IDs selected", "msg"))
             return
 
         if len(src_ids) != len(dst_ids):
             self.show_message(
-                t(
+                µ(
                     "Source and destination IDs not balanced",
-                    "mass_transfer/msg_src_dst_unbalanced",
+                    "msg",
                 )
             )
             return
@@ -196,20 +186,19 @@ class mass_transfer_dialog(DpgItem):
             src_play_id = self._line_to_hash(line)
             if src_play_id not in self._src_bnk:
                 self.show_message(
-                    t(
-                        "{name} not found in source bank",
-                        "mass_transfer/msg_id_not_found",
-                        name=line,
-                    )
+                    µ(
+                        "{name} not found in source bank", "msg"
+                        
+                    ).format(name=line)
                 )
                 return
 
         for line in dst_ids:
             if line.startswith("#"):
                 self.show_message(
-                    t(
+                    µ(
                         "Destination IDs cannot be hashes",
-                        "mass_transfer/msg_hash_in_dst",
+                        "msg",
                     )
                 )
                 return
@@ -217,11 +206,10 @@ class mass_transfer_dialog(DpgItem):
             dst_play_id = self._line_to_hash(line)
             if dst_play_id in self._dst_bnk:
                 self.show_message(
-                    t(
+                    µ(
                         "{name} already exists in destination bank",
-                        "mass_transfer/msg_exists_in_dst",
-                        name=line,
-                    )
+                        "msg"
+                    ).format(name=line)
                 )
                 return
 
@@ -232,9 +220,9 @@ class mass_transfer_dialog(DpgItem):
             dst_explicit = did.startswith(("Play_", "Stop_"))
             if src_explicit != dst_explicit:
                 self.show_message(
-                    t(
+                    µ(
                         "Cannot pair explicit with implicit event names",
-                        "mass_transfer/msg_explicit_with_implicit",
+                        "msg",
                     )
                 )
                 return
@@ -265,9 +253,9 @@ class mass_transfer_dialog(DpgItem):
             bnk2json = get_config().locate_bnk2json()
         except Exception:
             self.show_message(
-                t(
+                µ(
                     "bnk2json is required for repacking",
-                    "mass_transfer/msg_bnk2json_required",
+                    "msg",
                 )
             )
         else:
@@ -285,26 +273,25 @@ class mass_transfer_dialog(DpgItem):
         ) as window:
             add_generic_widget(
                 Path,
-                "Source Soundbank",
+                µ("Source Soundbank"),
                 self._on_source_bnk_selected,
-                filetypes={"Soundbanks (.bnk, .json)": ["*.bnk", "*.json"]},
+                filetypes={µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]},
                 tag=self._t("mass_transfer/source_bnk"),
             )
             add_generic_widget(
                 Path,
-                "Destination Soundbank",
+                µ("Destination Soundbank"),
                 self._on_dest_bnk_selected,
-                filetypes={"Soundbanks (.bnk, .json)": ["*.bnk", "*.json"]},
+                filetypes={µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]},
                 tag=self._t("mass_transfer/dest_bnk"),
             )
 
             with dpg.group(horizontal=True):
                 with dpg.group():
                     dpg_section(
-                        "Source Wwise IDs",
+                        label=µ("Source Wwise IDs"),
                         color=style.muted_orange,
                         first=True,
-                        tag=self._t("mass_transfer/source_ids_label"),
                     )
                     dpg.add_input_text(
                         multiline=True,
@@ -313,10 +300,9 @@ class mass_transfer_dialog(DpgItem):
                     )
                 with dpg.group():
                     dpg_section(
-                        "Destination Wwise IDs",
+                        label=µ("Destination Wwise IDs"),
                         color=style.muted_teal,
                         first=True,
-                        tag=self._t("mass_transfer/dest_ids_label"),
                     )
                     dpg.add_input_text(
                         multiline=True,
@@ -326,23 +312,23 @@ class mass_transfer_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Select IDs...",
+                    label=µ("Select IDs..."),
                     callback=self._select_nodes,
                     tag=self._t("mass_transfer/button_select_ids"),
                 )
                 dpg.add_button(
-                    label="Swap Banks",
+                    label=µ("Swap Banks"),
                     callback=self._swap_banks,
                     tag=self._t("mass_transfer/button_swap_banks"),
                 )
                 dpg.add_button(
-                    label="Swap IDs",
+                    label=µ("Swap IDs"),
                     callback=self._swap_ids,
                     tag=self._t("mass_transfer/button_swap_ids"),
                 )
 
             add_paragraphs(
-                t(
+                µ(
                     """\
                     - Transfer sound structures between soundbanks
                     - Specify by full name (Play_x123456789), hash (#102591249), or wwise name (x123456789)
@@ -360,18 +346,18 @@ class mass_transfer_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Scotty, beam them!",
+                    label=µ("Scotty, beam them!", "button"),
                     callback=self._on_okay,
                     tag=self._t("mass_transfer/button_okay"),
                 )
                 dpg.add_button(
-                    label="Save",
+                    label=µ("Save", "button"),
                     callback=self._on_save,
                     show=False,
                     tag=self._t("button_save"),
                 )
                 dpg.add_button(
-                    label="Repack",
+                    label=µ("Repack", "button"),
                     callback=self._on_repack,
                     show=False,
                     tag=self._t("button_repack"),

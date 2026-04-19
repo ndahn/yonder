@@ -2,6 +2,7 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
+from yonder.gui.localization import µ
 from yonder.gui.helpers import center_window
 from yonder.gui.widgets import add_paragraphs
 from yonder.gui.widgets import DpgItem
@@ -134,7 +135,7 @@ class simple_combo_dialog(DpgItem):
             )
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label="Okay", callback=on_okay, tag=self._t("okay"))
+                dpg.add_button(label=µ("Okay", "button"), callback=on_okay, tag=self._t("okay"))
 
         dpg.split_frame()
         center_window(dialog)

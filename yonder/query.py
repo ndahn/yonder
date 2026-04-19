@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from yonder.types import HIRCNode
 
 
+# Lucene-like syntax, see https://lucene.apache.org/core/2_9_4/queryparsersyntax.html
 lucene_grammar = r"""
     ?start: or_expr
 
@@ -43,32 +44,6 @@ lucene_grammar = r"""
 
     %import common.WS
     %ignore WS
-"""
-
-
-lucene_url = "https://lucene.apache.org/core/2_9_4/queryparsersyntax.html"
-
-
-query_help_text = """\
-Supports Lucene-style search queries (<field>=<value>). 
-
-- You may use the * wildcard for values
-- Field paths are prepended by ** unless quoted
-- Use [X..Y] to specify a value range
-- Precede your value with tilde ~ to do a fuzzy search
-- Terms may be combined using grouping, OR, NOT. 
-- Terms separated by a space are assumed to be AND.
-
-You may run queries over the following fields:
-- id (or hash), type, name
-- any field name
-- any field path separated by slashes /
-
-Examples:
-- id=*588 OR type=RandomSequenceContainer
-- source_id=123456789
-- NOT "node_base_params/parent_id"=[100000..200000]
-- name=~Play_s*
 """
 
 

@@ -3,6 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_wav_player
 
 
@@ -149,12 +150,12 @@ class edit_markers_dialog(DpgItem):
             if self._accept_on_okay:
                 with dpg.group(horizontal=True):
                     dpg.add_button(
-                        label="Okay",
+                        label=µ("Okay", "button"),
                         callback=self._on_okay,
                         tag=self._t("button_okay"),
                     )
                     dpg.add_button(
-                        label="Cancel",
+                        label=µ("Cancel", "button"),
                         callback=lambda: dpg.delete_item(self._window),
                     )
 

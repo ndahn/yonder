@@ -5,7 +5,7 @@ from yonder import Soundbank, HIRCNode
 from yonder.types.music_switch_container import MusicSwitchContainer, parse_state_path
 from yonder.hash import lookup_name
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_node_reference
 
 
@@ -114,12 +114,12 @@ class edit_state_path_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Okay",
+                    label=µ("Okay", "button"),
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
                 dpg.add_button(
-                    label="Cancel",
+                    label=µ("Cancel", "button"),
                     callback=lambda: dpg.delete_item(self._window),
                 )
 
@@ -137,20 +137,21 @@ class edit_state_path_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self._hide_node_id and self._leaf_node_id <= 0:
-            self.show_message(t("Leaf node ID not set", "msg_leaf_node_missing"))
+            self.show_message(µ("Leaf node ID not set", "msg"))
             return
 
         keys: list[str] = []
         for arg in self._node.arguments:
             key = dpg.get_value(self._t(f"arg_{arg.group_id}"))
             if not key:
-                self.show_message(t("Keys must not be empty", "msg_keys_empty"))
+                self.show_message(µ("Keys must not be empty", "msg"))
                 return
             keys.append(key)
 
         if self._raw:
             keys = parse_state_path(keys)
 
+        self.show_message()
         self._callback(self._tag, keys, self._leaf_node_id)
         dpg.delete_item(self._window)
 

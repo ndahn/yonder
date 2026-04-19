@@ -2,6 +2,7 @@ from typing import Any, Callable, Iterable, Type, TypeVar
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
 
 
@@ -9,7 +10,8 @@ _T = TypeVar("_T", bound=Type[HIRCNode])
 
 
 class select_nodes_dialog(DpgItem):
-    def __init__(self,
+    def __init__(
+        self,
         get_items: Callable[[str], Iterable[HIRCNode]],
         on_nodes_selected: Callable[[str, list[HIRCNode] | list[str], Any], None],
         *,
@@ -119,7 +121,9 @@ class select_nodes_dialog(DpgItem):
             if self._return_labels:
                 result = [k for k in self._selected_keys if k in self._items]
             else:
-                result = [self._items[k] for k in self._selected_keys if k in self._items]
+                result = [
+                    self._items[k] for k in self._selected_keys if k in self._items
+                ]
             self._on_nodes_selected(self.tag, result, self._user_data)
         else:
             key = next(iter(self._selected_keys), None)
@@ -156,13 +160,13 @@ class select_nodes_dialog(DpgItem):
                 policy=dpg.mvTable_SizingStretchProp,
             ):
                 dpg.add_table_column(
-                    label="Node (id)",
+                    label=µ("Node (id)"),
                     width_stretch=True,
                 )
 
             if self._multiple:
                 dpg.add_text(
-                    "Hold Ctrl or click multiple rows to select several nodes.",
+                    µ("Hold Ctrl or click multiple rows to select several nodes."),
                     wrap=330,
                     color=(180, 180, 180, 200),
                 )
@@ -170,9 +174,11 @@ class select_nodes_dialog(DpgItem):
             dpg.add_separator()
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label="Okay", callback=self._on_okay, tag=self._t("button_okay"))
                 dpg.add_button(
-                    label="Cancel",
+                    label=µ("Okay", "button"), callback=self._on_okay, tag=self._t("button_okay")
+                )
+                dpg.add_button(
+                    label=µ("Cancel", "button"),
                     callback=lambda: dpg.delete_item(window),
                 )
 
@@ -180,7 +186,8 @@ class select_nodes_dialog(DpgItem):
 
 
 class select_nodes_of_type(DpgItem):
-    def __init__(self,
+    def __init__(
+        self,
         bnk: Soundbank,
         node_type: _T,
         on_node_selected: Callable[[str, list[_T] | list[str], Any], None],

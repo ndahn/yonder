@@ -4,7 +4,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.types import Hash
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.helpers import shorten_path
 from yonder.gui.dialogs.file_dialog import (
     save_file_dialog,
@@ -237,7 +237,7 @@ def add_generic_widget(
             dpg.add_button(
                 # arrow=True,
                 # direction=dpg.mvDir_Right,
-                label=t("Browse", "browse"),
+                label=µ("Browse", "button"),
                 callback=select_file,
             )
             dpg.add_text(label)

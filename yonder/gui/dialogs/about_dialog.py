@@ -3,7 +3,7 @@ import webbrowser
 
 from yonder.util import resource_dir
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
 
 
@@ -22,7 +22,7 @@ class about_dialog(DpgItem):
         with dpg.window(
             width=410,
             height=230,
-            label=t("About", "about"),
+            label=µ("About"),
             no_saved_settings=True,
             on_close=lambda: dpg.delete_item(dialog),
             no_scrollbar=True,
@@ -40,7 +40,8 @@ class about_dialog(DpgItem):
                     dpg.add_text(f"Banks of Yonder v{__version__}", color=color)
 
                     dpg.add_text(
-                        "Written by Nikolas Dahn", color=color, tag=self._t("about/written_by")
+                        µ("Written by Nikolas Dahn"),
+                        color=color,
                     )
                     dpg.add_button(
                         label="https://github.com/ndahn/yonder",
@@ -52,14 +53,12 @@ class about_dialog(DpgItem):
                     dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
 
                     dpg.add_text(
-                        "Bugs, questions, feature request?", 
+                        µ("Bugs, questions, feature request?"),
                         color=color,
-                        tag=self._t("about/contact1"),
                     )
                     dpg.add_text(
-                        "Find me on ?ServerName? @Managarm!",
+                        µ("Find me on ?ServerName? @Managarm!"),
                         color=color,
-                        tag=self._t("contact"),
                     )
 
         dpg.bind_item_theme(dialog, style.themes.no_padding)

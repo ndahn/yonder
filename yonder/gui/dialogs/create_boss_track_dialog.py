@@ -8,7 +8,7 @@ from yonder.hash import calc_hash, lookup_name
 from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     DpgItem,
@@ -63,9 +63,7 @@ class create_boss_track_dialog(DpgItem):
 
     def _edit_state_path(self) -> None:
         if not self.msc:
-            self.show_message(
-                t("Select MusicSwitchContainer first", "boss_bgm/msg_no_msc_selected")
-            )
+            self.show_message(µ("Select MusicSwitchContainer first", "msg"))
             return
 
         edit_state_path_dialog(
@@ -118,9 +116,9 @@ class create_boss_track_dialog(DpgItem):
                 break
         else:
             self.show_message(
-                t(
+                µ(
                     "MSC does not have a BgmEnemyType argument",
-                    "boss_bgm/msg_msc_no_enemy_state",
+                    "msg",
                 )
             )
             return
@@ -134,9 +132,7 @@ class create_boss_track_dialog(DpgItem):
 
     def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
         if not value or value == "*":
-            self.show_message(
-                t("BgmEnemyType not set", "boss_bgm/msg_enemy_type_empty")
-            )
+            self.show_message(µ("BgmEnemyType not set", "msg"))
             return
 
         if self.msc:
@@ -186,22 +182,16 @@ class create_boss_track_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self.msc:
-            self.show_message(
-                t("Select MusicSwitchContainer first", "boss_bgm/msg_no_msc_selected")
-            )
+            self.show_message(µ("Select MusicSwitchContainer first", "msg"))
             return
 
         bgm_enemy_type = dpg.get_value(self._t("bgm_enemy_type"))
         if not bgm_enemy_type or bgm_enemy_type == "*":
-            self.show_message(
-                t("BgmEnemyType not set", "boss_bgm/msg_enemy_type_empty")
-            )
+            self.show_message(µ("BgmEnemyType not set", "msg"))
             return
 
         if not self.bgm_tracks:
-            self.show_message(
-                t("Must add at least one BGM track", "boss_bgm/msg_no_tracks")
-            )
+            self.show_message(µ("Must add at least one BGM track", "msg"))
             return
 
         self.show_message()
@@ -228,8 +218,8 @@ class create_boss_track_dialog(DpgItem):
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
-        self.show_message(t("Yay!", "yay"), color=style.blue)
-        dpg.set_item_label(self._t("boss_bgm/button_okay"), t("Again?", "again"))
+        self.show_message(µ("Yay!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("boss_bgm/button_okay"), µ("Again?"))
 
     # === Build =========================================================
 
@@ -274,7 +264,7 @@ class create_boss_track_dialog(DpgItem):
                 )
                 dpg.add_text("BgmEnemyType")
             dpg.add_button(
-                label="State Path",
+                label=µ("State Path", "button"),
                 callback=self._edit_state_path,
                 tag=self._t("state_path"),
             )
@@ -293,7 +283,7 @@ class create_boss_track_dialog(DpgItem):
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             add_paragraphs(
-                t(
+                µ(
                     """\
                         - Boss tracks need to be added to cs_smain
                         - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
@@ -301,7 +291,8 @@ class create_boss_track_dialog(DpgItem):
                         - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
                         - Only already existing BgmEnemyType strings can be used!
                         - BgmBossChrIdConv params mus be 6-digit for EMEVD
-                    """
+                    """,
+                    "tips"
                 ),
                 color=style.light_blue,
             )
@@ -309,7 +300,7 @@ class create_boss_track_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Bring the heat!",
+                    label=µ("Bring the heat!", "button"),
                     callback=self._on_okay,
                     tag=self._t("boss_bgm/button_okay"),
                 )

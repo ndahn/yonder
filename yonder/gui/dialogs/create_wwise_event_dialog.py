@@ -6,12 +6,13 @@ from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_generic_widget
 
 
 class create_wwise_event_dialog(DpgItem):
-    def __init__(self,
+    def __init__(
+        self,
         bnk: Soundbank,
         callback: Callable[[list[HIRCNode]], None],
         *,
@@ -28,14 +29,19 @@ class create_wwise_event_dialog(DpgItem):
     def _on_okay(self) -> None:
         name = dpg.get_value(self._t("name"))
         if not name:
-            self.show_message(t("Name not specified", "create_event/msg_name_not_set"))
+            self.show_message(µ("Name not specified", "msg"))
             return
 
         allow_arbitrary_name = dpg.get_value(self._t("allow_arbitrary_name"))
         if not allow_arbitrary_name:
             valid_chars = "".join(str(s) for s in SoundType)
             if not re.match(rf"[{valid_chars}]\d{4, 10}"):
-                self.show_message(t("Name not matching pattern (x123456789)", "create_event/msg_invalid_name"))
+                self.show_message(
+                    µ(
+                        "Name not matching pattern (x123456789)",
+                        "msg",
+                    )
+                )
                 return
 
         self.show_message()
@@ -60,13 +66,13 @@ class create_wwise_event_dialog(DpgItem):
             new_nodes.extend([stop_evt, stop_action])
 
         if not create_play_event and not create_stop_event:
-            self.show_message(t("No events created", "create_event/no_events_created"))
+            self.show_message(µ("No events created", "msg"))
             return
 
         self._bnk.add_nodes(new_nodes)
 
         self._callback(new_nodes)
-        self.show_message(t("Yay!", "yay"), color=style.blue)
+        self.show_message(µ("Yay!", "msg"), color=style.blue)
         dpg.set_item_label(self._t("create_event/button_okay"), "Again?")
 
     def _build(self, title: str):
@@ -80,11 +86,11 @@ class create_wwise_event_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             dpg.add_input_text(
-                label="Name",
+                label=µ("Name"),
                 tag=self._t("name"),
             )
             dpg.add_checkbox(
-                label="Allow arbitrary names",
+                label=µ("Allow arbitrary names"),
                 default_value=False,
                 tag=self._t("create_event/allow_arbitrary_names"),
             )
@@ -97,12 +103,12 @@ class create_wwise_event_dialog(DpgItem):
             )
 
             dpg.add_checkbox(
-                label="Create play action",
+                label=µ("Create play action"),
                 default_value=True,
                 tag=self._t("create_event/create_play_event"),
             )
             dpg.add_checkbox(
-                label="Create stop action",
+                label=µ("Create stop action"),
                 default_value=True,
                 tag=self._t("create_event/create_stop_event"),
             )
@@ -112,11 +118,13 @@ class create_wwise_event_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Chop chop!", callback=self._on_okay, tag=self._t("create_event/button_okay")
+                    label=µ("Chop chop!", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("create_event/button_okay"),
                 )
 
-    def show_message(self,
-        msg: str = None, color: tuple[int, int, int, int] = style.red
+    def show_message(
+        self, msg: str = None, color: tuple[int, int, int, int] = style.red
     ) -> None:
         if not msg:
             dpg.hide_item(self._t("notification"))

@@ -6,7 +6,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.wem import wem2wav
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator
 
@@ -48,22 +48,18 @@ class export_sounds_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self._bnk:
-            self.show_message(
-                t("No soundbank loaded", "export_sounds/msg_no_soundbank")
-            )
+            self.show_message(µ("No soundbank loaded", "msg"))
             return
 
         if not self._output_dir or not self._output_dir.is_dir():
-            self.show_message(
-                t("Invalid output directory", "export_sounds/msg_invalid_output_dir")
-            )
+            self.show_message(µ("Invalid output directory", "msg"))
             return
 
         self.show_message()
         export_full = dpg.get_value(self._t("export_sounds/export_full"))
         convert_to_wav = dpg.get_value(self._t("export_sounds/convert_to_wav"))
 
-        loading = loading_indicator(t("Converting...", "progress/converting"))
+        loading = loading_indicator(µ("Converting...", "loading"))
         try:
             config = get_config()
             if export_full:
@@ -87,10 +83,8 @@ class export_sounds_dialog(DpgItem):
                 for w in wems:
                     shutil.copy(w, self._output_dir)
 
-            self.show_message("Yay!", color=style.blue)
-            dpg.set_item_label(
-                self._t("export_sounds/button_okay"), t("Again?", "again")
-            )
+            self.show_message(µ("Yay!", "button"), color=style.blue)
+            dpg.set_item_label(self._t("export_sounds/button_okay"), µ("Again?"))
         finally:
             dpg.delete_item(loading)
 
@@ -109,7 +103,7 @@ class export_sounds_dialog(DpgItem):
                 "Soundbank",
                 self._on_soundbank_selected,
                 filetypes={
-                    t("Soundbanks (.bnk, .json)", "soundbank_files"): [
+                    µ("Soundbanks (.bnk, .json)", "filetypes"): [
                         "*.bnk",
                         "*.json",
                     ]
@@ -117,7 +111,7 @@ class export_sounds_dialog(DpgItem):
             )
             add_generic_widget(
                 Path,
-                "Output dir",
+                µ("Output folder"),
                 self._on_outputdir_selected,
                 file_mode="folder",
                 tag=self._t("export_sounds/output_dir"),
@@ -126,12 +120,12 @@ class export_sounds_dialog(DpgItem):
             dpg.add_spacer(height=5)
 
             dpg.add_checkbox(
-                label="Export full sounds for streamed",
+                label=µ("Export full sounds for streamed"),
                 default_value=True,
                 tag=self._t("export_sounds/export_full"),
             )
             dpg.add_checkbox(
-                label="Convert to wav",
+                label=µ("Convert to wav"),
                 default_value=True,
                 tag=self._t("export_sounds/convert_to_wav"),
             )
@@ -141,7 +135,7 @@ class export_sounds_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Yoink!",
+                    label=µ("Yoink!", "button"),
                     callback=self._on_okay,
                     tag=self._t("export_sounds/button_okay"),
                 )

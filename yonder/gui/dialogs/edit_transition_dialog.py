@@ -7,7 +7,7 @@ from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import CurveInterpolation, SyncType
 from yonder.util import deepmerge
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.helpers import dpg_section
 from yonder.gui.widgets import DpgItem
 
@@ -115,7 +115,7 @@ class edit_transition_dialog(DpgItem):
             tag=self._table_tag(rule_key),
         ):
             dpg.add_table_column(
-                label="File", width_stretch=True, init_width_or_weight=100
+                label=µ("File"), width_stretch=True, init_width_or_weight=100
             )
             dpg.add_table_column(label="")
 
@@ -128,11 +128,9 @@ class edit_transition_dialog(DpgItem):
         dst = self._dst_rule
 
         with dpg.window(
-            label=t(
-                "Edit Transition ({node_id})",
-                "edit_transition/title",
-                node_id=self._node.id,
-            ),
+            label=µ(
+                "Edit Transition ({node_id})"
+            ).format(node_id=self._node.id),
             width=400,
             height=400,
             autosize=True,
@@ -140,9 +138,14 @@ class edit_transition_dialog(DpgItem):
             tag=self._tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
-            dpg_section("Source Transition Rule", style.muted_orange, first=True, tag=self._t("edit_transition/src_transition_rule"))
+            dpg_section(
+                "Source Transition Rule",
+                style.muted_orange,
+                first=True,
+                tag=self._t("edit_transition/src_transition_rule"),
+            )
             dpg.add_input_int(
-                label="Transition time (ms)",
+                label=µ("Transition time (ms)"),
                 default_value=src.transition_time,
                 min_value=0,
                 max_value=60000,
@@ -154,7 +157,7 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/src_transition_time"),
             )
             dpg.add_input_int(
-                label="Fade offset (ms)",
+                label=µ("Fade offset (ms)"),
                 default_value=src.fade_offet,
                 min_value=-60000,
                 max_value=60000,
@@ -166,7 +169,7 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/src_fade_offset"),
             )
             dpg.add_combo(
-                label="Fade curve",
+                label=µ("Fade curve"),
                 items=[c.name for c in CurveInterpolation],
                 default_value=src.fade_curve.name,
                 callback=lambda s, a, u: setattr(
@@ -175,7 +178,7 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/src_fade_curve"),
             )
             dpg.add_combo(
-                label="Sync Type",
+                label=µ("Sync Type"),
                 items=[s.name for s in SyncType],
                 default_value=src.sync_type.name,
                 callback=lambda s, a, u: setattr(
@@ -184,9 +187,13 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/sync_type"),
             )
 
-            dpg_section("Destination Transition Rule", style.muted_teal, tag=self._t("edit_transition/dst_transition_rule"))
+            dpg_section(
+                "Destination Transition Rule",
+                style.muted_teal,
+                tag=self._t("edit_transition/dst_transition_rule"),
+            )
             dpg.add_input_int(
-                label="Transition time (ms)",
+                label=µ("Transition time (ms)"),
                 default_value=dst.transition_time,
                 min_value=0,
                 max_value=60000,
@@ -198,7 +205,7 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/dst_transition_time"),
             )
             dpg.add_input_int(
-                label="Fade offset (ms)",
+                label=µ("Fade offset (ms)"),
                 default_value=dst.fade_offet,
                 min_value=-60000,
                 max_value=60000,
@@ -208,7 +215,7 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/dst_fade_offset"),
             )
             dpg.add_combo(
-                label="Fade curve",
+                label=µ("Fade curve"),
                 items=[c.name for c in CurveInterpolation],
                 default_value=dst.fade_curve.name,
                 callback=lambda s, a, u: setattr(
@@ -217,7 +224,11 @@ class edit_transition_dialog(DpgItem):
                 tag=self._t("edit_transition/dst_fade_curve"),
             )
 
-            dpg_section("Affected nodes", style.light_grey, tag=self._t("edit_transition/affected_nodes"))
+            dpg_section(
+                "Affected nodes",
+                style.light_grey,
+                tag=self._t("edit_transition/affected_nodes"),
+            )
             with dpg.group(horizontal=True):
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Source IDs:")
@@ -232,10 +243,10 @@ class edit_transition_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Okay", callback=self._on_okay, tag=self._t("button_okay")
+                    label=µ("Okay", "button"), callback=self._on_okay, tag=self._t("button_okay")
                 )
                 dpg.add_button(
-                    label="Cancel", callback=lambda: dpg.delete_item(self._window)
+                    label=µ("Cancel", "button"), callback=lambda: dpg.delete_item(self._window)
                 )
 
     # === DPG Callbacks =================================================

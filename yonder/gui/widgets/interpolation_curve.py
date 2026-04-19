@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
+from yonder.gui.localization import µ
 from yonder.gui.helpers import GraphCurve
 from .draw_curve import draw_curve
 from .dpg_item import DpgItem
@@ -87,8 +88,8 @@ class add_interpolation_curve(DpgItem):
         p0 = self._curve[0]
         with dpg.group(tag=self._tag):
             with dpg.plot(width=-1, tag=self._t("canvas")):
-                dpg.add_plot_axis(dpg.mvXAxis, label="Input", tag=self._t("xaxis"))
-                dpg.add_plot_axis(dpg.mvYAxis, label="Output", tag=self._t("yaxis"))
+                dpg.add_plot_axis(dpg.mvXAxis, label=µ("Input"), tag=self._t("xaxis"))
+                dpg.add_plot_axis(dpg.mvYAxis, label=µ("Output"), tag=self._t("yaxis"))
 
             with dpg.group(horizontal=True):
                 dpg.add_text("p0", tag=self._t("point_label"))
@@ -119,10 +120,10 @@ class add_interpolation_curve(DpgItem):
                 )
                 dpg.add_text("|")
                 dpg.add_button(
-                    label="Add", callback=self._on_add_point, tag=self._t("add")
+                    label=µ("Add", "button"), callback=self._on_add_point, tag=self._t("add")
                 )
                 dpg.add_button(
-                    label="Remove",
+                    label=µ("Remove", "button"),
                     callback=self._on_remove_point,
                     tag=self._t("remove"),
                 )

@@ -1,8 +1,9 @@
 from dearpygui import dearpygui as dpg
 
 from yonder.util import resource_dir
+from yonder.gui.config import load_config
 from yonder.gui.style import init_themes
-from yonder.gui.localization import load_translations, apply_dpg_decorators
+from yonder.gui.localization import set_active_language
 from yonder.gui.yonder import BanksOfYonder
 
 
@@ -20,8 +21,8 @@ def dpg_init():
     init_themes()
 
     # Localization
-    load_translations()
-    apply_dpg_decorators()
+    lang = load_config().language or "en"
+    set_active_language(lang)
 
 
 if __name__ == "__main__":

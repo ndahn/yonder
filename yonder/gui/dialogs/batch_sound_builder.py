@@ -12,7 +12,7 @@ from yonder.query import query_nodes
 from yonder.enums import PropID, RandomMode, PlaybackMode, SoundType
 from yonder.util import logger
 from yonder.wem import wav2wem
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
@@ -130,13 +130,13 @@ class create_batch_sound_builder_dialog(DpgItem):
 
         if not name.isnumeric():
             self.show_message(
-                t("Name has non-standard format", "batch_sound_dialog/msg_bad_name"),
+                µ("Name has non-standard format", "msg"),
                 color=style.yellow,
             )
         else:
             self.show_message()
 
-        g.name = name.strip()
+        g.name = name.strip, "msg"()
 
     # === Table Management ===============
 
@@ -171,10 +171,10 @@ class create_batch_sound_builder_dialog(DpgItem):
 
     def _batch_groups_from_files(self) -> None:
         ret = open_multiple_dialog(
-            title=t("Select Audio Files", "select_audio_files"),
+            title=µ("Select Audio Files"),
             filetypes={
-                t("Wave (.wav)", "filetype_wav"): "*.wav",
-                t("WEM (.wem)", "filetype_wem"): "*.wem",
+                µ("Wave (.wav)", "filetypes"): "*.wav",
+                µ("WEM (.wem)", "filetypes"): "*.wem",
             },
         )
 
@@ -204,29 +204,20 @@ class create_batch_sound_builder_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         if not self._groups:
-            self.show_message(
-                t("No groups defined", "batch_sound_dialog/msg_no_groups")
-            )
+            self.show_message(µ("No groups defined", "msg"))
             return
 
         names_seen: set[str] = set()
 
         # Verify all groups are valid
         if not self._groups[0].actormixer:
-            self.show_message(
-                t(
-                    "ActorMixer of first group cannot be empty",
-                    "batch_sound_dialog/msg_first_actormixer_empty",
-                )
-            )
+            self.show_message(µ("ActorMixer of first group cannot be empty", "msg"))
             return
 
         for idx, g in enumerate(self._groups):
             if not g.soundfiles:
                 self.show_message(
-                    t(
-                        "Group {name} has no files",
-                        "batch_sound_dialog/msg_empty_group",
+                    µ("Group {name} has no files", "msg").format(
                         name=g.name,
                     )
                 )
@@ -245,10 +236,8 @@ class create_batch_sound_builder_dialog(DpgItem):
             if g.name:
                 if self._make_name("Play_", g.soundtype, g.name) in self._bnk:
                     self.show_message(
-                        t(
-                            "Group {name} already exists in soundbank",
-                            "batch_sound_dialog/msg_event_exists",
-                            name=g.name,
+                        µ("Group {name} already exists in soundbank", "msg").format(
+                            name=g.name
                         )
                     )
                     return
@@ -270,10 +259,7 @@ class create_batch_sound_builder_dialog(DpgItem):
         for g in self._groups:
             if g.name in names_seen:
                 self.show_message(
-                    t(
-                        "Duplicate group {name}",
-                        "batch_sound_dialog/msg_duplicate_group",
-                    )
+                    µ("Duplicate group {name}", "msg").format(name=g.name)
                 )
                 return
 
@@ -309,10 +295,8 @@ class create_batch_sound_builder_dialog(DpgItem):
         if self._callback:
             self._callback(created_pairs)
 
-        self.show_message(t("Yay!", "yay"), color=style.blue)
-        dpg.set_item_label(
-            self._t("batch_sound_builder/button_okay"), t("Again?", "again")
-        )
+        self.show_message(µ("Yay!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("batch_sound_builder/button_okay"), µ("Again?"))
 
     # === GUI Content =============
     def _build(self):
@@ -336,14 +320,14 @@ class create_batch_sound_builder_dialog(DpgItem):
                         on_add=lambda s, a, u: self._groups.append(a[1]),
                         on_remove=lambda s, a, u: self._groups.pop(a[0]),
                         on_select=lambda s, a, u: self.select_group(a[0]),
-                        label="Groups",
-                        add_item_label="Add Group",
+                        label=µ("Groups"),
+                        add_item_label=µ("Add Group"),
                     )
 
                     dpg.add_spacer(height=3)
 
                     with dpg.group():
-                        dpg.add_text("Bulk operations", color=style.pink)
+                        dpg.add_text(µ("Bulk operations"), color=style.pink)
                         dpg.add_separator()
 
                         with dpg.group(horizontal=True):
@@ -358,7 +342,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                             )
 
                         dpg.add_button(
-                            label="Groups from Files",
+                            label=µ("Groups from Files", "button"),
                             callback=self._batch_groups_from_files,
                             tag=self._t("batch_sound_builder/groups_from_files"),
                         )
@@ -376,11 +360,8 @@ class create_batch_sound_builder_dialog(DpgItem):
                             tag=self._t("soundtype"),
                         )
                         dpg.add_input_text(
-                            label="Name",
-                            hint=t(
-                                "Leave empty to generate from first audio file",
-                                "batch_sound_dialog/empty_name_hint",
-                            ),
+                            label=µ("Name"),
+                            hint=µ("Leave empty to generate from first audio file"),
                             callback=self._on_name_changed,
                             tag=self._t("name"),
                         )
@@ -394,7 +375,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
                     dpg.add_combo(
                         [p.name for p in PlaybackMode],
-                        label="Playback Mode",
+                        label=µ("Playback Mode"),
                         callback=self._make_setter(
                             "playback_mode", lambda v: PlaybackMode[v]
                         ),
@@ -402,14 +383,14 @@ class create_batch_sound_builder_dialog(DpgItem):
                     )
                     dpg.add_combo(
                         [r.name for r in RandomMode],
-                        label="Random Mode",
+                        label=µ("Random Mode"),
                         callback=self._make_setter(
                             "random_mode", lambda v: RandomMode[v]
                         ),
                         tag=self._t("random_mode"),
                     )
 
-                    with dpg.tree_node(label="Properties"):
+                    with dpg.tree_node(label=µ("Properties")):
                         self._w_properties = add_properties_table(
                             {},
                             self._make_setter("properties"),
@@ -421,8 +402,8 @@ class create_batch_sound_builder_dialog(DpgItem):
                         self._w_soundfiles = add_player_table_compact(
                             [],
                             self._make_setter("soundfiles"),
-                            label="Sound Files",
-                            add_item_label=t("+ Add Sound", "add_sound"),
+                            label=µ("Sound Files"),
+                            add_item_label=µ("+ Add Sound"),
                             show_clear=True,
                         )
 
@@ -431,7 +412,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="For the Horde!",
+                    label=µ("For the Horde!", "button"),
                     callback=self._on_okay,
                     tag=self._t("batch_sound_builder/button_okay"),
                 )

@@ -3,7 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.helpers import shorten_path
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, add_filepaths_table
@@ -46,7 +46,7 @@ class settings_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             with dpg.tree_node(
-                label="External Tools",
+                label=µ("External Tools"),
                 default_open=True,
                 tag=self._t("settings/external_tools"),
             ):
@@ -59,7 +59,7 @@ class settings_dialog(DpgItem):
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
-                        "For unpacking and repacking soundbanks",
+                        µ("For unpacking and repacking soundbanks"),
                         color=style.light_blue,
                         tag=self._t("settings/hint_bnk2json"),
                     )
@@ -73,7 +73,7 @@ class settings_dialog(DpgItem):
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
-                        "For wonverting wav to wem",
+                        µ("For wonverting wav to wem"),
                         color=style.light_blue,
                         tag=self._t("settings/hint_wwise"),
                     )
@@ -87,13 +87,13 @@ class settings_dialog(DpgItem):
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
-                        "For converting wem to wav and playback",
+                        µ("For converting wem to wav and playback"),
                         color=style.light_blue,
                         tag=self._t("settings/hint_vgmstream"),
                     )
 
             with dpg.tree_node(
-                label="Data Sources",
+                label=µ("Data Sources"),
                 default_open=True,
                 tag=self._t("settings/data_sources"),
             ):
@@ -101,12 +101,12 @@ class settings_dialog(DpgItem):
                     config.bankdirs,
                     self._on_bankdirs_changed,
                     folders=True,
-                    label="Soundbank folders",
+                    label=µ("Soundbank folders"),
                     tag=self._t("settings/soundbank_dirs"),
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
-                        "Used to locate external sounds",
+                        µ("Used to locate external sounds"),
                         color=style.light_blue,
                         tag=self._t("settings/hint_soundbank_dirs"),
                     )
@@ -116,13 +116,13 @@ class settings_dialog(DpgItem):
                 w = add_filepaths_table(
                     config.hash_dicts,
                     self._on_hashdicts_changed,
-                    label="Hash dictionaries",
-                    filetypes={t("Text files (.txt)", "text_files"): "*.txt"},
+                    label=µ("Hash dictionaries"),
+                    filetypes={µ("Text files (.txt)"): "*.txt"},
                     tag=self._t("settings/hash_dirs"),
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
-                        "Used for reversing hashes",
+                        µ("Used for reversing hashes"),
                         color=style.light_blue,
                         tag=self._t("settings/hint_hash_dirs"),
                     )
@@ -133,7 +133,7 @@ class settings_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Save", callback=self._on_okay, tag=self._t("button_save")
+                    label=µ("Save", "button"), callback=self._on_okay, tag=self._t("button_save")
                 )
 
     def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:

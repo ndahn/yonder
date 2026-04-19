@@ -9,7 +9,7 @@ from yonder.types.base_types import (
     MusicTransDstRule,
 )
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 from .dpg_item import DpgItem
 
@@ -63,6 +63,7 @@ class add_transition_matrix(DpgItem):
         node: TransitionNode,
         on_transition_rules_changed: Callable[[str, TransitionNode, Any], None] = None,
         *,
+        label: str = "Transition Rules",
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
@@ -87,7 +88,10 @@ class add_transition_matrix(DpgItem):
         self._theme_cache: dict[tuple, str] = {}
 
         # TODO consider using a heatmap for better performance instead
-        dpg.add_text("Transition rules", parent=parent, tag=self._t("transition_matrix/title"))
+        if label:
+            dpg.add_text(
+                label, parent=parent, tag=self._t("transition_matrix/title")
+            )
         dpg.add_table(
             header_row=True,
             no_pad_innerX=True,
@@ -233,12 +237,12 @@ class add_transition_matrix(DpgItem):
             on_close=lambda: dpg.delete_item(context_win),
         ) as context_win:
             dpg.add_menu_item(
-                label=t("Add rule", "transition_matrix/add_rule"),
+                label=µ("Add rule", "menu"),
                 callback=self._add_rule_for_cell,
                 user_data=cell_info,
             )
             dpg.add_menu_item(
-                label=t("Delete rule", "transition_matrix/delete_rule"),
+                label=µ("Delete rule", "menu"),
                 callback=self._delete_rule_for_cell,
                 user_data=cell_info,
             )
@@ -326,24 +330,21 @@ class add_transition_matrix(DpgItem):
                         )
                         with dpg.tooltip(btn):
                             dpg.add_text(
-                                t(
-                                    "Rule #{rule_idx}",
-                                    "transition_matrix/rule_tooltip_title",
+                                µ(
+                                    "Rule #{rule_idx}").format(
                                     rule_idx=rule_idx,
                                 )
                             )
                             dpg.add_text(f"{source_label} -> {dest_label}")
                             dpg.add_text(
-                                t(
-                                    "Total transition time: {time}ms",
-                                    "transition_matrix/rule_transition_time",
+                                µ(
+                                    "Total transition time: {time}ms").format(
                                     time=total_time,
                                 )
                             )
                             dpg.add_text(
-                                t(
-                                    "Sync type: {sync_type}",
-                                    "transition_matrix/rule_sync_type",
+                                µ(
+                                    "Sync type: {sync_type}").format(
                                     sync_type=rule.source_transition_rule.sync_type.name,
                                 )
                             )

@@ -6,7 +6,7 @@ from yonder.enums import RtpcType, RtpcAccum, CurveScaling
 from yonder.game import GameObjects
 from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from .hash_widget import add_hash_widget
 from .incomplete_enum import add_incomplete_int_enum
 from .interpolation_curve import add_interpolation_curve
@@ -111,7 +111,7 @@ class add_rtpc_table(DpgItem):
                 rtpc.id,
                 self._on_hash_changed,
                 horizontal=False,
-                string_label=t("Name", "name"),
+                string_label=µ("Name"),
                 user_data=rtpc,
                 width=120,
             )
@@ -125,14 +125,14 @@ class add_rtpc_table(DpgItem):
                 ):
                     dpg.add_combo(
                         [t.name for t in RtpcType],
-                        label="Type",
+                        label=µ("Type", "RTPC"),
                         default_value=rtpc.rtpc_type.name,
                         callback=self._make_setter(rtpc, "rtpc_type"),
                         tag=self._item_tag(idx, "rtpc_type"),
                     )
                     dpg.add_combo(
                         [a.name for a in RtpcAccum],
-                        label="Accumulation",
+                        label=µ("Accumulation", "RTPC"),
                         default_value=rtpc.rtpc_accum.name,
                         callback=self._make_setter(rtpc, "rtpc_accum"),
                         tag=self._item_tag(idx, "rtpc_accum"),
@@ -144,14 +144,14 @@ class add_rtpc_table(DpgItem):
                         self._make_setter(
                             rtpc, "param_id", callback=self._update_label
                         ),
-                        label="Parameter",
+                        label=µ("Parameter", "RTPC"),
                         sort=False,
                         tag=self._item_tag(idx, "param_id"),
                     )
                     with dpg.child_window(auto_resize_x=True, auto_resize_y=True):
                         dpg.add_combo(
                             [c.name for c in CurveScaling],
-                            label="Curve scaling",
+                            label=µ("Curve scaling", "RTPC"),
                             default_value=rtpc.curve_scaling.name,
                             callback=self._make_setter(
                                 rtpc, "curve_scaling", lambda v: CurveScaling[v]
@@ -177,7 +177,7 @@ class add_rtpc_table(DpgItem):
 
     def _add_footer(self) -> None:
         dpg.add_button(
-            label=t("+ Add RTPC", "add_rtpc"),
+            label=µ("+ Add RTPC"),
             callback=self._on_add_clicked,
             parent=self._tag,
         )

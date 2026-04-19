@@ -17,7 +17,7 @@ from yonder.types.sections import (
     STMGSection,
 )
 from yonder.gui import style
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from .generic_input_widget import add_generic_widget
 from .editable_table import add_widget_table
 from .hash_widget import add_hash_widget
@@ -142,7 +142,7 @@ def _add_widgets(
                 kwargs["value_type"] = type(kwargs["default"])
 
             label = kwargs["label"]
-            kwargs["label"] = t(label, "generic_param", param=label)
+            kwargs["label"] = µ(label, section.name)
 
             add_generic_widget(
                 callback=make_setter(
@@ -182,7 +182,7 @@ def _create_widgets_hirc(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> str:
-    dpg.add_text(t("See Events tab", "sections/hirc_goto_events"))
+    dpg.add_text(µ("See Events tab"))
 
 
 def _create_widgets_stid(
@@ -230,9 +230,9 @@ def _create_widgets_stid(
     add_widget_table(
         section.entries,
         stid_to_row,
-        label=t("Entries", "entries"),
+        label=µ("Entries"),
         header_row=True,
-        columns=[t("Bank ID", "bank_id"), t("Name", "name")],
+        columns=[µ("Bank ID", "table"), µ("Name", "table")],
     )
 
 

@@ -9,7 +9,7 @@ from yonder.enums import PropID
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
-from yonder.gui.localization import translate as t
+from yonder.gui.localization import µ
 from yonder.gui.widgets import (
     DpgItem,
     add_properties_table,
@@ -75,13 +75,13 @@ class create_simple_sound_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
             dpg.add_input_text(
-                label="Name",
+                label=µ("Name"),
                 default_value=default_name,
                 callback=self._update_name_and_id,
                 tag=self._t("name"),
             )
             dpg.add_input_text(
-                label="Hash",
+                label=µ("Hash"),
                 default_value=str(calc_hash(default_name)),
                 readonly=True,
                 enabled=False,
@@ -91,7 +91,7 @@ class create_simple_sound_dialog(DpgItem):
             # Actor mixer selector
             add_node_reference(
                 self._bnk.query,
-                "ActorMixer",
+                µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
                 node_type=ActorMixer,
                 get_node_details=self._get_amx_details,
@@ -100,7 +100,7 @@ class create_simple_sound_dialog(DpgItem):
 
             # Avoid repeats
             dpg.add_checkbox(
-                label="Avoid Repeats",
+                label=µ("Avoid Repeats"),
                 default_value=False,
                 tag=self._t("avoid_repeats"),
             )
@@ -114,8 +114,8 @@ class create_simple_sound_dialog(DpgItem):
             add_player_table(
                 self._soundfiles,
                 self._on_soundfiles_changed,
-                label="Sounds",
-                add_item_label="+ Add Sound",
+                label=µ("Sounds"),
+                add_item_label=µ("+ Add Sound"),
                 get_row_label=lambda i: f"source #{i}",
             )
 
@@ -124,7 +124,7 @@ class create_simple_sound_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label="Summon!",
+                    label=µ("Summon!", "button"),
                     callback=self._on_okay,
                     tag=self._t("simple_sound/button_okay"),
                 )
@@ -162,29 +162,24 @@ class create_simple_sound_dialog(DpgItem):
     def _on_okay(self) -> None:
         name = dpg.get_value(self._t("name"))
         if not name:
-            self.show_message(t("Name not specified", "simple_sound/msg_name_missing"))
+            self.show_message(µ("Name not specified", "msg"))
             return
 
         if f"Play_{name}" in self._bnk or f"Stop_{name}" in self._bnk:
             self.show_message(
-                t(
-                    "An event with this name already exists",
-                    "simple_sound/msg_name_duplicate",
-                )
+                µ(
+                    "An event with this name already exists"
+                , "msg")
             )
             return
 
         amx = int(dpg.get_value(self._t("actor_mixer")))
         if amx <= 0:
-            self.show_message(
-                t("ActorMixer not specified", "simple_sound/msg_amx_missing")
-            )
+            self.show_message(µ("ActorMixer not specified", "msg"))
             return
 
         if not self._soundfiles:
-            self.show_message(
-                t("No sounds specified", "simple_sound/msg_sounds_missing")
-            )
+            self.show_message(µ("No sounds specified", "msg"))
             return
 
         waves = [f for f in self._soundfiles if f.suffix == ".wav"]
@@ -209,8 +204,8 @@ class create_simple_sound_dialog(DpgItem):
         )
 
         self._callback(play_evt, stop_evt)
-        self.show_message(t("Yay!", "yay"), color=style.blue)
-        dpg.set_item_label(self._t("button_okay"), t("Again?", "again"))
+        self.show_message(µ("Yay!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("button_okay"), µ("Again?"))
 
     # === Public ========================================================
 

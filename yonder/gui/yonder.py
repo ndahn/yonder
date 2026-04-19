@@ -21,8 +21,8 @@ from yonder.types import (
 )
 from yonder.types.serialization import serialize
 from yonder.util import logger, unpack_soundbank, repack_soundbank
-from yonder.query import query_nodes, query_help_text
-from .config import Config, load_config
+from yonder.query import query_nodes
+from .config import Config, get_config
 from .helpers import center_window, shorten_path, tmp_dir
 from .widgets import (
     DpgItem,
@@ -40,12 +40,11 @@ from .widgets import (
 from . import style
 from .style import themes
 from .localization import (
-    set_active_lang,
-    get_active_lang,
-    translate_dpg_items,
+    set_active_language,
+    get_active_language,
+    translate_dpg_item,
     get_available_languages,
-    save_language_dict,
-    translate as t,
+    µ,
 )
 from .dialogs.about_dialog import about_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
@@ -79,9 +78,9 @@ class BanksOfYonder(DpgItem):
         self._selected_section: Section = None
         self._backup: DataNode = None
 
-        self.config: Config = load_config()
-        # Call once to 
-        set_active_lang(self.config.language)
+        self.config: Config = get_config()
+        # Call once to
+        set_active_language(self.config.language)
 
         self._setup_menu()
         self._setup_content()
@@ -106,7 +105,7 @@ class BanksOfYonder(DpgItem):
 
         sys.excepthook = self._handle_exception
         logger.addHandler(LogHandler())
-        dpg.set_frame_callback(5, lambda: logger.info(t("Hello :3", "hello")))
+        dpg.set_frame_callback(5, lambda: logger.info(µ("Hello :3", "log")))
 
     def _handle_exception(
         self, exc_type: Type[Exception], exc_value: Exception, exc_traceback
@@ -119,223 +118,235 @@ class BanksOfYonder(DpgItem):
         raise exc_value
 
     def _change_language(self, lang: str) -> None:
-        set_active_lang(lang)
-        lang = get_active_lang(False)
+        languages = get_available_languages()
+        if lang not in languages:
+            for key, val in languages.items():
+                if val == lang:
+                    lang = key
+                    break
+            else:
+                raise ValueError(f"Unknown language {lang}")
+
+        set_active_language(lang)
+        lang = get_active_language()
 
         for win in dpg.get_windows():
-            translate_dpg_items(win, lang)
+            translate_dpg_item(win, lang)
 
         # Only save if changing the language didn't cause any issues
         self.config.language = lang
         self.config.save()
 
-    def _save_reference_dict(self) -> None:
-        ret = save_file_dialog(
-            title=t("Save Reference Dict", "save_reference_dict"),
-            filetypes={t("YAML (.yaml)", "yaml_files"): "*.yaml"},
-        )
-        if ret:
-            save_language_dict(Path(ret))
+    # def _save_reference_dict(self) -> None:
+    #     ret = save_file_dialog(
+    #         title=µ("Generate i18n Template"),
+    #         filetypes={µ("Localization Templates (.pot)"): "*.pot"},
+    #     )
+    #     if ret:
+    #         save_language_dict(Path(ret))
 
     def _setup_menu(self) -> None:
         with dpg.menu_bar():
             with dpg.menu(
-                label="File",
+                label=µ("File", "menu"),
                 tag=self._t("menu/file"),
             ):
                 dpg.add_menu_item(
-                    label="Open...",
+                    label=µ("Open...", "menu"),
                     shortcut="ctrl-o",
                     callback=self._open_soundbank,
                     tag=self._t("menu/open"),
                 )
                 dpg.add_menu(
-                    label="Recent files",
+                    label=µ("Recent files", "menu"),
                     tag=self._t("menu/recent_files"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="Save",
+                    label=µ("Save", "menu"),
                     shortcut="ctrl-s",
                     callback=self._save_soundbank,
                     tag=self._t("menu/file_save"),
                 )
                 dpg.add_menu_item(
-                    label="Save As...",
+                    label=µ("Save As...", "menu"),
                     shortcut="ctrl-shift-s",
                     callback=self._save_soundbank_as,
                     tag=self._t("menu/file_save_as"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="Repack",
+                    label=µ("Repack", "menu"),
                     shortcut="f4",
                     callback=self._repack_soundbank,
                     tag=self._t("menu/file_repack"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="New Soundbank...",
+                    label=µ("New Soundbank...", "menu"),
                     shortcut="ctrl-n",
                     callback=self._create_empty_soundbank,
                     tag=self._t("menu/new_soundbank"),
                 )
 
             dpg.add_separator()
-            with dpg.menu(label="Bank", tag=self._t("menu/bank")):
+            with dpg.menu(label=µ("Bank", "menu"), tag=self._t("menu/bank")):
                 dpg.add_menu_item(
-                    label="Pin Orphans",
+                    label=µ("Pin Orphans", "menu"),
                     callback=self.pin_lost_objects,
                     tag=self._t("menu/pin_orphans"),
                 )
 
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="Solve HIRC",
+                    label=µ("Solve HIRC", "menu"),
                     callback=self._bank_solve_hirc,
                     tag=self._t("menu/solve_hirc"),
                 )
                 dpg.add_menu_item(
-                    label="Verify",
+                    label=µ("Verify", "menu"),
                     callback=self._bank_verify,
                     tag=self._t("menu/verify"),
                 )
 
                 dpg.add_separator()
                 with dpg.menu(
-                    label="Advanced",
+                    label=µ("Advanced", "menu"),
                     tag=self._t("menu/advanced"),
                 ):
                     dpg.add_menu_item(
-                        label="Delete unused wems",
+                        label=µ("Delete unused wems", "menu"),
                         callback=self._bank_remove_unused_wems,
                         tag=self._t("menu/remove_unused_wems"),
                     )
                     dpg.add_menu_item(
-                        label="Delete orphans",
+                        label=µ("Delete orphans", "menu"),
                         callback=self._bank_delete_orphans,
                         tag=self._t("menu/delete_orphans"),
                     )
 
-            with dpg.menu(label="Create", tag=self._t("menu/create")):
+            with dpg.menu(label=µ("Create", "menu"), tag=self._t("menu/create")):
                 dpg.add_menu_item(
-                    label="Simple Sound",
+                    label=µ("Simple Sound", "menu"),
                     callback=self._open_simple_sound_dialog,
                     tag=self._t("menu/create_simple_sound"),
                 )
                 dpg.add_menu_item(
-                    label="Batch Sound Builder",
+                    label=µ("Batch Sound Builder", "menu"),
                     callback=self._open_batch_sound_builder_dialog,
                     tag=self._t("menu/batch_sound_builder"),
                 )
                 dpg.add_menu_item(
-                    label="Boss Track",
+                    label=µ("Boss Track", "menu"),
                     callback=self._open_boss_track_dialog,
                     tag=self._t("menu/create_boss_track"),
                 )
                 dpg.add_menu_item(
-                    label="Ambience Track",
+                    label=µ("Ambience Track", "menu"),
                     callback=self._open_ambience_track_dialog,
                     enabled=False,  # TODO
                     tag=self._t("menu/create_ambience"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="New Wwise Event",
+                    label=µ("New Wwise Event", "menu"),
                     callback=self._open_new_wwise_event_dialog,
                     tag=self._t("menu/create_event"),
                 )
 
             dpg.add_separator()
 
-            with dpg.menu(label="Tools"):
+            with dpg.menu(label=µ("Tools", "menu")):
                 dpg.add_menu_item(
-                    label="Calc Hash",
+                    label=µ("Calc Hash", "menu"),
                     callback=self._open_calc_hash_dialog,
                     tag=self._t("menu/calc_hash"),
                 )
                 dpg.add_menu_item(
-                    label="Mass Transfer",
+                    label=µ("Mass Transfer", "menu"),
                     callback=self._open_mass_transfer_dialog,
                     tag=self._t("menu/mass_transfer"),
                 )
                 dpg.add_menu_item(
-                    label="Export Sounds",
+                    label=µ("Export Sounds", "menu"),
                     callback=self._open_export_sounds_dialog,
                     tag=self._t("menu/export_sounds"),
                 )
                 dpg.add_menu_item(
-                    label="Waves to Wems",
+                    label=µ("Waves to Wems", "menu"),
                     callback=self._open_convert_wavs_dialog,
                     tag=self._t("menu/waves_to_wems"),
                 )
 
             dpg.add_separator()
-            with dpg.menu(label="Yonder"):
+            with dpg.menu(label=µ("Yonder", "menu")):
                 with dpg.menu(
-                    label="Language",
+                    label=µ("Language", "menu"),
                     tag=self._t("menu/language"),
                 ):
                     dpg.add_radio_button(
-                        get_available_languages(True),
-                        default_value=get_active_lang(True),
+                        list(get_available_languages().values()),
+                        default_value=get_active_language(),
                         callback=lambda s, a, u: self._change_language(a),
                     )
-                    dpg.add_separator()
-                    dpg.add_menu_item(
-                        label="Save Reference Dict",
-                        callback=self._save_reference_dict,
-                        tag=self._t("menu/save_reference_dict"),
-                    )
+                    # dpg.add_separator()
+                    # dpg.add_menu_item(
+                    #     label=µ("Save Reference Dict"),
+                    #     callback=self._save_reference_dict,
+                    #     tag=self._t("menu/save_reference_dict"),
+                    # )
 
-                dpg.add_menu_item(
-                    label="Settings",
-                    callback=self._open_settings_dialog,
-                    tag=self._t("menu/settings"),
+                (
+                    dpg.add_menu_item(
+                        label=µ("Settings", "menu"),
+                        callback=self._open_settings_dialog,
+                        tag=self._t("menu/settings"),
+                    ),
                 )
                 dpg.add_menu_item(
-                    label="Open Temp Dir",
+                    label=µ("Open Temp Dir", "menu"),
                     callback=lambda s, a, u: os.startfile(tmp_dir.name),
                     tag=self._t("menu/open_temp"),
                 )
 
                 dpg.add_separator()
-                with dpg.menu(label="dearpygui"):
+                with dpg.menu(label=µ("dearpygui", "menu")):
                     dpg.add_menu_item(
-                        label="About",
+                        label=µ("About", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_About),
                     )
                     dpg.add_menu_item(
-                        label="Metrics",
+                        label=µ("Metrics", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_Metrics),
                     )
                     dpg.add_menu_item(
-                        label="Documentation",
+                        label=µ("Documentation", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_Doc),
                     )
                     dpg.add_menu_item(
-                        label="Debug", callback=lambda: dpg.show_tool(dpg.mvTool_Debug)
+                        label=µ("Debug", "menu"),
+                        callback=lambda: dpg.show_tool(dpg.mvTool_Debug),
                     )
                     dpg.add_menu_item(
-                        label="Style Editor",
+                        label=µ("Style Editor", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_Style),
                     )
                     dpg.add_menu_item(
-                        label="Font Manager",
+                        label=µ("Font Manager", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_Font),
                     )
                     dpg.add_menu_item(
-                        label="Item Registry",
+                        label=µ("Item Registry", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_ItemRegistry),
                     )
                     dpg.add_menu_item(
-                        label="Stack Tool",
+                        label=µ("Stack Tool", "menu"),
                         callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
                     )
 
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label="About",
+                    label=µ("About", "menu"),
                     callback=self._open_about_dialog,
                     tag=self._t("menu/about"),
                 )
@@ -370,10 +381,10 @@ class BanksOfYonder(DpgItem):
             ):
                 with dpg.child_window(border=True, resizable_y=True, height=500):
                     with dpg.tab_bar(tag=self._t("tabs")):
-                        with dpg.tab(label="Events", tag=self._t("tab_events")):
+                        with dpg.tab(label=µ("Events"), tag=self._t("tab_events")):
                             with dpg.group(horizontal=True):
                                 dpg.add_input_text(
-                                    hint=t("Search on enter", "hint_search"),
+                                    hint=µ("Search on enter"),
                                     width=-30,
                                     on_enter=True,
                                     callback=self._regenerate_events_list,
@@ -385,7 +396,30 @@ class BanksOfYonder(DpgItem):
                                 )
                                 with dpg.tooltip(dpg.last_item()):
                                     add_paragraphs(
-                                        t(query_help_text, "query_help"),
+                                        # See https://lucene.apache.org/core/2_9_4/queryparsersyntax.html
+                                        µ(
+                                            """\
+                                            Supports Lucene-style search queries (<field>=<value>). 
+
+                                            - You may use the * wildcard for values
+                                            - Field paths are prepended by ** unless quoted
+                                            - Use [X..Y] to specify a value range
+                                            - Precede your value with tilde ~ to do a fuzzy search
+                                            - Terms may be combined using grouping, OR, NOT. 
+                                            - Terms separated by a space are assumed to be AND.
+
+                                            You may run queries over the following fields:
+                                            - id (or hash), type, name
+                                            - any field name
+                                            - any field path separated by slashes /
+
+                                            Examples:
+                                            - id=*588 OR type=RandomSequenceContainer
+                                            - source_id=123456789
+                                            - NOT "node_base_params/parent_id"=[100000..200000]
+                                            - name=~Play_s*""",
+                                            "tips",
+                                        ),
                                         color=style.light_blue,
                                     )
 
@@ -401,12 +435,12 @@ class BanksOfYonder(DpgItem):
                                 tag=self._t("events_table"),
                             ):
                                 dpg.add_table_column(
-                                    label="Node",
+                                    label=µ("Node"),
                                     width_stretch=True,
                                     tag=self._t("events_col_nodes"),
                                 )
 
-                        with dpg.tab(label="Globals", tag=self._t("tab_globals")):
+                        with dpg.tab(label=µ("Globals"), tag=self._t("tab_globals")):
                             dpg.add_input_text(
                                 hint="Search on enter",
                                 width=-1,
@@ -426,12 +460,12 @@ class BanksOfYonder(DpgItem):
                                 tag=self._t("globals_table"),
                             ):
                                 dpg.add_table_column(
-                                    label="Node",
+                                    label=µ("Node"),
                                     width_stretch=True,
                                     tag=self._t("globals_col_nodes"),
                                 )
 
-                        with dpg.tab(label="Sections", tag=self._t("tab_sections")):
+                        with dpg.tab(label=µ("Sections"), tag=self._t("tab_sections")):
                             with dpg.table(
                                 no_host_extendX=True,
                                 resizable=True,
@@ -441,7 +475,7 @@ class BanksOfYonder(DpgItem):
                                 tag=self._t("sections_table"),
                             ):
                                 dpg.add_table_column(
-                                    label="Section",
+                                    label=µ("Section"),
                                     width_stretch=True,
                                     tag=self._t("sections_col_nodes"),
                                 )
@@ -458,7 +492,7 @@ class BanksOfYonder(DpgItem):
                         tag=self._t("pinned_objects_table"),
                     ) as self.pinned_objects_table:
                         dpg.add_table_column(
-                            label="Pinned Nodes",
+                            label=µ("Pinned Nodes"),
                             width_stretch=True,
                             tag=self._t("pinned_nodes_col_nodes"),
                         )
@@ -486,17 +520,17 @@ class BanksOfYonder(DpgItem):
                 )
                 with dpg.group(horizontal=True):
                     dpg.add_button(
-                        label="Apply",
+                        label=µ("Apply", "button"),
                         callback=self.apply_json,
                         tag=self._t("json_apply"),
                     )
                     dpg.add_button(
-                        label="Reload Json",
+                        label=µ("Reload Json", "button"),
                         callback=self.update_json_panel,
                         tag=self._t("json_reload"),
                     )
                     dpg.add_button(
-                        label="Reset Node",
+                        label=µ("Reset Node", "button"),
                         callback=self.reset_from_json,
                         tag=self._t("json_reset"),
                     )
@@ -532,51 +566,51 @@ class BanksOfYonder(DpgItem):
             tag=self._t("context_menu"),
         ):
             dpg.add_menu_item(
-                label="Show Graph",
+                label=µ("Show Graph", "menu"),
                 callback=self._open_node_graph,
                 tag=self._t("context/show_graph"),
             )
             dpg.add_menu_item(
-                label="Pin",
+                label=µ("Pin", "menu"),
                 callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
                 tag=self._t("context/pin"),
             )
 
             dpg.add_separator()
 
-            with dpg.menu(label="Copy", tag=self._t("context/copy")):
+            with dpg.menu(label=µ("Copy", "menu"), tag=self._t("context/copy")):
                 dpg.add_menu_item(
-                    label="Node",
+                    label=µ("Node", "menu"),
                     callback=self.node_copy,
                     tag=self._t("context/copy_node"),
                 )
                 dpg.add_menu_item(
-                    label="Hierarchy",
+                    label=µ("Hierarchy", "menu"),
                     callback=self.node_copy_hierarchy,
                     tag=self._t("context/copy_hierarchy"),
                 )
 
-            with dpg.menu(label="Paste", tag=self._t("context/paste")):
+            with dpg.menu(label=µ("Paste", "menu"), tag=self._t("context/paste")):
                 dpg.add_menu_item(
-                    label="Attach",
+                    label=µ("Attach", "menu"),
                     callback=self.node_attach,
                     tag=self._t("context/paste_node"),
                 )
                 dpg.add_menu_item(
-                    label="New child",
+                    label=µ("New child", "menu"),
                     callback=self.node_new_child,
                     tag=self._t("context/paste_new"),
                 )
 
             dpg.add_separator()
-            with dpg.menu(label="Delete", tag=self._t("context/delete")):
+            with dpg.menu(label=µ("Delete", "menu"), tag=self._t("context/delete")):
                 dpg.add_menu_item(
-                    label="Node",
+                    label=µ("Node", "menu"),
                     callback=self.node_delete,
                     tag=self._t("context/delete_node"),
                 )
                 dpg.add_menu_item(
-                    label="Tree",
+                    label=µ("Tree", "menu"),
                     callback=self.node_delete_tree,
                     tag=self._t("context/delete_node_tree"),
                 )
@@ -635,15 +669,15 @@ class BanksOfYonder(DpgItem):
             if self.bnk:
                 # A soundbank is loaded, save before exiting?
                 simple_choice_dialog(
-                    t("Save soundbank first?", "ask_save_soundbank"),
+                    µ("Save soundbank first?"),
                     [
-                        t("Save", "save"),
-                        t("Save as", "save_as"),
+                        µ("Save"),
+                        µ("Save as"),
                         "|",
-                        t("Just do it", "just_do_it"),
+                        µ("Just do it"),
                     ],
                     load_file_choice,
-                    title=t("Continue?", "confirm"),
+                    title=µ("Continue?"),
                     user_data=path,
                 )
                 return
@@ -727,9 +761,7 @@ class BanksOfYonder(DpgItem):
         node_id = dpg.get_item_user_data(selectable)
         node = self.bnk.get(node_id)
         if not node:
-            logger.error(
-                t("Node {node} no longer exists", "log_node_doesnt_exist", node=node_id)
-            )
+            logger.error(µ("Node {node} no longer exists", "log").format(node=node_id))
             return
 
         # Select, but don't jump
@@ -750,18 +782,18 @@ class BanksOfYonder(DpgItem):
             autosize=True,
         ) as popup:
             dpg.add_selectable(
-                label="Unpin",
+                label=µ("Unpin"),
                 callback=lambda s, a, u: self.remove_pinned_object(u),
                 user_data=node_id,
                 tag=self._t("pin/unpin"),
             )
             dpg.add_selectable(
-                label="Unpin All",
+                label=µ("Unpin All"),
                 callback=self.remove_all_pinned_objects,
                 tag=self._t("pin/unpin_all"),
             )
             dpg.add_selectable(
-                label="Jump To",
+                label=µ("Jump To"),
                 callback=lambda s, a, u: self.jump_to_node(u),
                 user_data=node_id,
                 tag=self._t("jump_to"),
@@ -801,18 +833,16 @@ class BanksOfYonder(DpgItem):
             return False
 
         path = save_file_dialog(
-            title=t("Save Soundbank", "save_soundbank"),
+            title=µ("Save Soundbank"),
             default_dir=str(self.bnk.bnk_dir),
-            filetypes={t("JSON (.json)", "json_files"): "*.json"},
+            filetypes={µ("JSON (.json)", "filetypes"): "*.json"},
         )
         if path:
-            loading = loading_indicator(t("Saving soundbank...", "progress/saving_soundbank"))
+            loading = loading_indicator(µ("Saving soundbank...", "loading"))
             try:
-                logger.info(
-                    t("Saving soundbank to {name}", "log_save_soundbank", name=path)
-                )
+                logger.info(µ("Saving soundbank to {name}", "log").format(name=path))
                 self.bnk.save(path)
-                logger.info(t("Don't forget to repack!", "log_reminder_repack"))
+                logger.info(µ("Don't forget to repack!", "log"))
                 return True
             finally:
                 dpg.delete_item(loading)
@@ -823,26 +853,24 @@ class BanksOfYonder(DpgItem):
         if not self.bnk:
             return
 
-        loading = loading_indicator(t("Repacking...", "progress/repacking"))
+        loading = loading_indicator(µ("Repacking...", "loading"))
         try:
-            logger.info(t("Repacking soundbank", "log_repacking"))
+            logger.info(µ("Repacking soundbank", "log"))
             bnk2json = self.config.locate_bnk2json()
             repack_soundbank(bnk2json, self.bnk.bnk_dir)
         except subprocess.CalledProcessError as e:
             error_msg = f"(E{e.returncode})\n{e.output}"
-            logger.error(
-                t("Repack failed: {error}", "log_repack_failed", error=error_msg)
-            )
+            logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
         finally:
             dpg.delete_item(loading)
 
     def _create_empty_soundbank(self) -> None:
-        path = choose_folder(title=t("Choose Empty Directory", "choose_empty_dir"))
+        path = choose_folder(title=µ("Choose Empty Directory"))
         if path:
             path = Path(path)
             empty = not bool(next(path.iterdir(), None))
             if not empty:
-                logger.error(t("Directory not empty", "log_directory_not_empty"))
+                logger.error(µ("Directory not empty", "log"))
                 return
 
             bnk = Soundbank.create_empty_soundbank(path, path.name)
@@ -850,11 +878,11 @@ class BanksOfYonder(DpgItem):
 
     def _open_soundbank(self) -> None:
         path = open_file_dialog(
-            title=t("Open", "open"),
+            title=µ("Open"),
             filetypes={
-                t("Supported files", "supported_files"): ["*.bnk", "*.json"],
-                t("JSON (.json)", "json_files"): "*.json",
-                t("Soundbanks (.bnk)", "soundbank_files"): "*.bnk",
+                µ("Supported files", "filetypes"): ["*.bnk", "*.json"],
+                µ("JSON (.json)", "filetypes"): "*.json",
+                µ("Soundbanks (.bnk)", "filetypes"): "*.bnk",
             },
         )
 
@@ -876,15 +904,13 @@ class BanksOfYonder(DpgItem):
             if unpacked_json.is_file():
                 # Soundbank was already unpacked, ask if we should open the json instead
                 simple_choice_dialog(
-                    t(
-                        "Soundbank {soundbank} was already unpacked. Open the json instead?",
-                        "ask_open_bnk_or_json",
-                        soundbank=path.stem,
-                    ),
-                    [t("Open json", "open_json"), t("Unpack again", "unpack_again")],
+                    µ(
+                        "Soundbank {soundbank} was already unpacked. Open the json instead?"
+                    ).format(soundbank=path.stem),
+                    [µ("Open json"), µ("Unpack again")],
                     on_unpack_choice,
                     user_data=path,
-                    title=t("Bnk or json?", "bnk_or_json"),
+                    title=µ("Bnk or json?"),
                 )
                 return
 
@@ -895,7 +921,7 @@ class BanksOfYonder(DpgItem):
             path = path / "soundbank.json"
 
         if not path.is_file():
-            logger.error(t("File not found: {name}", "log_file_not_found", name=path))
+            logger.error(µ("File not found: {name}", "log").format(name=path))
             self.config.remove_recent_file(path)
             self.config.save()
 
@@ -903,10 +929,8 @@ class BanksOfYonder(DpgItem):
             return
 
         if path.name.endswith(".bnk"):
-            logger.info(
-                t("Unpacking soundbank {name}", "log_unpacking_soundbank", name=path)
-            )
-            loading = loading_indicator(t("Unpacking...", "progress/unpacking"))
+            logger.info(µ("Unpacking soundbank {name}", "log").format(name=path))
+            loading = loading_indicator(µ("Unpacking...", "loading"))
             try:
                 bnk2json = self.config.locate_bnk2json()
                 unpack_soundbank(bnk2json, path)
@@ -914,8 +938,8 @@ class BanksOfYonder(DpgItem):
                 dpg.delete_item(loading)
                 dpg.split_frame()  # to enable the next modal loading indicator
 
-        logger.info(t("Loading soundbank {name}", "log_loading_soundbank", name=path))
-        loading = loading_indicator(t("Loading soundbank...", "progress/loading_soundbank"))
+        logger.info(µ("Loading soundbank {name}", "log").format(name=path))
+        loading = loading_indicator(µ("Loading soundbank...", "loading"))
         try:
             self.remove_all_pinned_objects()
             dpg.set_value(self._t("events_filter"), "")
@@ -931,11 +955,8 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
             self._set_bnk_menus_enabled(True)
             logger.info(
-                t(
-                    "Loaded soundbank {name} with {num_nodes} nodes",
-                    "log_soundbank_loaded",
-                    name=self.bnk.name,
-                    num_nodes=len(self.bnk),
+                µ("Loaded soundbank {name} with {num_nodes} nodes").format(
+                    name=self.bnk.name, num_nodes=len(self.bnk)
                 )
             )
         finally:
@@ -1114,11 +1135,8 @@ class BanksOfYonder(DpgItem):
 
         dpg.set_value(
             self._t("globals_count"),
-            t(
-                "Showing {num}/{total} globals",
-                "filter_info_nodes_shown",
-                num=len(self.globals_map),
-                total=len(global_nodes),
+            µ("Showing {num}/{total} globals").format(
+                num=len(self.globals_map), total=len(global_nodes)
             ),
         )
 
@@ -1259,11 +1277,9 @@ class BanksOfYonder(DpgItem):
                         break
                 else:
                     logger.error(
-                        t(
-                            "Could not find an event subgraph containing node {node}",
-                            "log_subgraph_not_found",
-                            node=node,
-                        )
+                        µ(
+                            "Could not find an event subgraph containing node {node}"
+                        ).format(node=node)
                     )
                     return
 
@@ -1298,11 +1314,8 @@ class BanksOfYonder(DpgItem):
                 break
         else:
             logger.error(
-                t(
-                    "Could not locate root item row for node {node} in {table}",
-                    "log_item_row_not_found",
-                    node=node,
-                    table=table,
+                µ("Could not locate root item row for node {node} in {table}").format(
+                    node=node, table=table
                 )
             )
 
@@ -1310,14 +1323,14 @@ class BanksOfYonder(DpgItem):
         self._on_node_selected(self._selected_root, True, self._selected_node)
 
     def _bank_solve_hirc(self) -> None:
-        loading = loading_indicator(t("Solving...", "progress/solving"))
+        loading = loading_indicator(µ("Solving...", "loading"))
         try:
             self.bnk.solve()
         finally:
             dpg.delete_item(loading)
 
     def _bank_verify(self) -> None:
-        loading = loading_indicator(t("Verifying...", "progress/verifying"))
+        loading = loading_indicator(µ("Verifying...", "loading"))
         try:
             self.bnk.verify()
         finally:
@@ -1335,11 +1348,7 @@ class BanksOfYonder(DpgItem):
         data = {"yonder_nodes": [self._selected_node]}
         pyperclip.copy(json.dumps(serialize(data), indent=2))
         logger.info(
-            t(
-                "Copied node {node} to clipboard",
-                "log_copied_node",
-                node=self._selected_node,
-            )
+            µ("Copied node {node} to clipboard").format(node=self._selected_node)
         )
 
     def node_copy_hierarchy(self) -> None:
@@ -1350,10 +1359,8 @@ class BanksOfYonder(DpgItem):
             node = self.bnk.get(nid)
             if not node:
                 logger.warning(
-                    t(
-                        "Subtree has reference to unknown node {node}",
-                        "log_unknown_reference",
-                        node=nid,
+                    µ("Subtree has reference to unknown node {node}", "log").format(
+                        node=nid
                     )
                 )
                 continue
@@ -1363,11 +1370,8 @@ class BanksOfYonder(DpgItem):
         data = {"yonder_nodes": nodes}
         pyperclip.copy(json.dumps(serialize(data), indent=2))
         logger.info(
-            t(
-                "Copied {node} and {num} descendants to clipboard",
-                "log_copied_hierarchy",
-                node=self._selected_node,
-                num=len(nodes) - 1,
+            µ("Copied {node} and {num} descendants to clipboard").format(
+                node=self._selected_node, num=len(nodes) - 1
             )
         )
 
@@ -1382,11 +1386,8 @@ class BanksOfYonder(DpgItem):
             self.bnk.add_nodes(node)
             self._selected_node.children.add(node)
             logger.info(
-                t(
-                    "Attached new node {node} to {parent}",
-                    "log_attached_node",
-                    node=node,
-                    parent=self._selected_node,
+                µ("Attached new node {node} to {parent}").format(
+                    node=node, parent=self._selected_node
                 )
             )
             # TODO no need to regenerate everything
@@ -1401,20 +1402,10 @@ class BanksOfYonder(DpgItem):
         try:
             data = json.loads(pyperclip.paste())
         except json.JSONDecodeError:
-            raise ValueError(
-                t(
-                    "Clipboard does not contain a valid hierarchy",
-                    "log_clipboard_invalid",
-                )
-            )
+            raise ValueError("Clipboard does not contain a valid hierarchy")
 
         if "yonder_nodes" not in data:
-            raise ValueError(
-                t(
-                    "Clipboard does not contain a valid hierarchy",
-                    "log_clipboard_invalid",
-                )
-            )
+            raise ValueError("Clipboard does not contain a valid hierarchy")
 
         nodes = [HIRCNode.from_dict(n) for n in data["yonder_nodes"]]
         id_map = {}
@@ -1440,12 +1431,8 @@ class BanksOfYonder(DpgItem):
         self._selected_node.attach(nodes[0])  # TODO
 
         logger.info(
-            t(
-                "Attached {node} and {num} descendants to {parent}",
-                "log_attached_hierarchy",
-                node=nodes[0],
-                num=len(nodes) - 1,
-                parent=self._selected_node,
+            µ("Attached {node} and {num} descendants to {parent}").format(
+                node=nodes[0], num=len(nodes) - 1, parent=self._selected_node
             )
         )
         self.regenerate()
@@ -1455,7 +1442,7 @@ class BanksOfYonder(DpgItem):
             return
 
         self.bnk.delete_nodes(self._selected_node)
-        logger.info(t("Deleted {node}", "log_deleted_node", node=self._selected_node))
+        logger.info(µ("Deleted {node}", "log").format(node=self._selected_node))
         self._on_node_selected(None, False, None)
         self.regenerate()
 
@@ -1466,11 +1453,8 @@ class BanksOfYonder(DpgItem):
         g = self.bnk.get_subtree(self._selected_node, True, False)
         self.bnk.delete_nodes(*g.nodes)
         logger.info(
-            t(
-                "Deleted {node} and {num} children",
-                "log_deleted_hierarchy",
-                node=self._selected_node,
-                num=len(g) - 1,
+            µ("Deleted {node} and {num} children").format(
+                node=self._selected_node, num=len(g) - 1
             )
         )
         self._on_node_selected(None, False, None)
@@ -1506,7 +1490,7 @@ class BanksOfYonder(DpgItem):
         try:
             data = json.loads(data_str)
         except json.JSONDecodeError as e:
-            raise ValueError(t("Failed to parse json", "log_parse_json_failed")) from e
+            raise ValueError("Failed to parse json") from e
 
         # Just to verify that the data actually makes sense
         tmp = item.from_dict(data)
@@ -1531,7 +1515,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
-            logger.info(t("Created node {node}", "log_created_node", node=node))
+            logger.info(µ("Created node {node}", "log").format(node=node))
             self.bnk.add_nodes(node)
             self.add_pinned_object(node)
 
@@ -1585,9 +1569,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_events_created(nodes: list[HIRCNode]) -> None:
-            logger.info(
-                t("Created new event {node}", "log_created_event", node=nodes[0])
-            )
+            logger.info(µ("Created new event {node}", "log").format(node=nodes[0]))
             self.regenerate()
             self.select_node(nodes[0])
 
@@ -1605,9 +1587,9 @@ class BanksOfYonder(DpgItem):
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
             logger.info(
-                t("Created new sound {name} with {count} sounds", "log_created_simple_sound"),
-                name=play_evt.get_wwise_name(play_evt),
-                count=len(self._soundfiles),
+                µ("Created new sound {name} with {count} sounds").format(
+                    name=play_evt.get_wwise_name(play_evt), count=len(self._soundfiles)
+                )
             )
             self.add_pinned_object(play_evt)
             self.add_pinned_object(stop_evt)
@@ -1641,10 +1623,8 @@ class BanksOfYonder(DpgItem):
 
         def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
             logger.info(
-                t(
-                    "Added boss track {bgm_enemy_type}",
-                    "log_created_boss_bgm",
-                    bgm_enemy_type=bgm_enemy_type,
+                µ("Added boss track {bgm_enemy_type}").format(
+                    bgm_enemy_type=bgm_enemy_type
                 )
             )
             self.add_pinned_object(nodes[0])
@@ -1664,9 +1644,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_ambience_track_created(nodes: list[HIRCNode]) -> None:
-            logger.info(
-                t("Added ambience track {name}", "log_created_ambience", name=nodes[0])
-            )
+            logger.info(µ("Added ambience track {name}", "log").format(name=nodes[0]))
 
         create_ambience_track_dialog(self.bnk, on_ambience_track_created, tag=tag)
 
