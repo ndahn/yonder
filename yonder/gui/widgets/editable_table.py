@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
+from yonder.gui import style
 from yonder.gui.helpers import shorten_path, GraphCurve
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
@@ -19,6 +20,9 @@ class add_widget_table(DpgItem):
     Renders a list of items as table rows via a caller-supplied ``create_row``
     function. Optionally supports adding, removing, selecting, and clearing
     items. If ``new_item`` is not set, add/remove controls are hidden.
+
+    Row selection is implemented with a narrow dedicated button column rather
+    than a span_columns selectable, so the remove button remains clickable.
 
     Parameters
     ----------
@@ -64,6 +68,7 @@ class add_widget_table(DpgItem):
         on_select: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
         header_row: bool = False,
         columns: list[str] = ("Value",),
+        selected_row_color: style.RGBA = style.muted_blue,
         label: str = None,
         add_item_label: str = "+",
         show_clear: bool = False,
@@ -79,9 +84,13 @@ class add_widget_table(DpgItem):
         self._on_add = on_add
         self._on_remove = on_remove
         self._on_select = on_select
+        self._selected_row_color = selected_row_color
         self._add_item_label = add_item_label
         self._show_clear = show_clear
         self._user_data = user_data
+        self._selected_idx: int = -1
+        # Maps row index -> tag of its select-indicator button
+        self._sel_buttons: dict[int, int] = {}
 
         self._build(header_row, columns, label, parent)
         self.refresh()
@@ -109,13 +118,14 @@ class add_widget_table(DpgItem):
                 tag=self._t("table"),
             ):
                 if self._on_select:
-                    dpg.add_table_column(label="")
+                    # Narrow indicator column; never spans other columns
+                    dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=14)
                 for col in columns:
                     dpg.add_table_column(
                         label=col, width_stretch=True, init_width_or_weight=100
                     )
                 if self._new_item:
-                    dpg.add_table_column(label="")
+                    dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=20)
 
             dpg.add_group(tag=self._t("footer"))
             dpg.add_spacer(height=3)
@@ -123,29 +133,70 @@ class add_widget_table(DpgItem):
     # === Internal row management =======================================
 
     def refresh(self) -> None:
+        self._sel_buttons.clear()
         dpg.delete_item(self._t("table"), children_only=True, slot=1)
         for i, val in enumerate(self._values):
             self._add_row(val, i)
         self._add_footer()
 
     def _add_row(self, val: _T, idx: int) -> None:
-        with dpg.table_row(parent=self._t("table")):
+        with dpg.table_row(parent=self._t("table")) as row:
             if self._on_select:
-                dpg.add_selectable(
-                    span_columns=True,
-                    callback=self._on_row_selected,
+                btn = dpg.add_button(
+                    label=" ",
+                    callback=self._on_select_clicked,
                     user_data=idx,
+                    small=True,
                 )
+                self._sel_buttons[idx] = btn
+
             self._create_row(val, idx)
+
+            remove_btn = None
             if self._new_item:
-                dpg.add_button(
-                    label="x", callback=self._on_remove_clicked, user_data=idx
+                remove_btn = dpg.add_button(
+                    label="x",
+                    callback=self._on_remove_clicked,
+                    user_data=idx,
+                    small=True,
                 )
+
+        # Bind a clicked handler to every content child (not the indicator or
+        # remove button) so clicking text, inputs, etc. also triggers selection.
+        # One registry per row; clicked_handler fires for both static text and
+        # input widgets. idx is captured via closure since the handler has no
+        # user_data forwarding.
+        if self._on_select:
+            registry = self._t(f"select_handler_{idx}")
+            if not dpg.does_item_exist(registry):
+                dpg.add_item_handler_registry(tag=registry)
+
+            # DPG calls handlers as (sender, app_data, user_data) even when no
+            # user_data is set, passing None — which overrides a default argument.
+            def _make_handler(i: int) -> Callable:
+                return lambda s, a, u: self._on_select_clicked(s, True, i)
+
+            dpg.add_item_clicked_handler(
+                parent=registry,
+                callback=_make_handler(idx),
+            )
+
+            for child in dpg.get_item_children(row, slot=1):
+                if child in (remove_btn, self._sel_buttons.get(idx)):
+                    continue
+                try:
+                    dpg.bind_item_handler_registry(child, registry)
+                except Exception:
+                    pass  # item types that don't support handlers; skip silently
 
     def _add_footer(self) -> None:
         if not self._new_item:
             return
         with dpg.table_row(parent=self._t("table")):
+            # When a selector column exists we must advance past it so the
+            # add/clear buttons land in a cell that spans the content columns.
+            if self._on_select:
+                dpg.add_table_cell()
             with dpg.group(horizontal=True):
                 dpg.add_button(
                     label=self._add_item_label, callback=self._on_add_clicked
@@ -155,10 +206,22 @@ class add_widget_table(DpgItem):
                         label=µ("Clear", "button"), callback=self._on_clear_clicked
                     )
 
+    def _update_indicators(self) -> None:
+        """Refresh all row indicator labels to reflect the current selection."""
+        for idx, btn in self._sel_buttons.items():
+            try:
+                dpg.set_item_label(btn, ">" if idx == self._selected_idx else " ")
+            except Exception:
+                pass  # row may have been deleted mid-refresh
+
     # === DPG callbacks =================================================
 
     def _on_remove_clicked(self, sender: int, app_data: Any, idx: int) -> None:
         prev = self._values.pop(idx)
+        if idx == self._selected_idx:
+            self._selected_idx = -1
+        elif idx < self._selected_idx:
+            self._selected_idx -= 1
         if self._on_remove:
             self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
         self.refresh()
@@ -177,12 +240,20 @@ class add_widget_table(DpgItem):
 
     def _on_clear_clicked(self) -> None:
         self._values.clear()
+        self._selected_idx = -1
         if self._on_remove:
             self._on_remove(self.tag, (0, None, self._values), self._user_data)
         self.refresh()
 
-    def _on_row_selected(self, sender: str, selected: bool, idx: int) -> None:
-        if selected and self._on_select:
+    def _on_select_clicked(self, sender: int, app_data: Any, idx: int) -> None:
+        if self._selected_idx >= 0:
+            dpg.unhighlight_table_row(self._t("table"), self._selected_idx)
+
+        dpg.highlight_table_row(self._t("table"), idx, self._selected_row_color)
+
+        self._selected_idx = idx
+        self._update_indicators()
+        if self._on_select:
             self._on_select(
                 self.tag, (idx, self._values[idx], self._values), self._user_data
             )
@@ -196,6 +267,7 @@ class add_widget_table(DpgItem):
 
     @items.setter
     def items(self, items: list[_T]) -> None:
+        self._selected_idx = -1
         self._values = list(items)
         self.refresh()
 
@@ -210,12 +282,17 @@ class add_widget_table(DpgItem):
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
         """Remove the item at ``idx`` and refresh the table."""
         prev = self._values.pop(idx)
+        if idx == self._selected_idx:
+            self._selected_idx = -1
+        elif idx < self._selected_idx:
+            self._selected_idx -= 1
         if fire_callbacks and self._on_remove:
             self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
         self.refresh()
 
     def clear(self, *, fire_callbacks: bool = False) -> None:
         """Remove all items and refresh the table."""
+        self._selected_idx = -1
         self._values.clear()
         if fire_callbacks and self._on_remove:
             self._on_remove(self.tag, (0, None, self._values), self._user_data)
@@ -484,7 +561,6 @@ class add_player_table(DpgItem):
             self._on_user_marker_changed(self.tag, (idx, markers), self._user_data)
 
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
-        # Player was already created by _create_row, just sync the list length
         if self._on_filepaths_changed:
             self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
 
