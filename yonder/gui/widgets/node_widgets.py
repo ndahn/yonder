@@ -995,10 +995,11 @@ def _create_attributes_musicsegment(
         with dpg.group(horizontal=True):
             dpg.add_combo(
                 [µ("Track #{idx}").format(idx=t) for t in tracks],
+                width=140,
                 tag=f"{base_tag}/child_tracks",
             )
             dpg.add_button(
-                label=µ("Edit", "button"),
+                label=µ("Edit on Track", "button"),
                 callback=edit_markers_on_track,
                 tag=f"{base_tag}/edit",
             )

@@ -230,11 +230,11 @@ class edit_transition_dialog(DpgItem):
             with dpg.group(horizontal=True):
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Source IDs:")
-                    self._build_id_table("edit_transition/source_ids")
+                    self._build_id_table("source_ids")
 
                 with dpg.child_window(border=False, width=200, auto_resize_y=True):
                     dpg.add_text("Destination IDs:")
-                    self._build_id_table("edit_transition/destination_ids")
+                    self._build_id_table("destination_ids")
 
             dpg.add_separator()
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)

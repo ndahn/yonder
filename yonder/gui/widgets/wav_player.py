@@ -990,13 +990,13 @@ class add_wav_player(DpgItem):
                             callback=lambda s, a, u: dpg.show_item(
                                 self._t("markers_popup")
                             ),
-                            tag=self._tag("markers"),
+                            tag=self._t("markers"),
                         )
                     else:
                         dpg.add_button(
                             label=µ("Edit", "button"),
                             callback=self._open_edit_markers_dialog,
-                            tag=self._tag("edit"),
+                            tag=self._t("edit"),
                         )
                     dpg.add_text("|")
 
