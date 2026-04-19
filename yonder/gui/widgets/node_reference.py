@@ -17,7 +17,8 @@ class add_node_reference(DpgItem):
         multiple: bool = False,
         default: HIRCNode = None,
         node_type: Type[HIRCNode] = None,
-        readonly: bool = False,
+        node_filter: Callable[[HIRCNode], bool] = None,
+        readonly: bool = True,
         parent: str = 0,
         tag: str = 0,
         user_data: Any = None,
@@ -25,12 +26,13 @@ class add_node_reference(DpgItem):
         super().__init__(tag)
 
         self._get_items = get_items
-        self._get_node_details = get_node_details
+        self._node_filter = node_filter
         self._callback = callback
         self._user_data = user_data
-        self.multiple = multiple
-        self.readonly = readonly
-        self.node_type = node_type
+        self._multiple = multiple
+        self._readonly = readonly
+        self._node_type = node_type
+        self._get_node_details = get_node_details
 
         if isinstance(default, HIRCNode):
             default = default.id
@@ -51,9 +53,9 @@ class add_node_reference(DpgItem):
                 decimal=True,
                 readonly=readonly,
                 enabled=not readonly,
-                callback=lambda s, a, u: self._callback(self._tag, int(a), u),
+                callback=self._on_node_edit,
                 user_data=self._user_data,
-                tag=self._tag,
+                tag=self.tag,
             )
             dpg.add_button(
                 arrow=True,
@@ -63,13 +65,23 @@ class add_node_reference(DpgItem):
             dpg.add_text(label)
 
     def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
-        for node in self.get_items(filt):
-            if not self.node_type or isinstance(node, self.node_type):
-                yield node
+        for node in self._get_items(filt):
+            if self._node_type and not isinstance(node, self._node_type):
+                continue
+
+            if self._node_filter and not self._node_filter(node):
+                continue
+
+            yield node
+
+    def _on_node_edit(self, sender: str, name: str, user_data: Any) -> None:
+        if self._callback:
+            self._callback(self.tag, name, user_data)
 
     def _on_node_selected(self, sender: str, node: HIRCNode, user_data: Any) -> None:
-        dpg.set_value(self._tag, str(node.id))
-        self._callback(self._tag, node, user_data)
+        dpg.set_value(self.tag, str(node.id))
+        if self._callback:
+            self._callback(self.tag, node, user_data)
 
     def _select_node(
         self,
@@ -78,7 +90,7 @@ class add_node_reference(DpgItem):
             self._get_nodes,
             self._on_node_selected,
             get_node_details=self._get_node_details,
-            multiple=self.multiple,
+            multiple=self._multiple,
             user_data=self._user_data,
         )
 
@@ -86,7 +98,7 @@ class add_node_reference(DpgItem):
 
     @property
     def selected_node(self) -> int:
-        val = dpg.get_value(self._tag)
+        val = dpg.get_value(self.tag)
         try:
             return int(val)
         except Exception:
@@ -100,4 +112,4 @@ class add_node_reference(DpgItem):
         if node is not None:
             node = int(node)
 
-        dpg.set_value(self._tag, node)
+        dpg.set_value(self.tag, node)

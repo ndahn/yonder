@@ -530,7 +530,7 @@ def _create_attributes_attenuation(
             curve_type = CurveScaling[curve.curve_type]
             node.curves.append(ConversionTable(curve_type, points=curve.points))
 
-        curve_items = ["-"] + [µ("Curve #{idx}", idx=i) for i in range(len(curves))]
+        curve_items = ["-"] + [µ("Curve #{idx}").format(idx=i) for i in range(len(curves))]
         for i in range(len(node.curves_to_use)):
             dpg.configure_item(
                 f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
@@ -558,10 +558,10 @@ def _create_attributes_attenuation(
         ):
             for i, curve in enumerate(node.curves_to_use):
                 param = CurveParameters(i).name
-                default_value = µ("Curve #{idx}", idx=curve) if curve >= 0 else "-"
+                default_value = µ("Curve #{idx}").format(idx=curve) if curve >= 0 else "-"
 
                 dpg.add_combo(
-                    ["-"] + [µ("Curve #{idx}", idx=i) for i in range(len(node.curves))],
+                    ["-"] + [µ("Curve #{idx}").format(idx=i) for i in range(len(node.curves))],
                     default_value=default_value,
                     label=param,
                     callback=on_curve_param_changed,

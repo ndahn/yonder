@@ -99,7 +99,7 @@ class select_nodes_dialog(DpgItem):
             self._selected_keys.add(key)
             dpg.set_value(sender, True)
 
-    def on_filter_changed(self, sender: int, filt: str, _user_data: Any) -> None:
+    def _on_filter_changed(self, sender: int, filt: str, _user_data: Any) -> None:
         self._items.clear()
         self._items.update(
             {
@@ -181,7 +181,7 @@ class select_nodes_dialog(DpgItem):
                     callback=lambda: dpg.delete_item(window),
                 )
 
-        self.on_filter_changed(self._t("filter"), "", None)
+        self._on_filter_changed(self._t("filter"), "", None)
 
 
 class select_nodes_of_type(DpgItem):

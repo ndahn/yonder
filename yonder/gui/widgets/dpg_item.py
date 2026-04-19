@@ -16,16 +16,16 @@ class DpgItem:
         if not tag:
             tag = dpg.generate_uuid()
         
-        if ctx:
-            tag += "/" + ctx
-        
         self._tag = tag
+        self._ctx = ctx
 
     @property
     def tag(self) -> int | str:
         return self._tag
 
     def _t(self, suffix: str) -> str:
+        if self._ctx:
+            suffix = f"{self._ctx}/{suffix}"
         return f"{self._tag}/{suffix}"
 
     @property

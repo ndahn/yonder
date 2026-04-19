@@ -249,7 +249,7 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label=µ("New Wwise Event", "menu"),
+                    label=µ("New Play/Stop Event", "menu"),
                     callback=self._open_new_wwise_event_dialog,
                     tag=self._t("menu/create_event"),
                 )

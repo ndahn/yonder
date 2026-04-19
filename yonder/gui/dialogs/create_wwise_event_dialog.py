@@ -34,8 +34,7 @@ class create_wwise_event_dialog(DpgItem):
 
         allow_arbitrary_name = dpg.get_value(self._t("allow_arbitrary_name"))
         if not allow_arbitrary_name:
-            valid_chars = "".join(str(s) for s in SoundType)
-            if not re.match(rf"[{valid_chars}]\d{4, 10}"):
+            if not re.match(rf"[{SoundType.values()}]\d{{4,10}}", name):
                 self.show_message(
                     µ(
                         "Name not matching pattern (x123456789)",
@@ -55,23 +54,25 @@ class create_wwise_event_dialog(DpgItem):
             play_action = Action.new_play_action(
                 self._bnk.new_id(), external_id, bank_id=self._bnk.bank_id
             )
-            play_evt.add_action(play_action)
+            play_evt.attach(play_action)
             new_nodes.extend([play_evt, play_action])
 
         create_stop_event = dpg.get_value(self._t("create_stop_event"))
         if create_stop_event:
             stop_evt = Event.new(f"Stop_{name}")
             stop_action = Action.new_stop_action(self._bnk.new_id(), external_id)
-            stop_evt.add_action(stop_action)
+            stop_evt.attach(stop_action)
             new_nodes.extend([stop_evt, stop_action])
 
         if not create_play_event and not create_stop_event:
             self.show_message(µ("No events created", "msg"))
             return
 
-        self._bnk.add_nodes(new_nodes)
+        self._bnk.add_nodes(*new_nodes)
 
-        self._callback(new_nodes)
+        if self._callback:
+            self._callback(new_nodes)
+        
         self.show_message(µ("Yay!", "msg"), color=style.blue)
         dpg.set_item_label(self._t("button_okay"), "Again?")
 
@@ -87,6 +88,7 @@ class create_wwise_event_dialog(DpgItem):
         ) as window:
             dpg.add_input_text(
                 label=µ("Name"),
+                hint="x123456789",
                 tag=self._t("name"),
             )
             dpg.add_checkbox(
@@ -99,6 +101,7 @@ class create_wwise_event_dialog(DpgItem):
                 self._bnk.query,
                 µ("Target node"),
                 None,
+                node_filter=lambda n: hasattr(n, "parent"),
                 tag=self._t("external_id"),
             )
 
