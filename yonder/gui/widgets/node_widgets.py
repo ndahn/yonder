@@ -134,9 +134,15 @@ def create_node_widgets(
 
             if hasattr(node, "parent"):
                 with dpg.group(horizontal=True):
-                    dpg.add_text("Parent: ", tag=f"{tag}/parent_is")
+                    dpg.add_text("Parent: ", tag=f"{tag}/parent_is", bullet=True)
                     parent_node = bnk.get(node.parent, node.parent)
                     add_node_link(str(parent_node), parent_node, on_node_selected)
+
+            if hasattr(node, "children"):
+                with dpg.tree_node(label=µ("Children")):
+                    for child_id in node.children:
+                        child = bnk.get(child_id, child_id)
+                        add_node_link(str(child), child, on_node_selected)
 
             dpg.add_spacer(height=3)
             dpg.add_separator()

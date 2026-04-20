@@ -320,6 +320,7 @@ class create_batch_sound_builder_dialog(DpgItem):
         dpg.set_item_label(self._t("batch_sound_builder/button_okay"), µ("Again?"))
 
     # === GUI Content =============
+
     def _build(self):
         with dpg.window(
             label=self._title,
