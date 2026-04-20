@@ -23,6 +23,7 @@ from yonder.gui.widgets import (
     add_node_reference,
     add_paragraphs,
 )
+from yonder.gui.widgets.node_reference import ActorMixerDetailProvider
 from .file_dialog import open_multiple_dialog
 
 
@@ -395,6 +396,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                         lambda f: query_nodes(self._actormixers, f),
                         "ActorMixer",
                         self._make_setter("actormixer", lambda n: n.id),
+                        get_node_details=ActorMixerDetailProvider(self._bnk),
                         tag=self._t("actormixer"),
                     )
 

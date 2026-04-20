@@ -8,6 +8,7 @@ from yonder.enums import SoundType
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_node_reference, add_paragraphs
+from yonder.gui.widgets.node_reference import get_details_generic
 
 
 class create_wwise_event_dialog(DpgItem):
@@ -105,6 +106,7 @@ class create_wwise_event_dialog(DpgItem):
                 µ("Target node"),
                 None,
                 node_filter=lambda n: hasattr(n, "parent"),
+                get_node_details=get_details_generic,
                 tag=self._t("external_id"),
             )
 

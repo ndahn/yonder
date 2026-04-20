@@ -16,6 +16,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_player_table,
 )
+from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
 
 
@@ -52,11 +53,6 @@ class create_boss_track_dialog(DpgItem):
     def _get_music_switch_containers(self, filt: str) -> list[MusicSwitchContainer]:
         filt = f"type=MusicSwitchContainer arguments:*/group_id={self.bgm_enemy_type_hash} {filt}"
         return list(self.bnk.query(filt))
-
-    def _get_music_switch_container_details(
-        self, msc: MusicSwitchContainer
-    ) -> list[str]:
-        return [lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments]
 
     def _edit_state_path(self) -> None:
         if not self.msc:
@@ -234,7 +230,7 @@ class create_boss_track_dialog(DpgItem):
                 self._get_music_switch_containers,
                 "MusicSwitchContainer",
                 self._on_music_switch_container_selected,
-                get_node_details=self._get_music_switch_container_details,
+                get_node_details=get_details_musicswitchcontainer,
                 node_type=MusicSwitchContainer,
             )
 

@@ -1,9 +1,58 @@
-from typing import Any, Callable, Type, Iterable
+from __future__ import annotations
+from typing import Any, Callable, Type, Iterable, TYPE_CHECKING
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
+from yonder.hash import lookup_name
+from yonder.gui.localization import µ
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
 from .dpg_item import DpgItem
+
+if TYPE_CHECKING:
+    from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
+
+
+class ActorMixerDetailProvider:
+    def __init__(self, bnk: Soundbank):
+        self.bnk = bnk
+
+    def __call__(self, am: ActorMixer) -> list[str]:
+        events = set()
+        for child_id in am.children:
+            child = self.bnk.get(child_id)
+            if child:
+                for evt, _ in self.bnk.find_event_subgraphs_for(child):
+                    name = evt.get_wwise_name(f"#{evt.id}")
+                    events.add(name)
+
+        used_by = sorted(events)[:10]
+        if len(events) > 10:
+            used_by.append("...")
+        
+        return [µ("Used by:")] + used_by
+
+
+def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
+    return [µ("States:")] + [lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments]
+
+
+def get_details_generic(node: HIRCNode) -> list[str]:
+    details = [node.get_name(f"#{node.id}")]
+    
+    if hasattr(node, "children"):
+        details.append(µ("Children: {num}").format(num=len(node.children)))
+
+    if hasattr(node, "properties") and node.properties:
+        details.append(µ("Properties") + ":")
+        for prop in node.properties:
+            details.append(f" {prop}")
+
+    if hasattr(node, "rtpcs") and node.rtpcs:
+        details.append("RTPCs:")
+        for rtpc in node.rtpcs:
+            details.append(f" {rtpc}")
+
+    return details
 
 
 class add_node_reference(DpgItem):

@@ -92,15 +92,10 @@ class add_rtpc_table(DpgItem):
     def _update_label(self, sender: str, info: tuple[RTPC, str, Any], ud: Any) -> None:
         rtpc = info[0]
         idx = self._rtpcs.index(rtpc)
-
-        try:
-            param = GameObjects.RTPCParameter(rtpc.param_id).name
-        except KeyError:
-            param = str(rtpc.param_id)
-
-        name = rtpc.get_name(f"#{rtpc.id}")
+        
         dpg.set_item_label(
-            self._item_tag(idx, "tree_node"), f"{name} ({param})".ljust(50)
+            self._item_tag(idx, "tree_node"),
+            str(rtpc).ljust(50),
         )
 
     def _bind_context_menu(self, item_tag: str, rtpc: RTPC) -> None:

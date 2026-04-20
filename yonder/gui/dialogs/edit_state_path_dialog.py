@@ -8,6 +8,7 @@ from yonder.hash import lookup_name
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_node_reference
+from yonder.gui.widgets.node_reference import get_details_generic
 
 
 class edit_state_path_dialog(DpgItem):
@@ -107,6 +108,7 @@ class edit_state_path_dialog(DpgItem):
                     self._get_nodes,
                     "Node",
                     self._on_node_selected,
+                    get_node_details=get_details_generic,
                     default=node_id or 0,
                 )
 

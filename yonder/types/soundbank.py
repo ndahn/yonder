@@ -470,7 +470,7 @@ class Soundbank:
 
     def find_event_subgraphs_for(
         self, node: int | HIRCNode
-    ) -> Generator[tuple[HIRCNode, nx.DiGraph], None, None]:
+    ) -> Generator[tuple[Event, nx.DiGraph], None, None]:
         if isinstance(node, HIRCNode):
             node = node.id
 

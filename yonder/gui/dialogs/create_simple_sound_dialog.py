@@ -17,6 +17,7 @@ from yonder.gui.widgets import (
     add_player_table,
     add_paragraphs,
 )
+from yonder.gui.widgets.node_reference import ActorMixerDetailProvider
 
 
 class create_simple_sound_dialog(DpgItem):
@@ -95,7 +96,7 @@ class create_simple_sound_dialog(DpgItem):
                 µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
                 node_type=ActorMixer,
-                get_node_details=self._get_amx_details,
+                get_node_details=ActorMixerDetailProvider(self._bnk),
                 tag=self._t("actor_mixer"),
             )
 
@@ -150,13 +151,6 @@ class create_simple_sound_dialog(DpgItem):
         if not new_name:
             return
         dpg.set_value(self._t("hash"), str(calc_hash(new_name)))
-
-    @staticmethod
-    def _get_amx_details(node: ActorMixer) -> list[str]:
-        return [
-            f"parent: {node.parent}",
-            f"children: {len(node.children)}",
-        ]
 
     def _on_amx_selected(self, sender: str, amx: ActorMixer, ud: Any) -> None:
         if amx:

@@ -456,6 +456,17 @@ class RTPC:
     def get_name(self, default: Any = None) -> str:
         return lookup_name(self.id, default)
 
+    def __str__(self) -> str:
+        from yonder.game import GameObjects
+        
+        try:
+            param = GameObjects.RTPCParameter(self.param_id).name
+        except KeyError:
+            param = str(self.param_id)
+
+        name = self.get_name(f"#{self.id}")
+        return f"{name} ({param})"
+
 
 @dataclass(slots=True)
 class InitialRTPC:
@@ -476,6 +487,10 @@ class PropBundle:
     prop_id: PropID = PropID.Volume
     value: float = 0.0
 
+    @property
+    def prop_enum(self) -> PropID:
+        return PropID(self.prop_id)
+
     def get_references(self) -> list[tuple[str, int]]:
         if self.prop_id in (PropID.AttachedPluginFXID, PropID.AttenuationID):
             return [("value", int(self.value))]
@@ -487,6 +502,9 @@ class PropBundle:
 
     def to_dict(self) -> dict:
         return {self.prop_id.name: self.value}
+
+    def __str__(self) -> str:
+        return f"{self.prop_enum.name}={self.value:.2f}"
 
 
 @dataclass(slots=True)
