@@ -924,6 +924,10 @@ class BanksOfYonder(DpgItem):
         self._load_soundbank(path)
 
     def _load_soundbank(self, path: Path) -> None:
+        self._selected_root = None
+        self._selected_node = None
+        self._selected_section = None
+
         if path.is_dir():
             path = path / "soundbank.json"
 
@@ -1290,7 +1294,8 @@ class BanksOfYonder(DpgItem):
                     logger.error(
                         µ(
                             "Could not find an event subgraph containing node {node}"
-                        ).format(node=node)
+                        ).format(node=node),
+                        stack_info=True,
                     )
                     return
 

@@ -450,7 +450,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     """,
                     "tips",
                 ),
-                color=style.light_blue,
+                color=style.blue,
             )
 
             dpg.add_separator()

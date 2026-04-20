@@ -131,7 +131,7 @@ class create_simple_sound_dialog(DpgItem):
                     """,
                     "tips",
                 ),
-                color=style.light_blue,
+                color=style.blue,
             )
 
             dpg.add_separator()

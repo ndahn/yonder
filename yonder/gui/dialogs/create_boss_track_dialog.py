@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.types import MusicSwitchContainer
-from yonder.hash import calc_hash, lookup_name
+from yonder.hash import calc_hash
 from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
 from yonder.gui import style
@@ -273,8 +273,6 @@ class create_boss_track_dialog(DpgItem):
             dpg.add_table(tag=self._t("per_track_settings"))
 
             dpg.add_separator()
-            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
-
             add_paragraphs(
                 µ(
                     """\
@@ -287,9 +285,12 @@ class create_boss_track_dialog(DpgItem):
                     """,
                     "tips",
                 ),
-                color=style.light_blue,
+                color=style.blue,
             )
-            dpg.add_spacer(height=5)
+            
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):
                 dpg.add_button(

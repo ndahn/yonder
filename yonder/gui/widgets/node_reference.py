@@ -28,17 +28,19 @@ class ActorMixerDetailProvider:
         used_by = sorted(events)[:10]
         if len(events) > 10:
             used_by.append("...")
-        
+
         return [µ("Used by:")] + used_by
 
 
 def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
-    return [µ("States:")] + [lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments]
+    return [µ("States:")] + [
+        lookup_name(s.group_id, f"#{s.group_id}") for s in msc.arguments
+    ]
 
 
 def get_details_generic(node: HIRCNode) -> list[str]:
     details = [node.get_name(f"#{node.id}")]
-    
+
     if hasattr(node, "children"):
         details.append(µ("Children: {num}").format(num=len(node.children)))
 

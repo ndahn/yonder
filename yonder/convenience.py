@@ -135,7 +135,7 @@ def create_boss_bgm(
     phase_transitions: list[tuple[MusicFade, MusicFade]] = None,
     self_transitions: list[tuple[MusicFade, MusicFade]] = None,
     repeat_transitions: list[tuple[MusicFade, MusicFade]] = None,
-) -> tuple[MusicSwitchContainer, list[HIRCNode]]:
+) -> tuple[list[HIRCNode]]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
     def apply_fades(
@@ -187,7 +187,7 @@ def create_boss_bgm(
         boss_phases += [f"HU{i + 1}" for i in range(len(tracks) - 1)]
 
     boss_state_keys = parse_state_path(boss_phases)
-    new_nodes: list[HIRCNode] = []
+    new_nodes: list[HIRCNode] = [boss_msc]
     phase_masters: list[MusicRandomSequenceContainer] = []
 
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
@@ -361,5 +361,5 @@ def create_boss_bgm(
     master.add_branch(master_state_keys, boss_msc.id)
 
     # Add nodes to soundbank
-    bnk.add_nodes(boss_msc, *new_nodes)
-    return (boss_msc, new_nodes)
+    bnk.add_nodes(*new_nodes)
+    return new_nodes
