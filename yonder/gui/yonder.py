@@ -1046,6 +1046,8 @@ class BanksOfYonder(DpgItem):
         self._regenerate_globals_list()
         self._regenerate_sections_list()
 
+        dpg.split_frame()
+
         if self._selected_node:
             self.jump_to_node(self._selected_node)
         elif self._selected_section:

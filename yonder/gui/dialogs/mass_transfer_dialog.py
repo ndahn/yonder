@@ -338,7 +338,7 @@ class mass_transfer_dialog(DpgItem):
                     """,
                     "mass_transfer/tips",
                 ),
-                color=style.blue,
+                color=style.light_blue,
             )
 
             dpg.add_separator()

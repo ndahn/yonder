@@ -285,7 +285,7 @@ class create_boss_track_dialog(DpgItem):
                     """,
                     "tips",
                 ),
-                color=style.blue,
+                color=style.light_blue,
             )
             
             dpg.add_separator()

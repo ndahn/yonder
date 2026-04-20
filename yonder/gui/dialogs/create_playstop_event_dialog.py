@@ -130,7 +130,7 @@ class create_wwise_event_dialog(DpgItem):
                     """,
                     "tips",
                 ),
-                color=style.blue,
+                color=style.light_blue,
             )
             
             dpg.add_separator()
