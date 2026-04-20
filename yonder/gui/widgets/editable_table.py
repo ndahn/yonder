@@ -508,7 +508,7 @@ class add_player_table(DpgItem):
         ] = None,
         *,
         label: str = "Tracks",
-        add_item_label: str = "+ Add Track",
+        add_item_label: str = "+ Add Tracks",
         get_row_label: Callable[[int], str] = None,
         on_loop_changed: Callable[
             [str, tuple[int, tuple[float, float, bool]], Any], None
@@ -523,11 +523,11 @@ class add_player_table(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from yonder.gui.dialogs.file_dialog import open_file_dialog
+        from yonder.gui.dialogs.file_dialog import open_multiple_dialog
         from .wav_player import add_wav_player as _wav_player
 
         self._wav_player_cls = _wav_player
-        self._open_file_dialog = open_file_dialog
+        self._open_multiple_dialog = open_multiple_dialog
 
         super().__init__(tag)
 
@@ -541,7 +541,7 @@ class add_player_table(DpgItem):
         )
         self._user_data = user_data
 
-        self.players: list = []  # add_wav_player instances, one per track
+        self.players: list[_wav_player] = []  # add_wav_player instances, one per track
 
         self._table = add_widget_table(
             list(initial_tracks or []),
@@ -562,18 +562,19 @@ class add_player_table(DpgItem):
         paths = self._table.items
         loop_info = [p.get_loop_state() for p in self.players]
         trims = [p.get_trims() for p in self.players]
-        markers = [p.get_user_marker_pos() for p in self.players]
+        markers = [p.get_user_markers() for p in self.players]
         return (paths, loop_info, trims, markers)
 
     # === DPG callbacks =================================================
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
-        ret = self._open_file_dialog(
+        ret = self._open_multiple_dialog(
             title=µ("Select Audio"),
             filetypes={µ("Audio (.wem, .wav)", "filetypes"): ["*.wem", "*.wav"]},
         )
         if ret:
-            done(Path(ret))
+            for f in ret:
+                done(Path(f))
 
     def _on_loop_edit(self, sender: str, new_loop: tuple, idx: int) -> None:
         if self._on_loop_changed:

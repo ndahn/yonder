@@ -71,6 +71,10 @@ def create_simple_sound(
     if isinstance(wems, Path):
         wems = [wems]
 
+    for w in wems:
+        if not w.name.endswith(".wem"):
+            raise ValueError("All tracks must be .wem files")
+
     rsc = RandomSequenceContainer.new(
         bnk.new_id(),
         None,
@@ -84,6 +88,7 @@ def create_simple_sound(
 
     sounds = []
     for w in wems:
+        w = bnk.add_wem(w, SourceType.Embedded)
         snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
         rsc.add_playlist_item(snd)
         sounds.append(snd)
@@ -112,10 +117,8 @@ def create_simple_sound(
     if isinstance(actor_mixer, HIRCNode):
         actor_mixer.children.add(rsc)
 
+    # Add nodes to soundbank
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
-    for w in wems:
-        bnk.add_wem(w, SourceType.Embedded)
-
     return ((play, stop), rsc, sounds)
 
 
@@ -188,6 +191,8 @@ def create_boss_bgm(
     phase_masters: list[MusicRandomSequenceContainer] = []
 
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
+        bgm = bnk.add_wem(bgm, SourceType.Streaming)
+
         phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
         phase_masters.append(phase_mrsc)
 
@@ -355,9 +360,6 @@ def create_boss_bgm(
     master_state_keys: list[int] = parse_state_path(state_path)
     master.add_branch(master_state_keys, boss_msc.id)
 
-    # Add nodes and wems to soundbank
+    # Add nodes to soundbank
     bnk.add_nodes(boss_msc, *new_nodes)
-    for bgm in tracks:
-        bnk.add_wem(bgm, SourceType.Streaming)
-
     return (boss_msc, new_nodes)

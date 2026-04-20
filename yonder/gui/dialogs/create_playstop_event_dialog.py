@@ -43,12 +43,15 @@ class create_wwise_event_dialog(DpgItem):
                 )
                 return
 
+        external_id = int(dpg.get_value(self._t("external_id")))
+        if not external_id:
+            self.show_message(µ("Target ID not set"))
+
         self.show_message()
 
         new_nodes = []
-        external_id = int(dpg.get_value(self._t("external_id")))
-
         create_play_event = dpg.get_value(self._t("create_play_event"))
+
         if create_play_event:
             play_evt = Event.new(f"Play_{name}")
             play_action = Action.new_play_action(

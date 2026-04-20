@@ -64,12 +64,12 @@ class export_sounds_dialog(DpgItem):
             config = get_config()
             if export_full:
                 wems = []
-                for w in self._bnk.wems():
+                for w in self._bnk.source_ids():
                     path = next(config.find_external_sounds(w), None)
                     if path:
                         wems.append(path)
             else:
-                wems = [self._bnk.bnk_dir / f"{w}.wem" for w in self._bnk.wems()]
+                wems = [self._bnk.bnk_dir / f"{w}.wem" for w in self._bnk.source_ids()]
 
             if convert_to_wav:
                 try:

@@ -116,7 +116,7 @@ class create_simple_sound_dialog(DpgItem):
                 self._soundfiles,
                 self._on_soundfiles_changed,
                 label=µ("Sounds"),
-                add_item_label=µ("+ Add Sound"),
+                add_item_label=µ("+ Add Sounds"),
                 get_row_label=lambda i: f"source #{i}",
             )
 

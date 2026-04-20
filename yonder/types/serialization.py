@@ -1,12 +1,27 @@
 from __future__ import annotations
 import sys
 from typing import Any, Type, get_origin, get_args, Union
-from dataclasses import is_dataclass, fields, InitVar
+from dataclasses import is_dataclass, fields, InitVar, Field
 import keyword
 import inspect
 from enum import Enum, StrEnum
 
 from yonder.util import resolve_typehint, get_module_for_field, logger
+
+
+class WrongValueTypeError(RuntimeError):
+    def __init__(self, obj: Any, fields: list[str], mismatches: list[tuple[type, type]]):
+        super().__init__()
+        self.obj = obj
+        self.fields = fields
+        self.mismatches = mismatches
+
+    def __str__(self):
+        details = "\n".join(
+            f" - {f} (expected: {m[0].__name__}, is: {m[1].__name__})"
+            for f, m in zip(self.fields, self.mismatches)
+        )
+        return f"The following fields of object {self.obj} don't match the expected type:\n{details}"
 
 
 def serialize(obj: Any) -> Any:
@@ -17,7 +32,7 @@ def serialize(obj: Any) -> Any:
 
 
 def _serialize_value(obj: Any) -> Any:
-    verify_values(obj)
+    verify_values(obj, False)
 
     if is_dataclass(obj) and not isinstance(obj, type):
         result = {}
@@ -75,7 +90,8 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
         kwargs[f] = _parse_value(field_type, value)
 
     ret = target_type(**kwargs)
-    verify_values(ret)
+    verify_values(ret, False)
+
     return ret
 
 
@@ -138,7 +154,7 @@ def _get_hints(target_type: Type) -> dict[str, Any]:
     return hints
 
 
-def verify_values(obj) -> None:
+def verify_values(obj, raise_on_error: bool) -> None:
     if hasattr(obj, "validate") and callable(obj.validate):
         obj.validate()
 
@@ -146,6 +162,8 @@ def verify_values(obj) -> None:
         return
 
     ctx = str(obj)
+    wrong_fields: list[str] = []
+    mismatches: list[type, type] = []
 
     for f in fields(obj):
         fmod = get_module_for_field(obj, f.name)
@@ -155,27 +173,33 @@ def verify_values(obj) -> None:
 
         if issubclass(origin, Enum):
             if not isinstance(val, (origin, str, int)):
-                raise ValueError(
-                    f"{ctx}: value of field {f.name} is not compatible with enum {origin}"
-                )
+                wrong_fields.append(f.name)
+                mismatches.append((type(val), origin))
 
         if origin is Union:
             logger.warning(f"{ctx}: field {f.name} has union type")
-            continue
+            return
 
         if not isinstance(val, origin):
-            raise ValueError(
-                f"{ctx}: value of field {f.name} has invalid type {origin}"
-            )
+            wrong_fields.append(f.name)
+            mismatches.append((type(val), origin))
 
         if isinstance(val, list):
             args = get_args(tp)
             if not args:
-                logger.warning(f"{ctx}: incomplete type annotation of field {f.name}")
+                logger.warning(
+                    f"{ctx}: incomplete type annotation {tp} of field {f.name}"
+                )
             else:
                 item_tp = args[0]
                 for idx, item in enumerate(val):
                     if not isinstance(item, item_tp):
-                        raise ValueError(
-                            f"{ctx}: item {idx} ({item}) of field {f.name} does not conform to list item type {item_tp}"
-                        )
+                        wrong_fields.append(f"{f.name}:{idx}")
+                        mismatches.append((type(item), item_tp))
+
+    if wrong_fields:
+        e = WrongValueTypeError(obj, wrong_fields, mismatches)
+        if raise_on_error:
+            raise e
+        else:
+            logger.error(str(e))

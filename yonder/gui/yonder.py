@@ -49,7 +49,7 @@ from .localization import (
 from .dialogs.about_dialog import about_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
 from .dialogs.create_node_dialog import create_node_dialog
-from .dialogs.create_wwise_event_dialog import create_wwise_event_dialog
+from .dialogs.create_playstop_event_dialog import create_wwise_event_dialog
 from .dialogs.file_dialog import (
     open_file_dialog,
     save_file_dialog,
@@ -1348,7 +1348,7 @@ class BanksOfYonder(DpgItem):
             dpg.delete_item(loading)
 
     def _bank_remove_unused_wems(self) -> None:
-        self.bnk.remove_unused_wems()
+        self.bnk.delete_unused_wems()
         self.regenerate
 
     def _bank_delete_orphans(self) -> None:
@@ -1654,7 +1654,7 @@ class BanksOfYonder(DpgItem):
         def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
             self.add_pinned_object(nodes[0])
             logger.info(
-                µ("Added boss track {bgm_enemy_type}").format(
+                µ("Added boss bgm for {bgm_enemy_type}").format(
                     bgm_enemy_type=bgm_enemy_type
                 )
             )

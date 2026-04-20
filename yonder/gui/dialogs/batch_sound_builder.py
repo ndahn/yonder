@@ -2,10 +2,9 @@ from typing import Any, Callable
 import re
 from pathlib import Path
 from dataclasses import dataclass, field
-import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Hash, calc_hash
+from yonder import Soundbank, Hash
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
 from yonder.query import query_nodes
@@ -212,7 +211,7 @@ class create_batch_sound_builder_dialog(DpgItem):
         choice = dpg.get_value(self._t("batch_sound_builder/batch_soundtype"))
         soundtype = self._soundtype_choice_to_enum(choice)
         for f in ret:
-            g = BatchGroup(self._new_group_name(), soundtype=soundtype, soundfiles=[f])
+            g = BatchGroup(self._new_group_name(), soundtype=soundtype, soundfiles=[Path(f)])
             self._w_groups.append(g)
             self._groups.append(g)
 
@@ -247,16 +246,6 @@ class create_batch_sound_builder_dialog(DpgItem):
                     µ("Group {name} has no files", "msg").format(name=g.name)
                 )
                 return
-
-            # Rename files whose stems are not integers using calc_hash
-            for file_idx, f in enumerate(g.soundfiles):
-                try:
-                    int(f.stem)
-                except ValueError:
-                    new_file = f.parent / (str(calc_hash(f.stem)) + f.suffix)
-                    shutil.copy(str(f), str(new_file))
-                    logger.info(f"Renamed {f.name} to {new_file.name}")
-                    g.soundfiles[file_idx] = new_file
 
             if g.name:
                 event_name = self._make_name("Play_", g.soundtype, g.name)
@@ -352,6 +341,12 @@ class create_batch_sound_builder_dialog(DpgItem):
                     )
 
                     dpg_section(µ("Bulk Operations"), color=style.muted_purple, spacer=0)
+                    dpg.add_button(
+                        label=µ("Groups from Files", "button"),
+                        callback=self._batch_groups_from_files,
+                        tag=self._t("batch_sound_builder/groups_from_files"),
+                    )
+
                     with dpg.group(horizontal=True):
                         dpg.add_combo(
                             [str(st) for st in SoundType],
@@ -363,12 +358,6 @@ class create_batch_sound_builder_dialog(DpgItem):
                             label=µ("Apply"),
                             callback=self._batch_apply_soundtype,
                         )
-
-                    dpg.add_button(
-                        label=µ("Groups from Files", "button"),
-                        callback=self._batch_groups_from_files,
-                        tag=self._t("batch_sound_builder/groups_from_files"),
-                    )
 
                 # Right panel: per-group settings
                 with dpg.child_window(

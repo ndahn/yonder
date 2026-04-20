@@ -71,7 +71,11 @@ class Sound(PropertyMixin, HIRCNode):
         wem: Path,
         source_type: SourceType = SourceType.Embedded,
     ) -> BankSourceData:
-        wem_id = wem.stem
+        try:
+            wem_id = int(wem.stem)
+        except ValueError:
+            raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
+
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
 
@@ -89,5 +93,5 @@ class Sound(PropertyMixin, HIRCNode):
     ) -> BankSourceData:
         self.bank_source_data = BankSourceData(
             source_type=source_type,
-            media_information=MediaInformation(source_id, media_size),
+            media_information=MediaInformation(int(source_id), media_size),
         )

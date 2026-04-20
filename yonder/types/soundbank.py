@@ -14,7 +14,7 @@ from yonder.enums import SourceType
 
 from .sections import Section, BKHDSection, HIRCSection
 from .hirc_node import HIRCNode
-from .serialization import serialize, deserialize
+from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
 from .action import ActionType
 
 from . import (
@@ -117,16 +117,31 @@ class Soundbank:
     def bnk_dir(self) -> Path:
         return self.json_path.parent
 
-    def wems(self) -> list[int]:
-        wems = []
-        # TODO not covering music tracks
-        for sound in self.query("type=Sound"):
-            wid = sound["bank_source_data/media_information/source_id"]
-            wems.append(wid)
+    def source_ids(self) -> list[int]:
+        source_ids = []
+        sound: Sound
+        track: MusicTrack
 
-        return wems
+        for sound in self.query("type=Sound"):
+            source_ids.append(sound.source_id)
+
+        for track in self.query("type=MusicTrack"):
+            source_ids.extend(track.source_ids)
+
+        return source_ids
+
+    def wems(self) -> Iterator[Path]:
+        yield from self.bnk_dir.glob("*.wem")
 
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
+        try:
+            int(wem.stem)
+        except ValueError:
+            new_file = wem.parent / (str(calc_hash(wem.stem)) + wem.suffix)
+            shutil.copy(wem, new_file)
+            logger.info(f"Renamed {wem.name} to {new_file.name}")
+            wem = new_file
+
         if source_type == SourceType.Embedded:
             target = self.bnk_dir / f"{wem.stem}.wem"
             if wem.is_file() and target.is_file() and wem.samefile(target):
@@ -171,14 +186,14 @@ class Soundbank:
         else:
             raise ValueError(f"Unknown source type {source_type}")
 
-    def remove_unused_wems(self) -> None:
-        used = set(self.wems())
+    def delete_unused_wems(self) -> None:
+        used = set(self.source_ids())
         removed = []
-        for file in self.bnk_dir.glob("*.wem"):
-            wem = int(file.stem)
+        for f in self.wems():
+            wem = int(f.stem)
             if wem not in used:
                 removed.append(wem)
-                file.unlink()
+                f.unlink()
 
         logger.info(f"Removed {len(removed)} unused wems")
 
@@ -516,9 +531,8 @@ class Soundbank:
         severity = 0
         discovered_ids = set([0])
 
-        logger.info(f"Verifying {self}...")
-
-        for node in self.hirc.objects:
+        def _verify_hirc_node(node: HIRCNode):
+            nonlocal severity
             node_id = node.id
 
             if node_id <= 0:
@@ -526,7 +540,7 @@ class Soundbank:
             elif node_id in discovered_ids:
                 logger.error(f"{node}: ID {node_id} has been defined before")
                 severity = max(severity, 2)
-                continue
+                return
 
             discovered_ids.add(node_id)
 
@@ -583,6 +597,22 @@ class Soundbank:
                                 f"{node}: child {child_id} has different parent {child.parent}"
                             )
                             severity = max(severity, 2)
+
+        logger.info(f"Verifying {self}...")
+
+        for sec in self.sections.values():
+            try:
+                verify_values(sec, True)
+            except WrongValueTypeError as e:
+                severity = max(severity, 3)
+                logger.critical(f"{e}\n>>> THIS IS A BUG - tell mana about it! <<<")
+
+            if isinstance(sec, HIRCSection):
+                for node in sec.objects:
+                    _verify_hirc_node(node)
+
+            if hasattr(sec, "validate") and callable(sec.validate):
+                sec.validate()
 
         if severity == 0:
             logger.info("Seems surprisingly fine - yay!")

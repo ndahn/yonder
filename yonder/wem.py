@@ -305,7 +305,8 @@ def wem2wav(
                     "-o",
                     str(target),
                     str(wem),
-                ]
+                ],
+                stdout=subprocess.DEVNULL,
             )
             out_files.append(target)
         except subprocess.CalledProcessError as e:

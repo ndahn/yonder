@@ -204,14 +204,15 @@ def _create_widgets_stid(
                 on_section_changed,
                 base_tag,
                 user_data,
+                int,
             ),
         )
         dpg.add_input_text(
-            default_value="".join(entry.name),
+            default_value=entry.name_str,
             width=-1,
             callback=make_setter(
                 section,
-                f"entries:{idx}/name",
+                f"entries:{idx}/name_str",
                 on_section_changed,
                 base_tag,
                 user_data,

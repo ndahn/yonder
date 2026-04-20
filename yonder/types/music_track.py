@@ -88,7 +88,11 @@ class MusicTrack(PropertyMixin, HIRCNode):
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Embedded,
     ) -> BankSourceData:
-        wem_id = wem.stem
+        try:
+            wem_id = int(wem.stem)
+        except ValueError:
+            raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
+        
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
         duration = meta["duration"] * 1000
@@ -117,7 +121,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
         self.sources.append(
             BankSourceData(
                 source_type=source_type,
-                media_information=MediaInformation(source_id, media_size),
+                media_information=MediaInformation(int(source_id), media_size),
             )
         )
         begin_trim = abs(begin_trim)
