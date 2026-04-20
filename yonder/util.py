@@ -186,11 +186,25 @@ def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
     return apply_dict(base, updates)
 
 
+def get_module_for_field(obj, field_name: str) -> str:
+    """Walk the MRO to find which class originally declared a dataclass field."""
+    for cls in reversed(type(obj).mro()):
+        if hasattr(cls, '__dataclass_fields__') and field_name in cls.__dataclass_fields__:
+            return cls.__module__
+    
+    # Fallback
+    return obj.__module__
+
+
 def resolve_typehint(hint: str, context_module: str | object) -> type:
+    if isinstance(hint, type):
+        return hint
+    
     # get_type_hints can have some weird effects I don't want to encounter again,
     # like two different versions of the same class, so we use a much simpler way
     if isinstance(context_module, str):
         module = sys.modules[context_module]
+    
     return eval(hint, vars(module))
 
 

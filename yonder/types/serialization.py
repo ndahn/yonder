@@ -1,16 +1,15 @@
 from __future__ import annotations
 import sys
-from typing import Any, Type, get_origin, get_args
+from typing import Any, Type, get_origin, get_args, Union
 from dataclasses import is_dataclass, fields, InitVar
 import keyword
 import inspect
 from enum import Enum, StrEnum
 
+from yonder.util import resolve_typehint, get_module_for_field, logger
+
 
 def serialize(obj: Any) -> Any:
-    if hasattr(obj, "validate") and callable(obj.validate):
-        obj.validate()
-
     if hasattr(obj, "to_dict") and callable(obj.to_dict):
         return obj.to_dict()
 
@@ -18,6 +17,8 @@ def serialize(obj: Any) -> Any:
 
 
 def _serialize_value(obj: Any) -> Any:
+    verify_values(obj)
+
     if is_dataclass(obj) and not isinstance(obj, type):
         result = {}
         for f in fields(obj):
@@ -59,7 +60,8 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
         sig = inspect.signature(target_type.__init__)
         # Skip self, *args and **kwargs
         target_fields = [
-            name for name, param in sig.parameters.items()
+            name
+            for name, param in sig.parameters.items()
             if name != "self"
             and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
         ]
@@ -72,7 +74,9 @@ def _deserialize_fields(target_type: Type, data: dict) -> Any:
         field_type = hints[f]
         kwargs[f] = _parse_value(field_type, value)
 
-    return target_type(**kwargs)
+    ret = target_type(**kwargs)
+    verify_values(ret)
+    return ret
 
 
 def _parse_value(target_type: Type, value: Any) -> Any:
@@ -86,7 +90,7 @@ def _parse_value(target_type: Type, value: Any) -> Any:
         if isinstance(value, str):
             if keyword.iskeyword(value):
                 value += "_"
-                
+
             if issubclass(origin, StrEnum):
                 if value in origin:
                     return origin(value)
@@ -107,7 +111,7 @@ def _parse_value(target_type: Type, value: Any) -> Any:
     if isinstance(value, dict):
         if hasattr(origin, "from_dict") and callable(origin.from_dict):
             return origin.from_dict(value)
-        
+
         if is_dataclass(origin):
             return _deserialize_fields(origin, value)
 
@@ -119,6 +123,7 @@ def _get_hints(target_type: Type) -> dict[str, Any]:
     for cls in reversed(target_type.__mro__):
         if cls is object:
             continue
+
         ann = cls.__dict__.get("__annotations__", {})
         module = sys.modules.get(cls.__module__, None)
         globalns = getattr(module, "__dict__", {}) if module else {}
@@ -129,4 +134,48 @@ def _get_hints(target_type: Type) -> dict[str, Any]:
                 except NameError:
                     pass  # leave unresolvable hints as strings
             hints[name] = hint
+
     return hints
+
+
+def verify_values(obj) -> None:
+    if hasattr(obj, "validate") and callable(obj.validate):
+        obj.validate()
+
+    if not is_dataclass(obj):
+        return
+
+    ctx = str(obj)
+
+    for f in fields(obj):
+        fmod = get_module_for_field(obj, f.name)
+        tp = resolve_typehint(f.type, fmod)
+        origin = get_origin(tp) or tp
+        val = getattr(obj, f.name)
+
+        if issubclass(origin, Enum):
+            if not isinstance(val, (origin, str, int)):
+                raise ValueError(
+                    f"{ctx}: value of field {f.name} is not compatible with enum {origin}"
+                )
+
+        if origin is Union:
+            logger.warning(f"{ctx}: field {f.name} has union type")
+            continue
+
+        if not isinstance(val, origin):
+            raise ValueError(
+                f"{ctx}: value of field {f.name} has invalid type {origin}"
+            )
+
+        if isinstance(val, list):
+            args = get_args(tp)
+            if not args:
+                logger.warning(f"{ctx}: incomplete type annotation of field {f.name}")
+            else:
+                item_tp = args[0]
+                for idx, item in enumerate(val):
+                    if not isinstance(item, item_tp):
+                        raise ValueError(
+                            f"{ctx}: item {idx} ({item}) of field {f.name} does not conform to list item type {item_tp}"
+                        )
