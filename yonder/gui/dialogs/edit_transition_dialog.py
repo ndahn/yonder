@@ -139,7 +139,7 @@ class edit_transition_dialog(DpgItem):
             dpg_section(
                 "Source Transition Rule",
                 style.muted_orange,
-                first=True,
+                spacer=0,
                 tag=self._t("edit_transition/src_transition_rule"),
             )
             dpg.add_input_int(

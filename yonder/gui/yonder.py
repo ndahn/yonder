@@ -225,14 +225,14 @@ class BanksOfYonder(DpgItem):
 
             with dpg.menu(label=µ("Create", "menu"), tag=self._t("menu/create")):
                 dpg.add_menu_item(
+                    label=µ("New Play/Stop Event", "menu"),
+                    callback=self._open_new_wwise_event_dialog,
+                    tag=self._t("menu/create_event"),
+                )
+                dpg.add_menu_item(
                     label=µ("Simple Sound", "menu"),
                     callback=self._open_simple_sound_dialog,
                     tag=self._t("menu/create_simple_sound"),
-                )
-                dpg.add_menu_item(
-                    label=µ("Batch Sound Builder", "menu"),
-                    callback=self._open_batch_sound_builder_dialog,
-                    tag=self._t("menu/batch_sound_builder"),
                 )
                 dpg.add_menu_item(
                     label=µ("Boss Track", "menu"),
@@ -247,9 +247,9 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label=µ("New Play/Stop Event", "menu"),
-                    callback=self._open_new_wwise_event_dialog,
-                    tag=self._t("menu/create_event"),
+                    label=µ("Batch Sound Builder", "menu"),
+                    callback=self._open_batch_sound_builder_dialog,
+                    tag=self._t("menu/batch_sound_builder"),
                 )
 
             dpg.add_separator()

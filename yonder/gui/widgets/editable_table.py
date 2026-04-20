@@ -72,6 +72,8 @@ class add_widget_table(DpgItem):
         label: str = None,
         add_item_label: str = "+",
         show_clear: bool = False,
+        width: int = 0,
+        height: int = 0,
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
@@ -92,7 +94,7 @@ class add_widget_table(DpgItem):
         # Maps row index -> tag of its select-indicator button
         self._sel_buttons: dict[int, int] = {}
 
-        self._build(header_row, columns, label, parent)
+        self._build(header_row, columns, label, parent, width, height)
         self.refresh()
 
     # === Build =========================================================
@@ -103,6 +105,8 @@ class add_widget_table(DpgItem):
         columns: list[str],
         label: str,
         parent: str | int,
+        width: int,
+        height: int,
     ) -> None:
         if label:
             dpg.add_text(label, parent=parent, tag=self.tag)
@@ -115,17 +119,25 @@ class add_widget_table(DpgItem):
                 policy=dpg.mvTable_SizingFixedFit,
                 borders_outerH=True,
                 borders_outerV=True,
+                width=width,
+                height=height,
+                scrollX=(width != 0),
+                scrollY=(height != 0),
                 tag=self._t("table"),
             ):
                 if self._on_select:
                     # Narrow indicator column; never spans other columns
-                    dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=14)
+                    dpg.add_table_column(
+                        label="", width_fixed=True, init_width_or_weight=14
+                    )
                 for col in columns:
                     dpg.add_table_column(
                         label=col, width_stretch=True, init_width_or_weight=100
                     )
                 if self._new_item:
-                    dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=20)
+                    dpg.add_table_column(
+                        label="", width_fixed=True, init_width_or_weight=20
+                    )
 
             dpg.add_group(tag=self._t("footer"))
             dpg.add_spacer(height=3)
@@ -138,6 +150,11 @@ class add_widget_table(DpgItem):
         for i, val in enumerate(self._values):
             self._add_row(val, i)
         self._add_footer()
+
+        if self._on_select and self._selected_idx >= 0:
+            dpg.highlight_table_row(
+                self._t("table"), self._selected_idx, self._selected_row_color
+            )
 
     def _add_row(self, val: _T, idx: int) -> None:
         with dpg.table_row(parent=self._t("table")) as row:
@@ -271,6 +288,12 @@ class add_widget_table(DpgItem):
         self._values = list(items)
         self.refresh()
 
+    def select(self, index: int) -> None:
+        if index is None:
+            index = -1
+        self._selected_idx = index
+        self.refresh()
+
     def append(self, item: _T, *, fire_callbacks: bool = False) -> None:
         """Append an item and refresh the table."""
         pos = len(self._values)
@@ -342,6 +365,7 @@ class add_filepaths_table(DpgItem):
         label: str = "Files",
         filetypes: dict[str, str] = None,
         on_select: Callable[[str, Path, Any], None] = None,
+        selected_row_color: style.RGBA = style.muted_blue,
         show_clear: bool = False,
         parent: str | int = 0,
         tag: str | int = 0,
@@ -364,6 +388,7 @@ class add_filepaths_table(DpgItem):
             on_remove=self._on_remove,
             on_select=self._on_select if on_select else None,
             add_item_label=µ("+ Add Paths") if folders else µ("+ Add Files"),
+            selected_row_color=selected_row_color,
             show_clear=show_clear,
             label=label,
             parent=parent,
@@ -421,6 +446,9 @@ class add_filepaths_table(DpgItem):
     @paths.setter
     def paths(self, items: list[Path]) -> None:
         self._table.items = items
+
+    def select(self, index: int) -> None:
+        self._table.select(index)
 
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)
@@ -650,8 +678,9 @@ class add_player_table_compact(DpgItem):
         on_filepaths_changed: Callable[[str, list[Path], Any], None] = None,
         *,
         label: str = "Tracks",
-        add_item_label: str = "+ Add Track",
+        add_item_label: str = "+ Add Tracks",
         get_row_label: Callable[[int], str] = None,
+        selected_row_color: style.RGBA = style.muted_blue,
         show_clear: bool = False,
         parent: str | int = 0,
         tag: str | int = 0,
@@ -676,6 +705,7 @@ class add_player_table_compact(DpgItem):
                 on_add=self._on_track_added,
                 on_remove=self._on_track_removed,
                 on_select=self._on_track_selected,
+                selected_row_color=selected_row_color,
                 add_item_label=add_item_label,
                 show_clear=show_clear,
                 label=label,
@@ -726,6 +756,13 @@ class add_player_table_compact(DpgItem):
     @audiofiles.setter
     def audiofiles(self, items: list[Path]) -> None:
         self._table.items = items
+
+    def select(self, index: int) -> None:
+        self._table.select(index)
+        if index is None:
+            self.player.set_file(None)
+        else:
+            self.player.set_file(self._table.items[index])
 
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)

@@ -7,7 +7,7 @@ from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_node_reference
+from yonder.gui.widgets import DpgItem, add_node_reference, add_paragraphs
 
 
 class create_wwise_event_dialog(DpgItem):
@@ -117,6 +117,19 @@ class create_wwise_event_dialog(DpgItem):
             )
 
             dpg.add_separator()
+            add_paragraphs(
+                µ(
+                    """\
+                        - Create events for an existing structure
+                        - Will only create the events
+                    """,
+                    "tips",
+                ),
+                color=style.light_blue,
+            )
+            
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):

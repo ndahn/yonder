@@ -73,12 +73,12 @@ def dpg_section(
     label: str,
     color: tuple,
     *,
-    first: bool = False,
+    spacer: int = 10,
     parent: str = 0,
     tag: str = 0,
 ) -> None:
-    if not first:
-        dpg.add_spacer(height=10)
+    if spacer > 0:
+        dpg.add_spacer(height=spacer)
 
     dpg.add_text(label, color=color, parent=parent, tag=tag)
     dpg.add_separator()

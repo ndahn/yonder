@@ -291,7 +291,7 @@ class mass_transfer_dialog(DpgItem):
                     dpg_section(
                         label=µ("Source Wwise IDs"),
                         color=style.muted_orange,
-                        first=True,
+                        spacer=0,
                     )
                     dpg.add_input_text(
                         multiline=True,
@@ -302,7 +302,7 @@ class mass_transfer_dialog(DpgItem):
                     dpg_section(
                         label=µ("Destination Wwise IDs"),
                         color=style.muted_teal,
-                        first=True,
+                        spacer=0,
                     )
                     dpg.add_input_text(
                         multiline=True,
@@ -327,6 +327,7 @@ class mass_transfer_dialog(DpgItem):
                     tag=self._t("mass_transfer/button_swap_ids"),
                 )
 
+            dpg.add_separator()
             add_paragraphs(
                 µ(
                     """\
@@ -340,8 +341,8 @@ class mass_transfer_dialog(DpgItem):
                 color=style.light_blue,
             )
 
-            dpg.add_spacer(height=3)
             dpg.add_separator()
+            dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):

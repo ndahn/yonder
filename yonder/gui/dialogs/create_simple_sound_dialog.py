@@ -15,6 +15,7 @@ from yonder.gui.widgets import (
     add_properties_table,
     add_node_reference,
     add_player_table,
+    add_paragraphs,
 )
 
 
@@ -107,10 +108,10 @@ class create_simple_sound_dialog(DpgItem):
 
             # Properties
             dpg.add_spacer(height=5)
-            add_properties_table(self._properties, self._on_properties_changed)
+            with dpg.tree_node(label=µ("Properties")):
+                add_properties_table(self._properties, self._on_properties_changed, label=None)
 
             # Sounds
-            dpg.add_spacer(height=5)
             add_player_table(
                 self._soundfiles,
                 self._on_soundfiles_changed,
@@ -120,6 +121,20 @@ class create_simple_sound_dialog(DpgItem):
             )
 
             dpg.add_separator()
+            add_paragraphs(
+                µ(
+                    """\
+                        - Use this for short sounds like sfx
+                        - Sounds will be added to a RandomSequenceContainer
+                        - Will create a play and stop event
+                    """,
+                    "tips",
+                ),
+                color=style.light_blue,
+            )
+
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):

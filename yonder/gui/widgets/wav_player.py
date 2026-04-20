@@ -173,9 +173,11 @@ class add_wav_player(DpgItem):
 
     # === Playback ======================================================
 
-    def set_file(self, wav: str | Path) -> None:
+    def set_file(self, path: str | Path) -> None:
         """Load a new audio file, stopping any current playback."""
-        path = Path(wav).absolute()
+        if path:
+            path = Path(path).absolute()
+
         if path == self._audio:
             return
 
@@ -188,7 +190,7 @@ class add_wav_player(DpgItem):
 
         self._audio = path
 
-        if self._allow_change_file:
+        if path and self._allow_change_file:
             path_str = shorten_path(path, 40) if self._show_filepath else path.stem
             dpg.set_value(self._t("filepath"), path_str)
 
@@ -226,9 +228,12 @@ class add_wav_player(DpgItem):
             self._progress_update()
 
     def _get_wav_path(self) -> Path:
-        if self._audio is None or not self._audio.is_file():
+        if self._audio is None:
+            return None
+
+        if not self._audio.is_file():
             logger.error(
-                µ("Audio {file} does not exist", "log").format(file=self._audio)
+                µ("Audio {file} is not a file", "log").format(file=self._audio)
             )
             return None
 
@@ -680,6 +685,9 @@ class add_wav_player(DpgItem):
     def regenerate(self) -> None:
         """Rebuild the waveform plot from the current audio file."""
         dpg.delete_item(self._t("xaxis"), children_only=True)
+        
+        if not self._get_wav_path():
+            return
 
         if not self._player:
             try:
