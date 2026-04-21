@@ -205,8 +205,8 @@ class create_boss_track_dialog(DpgItem):
             self.msc,
             self.current_state_path,
             self.bgm_tracks,
-            loop_info,
-            self.play_intro_enabled,
+            loop_markers=loop_info,
+            play_preloop_intro=self.play_intro_enabled,
         )
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)

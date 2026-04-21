@@ -239,18 +239,22 @@ class add_widget_table(DpgItem):
             self._selected_idx = -1
         elif idx < self._selected_idx:
             self._selected_idx -= 1
+
+        # Refresh first in case an outside caller needs the updated table state
+        self.refresh()
         if self._on_remove:
             self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
-        self.refresh()
 
     def _on_add_item_done(self, result: _T) -> None:
         if not result:
             return
+
         pos = len(self._values)
         self._values.append(result)
+
+        self.refresh()
         if self._on_add:
             self._on_add(self.tag, (pos, result, self._values), self._user_data)
-        self.refresh()
 
     def _on_add_clicked(self) -> None:
         self._new_item(self._on_add_item_done)
@@ -258,9 +262,10 @@ class add_widget_table(DpgItem):
     def _on_clear_clicked(self) -> None:
         self._values.clear()
         self._selected_idx = -1
+        
+        self.refresh()
         if self._on_remove:
             self._on_remove(self.tag, (0, None, self._values), self._user_data)
-        self.refresh()
 
     def _on_select_clicked(self, sender: int, app_data: Any, idx: int) -> None:
         if self._selected_idx >= 0:
@@ -504,7 +509,17 @@ class add_player_table(DpgItem):
         self,
         initial_tracks: list[Path] = None,
         on_filepaths_changed: Callable[
-            [str, tuple[list[Path], list, list, list], Any], None
+            [
+                str,
+                tuple[
+                    list[Path],  # filepaths
+                    list[tuple[float, float, bool]],  # loop infos
+                    list[tuple[float, float]],  # trims
+                    list[tuple[int, float]],  # user markers
+                ],
+                Any,
+            ],
+            None,
         ] = None,
         *,
         label: str = "Tracks",
@@ -619,7 +634,10 @@ class add_player_table(DpgItem):
                 show_filepath=True,
                 user_data=idx,
             )
-            self.players.insert(idx, player)
+            if idx < len(self.players):
+                self.players[idx] = player
+            else:
+                self.players.append(player)
 
     # === Public ========================================================
 
