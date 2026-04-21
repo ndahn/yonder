@@ -211,8 +211,12 @@ class create_boss_track_dialog(DpgItem):
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
-        self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("boss_bgm/button_okay"), µ("Again?"))
+        self.show_message(µ("Success!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("boss_bgm/button_okay"), µ("Yay!"))
+        dpg.set_item_callback(
+            self._t("boss_bgm/button_okay"),
+            lambda s, a, u: dpg.delete_item(self.tag),
+        )
 
     # === Build =========================================================
 

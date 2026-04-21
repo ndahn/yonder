@@ -83,8 +83,12 @@ class export_sounds_dialog(DpgItem):
                 for w in wems:
                     shutil.copy(w, self._output_dir)
 
-            self.show_message(µ("Yay!", "button"), color=style.blue)
-            dpg.set_item_label(self._t("export_sounds/button_okay"), µ("Again?"))
+            self.show_message(µ("Success!", "msg"), color=style.blue)
+            dpg.set_item_label(self._t("export_sounds/button_okay"), µ("Yay!"))
+            dpg.set_item_callback(
+                self._t("export_sounds/button_okay"),
+                lambda s, a, u: dpg.delete_item(self.tag),
+            )
         finally:
             dpg.delete_item(loading)
 

@@ -212,7 +212,9 @@ class create_batch_sound_builder_dialog(DpgItem):
         choice = dpg.get_value(self._t("batch_sound_builder/batch_soundtype"))
         soundtype = self._soundtype_choice_to_enum(choice)
         for f in ret:
-            g = BatchGroup(self._new_group_name(), soundtype=soundtype, soundfiles=[Path(f)])
+            g = BatchGroup(
+                self._new_group_name(), soundtype=soundtype, soundfiles=[Path(f)]
+            )
             self._w_groups.append(g)
             self._groups.append(g)
 
@@ -306,8 +308,12 @@ class create_batch_sound_builder_dialog(DpgItem):
         if self._callback:
             self._callback(created_pairs)
 
-        self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("batch_sound_builder/button_okay"), µ("Again?"))
+        self.show_message(µ("Success!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("batch_sound_builder/button_okay"), µ("Yay!"))
+        dpg.set_item_callback(
+            self._t("batch_sound_builder/button_okay"),
+            lambda s, a, u: dpg.delete_item(self.tag),
+        )
 
     # === GUI Content =============
 
@@ -341,7 +347,9 @@ class create_batch_sound_builder_dialog(DpgItem):
                         header_row=True,
                     )
 
-                    dpg_section(µ("Bulk Operations"), color=style.muted_purple, spacer=0)
+                    dpg_section(
+                        µ("Bulk Operations"), color=style.muted_purple, spacer=0
+                    )
                     dpg.add_button(
                         label=µ("Groups from Files", "button"),
                         callback=self._batch_groups_from_files,

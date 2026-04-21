@@ -118,8 +118,12 @@ class convert_wavs_dialog(DpgItem):
         if self.callback:
             self.callback(out_files)
 
-        self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("convert/button_okay"), µ("Again?"))
+        self.show_message(µ("Success!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("convert/button_okay"), µ("Yay!"))
+        dpg.set_item_callback(
+            self._t("convert/button_okay"),
+            lambda s, a, u: dpg.delete_item(self.tag),
+        )
 
     # === Build ========================================================
 

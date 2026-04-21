@@ -209,8 +209,12 @@ class create_simple_sound_dialog(DpgItem):
         )
 
         self._callback(play_evt, stop_evt)
-        self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("simple_sound/button_okay"), µ("Again?"))
+        self.show_message(µ("Success!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("simple_sound/button_okay"), µ("Yay!"))
+        dpg.set_item_callback(
+            self._t("simple_sound/button_okay"),
+            lambda s, a, u: dpg.delete_item(self.tag),
+        )
 
     # === Public ========================================================
 

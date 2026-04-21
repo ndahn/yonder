@@ -77,8 +77,12 @@ class create_wwise_event_dialog(DpgItem):
         if self._callback:
             self._callback(new_nodes)
         
-        self.show_message(µ("Yay!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("button_okay"), "Again?")
+        self.show_message(µ("Success!", "msg"), color=style.blue)
+        dpg.set_item_label(self._t("playstop/button_okay"), µ("Yay!"))
+        dpg.set_item_callback(
+            self._t("playstop/button_okay"),
+            lambda s, a, u: dpg.delete_item(self.tag),
+        )
 
     def _build(self, title: str):
         with dpg.window(
@@ -141,7 +145,7 @@ class create_wwise_event_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Chop chop!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("button_okay"),
+                    tag=self._t("playstop/button_okay"),
                 )
 
     def show_message(
