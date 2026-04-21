@@ -115,7 +115,7 @@ def create_simple_sound(
                 )
 
     if isinstance(actor_mixer, HIRCNode):
-        actor_mixer.children.add(rsc)
+        actor_mixer.attach(rsc)
 
     # Add nodes to soundbank
     bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
@@ -156,7 +156,7 @@ def create_boss_bgm(
         dst_rule.fade_curve = dst_fade.curve
 
     if isinstance(tracks, Path):
-        tracks: list[Path] = tracks
+        tracks = list(tracks)
 
     for f in tracks:
         if not f.name.endswith(".wem"):
@@ -217,7 +217,7 @@ def create_boss_bgm(
                     ],
                 )
 
-                intro_seg.children.add(intro_track)
+                intro_seg.attach(intro_track)
                 intro_seg.duration = intro_track.playlist[0].source_duration
 
                 # Trim track to loop_markers marker
@@ -256,7 +256,7 @@ def create_boss_bgm(
 
         # Add to segment
         track_duration_ms = phase_track.playlist[0].source_duration
-        phase_seg.children.add(phase_track)
+        phase_seg.attach(phase_track)
         phase_seg.duration = track_duration_ms
 
         # Intro to main track transition rule
@@ -334,11 +334,11 @@ def create_boss_bgm(
     # Setup phase transition rules
     if default_transition:
         base_rule = boss_msc.music_trans_node_params.transition_rules[0]
-        apply_fades(rule, *default_transition, SyncType.Immediate)
+        apply_fades(base_rule, *default_transition, SyncType.Immediate)
 
     if phase_transitions:
         # the "any" phase will use the default transition
-        for i in range(boss_phases[1:-1]):
+        for i in range(1, len(boss_phases) - 1):
             if phase_transitions[i]:
                 rule = boss_msc.add_transition_rule(
                     phase_masters[i].id,
@@ -348,7 +348,7 @@ def create_boss_bgm(
 
     if self_transitions:
         # the "any" phase will use the default transition
-        for i in range(boss_phases[1:]):
+        for i in range(1, len(boss_phases)):
             if self_transitions[i]:
                 rule = boss_msc.add_transition_rule(
                     phase_masters[i].id,

@@ -135,7 +135,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
         path: list[int] = parse_state_path(path)
         parent = self.tree
-        offset = 0
+        offset = None
 
         for i, key in enumerate(path):
             for child in parent.children:

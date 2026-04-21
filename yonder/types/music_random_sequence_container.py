@@ -192,6 +192,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
 
             insert_idx += parent_item.child_count
             self.playlist_items.insert(insert_idx, new_item)
+            parent_item.child_count += 1
         else:
             self.playlist_items.append(new_item)
 
