@@ -245,10 +245,6 @@ class edit_transition_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
-                dpg.add_button(
-                    label=µ("Cancel", "button"),
-                    callback=lambda: dpg.delete_item(self._window),
-                )
 
     # === DPG Callbacks =================================================
 

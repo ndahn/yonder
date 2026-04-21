@@ -99,7 +99,19 @@ class select_nodes_dialog(DpgItem):
             self._selected_keys.add(key)
             dpg.set_value(sender, True)
 
-    def _on_filter_changed(self, sender: int, filt: str, _user_data: Any) -> None:
+    def _invert_selection(self) -> None:
+        for row in dpg.get_item_children(self._t("table"), slot=1):
+            key = self._row_tags.get(row)
+            selectable = next(iter(dpg.get_item_children(row, slot=1)), None)
+            if selectable:
+                if key in self._selected_keys:
+                    dpg.set_value(selectable, False)
+                    self._selected_keys.remove(key)
+                else:
+                    dpg.set_value(selectable, True)
+                    self._selected_keys.add(key)
+
+    def _on_filter_changed(self, sender: int, filt: str, cb_user_data: Any) -> None:
         self._items.clear()
         self._items.update(
             {
@@ -176,10 +188,12 @@ class select_nodes_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
-                dpg.add_button(
-                    label=µ("Cancel", "button"),
-                    callback=lambda: dpg.delete_item(window),
-                )
+                if self._multiple:
+                    dpg.add_button(
+                        label=µ("Invert", "button"),
+                        callback=self._invert_selection,
+                        tag=self._t("button_invert"),
+                    )
 
         self._on_filter_changed(self._t("filter"), "", None)
 
