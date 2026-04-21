@@ -875,6 +875,7 @@ class BanksOfYonder(DpgItem):
             logger.info(µ("Repacking soundbank", "log"))
             bnk2json = self.config.locate_bnk2json()
             repack_soundbank(bnk2json, self.bnk.bnk_dir)
+            logger.info(µ("Done!", "log"))
         except subprocess.CalledProcessError as e:
             error_msg = f"(E{e.returncode})\n{e.output}"
             logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))

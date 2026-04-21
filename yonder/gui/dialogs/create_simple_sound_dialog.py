@@ -5,7 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, calc_hash
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
-from yonder.enums import PropID
+from yonder.enums import PropID, PlaybackMode, RandomMode
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.config import get_config
@@ -99,12 +99,19 @@ class create_simple_sound_dialog(DpgItem):
                 get_node_details=ActorMixerDetailProvider(self._bnk),
                 tag=self._t("actor_mixer"),
             )
-
-            # Avoid repeats
-            dpg.add_checkbox(
-                label=µ("Avoid Repeats"),
-                default_value=False,
-                tag=self._t("avoid_repeats"),
+            
+            dpg.add_spacer(height=5)
+            dpg.add_combo(
+                [p.name for p in PlaybackMode],
+                default_value=PlaybackMode.Random.name,
+                label=µ("Playback Mode"),
+                tag=self._t("playback_mode"),
+            )
+            dpg.add_combo(
+                [r.name for r in RandomMode],
+                default_value=RandomMode.Standard.name,
+                label=µ("Random Mode"),
+                tag=self._t("random_mode"),
             )
 
             # Properties
@@ -197,14 +204,17 @@ class create_simple_sound_dialog(DpgItem):
                         self._soundfiles[idx] = wem
 
         self.show_message()
-        avoid_repeats = dpg.get_value(self._t("avoid_repeats"))
+        
+        playback_mode = PlaybackMode[dpg.get_value(self._t("playback_mode"))]
+        random_mode = RandomMode[dpg.get_value(self._t("random_mode"))]
 
         (play_evt, stop_evt), _, _ = create_simple_sound(
             self._bnk,
             name,
             self._soundfiles,
             amx,
-            avoid_repeat_count=avoid_repeats,
+            playback_mode=playback_mode,
+            random_mode=random_mode,
             properties=self._properties,
         )
 
