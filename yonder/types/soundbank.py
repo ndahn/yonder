@@ -66,7 +66,7 @@ class Soundbank:
                 table[obj.name] = idx
 
     @classmethod
-    def from_file(cls, bnk_path: Path | str) -> Soundbank:
+    def load(cls, bnk_path: Path | str) -> Soundbank:
         bnk_path: Path = Path(bnk_path).absolute()
         if bnk_path.is_dir():
             json_path = bnk_path / "soundbank.json"

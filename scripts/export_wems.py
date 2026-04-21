@@ -228,7 +228,7 @@ if __name__ == "__main__":
         "Play_v301054180",
     ]
 
-    bnk = Soundbank.from_file(bnk_dir)
+    bnk = Soundbank.load(bnk_dir)
     wems = collect_wems(bnk, events)
     logger.info(
         f"Collected {sum(len(x) for x in wems.values())} wems for {len(events)} events"

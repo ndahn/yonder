@@ -27,7 +27,7 @@ class export_sounds_dialog(DpgItem):
 
     def _on_soundbank_selected(self, sender: str, path: Path, user_data: Any) -> None:
         try:
-            self._bnk = Soundbank.from_file(path)
+            self._bnk = Soundbank.load(path)
         except Exception as e:
             self.show_message(str(e))
 

@@ -956,7 +956,7 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("events_filter"), "")
             dpg.set_value(self._t("globals_filter"), "")
 
-            self.bnk = Soundbank.from_file(path)
+            self.bnk = Soundbank.load(path)
             # NOTE: don't translate to avoid bakemoji on some windows configurations
             dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
             self.config.add_recent_file(path)

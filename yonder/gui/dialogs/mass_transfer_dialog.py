@@ -30,10 +30,10 @@ class mass_transfer_dialog(DpgItem):
         self._build(title)
 
     def _on_source_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
-        self._src_bnk = Soundbank.from_file(path)
+        self._src_bnk = Soundbank.load(path)
 
     def _on_dest_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
-        self._dst_bnk = Soundbank.from_file(path)
+        self._dst_bnk = Soundbank.load(path)
 
     def _select_nodes(self) -> None:
         if not self._src_bnk:
