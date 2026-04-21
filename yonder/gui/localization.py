@@ -8,7 +8,7 @@ from yonder.util import resource_dir
 
 _languages: dict[str, str] = {
     "en": "English",
-    "zh-cn": "中文",
+    "zhcn": "中文",
 }
 
 _active_lang = "en"
