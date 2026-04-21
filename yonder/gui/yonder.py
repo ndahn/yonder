@@ -1042,6 +1042,9 @@ class BanksOfYonder(DpgItem):
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
         dpg.set_value(self._t("json"), "")
 
+        if not self.bnk:
+            return
+
         self._regenerate_events_list()
         self._regenerate_globals_list()
         self._regenerate_sections_list()
@@ -1289,10 +1292,24 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("tabs"), self._t("tab_events"))
 
             if not isinstance(node, Event):
-                for evt, sub in self.bnk.find_event_subgraphs_for(node):
-                    if not self._selected_node or self._selected_node.id in sub:
-                        break
-                else:
+                evt = None
+                selected_graph = None
+
+                if self._selected_node:
+                    # Try to find the node in the tree with the current selection if possible
+                    evt, current_graph = next(
+                        self.bnk.find_event_subgraphs_for(self._selected_node)
+                    )
+                    if node.id in current_graph:
+                        selected_graph = current_graph
+
+                if not selected_graph:
+                    # Find the first tree containing the node to select
+                    evt, selected_graph = next(
+                        self.bnk.find_event_subgraphs_for(node), (None, None)
+                    )
+
+                if not selected_graph:
                     logger.error(
                         µ(
                             "Could not find an event subgraph containing node {node}"
@@ -1301,7 +1318,7 @@ class BanksOfYonder(DpgItem):
                     )
                     return
 
-                path = nx.shortest_path(sub, evt.id, node_id)
+                path = nx.shortest_path(selected_graph, evt.id, node_id)
 
                 # Unfold the structure
                 for n in path:
