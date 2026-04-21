@@ -140,15 +140,7 @@ class PLATSection(Section):
 class STIDSectionEntry:
     bnk_id: int = 0
     name_length: int = 0
-    name: list[str] = field(default_factory=list)
-
-    @property
-    def name_str(self) -> str:
-        return "".join(self.name)
-
-    @name_str.setter
-    def name_str(self, value: str) -> None:
-        self.name = list[value]
+    name: str = field(default_factory=list)
 
 
 @dataclass

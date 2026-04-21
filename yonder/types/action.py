@@ -18,7 +18,7 @@ class Action(PropertyMixin, HIRCNode):
     action_type: int = 0
     external_id: int = 0
     params: ActionParams = None
-    is_bus: int = 0
+    is_bus: int = 0  # NOTE not a bool!
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
 
@@ -45,7 +45,6 @@ class Action(PropertyMixin, HIRCNode):
         return cls(
             id=nid,
             external_id=external_id,
-            is_bus=False,
             params=ActionPlay(ActionType.Play, bank_id, fade_curve),
         )
 
@@ -71,7 +70,6 @@ class Action(PropertyMixin, HIRCNode):
         return cls(
             id=nid,
             external_id=external_id,
-            is_bus=False,
             params=ActionStop(
                 ActionType.StopEO,
                 ActionStopParams(flags1=flags1, flags2=flags2),

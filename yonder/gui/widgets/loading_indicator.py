@@ -4,7 +4,7 @@ from yonder.gui import style
 
 
 def loading_indicator(
-    label: str, color: tuple[int, int, int, int] = style.light_blue
+    label: str, color: style.RGBA = style.light_blue
 ) -> str:
     dpg.split_frame()
 

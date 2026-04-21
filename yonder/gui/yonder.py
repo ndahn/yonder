@@ -181,6 +181,12 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
+                    label=µ("Open Bank Dir...", "menu"),
+                    callback=lambda s, a, u: os.startfile(str(self.bnk.bnk_dir)),
+                    tag=self._t("menu/open_bank_dir"),
+                )
+                dpg.add_separator()
+                dpg.add_menu_item(
                     label=µ("New Soundbank...", "menu"),
                     shortcut="ctrl-n",
                     callback=self._create_empty_soundbank,
@@ -364,6 +370,7 @@ class BanksOfYonder(DpgItem):
             "menu/file_save",
             "menu/file_save_as",
             "menu/file_repack",
+            "menu/open_bank_dir",
             "menu/bank",
             "menu/create",
         ]:
@@ -648,6 +655,9 @@ class BanksOfYonder(DpgItem):
             #     self.open_search_dialog()
 
         elif dpg.is_key_down(dpg.mvKey_ModShift):
+            pass
+
+        elif dpg.is_key_down(dpg.mvKey_ModSuper):
             pass
 
         else:
@@ -1298,7 +1308,7 @@ class BanksOfYonder(DpgItem):
                 if self._selected_node:
                     # Try to find the node in the tree with the current selection if possible
                     evt, current_graph = next(
-                        self.bnk.find_event_subgraphs_for(self._selected_node)
+                        self.bnk.find_event_subgraphs_for(self._selected_node), None
                     )
                     if node.id in current_graph:
                         selected_graph = current_graph

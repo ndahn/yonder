@@ -471,17 +471,22 @@ class Soundbank:
     def find_event_subgraphs_for(
         self, node: int | HIRCNode
     ) -> Generator[tuple[Event, nx.DiGraph], None, None]:
-        if isinstance(node, HIRCNode):
-            node = node.id
+        if not isinstance(node, HIRCNode):
+            node = self[node]
 
         # TODO cache nodes by type
         # TODO cache full graph
         events: list[Event] = list(self.query("type=Event"))
 
         g = self.get_full_tree()
+        if isinstance(node, Event):
+            desc = nx.descendants(g, node.id)
+            yield node, g.subgraph({node.id} | desc)
+            return
+
         for evt in events:
             desc = nx.descendants(g, evt.id)
-            if node in desc:
+            if node.id in desc:
                 yield evt, g.subgraph({evt.id} | desc)
 
     def solve(self) -> None:

@@ -576,7 +576,7 @@ class BankSourceData:
         default_factory=lambda: MediaInformation(source_id=0)
     )
     params_size: int = 0
-    params: list[int] = field(default_factory=list)
+    params: str = ""
 
 
 @dataclass(slots=True)
@@ -659,7 +659,7 @@ class PluginPropertyValue:
 class FxBaseInitialValues:
     fx_id: int = 0
     params_size: int = 0
-    params: list[str] = field(default_factory=list)
+    params: str = ""
     media_count: int = 0
     media: list[MediaMap] = field(default_factory=list)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)

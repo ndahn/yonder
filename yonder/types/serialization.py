@@ -10,18 +10,27 @@ from yonder.util import resolve_typehint, get_module_for_field, logger
 
 
 class WrongValueTypeError(RuntimeError):
-    def __init__(self, obj: Any, fields: list[str], mismatches: list[tuple[type, type]]):
+    def __init__(
+        self, obj: Any, fields: list[str], mismatches: list[tuple[type, type]]
+    ):
         super().__init__()
         self.obj = obj
         self.fields = fields
         self.mismatches = mismatches
 
     def __str__(self):
-        details = "\n".join(
-            f" - {f} (expected: {m[0].__name__}, is: {m[1].__name__})"
-            for f, m in zip(self.fields, self.mismatches)
-        )
-        return f"The following fields of object {self.obj} don't match the expected type:\n{details}"
+        if len(self.fields) == 1:
+            m = self.mismatches[0]
+            return (
+                f"{self.obj}: field {self.fields[0]} does not match expected type"
+                f"(expected: {m[0].__name__}, is: {m[1].__name__})"
+            )
+        else:
+            details = "\n".join(
+                f" - {f} (expected: {m[0].__name__}, is: {m[1].__name__})"
+                for f, m in zip(self.fields, self.mismatches)
+            )
+            return f"{self.obj}: multiple fields don't match their expected types:\n{details}"
 
 
 def serialize(obj: Any) -> Any:
@@ -165,6 +174,24 @@ def verify_values(obj, raise_on_error: bool) -> None:
     wrong_fields: list[str] = []
     mismatches: list[type, type] = []
 
+    def has_valid_type(val: Any, types: type | tuple[type]) -> bool:
+        if isinstance(types, type):
+            types = (types,)
+
+        types = tuple(types)
+
+        if isinstance(val, float) and int in types:
+            if val.is_integer():
+                return True
+
+        if isinstance(val, int) and float in types:
+            return True
+
+        if not isinstance(val, types):
+            return False
+
+        return True
+
     for f in fields(obj):
         fmod = get_module_for_field(obj, f.name)
         tp = resolve_typehint(f.type, fmod)
@@ -172,7 +199,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
         val = getattr(obj, f.name)
 
         if issubclass(origin, Enum):
-            if not isinstance(val, (origin, str, int)):
+            if not has_valid_type(val, (origin, str, int)):
                 wrong_fields.append(f.name)
                 mismatches.append((type(val), origin))
 
@@ -180,7 +207,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
             logger.warning(f"{ctx}: field {f.name} has union type")
             return
 
-        if not isinstance(val, origin):
+        if not has_valid_type(val, origin):
             wrong_fields.append(f.name)
             mismatches.append((type(val), origin))
 
@@ -193,9 +220,10 @@ def verify_values(obj, raise_on_error: bool) -> None:
             else:
                 item_tp = args[0]
                 for idx, item in enumerate(val):
-                    if not isinstance(item, item_tp):
+                    if not has_valid_type(item, item_tp):
                         wrong_fields.append(f"{f.name}:{idx}")
                         mismatches.append((type(item), item_tp))
+                    verify_values(item, raise_on_error)
 
     if wrong_fields:
         e = WrongValueTypeError(obj, wrong_fields, mismatches)
