@@ -7,6 +7,7 @@ tmp/
 dpg_demo.py
 **/config.yaml
 yonder_v*
+*.*lock*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

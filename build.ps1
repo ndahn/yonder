@@ -4,8 +4,7 @@ pip install pyinstaller
 
 # === RUNNING PYINSTALLER ===
 if (Test-Path dist) { Remove-Item dist -Recurse -Force }
-pyinstaller banks_of_yonder.py --onefile
-# --icon=icon.ico
+pyinstaller banks_of_yonder.py --onefile --icon=yonder.ico
 
 # === COPYING ADDITIONAL FILES ===
 Copy-Item LICENSE dist\

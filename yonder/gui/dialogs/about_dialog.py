@@ -11,16 +11,14 @@ class about_dialog(DpgItem):
     def __init__(self, *, tag: str = None, **window_args):
         super().__init__(tag)
 
-        color = (48, 48, 48, 255)
-
-        if not dpg.does_item_exist("yonder_splash"):
+        if not dpg.does_item_exist("yonder_about"):
             with dpg.texture_registry():
-                img_path = resource_dir() / "misty_cliffs.jpg"
+                img_path = resource_dir() / "maris_banner.png"
                 w, h, ch, data = dpg.load_image(str(img_path))
-                dpg.add_static_texture(w, h, data, tag="yonder_splash")
+                dpg.add_static_texture(w, h, data, tag="yonder_about")
 
         with dpg.window(
-            width=410,
+            width=500,
             height=230,
             label=µ("About"),
             no_saved_settings=True,
@@ -34,14 +32,15 @@ class about_dialog(DpgItem):
             from yonder import __version__
 
             with dpg.group(horizontal=True):
-                dpg.add_image("yonder_splash", width=410, height=230)
+                dpg.add_image("yonder_about", width=500, height=230)
 
-                with dpg.group(pos=(10, 30)):
-                    dpg.add_text(f"Banks of Yonder v{__version__}", color=color)
+                with dpg.group(pos=(15, 25)):
+                    dpg.add_text(f"Banks of Yonder v{__version__}", color=style.white)
+                    dpg.add_spacer(height=5)
 
                     dpg.add_text(
                         µ("Written by Nikolas Dahn"),
-                        color=color,
+                        color=style.light_grey,
                     )
                     dpg.add_button(
                         label="https://github.com/ndahn/yonder",
@@ -54,11 +53,11 @@ class about_dialog(DpgItem):
 
                     dpg.add_text(
                         µ("Bugs, questions, feature request?"),
-                        color=color,
+                        color=style.light_grey,
                     )
                     dpg.add_text(
                         µ("Find me on ?ServerName? @Managarm!"),
-                        color=color,
+                        color=style.light_grey,
                     )
 
         dpg.bind_item_theme(dialog, style.themes.no_padding)

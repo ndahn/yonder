@@ -63,6 +63,7 @@ from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
+from .widgets.splash import add_splash
 
 
 class BanksOfYonder(DpgItem):
@@ -86,6 +87,9 @@ class BanksOfYonder(DpgItem):
         self._setup_content()
         self._setup_context_menus()
         self._set_bnk_menus_enabled(False)
+
+        add_splash(tag=self._t("splash"))
+        dpg.set_frame_callback(dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash")))
 
         # Call late to get all created items translated
         # self._change_language(self.config.language)
@@ -938,6 +942,9 @@ class BanksOfYonder(DpgItem):
         self._selected_root = None
         self._selected_node = None
         self._selected_section = None
+
+        if dpg.does_item_exist(self._t("splash")):
+            dpg.delete_item(self._t("splash"))
 
         if path.is_dir():
             path = path / "soundbank.json"
