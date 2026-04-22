@@ -266,12 +266,14 @@ class HighContrastColorGenerator:
         hue_step: float = 0.61803398875,
         saturation: float = 1.0,
         value: float = 1.0,
+        alpha: float = 1.0,
     ):
         # 0.61803398875: golden ratio conjugate, ensures well-spaced hues
         self.hue_step = hue_step
         self.hue = initial_hue
         self.saturation = saturation
         self.value = value
+        self.alpha = alpha
         self.initial_hue = initial_hue
         self.cache = {}
 
@@ -287,7 +289,7 @@ class HighContrastColorGenerator:
         """Generates the next high-contrast color."""
         self.hue = (self.hue + self.hue_step) % 1
         r, g, b = colorsys.hsv_to_rgb(self.hue, self.saturation, self.value)
-        return (int(r * 255), int(g * 255), int(b * 255))
+        return (int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
 
     def __call__(self, key: Any = None) -> tuple[int, int, int]:
         """Allows calling the instance directly to get the next color."""

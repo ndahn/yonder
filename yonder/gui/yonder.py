@@ -1249,6 +1249,11 @@ class BanksOfYonder(DpgItem):
     def _on_node_selected(
         self, sender: str, app_data: Any, node: int | HIRCNode
     ) -> None:
+        # Prevent refresh when the item is already selected so context 
+        # menus can open on nodes with long loading times
+        if sender == self._selected_root:
+            return
+
         # Deselect previous selectable
         if self._selected_root and dpg.does_item_exist(self._selected_root):
             dpg.set_value(self._selected_root, False)
