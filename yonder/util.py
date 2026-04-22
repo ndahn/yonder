@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, TYPE_CHECKING
-from collections.abc import MutableMapping
+from typing import Any, Callable, TYPE_CHECKING
 import sys
 import re
 from pathlib import Path

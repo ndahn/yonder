@@ -1,7 +1,43 @@
 import wave
 import threading
 import numpy as np
-import sounddevice as sd
+
+import sys
+from types import ModuleType
+import unittest.mock
+
+
+# Remove once https://github.com/spatialaudio/python-sounddevice/pull/628 
+# is merged and published
+def _import_sounddevice() -> type[ModuleType]:
+    """
+    sounddevice._initialize() calls os.dup(2) / os.dup2() which corrupts the
+    Windows CRT handle inheritance table in frozen apps. The fix is to patch
+    _initialize before the module-level call triggers it.
+    """
+    if not (sys.platform == "win32" and getattr(sys, "frozen", False)):
+        import sounddevice
+
+        return sounddevice
+
+    # Intercept the module mid-load before _initialize() is auto-called
+    with unittest.mock.patch("sounddevice._initialize"):
+        import sounddevice
+
+    # Now replace _initialize with a safe version and call it once
+    def _safe_initialize():
+        sounddevice._check(
+            sounddevice._lib.Pa_Initialize(), "Error initializing PortAudio"
+        )
+        sounddevice._initialized += 1
+
+    sounddevice._initialize = _safe_initialize
+    _safe_initialize()
+
+    return sounddevice
+
+
+sd = _import_sounddevice()
 
 
 class WavPlayer:
