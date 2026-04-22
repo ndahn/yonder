@@ -1463,7 +1463,7 @@ class BanksOfYonder(DpgItem):
         except json.JSONDecodeError:
             raise ValueError("Clipboard does not contain a valid hierarchy")
 
-        if "yonder_nodes" not in data:
+        if not isinstance(data, dict) or "yonder_nodes" not in data:
             raise ValueError("Clipboard does not contain a valid hierarchy")
 
         nodes = [HIRCNode.from_dict(n) for n in data["yonder_nodes"]]
