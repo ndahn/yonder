@@ -1,10 +1,13 @@
 test/
+todo/
 /test.py
 tmp/
+*.tmp
 *.pdb
 dpg_demo.py
 **/config.yaml
 yonder_v*
+*.*lock*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -59,9 +62,6 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
-*.mo
-*.pot
 
 # Django stuff:
 *.log

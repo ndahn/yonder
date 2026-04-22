@@ -1,4 +1,5 @@
-from typing import Literal
+from __future__ import annotations
+from typing import Literal, TYPE_CHECKING
 from pathlib import Path
 import shutil
 import subprocess
@@ -6,13 +7,16 @@ import subprocess
 # NOTE need to manually install audioop-lts
 from pydub import AudioSegment, silence
 
-from yonder import Soundbank
 from yonder.util import logger
+
+if TYPE_CHECKING:
+    from yonder import Soundbank
 
 
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
-    from yonder.node_types import WwiseNode
-    
+    from yonder import HIRCNode
+    from yonder.types.base_types import MediaInformation
+
     for wem in wems:
         if not wem.name.endswith(".wem"):
             continue
@@ -43,12 +47,14 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         wem_nodes = list(bnk.query(f"'**/source_id'={wem_id}"))
         wem_size = target_path.stat().st_size
         for node in wem_nodes:
-            if isinstance(node, WwiseNode):
-                attr_paths = node.resolve_path("**/media_information")
+            if isinstance(node, HIRCNode):
+                attr_paths = node.glob("**/media_information")
+                media_info: MediaInformation
+
                 for _, media_info in attr_paths:
                     # Music tracks have multiple sources, so check if this is the right one
-                    if media_info.get("source_id") == wem_id:
-                        media_info["in_memory_media_size"] = wem_size
+                    if media_info.source_id == wem_id:
+                        media_info.in_memory_media_size = wem_size
 
 
 def get_wem_metadata(wem: Path) -> float:
@@ -149,7 +155,7 @@ def create_prefetch_snippet(
         out_file = wav.parent / f"{wav.stem}_snippet.wav"
 
     audio: AudioSegment = AudioSegment.from_file(str(wav))
-    audio = audio[:int(length)]
+    audio = audio[: int(length)]
     audio.export(str(out_file), format="wav")
     return Path(out_file)
 
@@ -201,6 +207,8 @@ def wav2wem(
     wav_dir = waves[0].parent
     if not out_dir:
         out_dir = wav_dir
+
+    logger.info(f"Converting {len(waves)} wave files to wem")
 
     source_lines = []
     for wav in waves:
@@ -297,7 +305,8 @@ def wem2wav(
                     "-o",
                     str(target),
                     str(wem),
-                ]
+                ],
+                stdout=subprocess.DEVNULL,
             )
             out_files.append(target)
         except subprocess.CalledProcessError as e:

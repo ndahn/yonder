@@ -4,403 +4,675 @@ import numpy as np
 
 from dearpygui import dearpygui as dpg
 
+from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.util import logger
-from yonder.gui.config import get_config
+from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
 from yonder.player import WavPlayer
+from yonder.enums import CurveInterpolation
+from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
+from yonder.gui.config import get_config
 from yonder.gui.helpers import tmp_dir, shorten_path
+from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_file_dialog
+from .dpg_item import DpgItem
 
 
-def add_wav_player(
-    initial_file: Path,
-    *,
-    label: str = "",
-    allow_change_file: bool = True,
-    show_filepath: bool = False,
-    on_file_changed: Callable[[str, Path, Any], None] = None,
-    loop_markers_enabled: bool = False,
-    loop_start: float = 0.0,
-    loop_end: float = 0.0,
-    on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
-    trim_enabled: bool = False,
-    begin_trim: float = 0.0,
-    end_trim: float = 0.0,
-    on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
-    user_markers_enabled: bool = False,
-    user_markers: list[tuple[str, float, tuple[int, int, int]]] = None,
-    on_user_marker_changed: Callable[[str, tuple[str, float], Any], None] = None,
-    edit_markers_inplace: bool = False,
-    max_points: int = 5000,
-    width: int = -1,
-    height: int = 100,
-    tag: str = 0,
-    parent: str = 0,
-    user_data: Any = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
+class add_wav_player(DpgItem):
+    """An audio waveform player widget for Dear PyGui.
 
-    if not allow_change_file and not initial_file:
-        raise ValueError("allow_change_path is False and no initial_file provided")
+    Displays a waveform plot with an interactive playback cursor. Optionally
+    supports loop markers, trim markers, and named user markers. Markers can
+    be edited via drag handles on the plot or through a popup/dialog.
 
-    audio: Path = initial_file
-    player: WavPlayer = None
+    Parameters
+    ----------
+    initial_file : Path, optional
+        Audio file to load on construction (.wav or .wem).
+    label : str
+        Text label shown next to the file path row.
+    allow_change_file : bool
+        Show a Browse button to swap the audio file at runtime.
+    show_filepath : bool
+        Show the full shortened path instead of just the stem.
+    on_file_changed : callable, optional
+        Fired as ``on_file_changed(tag, path, user_data)`` when the file changes.
+    loop_markers_enabled : bool
+        Enable loop start/end drag markers on the waveform.
+    loop_start : float
+        Initial loop start position (in ms if ``markers_in_ms``, else seconds).
+    loop_end : float
+        Initial loop end position.
+    on_loop_changed : callable, optional
+        Fired as ``on_loop_changed(tag, (start, end, enabled), user_data)``.
+    trim_enabled : bool
+        Enable begin/end trim drag rect markers.
+    begin_trim : float
+        Initial begin trim position.
+    end_trim : float
+        Initial end trim position (negative = from end).
+    on_trim_marker_changed : callable, optional
+        Fired as ``on_trim_marker_changed(tag, (begin, end), user_data)``.
+    user_markers_enabled : bool
+        Enable named user-defined drag line markers.
+    user_markers : dict of (int or str) to float, optional
+        Initial marker positions keyed by ID or name.
+    on_user_markers_changed : callable, optional
+        Fired as ``on_user_markers_changed(tag, markers_dict, user_data)``.
+    edit_markers_inplace : bool
+        Allow dragging markers directly on the plot; otherwise use a dialog.
+    max_points : int
+        Maximum waveform envelope points rendered per channel.
+    markers_in_ms : bool
+        Interpret and report all marker positions in milliseconds.
+    width : int
+        Plot width in pixels (-1 = auto).
+    height : int
+        Plot height in pixels.
+    tag : int or str
+        Explicit tag; auto-generated if 0.
+    parent : int or str
+        DPG parent item.
+    user_data : any
+        Passed through to all callbacks.
+    """
 
-    # PLAYBACK
+    def __init__(
+        self,
+        initial_file: Path,
+        *,
+        label: str = "",
+        allow_change_file: bool = True,
+        show_filepath: bool = False,
+        on_file_changed: Callable[[str, Path, Any], None] = None,
+        loop_markers_enabled: bool = False,
+        loop_start: float = 0.0,
+        loop_end: float = 0.0,
+        on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
+        trim_enabled: bool = False,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
+        user_markers_enabled: bool = False,
+        user_markers: dict[Hash, float] = None,
+        on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
+        edit_markers_inplace: bool = False,
+        max_points: int = 5000,
+        markers_in_ms: bool = True,
+        width: int = -1,
+        height: int = 100,
+        tag: str = 0,
+        parent: str = 0,
+        user_data: Any = None,
+    ) -> None:
+        super().__init__(tag)
 
-    def select_file() -> None:
-        nonlocal audio, player
+        # Layout / construction-time settings (fixed for lifetime)
+        self._label = label
+        self._allow_change_file = allow_change_file
+        self._show_filepath = show_filepath
+        self._loop_markers_enabled = loop_markers_enabled
+        self._trim_enabled = trim_enabled
+        self._user_markers_enabled = user_markers_enabled
+        self._edit_markers_inplace = edit_markers_inplace
+        self._max_points = max_points
+        self._markers_in_ms = markers_in_ms
+        self._height = height
+        self._parent = parent
 
+        # Callbacks
+        self._on_file_changed = on_file_changed
+        self._on_loop_changed = on_loop_changed
+        self._on_trim_marker_changed = on_trim_marker_changed
+        self._on_user_markers_changed = on_user_markers_changed
+
+        self._user_data = user_data
+
+        # Runtime state
+        self._audio: Path = initial_file
+        self._player: WavPlayer = None
+
+        # Parse user markers — resolves str keys to int hashes
+        self._user_markers: dict[int, float] = {}
+        self._user_marker_labels: dict[int, str] = {}
+        if user_markers:
+            for mid, pos in user_markers.items():
+                if isinstance(mid, str):
+                    marker_label = mid
+                    mid = calc_hash(mid)
+                else:
+                    marker_label = lookup_name(mid, f"#{mid}")
+                self._user_markers[mid] = pos
+                self._user_marker_labels[mid] = marker_label
+
+        # Convert initial marker positions to seconds if needed
+        if markers_in_ms:
+            loop_start /= 1000
+            loop_end /= 1000
+            begin_trim /= 1000
+            end_trim /= 1000
+            self._user_markers = {k: v / 1000 for k, v in self._user_markers.items()}
+
+        self._loop_start = loop_start
+        self._loop_end = loop_end
+        self._begin_trim = begin_trim
+        self._end_trim = end_trim
+
+        # SFX curves — set via set_volume / set_lowpass / etc.
+        self.volume: list[RTPCGraphPoint] = None
+        self.lowpass: list[RTPCGraphPoint] = None
+        self.highpass: list[RTPCGraphPoint] = None
+        self.fadein: list[RTPCGraphPoint] = None
+        self.fadeout: list[RTPCGraphPoint] = None
+
+        self._setup_content(width, height)
+
+        if initial_file:
+            self.regenerate()
+
+    # === Playback ======================================================
+
+    def set_file(self, path: str | Path) -> None:
+        """Load a new audio file, stopping any current playback."""
+        if path:
+            path = Path(path).absolute()
+
+        if path == self._audio:
+            return
+
+        if self._on_file_changed:
+            self._on_file_changed(self._tag, path, self._user_data)
+
+        if self._player:
+            self._player.stop()
+            self._player = None
+
+        self._audio = path
+
+        if path and self._allow_change_file:
+            path_str = shorten_path(path, 40) if self._show_filepath else path.stem
+            dpg.set_value(self._t("filepath"), path_str)
+
+        self.regenerate()
+
+    def open_select_wav_dialog(self) -> None:
+        """Open a file picker and load the chosen file."""
         ret = open_file_dialog(
             title="Select Audio File",
-            default_file=str(audio) if audio else None,
-            filetypes={"Audio Files (.wav, .wem)": ["*.wav", "*.wem"]},
+            default_file=str(self._audio) if self._audio else None,
+            filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
-            path = Path(ret).absolute()
-            if path == audio:
-                return
+            self.set_file(Path(ret))
 
-            if on_file_changed:
-                on_file_changed(tag, path, user_data)
+    def play_pause(self) -> None:
+        """Toggle playback; creates the player on first call."""
+        if not self._player:
+            self._create_player()
+            self.regenerate()
 
-            if player:
-                player.stop()
-                player = None
+        if self._player.playing:
+            self._player.pause()
+        else:
+            if self._player.position >= self._player.duration:
+                if self._trim_enabled:
+                    pos = self._get_valid_pos(self.get_trims()[0])
+                else:
+                    pos = 0.0
+                dpg.set_value(self._t("progress"), pos)
+                dpg.set_value(self._t("progress_axis"), pos)
+                self._player.seek(pos)
 
-            audio = path
-            path_str = shorten_path(path, 40) if show_filepath else path.stem
-            dpg.set_value(f"{tag}_filepath", path_str)
-            regenerate()
+            self._player.play()
+            self._progress_update()
 
-    def get_wav_path() -> Path:
-        if audio is None or not audio.is_file():
-            logger.error(f"Audio {audio} does not exist")
+    def _get_wav_path(self) -> Path:
+        if self._audio is None:
             return None
 
-        if audio.name.endswith(".wem"):
-            wav = Path(tmp_dir.name) / (audio.stem + ".wav")
+        if not self._audio.is_file():
+            logger.error(
+                µ("Audio {file} is not a file", "log").format(file=self._audio)
+            )
+            return None
+
+        if self._audio.suffix == ".wem":
+            wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
             if not wav.is_file():
                 vgmstream = get_config().locate_vgmstream()
-                logger.info(f"Converting {audio} to wav for playback")
-                wav = wem2wav(Path(vgmstream), audio, Path(tmp_dir.name))[0]
+                logger.info(
+                    µ("Converting {file} to wav for playback", "log").format(
+                        file=self._audio.name
+                    )
+                )
+                wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
             return wav
 
-        elif audio.name.endswith(".wav"):
-            return audio
+        if self._audio.suffix == ".wav":
+            return self._audio
 
-        else:
-            logger.error(f"Audio must be a wav or wem file ({audio})")
-            return None
+        logger.error(
+            µ("Audio {file} is not a wav or wem file", "log").format(
+                file=self._audio.name
+            )
+        )
+        return None
 
-    def get_valid_pos(pos: float, use_trims: bool = True) -> float:
-        if player:
+    def _get_valid_pos(self, pos: float, use_trims: bool = True) -> float:
+        if self._player:
             if pos < 0:
-                pos = player.duration + pos
-            
-            if trim_enabled and use_trims:
-                trims = get_trims()
-                begin_trim = get_valid_pos(trims[0], False)
-                if trims[1] == 0.0:
-                    end_trim = player.duration
-                else:
-                    end_trim = get_valid_pos(trims[1], False)
+                pos = self._player.duration + pos
 
-                min_pos = max(0.0, min(begin_trim, player.duration))
-                max_pos = min(player.duration, max(0.0, end_trim))
+            if self._trim_enabled and use_trims:
+                trims = self.get_trims()
+                begin = self._get_valid_pos(trims[0], False)
+                end = (
+                    self._player.duration
+                    if trims[1] == 0.0
+                    else self._get_valid_pos(trims[1], False)
+                )
+                min_pos = max(0.0, min(begin, self._player.duration))
+                max_pos = min(self._player.duration, max(0.0, end))
             else:
                 min_pos = 0.0
-                max_pos = player.duration
+                max_pos = self._player.duration
 
             return max(min_pos, min(pos, max_pos))
 
         return max(0.0, abs(pos))
 
-    def create_player() -> None:
-        nonlocal player
-
-        if player:
+    def _create_player(self) -> None:
+        if self._player:
             raise ValueError("A player instance already exists")
 
-        wav = get_wav_path()
+        wav = self._get_wav_path()
         if not wav or not wav.is_file():
             raise FileNotFoundError()
 
-        player = WavPlayer(str(wav))
-        # Will be set on first call to on_play_pause
-        player.seek(player.duration)
+        self._player = WavPlayer(str(wav))
+        self._player.seek(self._player.duration)  # set on first play_pause call
 
-        initial_pos = get_trims()[0]
-        dpg.set_value(f"{tag}_progress", initial_pos)
-        dpg.set_value(f"{tag}_progress_axis", initial_pos)
+        initial_pos = self.get_trims()[0]
+        dpg.set_value(self._t("progress"), initial_pos)
+        dpg.set_value(self._t("progress_axis"), initial_pos)
 
-    def on_play_pause() -> None:
-        nonlocal player
-
-        if not player:
-            create_player()
-            regenerate()
-
-        if player.playing:
-            player.pause()
-        else:
-            if player.position >= player.duration:
-                if trim_enabled:
-                    pos = get_valid_pos(get_trims()[0])
-                    dpg.set_value(f"{tag}_progress", pos)
-                    dpg.set_value(f"{tag}_progress_axis", pos)
-                else:
-                    pos = 0.0
-
-                player.seek(pos)
-
-            player.play()
-            progress_update()
-
-    def on_progress_moved(sender: str) -> None:
-        pos = dpg.get_value(sender)
-        dpg.set_value(f"{tag}_progress_axis", pos)
-
-        if player:
-            dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
-            player.seek(pos)
-
-    def progress_update() -> None:
-        if not player or not player.playing:
+    def _progress_update(self) -> None:
+        if not self._player or not self._player.playing:
             return
 
-        # In case the player widget got destroyed
-        if not dpg.does_item_exist(f"{tag}_progress"):
-            player.stop()
+        if not dpg.does_item_exist(self._t("progress")):
+            self._player.stop()
             return
 
-        pos = player.position
-        loop_start, loop_end, loop_active = get_loop_state()
-        
+        pos = self._player.position
+        loop_start, loop_end, loop_active = self.get_loop_state()
+
         if loop_active:
-            loop_start = get_valid_pos(loop_start)
-            loop_end = get_valid_pos(loop_end)
+            loop_start = self._get_valid_pos(loop_start)
+            loop_end = self._get_valid_pos(loop_end)
             if pos >= loop_end:
                 pos = loop_start
-                player.seek(pos)
+                self._player.seek(pos)
 
-        # Only repeat the part around the loop point for testing
-        if dpg.get_value(f"{tag}_loop_test"):
+        # Only repeat the region around the loop point for testing
+        if dpg.get_value(self._t("loop_test")):
             if pos < loop_start:
                 pos = loop_start
-                player.seek(pos)
-            elif pos >= loop_start + 3 and pos < loop_end - 3:
+                self._player.seek(pos)
+            elif loop_start + 3 <= pos < loop_end - 3:
                 pos = loop_end - 3.0
-                player.seek(pos)
-        # Use trimming only when not in loop testing mode
-        elif trim_enabled:
-            trims = get_trims()
-            if pos < trims[0]:
-                player.seek(trims[0])
-            elif pos >= player.duration + trims[1]:
-                player.seek(trims[0])
+                self._player.seek(pos)
 
-        dpg.set_value(f"{tag}_progress", pos)
-        dpg.set_value(f"{tag}_progress_axis", pos)
-        dpg.set_value(f"{tag}_progress_value", f"{pos:.03f} / {player.duration:.3f}")
-        dpg.set_frame_callback(dpg.get_frame_count() + 2, progress_update)
+        # Apply trims only when not in loop-test mode
+        elif self._trim_enabled:
+            trims = self.get_trims()
+            if pos < trims[0] or pos >= self._player.duration + trims[1]:
+                pos = trims[0]
+                self._player.seek(pos)
 
-    # LOOP MARKERS
+        self._player.fx_set_volume_rel(self.get_volume_at(pos))
+        self._player.fx_set_lowpass(self.get_lowpass_at(pos))
+        self._player.fx_set_highpass(self.get_highpass_at(pos))
 
-    def get_loop_state() -> tuple[float, float, bool]:
-        if not loop_markers_enabled:
+        dpg.set_value(self._t("progress"), pos)
+        dpg.set_value(self._t("progress_axis"), pos)
+        dpg.set_value(
+            self._t("progress_value"), f"{pos:.03f} / {self._player.duration:.3f}"
+        )
+        # TODO update every frame if sfx updates don't seem smooth
+        dpg.set_frame_callback(dpg.get_frame_count() + 2, self._progress_update)
+
+    # === SFX ===========================================================
+
+    def _interpolate_curve(
+        self, points: list[RTPCGraphPoint], pos: float, default: float = 0.0
+    ) -> float:
+        if not points:
+            return default
+
+        # Find the last point whose from_ is <= pos
+        p0 = None
+        p1 = None
+        for i, p in enumerate(points):
+            if p.from_ <= pos:
+                p0 = p
+                p1 = points[i + 1] if i + 1 < len(points) else None
+            else:
+                break
+
+        if p0 is None:
+            return points[0].to  # before first point
+
+        if p1 is None:
+            return p0.to  # after last point
+
+        t = (pos - p0.from_) / (p1.from_ - p0.from_)
+        return interpolate(p0.interpolation, t, p0.to, p1.to)
+
+    def get_volume_at(self, pos: float) -> float:
+        vol_lin = 10 ** (self._interpolate_curve(self.volume, pos, default=0.0) / 20)
+        fadein = self._interpolate_curve(self.fadein, pos, default=1.0)
+        fadeout = 1.0 - self._interpolate_curve(self.fadeout, pos, default=0.0)
+        return vol_lin * fadein * fadeout
+
+    def get_lowpass_at(self, pos: float) -> float:
+        return self._interpolate_curve(self.lowpass, pos)
+
+    def get_highpass_at(self, pos: float) -> float:
+        return self._interpolate_curve(self.highpass, pos)
+
+    def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(volume, (float, int)):
+            volume = [RTPCGraphPoint(0.0, volume, CurveInterpolation.Constant)]
+        self.volume = volume
+
+    def set_lowpass(self, lowpass: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(lowpass, (float, int)):
+            lowpass = [RTPCGraphPoint(0.0, lowpass, CurveInterpolation.Constant)]
+        self.lowpass = lowpass
+
+    def set_highpass(self, highpass: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(highpass, (float, int)):
+            highpass = [RTPCGraphPoint(0.0, highpass, CurveInterpolation.Constant)]
+        self.highpass = highpass
+
+    def set_fadein(self, fadein: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(fadein, (float, int)):
+            fadein = [
+                RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Linear),
+                RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+            ]
+        self.fadein = fadein
+
+    def set_fadeout(self, fadeout: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(fadeout, (float, int)):
+            duration = self._player.duration if self._player else 100
+            fadeout = [
+                RTPCGraphPoint(duration - fadeout, 0.0, CurveInterpolation.Linear),
+                RTPCGraphPoint(duration, 1.0, CurveInterpolation.Constant),
+            ]
+        self.fadeout = fadeout
+
+    # === Loop markers ==================================================
+
+    def get_loop_state(self) -> tuple[float, float, bool]:
+        """Return ``(loop_start, loop_end, enabled)`` in seconds."""
+        if not self._loop_markers_enabled:
             return (0.0, 0.0, False)
 
-        start = dpg.get_value(f"{tag}_loop_start")
-        end = dpg.get_value(f"{tag}_loop_end")
-
-        if dpg.does_item_exist(f"{tag}_loop_enabled"):
-            active = dpg.get_value(f"{tag}_loop_enabled")
-        else:
-            active = True
-
+        start = dpg.get_value(self._t("loop_start"))
+        end = dpg.get_value(self._t("loop_end"))
+        active = (
+            dpg.get_value(self._t("loop_enabled"))
+            if dpg.does_item_exist(self._t("loop_enabled"))
+            else True
+        )
         return (start, end, active)
 
-    def set_loop_marker_pos(sender: str, pos: float, loop_marker: str) -> None:
-        pos = get_valid_pos(pos, False)
+    def set_loop_state(self, loop_start: float, loop_end: float, enabled: bool) -> None:
+        """Set loop marker positions and enabled state programmatically."""
+        if not self._loop_markers_enabled:
+            raise RuntimeError("loop_markers_enabled is False")
+
+        dpg.set_value(self._t("loop_start"), loop_start)
+        dpg.set_value(self._t("loop_end"), loop_end)
+        if dpg.does_item_exist(self._t("loop_enabled")):
+            dpg.set_value(self._t("loop_enabled"), enabled)
+        self._update_loop_widgets()
+
+    def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
+        pos = self._get_valid_pos(pos, False)
         if loop_marker == "loop_end" and pos == 0.0:
             pos = -0.01
 
-        dpg.set_value(f"{tag}_{loop_marker}", pos)
-        dpg.set_value(f"{tag}_{loop_marker}_axis", pos)
+        dpg.set_value(self._t(loop_marker), pos)
+        dpg.set_value(self._t(f"{loop_marker}_axis"), pos)
 
-        if on_loop_changed:
-            on_loop_changed(tag, get_loop_state(), user_data)
+        if self._on_loop_changed:
+            loop_start, loop_end, enabled = self.get_loop_state()
+            if self._markers_in_ms:
+                loop_start *= 1000
+                loop_end *= 1000
+            self._on_loop_changed(
+                self._tag, (loop_start, loop_end, enabled), self._user_data
+            )
 
-    def update_loop_widgets() -> None:
-        loop_start, loop_end, _ = get_loop_state()
-        
-        loop_start = get_valid_pos(loop_start, False)
-        loop_end = get_valid_pos(loop_end, False)
-        loop_end_viz = player.duration if loop_end == 0.0 else loop_end
+    def _update_loop_widgets(self) -> None:
+        loop_start, loop_end, _ = self.get_loop_state()
 
-        # Can't have overlap
+        loop_start = self._get_valid_pos(loop_start, False)
+        loop_end = self._get_valid_pos(loop_end, False)
+        loop_end_viz = self._player.duration if loop_end == 0.0 else loop_end
+
         loop_start = min(loop_start, loop_end)
 
-        dpg.set_value(f"{tag}_loop_start", loop_start)
-        dpg.set_value(f"{tag}_loop_start_axis", loop_start)
-        dpg.set_value(f"{tag}_loop_start_value", loop_start)
+        dpg.set_value(self._t("loop_start"), loop_start)
+        dpg.set_value(self._t("loop_start_axis"), loop_start)
+        dpg.set_value(self._t("loop_start_value"), loop_start)
 
-        dpg.set_value(f"{tag}_loop_end", loop_end_viz)
-        dpg.set_value(f"{tag}_loop_end_axis", loop_end_viz)
-        dpg.set_value(f"{tag}_loop_end_value", loop_end)
+        dpg.set_value(self._t("loop_end"), loop_end_viz)
+        dpg.set_value(self._t("loop_end_axis"), loop_end_viz)
+        dpg.set_value(self._t("loop_end_value"), loop_end)
 
-    def on_loop_marker_moved() -> None:
-        update_loop_widgets()
+    def _on_loop_marker_moved(self) -> None:
+        self._update_loop_widgets()
 
-        if on_loop_changed:
-            on_loop_changed(tag, get_loop_state(), user_data)
+        if self._on_loop_changed:
+            loop_start, loop_end, enabled = self.get_loop_state()
+            if self._markers_in_ms:
+                loop_start *= 1000
+                loop_end *= 1000
+            self._on_loop_changed(
+                self._tag, (loop_start, loop_end, enabled), self._user_data
+            )
 
-    # TRIMS
+    # === Trim markers ==================================================
 
-    def get_trims() -> tuple[float, float]:
-        if not trim_enabled:
+    def get_trims(self) -> tuple[float, float]:
+        """Return ``(begin_trim, end_trim)`` in seconds."""
+        if not self._trim_enabled:
             return (0.0, 0.0)
 
-        begin_trim = dpg.get_value(f"{tag}_begin_trim_value")
-        end_trim = dpg.get_value(f"{tag}_end_trim_value")
-        return (begin_trim, end_trim)
+        begin = dpg.get_value(self._t("begin_trim_value"))
+        end = dpg.get_value(self._t("end_trim_value"))
+        return (begin, end)
 
-    def set_trim_marker_pos(sender: str, pos: float, trim_marker: str) -> None:
+    def set_trims(self, begin_trim: float, end_trim: float) -> None:
+        """Set trim marker positions programmatically."""
+        if not self._trim_enabled:
+            raise RuntimeError("trim_enabled is False")
+
+        dpg.set_value(self._t("begin_trim_value"), begin_trim)
+        dpg.set_value(self._t("end_trim_value"), end_trim)
+        self._update_trim_widgets()
+
+    def set_trim_marker_pos(self, sender: str, pos: float, trim_marker: str) -> None:
+        """Set a single trim marker; also usable as a DPG callback."""
         if trim_marker == "begin_trim":
-            pos = get_valid_pos(pos, False)
-            dpg.set_value(f"{tag}_begin_trim", (-10, -1, pos, 1))
-            dpg.set_value(f"{tag}_begin_trim_axis", pos)
-        if trim_marker == "end_trim":
+            pos = self._get_valid_pos(pos, False)
+            dpg.set_value(self._t("begin_trim"), (-10, -1, pos, 1))
+            dpg.set_value(self._t("begin_trim_axis"), pos)
+        elif trim_marker == "end_trim":
             if pos == 0.0:
                 pos = -0.01
-            pos = get_valid_pos(pos, False)
-            dpg.set_value(f"{tag}_end_trim", (pos, -1, 1000, 1))
-            dpg.set_value(f"{tag}_end_trim_axis", pos)
+            pos = self._get_valid_pos(pos, False)
+            dpg.set_value(self._t("end_trim"), (pos, -1, 1000, 1))
+            dpg.set_value(self._t("end_trim_axis"), pos)
 
-        if on_trim_marker_changed:
-            on_trim_marker_changed(tag, get_trims(), user_data)
+        if self._on_trim_marker_changed:
+            begin_trim, end_trim = self.get_trims()
+            if self._markers_in_ms:
+                begin_trim *= 1000
+                end_trim *= 1000
+            self._on_trim_marker_changed(
+                self._tag, (begin_trim, end_trim), self._user_data
+            )
 
-    def update_trim_widgets() -> None:
-        begin_trim, end_trim = get_trims()
+    def _update_trim_widgets(self) -> None:
+        begin_trim, end_trim = self.get_trims()
 
-        begin_trim = get_valid_pos(begin_trim, False)
-        end_trim = get_valid_pos(end_trim, False)
-        end_trim_viz = player.duration if end_trim == 0.0 else end_trim
+        begin_trim = self._get_valid_pos(begin_trim, False)
+        end_trim = self._get_valid_pos(end_trim, False)
+        end_trim_viz = self._player.duration if end_trim == 0.0 else end_trim
 
-        # Can't have overlap
         begin_trim = min(begin_trim, end_trim_viz)
 
-        dpg.set_value(f"{tag}_begin_trim", (-1000, -1, begin_trim, 1))
-        dpg.set_value(f"{tag}_begin_trim_axis", begin_trim)
-        dpg.set_value(f"{tag}_begin_trim_value", begin_trim)
+        dpg.set_value(self._t("begin_trim"), (-1000, -1, begin_trim, 1))
+        dpg.set_value(self._t("begin_trim_axis"), begin_trim)
+        dpg.set_value(self._t("begin_trim_value"), begin_trim)
 
-        dpg.set_value(f"{tag}_end_trim", (end_trim_viz, -1, 1000, 1))
-        dpg.set_value(f"{tag}_end_trim_axis", end_trim_viz)
-        dpg.set_value(f"{tag}_end_trim_value", end_trim)  # raw value
+        dpg.set_value(self._t("end_trim"), (end_trim_viz, -1, 1000, 1))
+        dpg.set_value(self._t("end_trim_axis"), end_trim_viz)
+        dpg.set_value(self._t("end_trim_value"), end_trim)  # raw value
 
-    def on_trim_marker_moved() -> None:
-        # Storing the value in the float widget instead
-        begin_drag = dpg.get_value(f"{tag}_begin_trim")[2]
-        end_drag = dpg.get_value(f"{tag}_end_trim")[0]
-        dpg.set_value(f"{tag}_begin_trim_value", begin_drag)
-        dpg.set_value(f"{tag}_end_trim_value", -(player.duration - end_drag))
+    def _on_trim_marker_moved(self) -> None:
+        # Store raw values in the float widgets
+        begin_drag = dpg.get_value(self._t("begin_trim"))[2]
+        end_drag = dpg.get_value(self._t("end_trim"))[0]
+        dpg.set_value(self._t("begin_trim_value"), begin_drag)
+        dpg.set_value(self._t("end_trim_value"), -(self._player.duration - end_drag))
 
-        update_trim_widgets()
+        self._update_trim_widgets()
 
-        if on_trim_marker_changed:
-            on_trim_marker_changed(tag, get_trims(), user_data)
+        if self._on_trim_marker_changed:
+            begin_trim, end_trim = self.get_trims()
+            if self._markers_in_ms:
+                begin_trim *= 1000
+                end_trim *= 1000
+            self._on_trim_marker_changed(
+                self._tag, (begin_trim, end_trim), self._user_data
+            )
 
-    # USER MARKERS
+    # === User markers ==================================================
 
-    def set_user_marker_pos(sender: str, pos: float, marker: str) -> None:
-        dpg.set_value(f"{tag}_marker_{marker}", pos)
-        if on_user_marker_changed:
-            on_user_marker_changed(tag, (marker, pos), user_data)
+    def get_user_markers(self) -> dict[int, float]:
+        """Return all user marker positions ``{id: pos}`` in seconds."""
+        return dict(self._user_markers)
 
-    def update_user_marker_widget(marker: str) -> None:
-        marker_drag = f"{tag}_marker_{marker}"
-        pos = dpg.get_value(marker_drag)
-        pos = get_valid_pos(pos)
+    def get_user_marker_pos(self, mid: Hash, default: float = 0.0) -> float:
+        """Return a single marker position by ID or name."""
+        if isinstance(mid, str):
+            mid = calc_hash(mid)
+        return self._user_markers.get(mid, default)
 
-        dpg.set_value(marker_drag, pos)
-        dpg.set_value(f"{tag}_marker_{marker}_value", pos)
-        dpg.set_value(f"{tag}_marker_{marker}_axis", pos)
+    def _set_user_marker_pos(self, sender: str, pos: float, mid: int) -> None:
+        dpg.set_value(self._t(f"marker_{mid}"), pos)
+        self._user_markers[mid] = pos
+        self._fire_user_markers_changed()
 
-    def on_user_marker_moved(marker: str) -> None:
-        update_user_marker_widget(marker)
+    def _update_user_marker_widget(self, mid: int) -> None:
+        pos = dpg.get_value(self._t(f"marker_{mid}"))
+        pos = self._get_valid_pos(pos)
+        self._user_markers[mid] = pos
 
-        if on_user_marker_changed:
-            on_user_marker_changed(tag, (marker, pos), user_data)
+        dpg.set_value(self._t(f"marker_{mid}"), pos)
+        dpg.set_value(self._t(f"marker_{mid}_value"), pos)
+        dpg.set_value(self._t(f"marker_{mid}_axis"), pos)
 
-    # EDIT DIALOG
+    def _on_user_markers_moved(self) -> None:
+        for mid in self._user_markers:
+            self._update_user_marker_widget(mid)
+        self._fire_user_markers_changed()
 
-    def on_loop_marker_edit(
-        sender: str, new_loop_info: tuple[float, float, bool], user_data: Any
+    def _fire_user_markers_changed(self) -> None:
+        if not self._on_user_markers_changed:
+            return
+        markers = (
+            {k: v * 1000 for k, v in self._user_markers.items()}
+            if self._markers_in_ms
+            else dict(self._user_markers)
+        )
+        self._on_user_markers_changed(self._tag, markers, self._user_data)
+
+    # === Edit dialog ===================================================
+
+    def _on_loop_marker_edit(
+        self, sender: str, new_loop_info: tuple[float, float, bool], ud: Any
     ) -> None:
         loop_start, loop_end, _ = new_loop_info
-        dpg.set_value(f"{tag}_loop_start", loop_start)
-        dpg.set_value(f"{tag}_loop_end", loop_end)
-        on_loop_marker_moved()
+        dpg.set_value(self._t("loop_start"), loop_start)
+        dpg.set_value(self._t("loop_end"), loop_end)
+        self._on_loop_marker_moved()
 
-    def on_trim_marker_edit(
-        sender: str, trims: tuple[float, float], user_data: Any
+    def _on_trim_marker_edit(
+        self, sender: str, trims: tuple[float, float], ud: Any
     ) -> None:
-        dpg.set_value(f"{tag}_begin_trim", (-1000, -1, trims[0], 1))
-        dpg.set_value(f"{tag}_end_trim", (player.duration + trims[1], -1, 1000, 1))
-        on_trim_marker_moved()
+        dpg.set_value(self._t("begin_trim"), (-1000, -1, trims[0], 1))
+        dpg.set_value(
+            self._t("end_trim"), (self._player.duration + trims[1], -1, 1000, 1)
+        )
+        self._on_trim_marker_moved()
 
-    def on_user_marker_edit(
-        sender: str, marker: tuple[str, float], user_data: Any
+    def _on_user_marker_edit(
+        self, sender: str, markers: dict[Hash, float], ud: Any
     ) -> None:
-        name, pos = marker
-        dpg.set_value(f"{tag}_marker_{name}", pos)
-        on_user_marker_moved(name)
+        for mid, pos in markers.items():
+            dpg.set_value(self._t(f"marker_{mid}"), pos)
+        self._on_user_markers_moved()
 
-    def open_edit_markers_dialog() -> None:
+    def _open_edit_markers_dialog(self) -> None:
         from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
 
-        dpg.hide_item(f"{tag}_markers_popup")
-        loop_start, loop_end, _ = get_loop_state()
+        dpg.hide_item(self._t("markers_popup"))
+        loop_start, loop_end, _ = self.get_loop_state()
 
         edit_markers_dialog(
-            audio,
-            loop_markers_enabled=loop_markers_enabled,
+            self._audio,
+            loop_markers_enabled=self._loop_markers_enabled,
             loop_start=loop_start,
             loop_end=loop_end,
-            on_loop_changed=on_loop_marker_edit,
-            trim_enabled=trim_enabled,
-            begin_trim=begin_trim,
-            end_trim=end_trim,
-            on_trim_marker_changed=on_trim_marker_edit,
-            user_markers_enabled=user_markers_enabled,
-            user_markers=user_markers,
-            on_user_marker_changed=on_user_marker_edit,
+            on_loop_changed=self._on_loop_marker_edit,
+            trim_enabled=self._trim_enabled,
+            begin_trim=self._begin_trim,
+            end_trim=self._end_trim,
+            on_trim_marker_changed=self._on_trim_marker_edit,
+            user_markers_enabled=self._user_markers_enabled,
+            user_markers=self._user_markers,
+            on_user_marker_changed=self._on_user_marker_edit,
+            markers_in_ms=False,  # already in seconds internally
         )
 
-    # RENDERING
+    # === Rendering =====================================================
 
-    def minmax_envelope(
+    @staticmethod
+    def _minmax_envelope(
         signal: np.ndarray, time: np.ndarray, n_buckets: int
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Downsample by splitting into n_buckets and keeping min+max per bucket.
         Returns (t, y) where len == 2*n_buckets, ready to plot as a filled waveform.
         """
-        # Trim to a multiple of n_buckets for clean reshaping
         trim = (len(signal) // n_buckets) * n_buckets
         sig_buckets = signal[:trim].reshape(n_buckets, -1)
         t_buckets = time[:trim].reshape(n_buckets, -1)
 
         mins = sig_buckets.min(axis=1)
         maxs = sig_buckets.max(axis=1)
-        # Use the midpoint time of each bucket
         t_mid = t_buckets.mean(axis=1)
 
-        # Interleave: for each bucket emit (t, max) then (t, min)
-        # This gives a continuous line that traces the envelope
+        # Interleave: for each bucket emit (t, max) then (t, min) for a
+        # continuous envelope trace
         t_out = np.empty(2 * n_buckets)
         y_out = np.empty(2 * n_buckets)
         t_out[0::2] = t_mid
@@ -410,48 +682,52 @@ def add_wav_player(
 
         return t_out, y_out
 
-    def regenerate() -> None:
-        dpg.delete_item(f"{tag}_yaxis", children_only=True)
+    def regenerate(self) -> None:
+        """Rebuild the waveform plot from the current audio file."""
+        dpg.delete_item(self._t("xaxis"), children_only=True)
+        
+        if not self._get_wav_path():
+            return
 
-        if not player:
+        if not self._player:
             try:
-                create_player()
+                self._create_player()
             except FileNotFoundError:
-                logger.error(f"Audio {audio} not found")
-                dpg.hide_item(f"{tag}_plot_group")
+                logger.error(
+                    µ("Audio {file} not found", "msg").format(file=self._audio)
+                )
+                dpg.hide_item(self._t("plot_group"))
                 dpg.configure_item(
-                    f"{tag}_audio_error",
-                    default_value=f"Audio {audio.name} not found",
+                    self._t("audio_error"),
+                    default_value=µ("Audio {file} not found", "msg").format(
+                        file=self._audio.name
+                    ),
                     show=True,
                 )
                 return
             except Exception as e:
-                logger.error(f"Error reading file: {e}")
-                dpg.hide_item(f"{tag}_plot_group")
+                logger.error(µ("Error reading file: {exc}", "log").format(exc=e))
+                dpg.hide_item(self._t("plot_group"))
                 dpg.configure_item(
-                    f"{tag}_audio_error",
-                    default_value=str(e),
-                    show=True,
+                    self._t("audio_error"), default_value=str(e), show=True
                 )
                 return
 
-        dpg.show_item(f"{tag}_plot_group")
-        dpg.hide_item(f"{tag}_audio_error")
+        dpg.show_item(self._t("plot_group"))
+        dpg.hide_item(self._t("audio_error"))
 
         # frames is [L, R, L, R, ...] -> shape (n_frames, n_channels)
-        samples = player.frames
-        time = np.linspace(0, player.duration, num=player.num_frames)
+        samples = self._player.frames
+        time = np.linspace(0, self._player.duration, num=self._player.num_frames)
 
         factors = [1, -1]
         colors = [style.themes.plot_blue, style.themes.plot_red]
 
-        # Numerical progress display
-        dpg.set_value(f"{tag}_progress_value", f"0.000 / {player.duration:.3f}")
+        dpg.set_value(self._t("progress_value"), f"0.000 / {self._player.duration:.3f}")
 
-        # If there are multiple channels we only want the first two (usually FL and FR)
-        for i in range(min(player.num_channels, 2)):
+        for i in range(min(self._player.num_channels, 2)):
             signal = samples[:, i].astype(np.float32)
-            t_env, y_env = minmax_envelope(signal, time, n_buckets=max_points // 2)
+            t_env, y_env = self._minmax_envelope(signal, time, self._max_points // 2)
             y_env = factors[i % 2] * np.abs(y_env)
 
             dpg.add_line_series(
@@ -459,322 +735,345 @@ def add_wav_player(
                 y_env.tolist(),
                 shaded=True,
                 no_clip=True,
-                tag=f"{tag}_channel_{i}",
+                tag=self._t(f"channel_{i}"),
                 label=f"Ch{i}",
-                parent=f"{tag}_xaxis",
+                parent=self._t("xaxis"),
             )
-            dpg.bind_item_theme(f"{tag}_channel_{i}", colors[i])
+            dpg.bind_item_theme(self._t(f"channel_{i}"), colors[i])
 
-        if loop_markers_enabled:
-            update_loop_widgets()
+        if self._loop_markers_enabled:
+            self._update_loop_widgets()
 
-        if user_markers_enabled:
-            for marker, _, _ in user_markers:
-                update_user_marker_widget(marker)
+        if self._user_markers_enabled:
+            for mid in self._user_markers:
+                self._update_user_marker_widget(mid)
 
-        if trim_enabled:
-            update_trim_widgets()
+        if self._trim_enabled:
+            self._update_trim_widgets()
 
-        dpg.set_axis_limits_constraints(f"{tag}_xaxis", 0.0, player.duration)
-        dpg.fit_axis_data(f"{tag}_xaxis")
-        dpg.fit_axis_data(f"{tag}_yaxis")
+        dpg.set_axis_limits_constraints(self._t("xaxis"), 0.0, self._player.duration)
+        dpg.fit_axis_data(self._t("xaxis"))
+        dpg.fit_axis_data(self._t("yaxis"))
 
-    with dpg.group(tag=tag):
-        dpg.add_text(
-            "Audio not found", color=style.yellow, show=False, tag=f"{tag}_audio_error"
-        )
+    # === DPG callbacks =================================================
 
-        with dpg.group(horizontal=True):
-            if allow_change_file:
-                dpg.add_input_text(
-                    default_value=shorten_path(initial_file) if initial_file else "",
-                    enabled=False,
-                    readonly=True,
-                    tag=f"{tag}_filepath",
-                )
-                dpg.add_button(
-                    label="Browse",
-                    callback=select_file,
-                )
-            
-            if label:
-                dpg.add_text(label, color=style.pink.mix(style.white))
+    def _on_progress_moved(self, sender: str) -> None:
+        pos = dpg.get_value(sender)
+        dpg.set_value(self._t("progress_axis"), pos)
 
-            dpg.add_spacer(height=2)
+        if self._player:
+            dpg.set_value(
+                self._t("progress_value"), f"{pos:.03f} / {self._player.duration:.3f}"
+            )
+            self._player.seek(pos)
 
-        with dpg.group(tag=f"{tag}_plot_group", parent=parent):
-            # We want the markers to be at the top, but placing them on e.g. x-axis 2 will make 
-            # their position independent from x-axis 1 where the plot is. So we make two plots,
-            # one for the markers with no visible plot area, and one for the series itself, then
-            # link their x-axis.
-            with dpg.subplots(
-                2,
-                1,
-                link_all_x=True,
-                link_all_y=True,
-                row_ratios=[0.0001, 1],
-                width=width,
-                height=height,
-                no_resize=True,
-                no_menus=True,
-                no_title=True,
-            ):
-                with dpg.plot(
-                    no_title=True,
+    # === Build =========================================================
+
+    def _setup_content(self, width: int, height: int) -> None:
+        with dpg.group(tag=self._tag, parent=self._parent):
+            dpg.add_text(
+                "Audio not found",
+                color=style.yellow,
+                show=False,
+                tag=self._t("audio_error"),
+            )
+
+            with dpg.group(horizontal=True):
+                if self._allow_change_file:
+                    dpg.add_input_text(
+                        default_value=shorten_path(self._audio) if self._audio else "",
+                        enabled=False,
+                        readonly=True,
+                        tag=self._t("filepath"),
+                    )
+                    dpg.add_button(
+                        label=µ("Browse", "button"),
+                        callback=self.open_select_wav_dialog,
+                        tag=self._t("browse"),
+                    )
+
+                if self._label:
+                    dpg.add_text(self._label, color=style.pink.mix(style.white))
+
+                dpg.add_spacer(height=2)
+
+            with dpg.group(tag=self._t("plot_group")):
+                # Two linked subplots: a thin marker strip on top, waveform below.
+                # Markers must live on a separate plot to appear above the waveform
+                # while still sharing the same x-axis range.
+                with dpg.subplots(
+                    2,
+                    1,
+                    link_all_x=True,
+                    link_all_y=True,
+                    row_ratios=[0.0001, 1],
+                    width=width,
+                    height=height,
+                    no_resize=True,
                     no_menus=True,
-                    no_mouse_pos=True,
-                    no_inputs=True,
-                    no_frame=True,
-                    height=1,
-                ):
-                    dpg.add_plot_axis(
-                        dpg.mvXAxis,
-                        label="markers",
-                        opposite=True,
-                        no_label=True,
-                        no_highlight=True,
-                        no_tick_labels=True,
-                        no_tick_marks=True,
-                        no_initial_fit=True,
-                        tag=f"{tag}_marker_axis",
-                    )
-                    dpg.add_plot_axis(
-                        dpg.mvYAxis,
-                        show=False,
-                        no_label=True,
-                        no_highlight=True,
-                        no_tick_labels=True,
-                        no_tick_marks=True,
-                    )
-
-                with dpg.plot(
                     no_title=True,
-                    no_menus=True,
-                    no_mouse_pos=True,
-                    tag=f"{tag}_plot",
                 ):
-                    dpg.add_plot_axis(
-                        dpg.mvXAxis,
-                        label="amp",
-                        no_label=True,
-                        no_highlight=True,
-                        tag=f"{tag}_xaxis",
-                    )
-                    dpg.add_plot_axis(
-                        dpg.mvYAxis,
-                        label="time",
-                        no_label=True,
-                        no_highlight=True,
-                        no_tick_labels=True,
-                        no_tick_marks=True,
-                        auto_fit=True,
-                        tag=f"{tag}_yaxis",
-                    )
-
-                    # Playback marker
-                    dpg.add_drag_line(
-                        show_label=False,
-                        thickness=2,
-                        color=style.light_blue,
-                        callback=on_progress_moved,
-                        tag=f"{tag}_progress",
-                    )
-                    dpg.add_axis_tag(
-                        label=" ",
-                        default_value=loop_start,
-                        color=style.light_blue,
-                        parent=f"{tag}_marker_axis",
-                        tag=f"{tag}_progress_axis",
-                    )
-
-                    # Loop markers
-                    if loop_markers_enabled:
-                        dpg.add_drag_line(
-                            label="loop_start",
-                            color=style.green,
-                            default_value=loop_start,
-                            callback=on_loop_marker_moved,
-                            no_inputs=not edit_markers_inplace,
-                            tag=f"{tag}_loop_start",
+                    with dpg.plot(
+                        no_title=True,
+                        no_menus=True,
+                        no_mouse_pos=True,
+                        no_inputs=True,
+                        no_frame=True,
+                        height=1,
+                    ):
+                        dpg.add_plot_axis(
+                            dpg.mvXAxis,
+                            label=µ("markers"),
+                            opposite=True,
+                            no_label=True,
+                            no_highlight=True,
+                            no_tick_labels=True,
+                            no_tick_marks=True,
+                            no_initial_fit=True,
+                            tag=self._t("marker_axis"),
                         )
-                        dpg.add_axis_tag(
-                            label="L0",
-                            default_value=loop_start,
-                            color=style.green,
-                            parent=f"{tag}_marker_axis",
-                            tag=f"{tag}_loop_start_axis",
-                        )
-                        dpg.add_drag_line(
-                            label="loop_end",
-                            color=style.green,
-                            default_value=loop_end,
-                            callback=on_loop_marker_moved,
-                            no_inputs=not edit_markers_inplace,
-                            tag=f"{tag}_loop_end",
-                        )
-                        dpg.add_axis_tag(
-                            label="L1",
-                            default_value=loop_end,
-                            color=style.green,
-                            parent=f"{tag}_marker_axis",
-                            tag=f"{tag}_loop_end_axis",
+                        dpg.add_plot_axis(
+                            dpg.mvYAxis,
+                            show=False,
+                            no_label=True,
+                            no_highlight=True,
+                            no_tick_labels=True,
+                            no_tick_marks=True,
                         )
 
-                    # Trimming
-                    if trim_enabled:
-                        dpg.add_drag_rect(
-                            label="begin_trim",
-                            color=style.red,
-                            no_fit=True,
-                            no_inputs=not edit_markers_inplace,
-                            callback=on_trim_marker_moved,
-                            tag=f"{tag}_begin_trim",
-                        )
+                        # Playback cursor on marker strip
                         dpg.add_axis_tag(
-                            label="T0",
-                            color=style.red,
-                            parent=f"{tag}_marker_axis",
-                            tag=f"{tag}_begin_trim_axis",
-                        )
-                        dpg.add_drag_rect(
-                            label="end_trim",
-                            color=style.red,
-                            no_fit=True,
-                            no_inputs=not edit_markers_inplace,
-                            callback=on_trim_marker_moved,
-                            tag=f"{tag}_end_trim",
-                        )
-                        dpg.add_axis_tag(
-                            label="T1",
-                            color=style.red,
-                            parent=f"{tag}_marker_axis",
-                            tag=f"{tag}_end_trim_axis",
+                            label=" ",
+                            default_value=self._loop_start,
+                            color=style.light_blue,
+                            parent=self._t("marker_axis"),
+                            tag=self._t("progress_axis"),
                         )
 
-                    # User markers
-                    if user_markers_enabled:
-                        for i, (marker, pos, color) in enumerate(user_markers):
+                        if self._loop_markers_enabled:
                             dpg.add_drag_line(
-                                label=marker,
-                                color=color,
-                                default_value=pos,
-                                no_inputs=not edit_markers_inplace,
-                                callback=on_user_marker_moved,
-                                tag=f"{tag}_marker_{marker}",
+                                label=µ("loop_start", "marker"),
+                                color=style.green,
+                                default_value=self._loop_start,
+                                callback=self._on_loop_marker_moved,
+                                no_inputs=not self._edit_markers_inplace,
+                                tag=self._t("loop_start"),
                             )
                             dpg.add_axis_tag(
-                                label=f"m{i}",
-                                default_value=pos,
-                                color=color,
-                                parent=f"{tag}_marker_axis",
-                                tag=f"{tag}_marker{marker}_axis",
+                                label=µ("L0", "marker"),
+                                default_value=self._loop_start,
+                                color=style.green,
+                                parent=self._t("marker_axis"),
+                                tag=self._t("loop_start_axis"),
                             )
+                            dpg.add_drag_line(
+                                label=µ("loop_end", "marker"),
+                                color=style.green,
+                                default_value=self._loop_end,
+                                callback=self._on_loop_marker_moved,
+                                no_inputs=not self._edit_markers_inplace,
+                                tag=self._t("loop_end"),
+                            )
+                            dpg.add_axis_tag(
+                                label=µ("L1", "marker"),
+                                default_value=self._loop_end,
+                                color=style.green,
+                                parent=self._t("marker_axis"),
+                                tag=self._t("loop_end_axis"),
+                            )
+
+                        if self._trim_enabled:
+                            dpg.add_drag_rect(
+                                label=µ("begin_trim", "marker"),
+                                color=style.red,
+                                no_fit=True,
+                                no_inputs=not self._edit_markers_inplace,
+                                callback=self._on_trim_marker_moved,
+                                tag=self._t("begin_trim"),
+                            )
+                            dpg.add_axis_tag(
+                                label=µ("T0", "marker"),
+                                color=style.red,
+                                parent=self._t("marker_axis"),
+                                tag=self._t("begin_trim_axis"),
+                            )
+                            dpg.add_drag_rect(
+                                label=µ("end_trim", "marker"),
+                                color=style.red,
+                                no_fit=True,
+                                no_inputs=not self._edit_markers_inplace,
+                                callback=self._on_trim_marker_moved,
+                                tag=self._t("end_trim"),
+                            )
+                            dpg.add_axis_tag(
+                                label=µ("T1", "marker"),
+                                color=style.red,
+                                parent=self._t("marker_axis"),
+                                tag=self._t("end_trim_axis"),
+                            )
+
+                        if self._user_markers_enabled:
+                            colorgen = style.HighContrastColorGenerator()
+                            for i, (mid, pos) in enumerate(self._user_markers.items()):
+                                color = colorgen()
+                                marker_label = self._user_marker_labels.get(
+                                    mid, f"#{mid}"
+                                )
+                                dpg.add_drag_line(
+                                    label=marker_label,
+                                    color=color,
+                                    default_value=pos,
+                                    no_inputs=not self._edit_markers_inplace,
+                                    callback=self._on_user_markers_moved,
+                                    tag=self._t(f"marker_{mid}"),
+                                    user_data=mid,
+                                )
+                                dpg.add_axis_tag(
+                                    label=µ("m{idx}", "marker"),
+                                    default_value=pos,
+                                    color=color,
+                                    parent=self._t("marker_axis"),
+                                    tag=self._t(f"marker_{mid}_axis"),
+                                )
+
+                    with dpg.plot(
+                        no_title=True,
+                        no_menus=True,
+                        no_mouse_pos=True,
+                        tag=self._t("plot"),
+                    ):
+                        dpg.add_plot_axis(
+                            dpg.mvXAxis,
+                            label=µ("amp"),
+                            no_label=True,
+                            no_highlight=True,
+                            tag=self._t("xaxis"),
+                        )
+                        dpg.add_plot_axis(
+                            dpg.mvYAxis,
+                            label=µ("time"),
+                            no_label=True,
+                            no_highlight=True,
+                            no_tick_labels=True,
+                            no_tick_marks=True,
+                            auto_fit=True,
+                            tag=self._t("yaxis"),
+                        )
+
+                        dpg.add_drag_line(
+                            show_label=False,
+                            thickness=2,
+                            color=style.light_blue,
+                            callback=self._on_progress_moved,
+                            tag=self._t("progress"),
+                        )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
                     arrow=True,
                     direction=dpg.mvDir_Right,
-                    callback=on_play_pause,
+                    callback=self.play_pause,
                 )
+                dpg.add_text("|")
 
-                if loop_markers_enabled:
+                if self._loop_markers_enabled:
                     dpg.add_checkbox(
-                        label="Loop",
+                        label=µ("Loop"),
                         default_value=True,
-                        callback=on_loop_marker_moved,
-                        tag=f"{tag}_loop_enabled",
+                        callback=self._on_loop_marker_moved,
+                        tag=self._t("loop_enabled"),
                     )
                     dpg.add_checkbox(
-                        label="Test",
+                        label=µ("Test"),
                         default_value=False,
-                        tag=f"{tag}_loop_test",
+                        tag=self._t("loop_test"),
                     )
 
-                if loop_markers_enabled or user_markers_enabled or trim_enabled:
+                if (
+                    self._loop_markers_enabled
+                    or self._user_markers_enabled
+                    or self._trim_enabled
+                ):
                     dpg.add_text("|")
-                    if edit_markers_inplace:
+                    if self._edit_markers_inplace:
                         dpg.add_button(
-                            label="Markers",
+                            label=µ("Markers", "button"),
                             callback=lambda s, a, u: dpg.show_item(
-                                f"{tag}_markers_popup"
+                                self._t("markers_popup")
                             ),
+                            tag=self._t("markers"),
                         )
                     else:
                         dpg.add_button(
-                            label="Edit",
-                            callback=open_edit_markers_dialog,
+                            label=µ("Edit", "button"),
+                            callback=self._open_edit_markers_dialog,
+                            tag=self._t("edit"),
                         )
+                    dpg.add_text("|")
 
-                dpg.add_text("|")
-                dpg.add_text("0.000 / 0.000", tag=f"{tag}_progress_value")
+                dpg.add_text("0.000 / 0.000", tag=self._t("progress_value"))
 
-    with dpg.window(
-        popup=True,
-        no_move=True,
-        no_title_bar=True,
-        no_resize=True,
-        tag=f"{tag}_markers_popup",
-        show=False,
-    ):
-        if loop_markers_enabled:
-            dpg.add_input_float(
-                label="loop_start",
-                default_value=loop_start,
-                width=130,
-                callback=set_loop_marker_pos,
-                user_data="loop_start",
-                tag=f"{tag}_loop_start_value",
-            )
-            dpg.add_input_float(
-                label="loop_end",
-                default_value=loop_end,
-                width=130,
-                callback=set_loop_marker_pos,
-                user_data="loop_end",
-                tag=f"{tag}_loop_end_value",
-            )
-
-        if trim_enabled:
-            if loop_markers_enabled:
-                dpg.add_separator()
-
-            dpg.add_input_float(
-                label="begin_trim",
-                default_value=begin_trim,
-                min_value=0.0,
-                min_clamped=True,
-                width=130,
-                callback=set_trim_marker_pos,
-                user_data="begin_trim",
-                tag=f"{tag}_begin_trim_value",
-            )
-            dpg.add_input_float(
-                label="end_trim",
-                default_value=-abs(end_trim),
-                max_value=0.0,
-                max_clamped=True,
-                width=130,
-                callback=set_trim_marker_pos,
-                user_data="end_trim",
-                tag=f"{tag}_end_trim_value",
-            )
-
-        if user_markers_enabled:
-            if loop_markers_enabled or trim_enabled:
-                dpg.add_separator()
-
-            # TODO Make this a widget table instead
-            for marker, pos, _ in user_markers:
+        with dpg.window(
+            popup=True,
+            no_move=True,
+            no_title_bar=True,
+            no_resize=True,
+            tag=self._t("markers_popup"),
+            show=False,
+        ):
+            if self._loop_markers_enabled:
                 dpg.add_input_float(
-                    label=marker,
-                    default_value=pos,
+                    label=µ("loop_start", "marker"),
+                    default_value=self._loop_start,
                     width=130,
-                    callback=set_user_marker_pos,
-                    user_data=marker,
-                    tag=f"{tag}_marker_{marker}_value",
+                    callback=self._set_loop_marker_pos,
+                    user_data="loop_start",
+                    tag=self._t("loop_start_value"),
+                )
+                dpg.add_input_float(
+                    label=µ("loop_end", "marker"),
+                    default_value=self._loop_end,
+                    width=130,
+                    callback=self._set_loop_marker_pos,
+                    user_data="loop_end",
+                    tag=self._t("loop_end_value"),
                 )
 
-    if initial_file:
-        regenerate()
+            if self._trim_enabled:
+                if self._loop_markers_enabled:
+                    dpg.add_separator()
+                dpg.add_input_float(
+                    label=µ("begin_trim", "marker"),
+                    default_value=self._begin_trim,
+                    min_value=0.0,
+                    min_clamped=True,
+                    width=130,
+                    callback=self.set_trim_marker_pos,
+                    user_data="begin_trim",
+                    tag=self._t("begin_trim_value"),
+                )
+                dpg.add_input_float(
+                    label=µ("end_trim", "marker"),
+                    default_value=-abs(self._end_trim),
+                    max_value=0.0,
+                    max_clamped=True,
+                    width=130,
+                    callback=self.set_trim_marker_pos,
+                    user_data="end_trim",
+                    tag=self._t("end_trim_value"),
+                )
 
-    return tag
+            if self._user_markers_enabled:
+                if self._loop_markers_enabled or self._trim_enabled:
+                    dpg.add_separator()
+                # TODO Make this a widget table instead
+                for mid, pos in self._user_markers.items():
+                    marker_label = self._user_marker_labels.get(mid, f"#{mid}")
+                    dpg.add_input_float(
+                        label=marker_label,
+                        default_value=pos,
+                        width=130,
+                        callback=self._set_user_marker_pos,
+                        user_data=mid,
+                        tag=self._t(f"marker_{mid}_value"),
+                    )

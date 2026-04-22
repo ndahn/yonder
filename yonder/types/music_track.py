@@ -1,0 +1,161 @@
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import ClassVar
+from pathlib import Path
+
+from yonder.hash import Hash
+from yonder.wem import get_wem_metadata
+from yonder.enums import ClipAutomationType, PropID, SourceType
+from yonder.util import logger
+from .hirc_node import HIRCNode
+from .base_types import (
+    NodeBaseParams,
+    BankSourceData,
+    MediaInformation,
+    RTPCGraphPoint,
+    PropBundle,
+    ClipAutomation,
+    TrackSrcInfo,
+    RTPC,
+)
+from .mixins import PropertyMixin
+
+
+@dataclass(repr=False)
+class MusicTrack(PropertyMixin, HIRCNode):
+    body_type: ClassVar[int] = 11
+    flags: int = 0
+    source_count: int = 0
+    sources: list[BankSourceData] = field(default_factory=list)
+    playlist_item_count: int = 0
+    playlist: list[TrackSrcInfo] = field(default_factory=list)
+    subtrack_count: int = 0
+    clip_item_count: int = 0
+    clip_items: list[ClipAutomation] = field(default_factory=list)
+    node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
+    track_type: int = 0
+    look_ahead_time: int = 0
+
+    @classmethod
+    def new(
+        cls,
+        nid: Hash,
+        wem: Path = None,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        source_type: SourceType = SourceType.Streaming,
+        props: dict[PropID, float] = None,
+        parent: int | HIRCNode = 0,
+    ) -> MusicTrack:
+        obj = cls(nid)
+
+        if wem:
+            obj.add_source_from_wem(wem, begin_trim, end_trim, source_type=source_type)
+
+        if props:
+            for prop, val in props.items():
+                obj.set_property(prop, val)
+
+        obj.parent = parent
+        return obj
+
+    @property
+    def parent(self) -> int:
+        return self.node_base_params.direct_parent_id
+
+    @parent.setter
+    def parent(self, new_parent: int | HIRCNode) -> None:
+        if isinstance(new_parent, HIRCNode):
+            new_parent = new_parent.id
+        self.node_base_params.direct_parent_id = new_parent
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def rtpcs(self) -> list[RTPC]:
+        return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def source_ids(self) -> list[int]:
+        return [s.media_information.source_id for s in self.sources]
+
+    def add_source_from_wem(
+        self,
+        wem: Path,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        source_type: SourceType = SourceType.Embedded,
+    ) -> BankSourceData:
+        try:
+            wem_id = int(wem.stem)
+        except ValueError:
+            raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
+        
+        meta = get_wem_metadata(wem)
+        size = meta["in_memory_size"]
+        duration = meta["duration"] * 1000
+
+        self.add_source(
+            wem_id,
+            size,
+            duration,
+            begin_trim=begin_trim,
+            end_trim=end_trim,
+            source_type=source_type,
+        )
+
+    def add_source(
+        self,
+        source_id: int,
+        media_size: int,
+        duration_ms: float,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        source_type: SourceType = SourceType.Embedded,
+    ) -> BankSourceData:
+        if duration_ms < 500.0:
+            logger.warning(f"{self}: duration of new source {source_id} is very short, not in ms?")
+
+        self.sources.append(
+            BankSourceData(
+                source_type=source_type,
+                media_information=MediaInformation(int(source_id), media_size),
+            )
+        )
+        begin_trim = abs(begin_trim)
+        self.playlist.append(
+            TrackSrcInfo(
+                source_id=source_id,
+                play_at=-begin_trim,
+                begin_trim_offset=begin_trim,
+                end_trim_offset=-abs(end_trim),
+                source_duration=duration_ms,
+            )
+        )
+
+    def add_clip(
+        self,
+        clip_type: ClipAutomationType,
+        points: list[RTPCGraphPoint],
+    ) -> ClipAutomation:
+        clip = ClipAutomation(
+            len(self.clip_items),
+            clip_type,
+            graph_points=points,
+        )
+        self.clip_items.append(clip)
+        return clip
+
+    def get_trims(self, idx: int = 0) -> tuple[float, float]:
+        return (
+            self.playlist[idx].begin_trim_offset,
+            self.playlist[idx].end_trim_offset,
+        )
+
+    def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
+        begin_trim = abs(begin_trim)
+        self.playlist[idx].begin_trim_offset = begin_trim
+        self.playlist[idx].play_at = -begin_trim
+        self.playlist[idx].end_trim_offset = -abs(end_trim)

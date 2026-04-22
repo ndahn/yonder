@@ -1,9 +1,14 @@
+from __future__ import annotations
+from typing import Any, Iterable
 from pathlib import Path
 import tempfile
 import atexit
+from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder.util import logger
+from yonder.types.base_types import RTPCGraphPoint
+from yonder.enums import CurveInterpolation
 
 
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
@@ -51,7 +56,7 @@ def center_window(window: str, parent: str = None) -> None:
 def shorten_path(path: str | Path, maxlen: int = 30) -> str:
     if not path:
         return ""
-    
+
     parts = Path(path).parts
     short = parts[-1]
 
@@ -62,3 +67,65 @@ def shorten_path(path: str | Path, maxlen: int = 30) -> str:
             break
 
     return str(short)
+
+
+def dpg_section(
+    label: str,
+    color: tuple,
+    *,
+    spacer: int = 10,
+    parent: str = 0,
+    tag: str = 0,
+) -> None:
+    if spacer > 0:
+        dpg.add_spacer(height=spacer)
+
+    dpg.add_text(label, color=color, parent=parent, tag=tag)
+    dpg.add_separator()
+
+
+class GraphCurve:
+    def __init__(self, curve_type: Any, points: list[RTPCGraphPoint]):
+        self.curve_type = curve_type
+        self.points = points
+
+    def copy(self) -> GraphCurve:
+        return deepcopy(self)
+
+    @property
+    def x(self) -> Iterable[float]:
+        for p in self:
+            yield p.from_
+
+    @property
+    def y(self) -> Iterable[float]:
+        for p in self:
+            yield p.to
+
+    @property
+    def interp(self) -> Iterable[CurveInterpolation]:
+        for p in self:
+            yield p.interpolation
+
+    @property
+    def coords(self) -> Iterable[tuple[float, float]]:
+        for p in self:
+            yield (p.from_, p.to)
+
+    def __getitem__(self, idx: int) -> RTPCGraphPoint:
+        return self.points[idx]
+
+    def __setitem__(self, idx: int, val: RTPCGraphPoint) -> None:
+        self.points[idx] = val
+
+    def __delitem__(self, idx: int) -> None:
+        del self.points[idx]
+
+    def __len__(self) -> int:
+        return len(self.points)
+
+    def __iter__(self) -> Iterable[RTPCGraphPoint]:
+        yield from self.points
+
+    def __str__(self) -> str:
+        return f"GraphCurve<{self.curve_type}> [{len(self)} points]"

@@ -1,8 +1,7 @@
-from typing import get_args
 import math
 import dearpygui.dearpygui as dpg
 
-from yonder.enums import CurveType
+from yonder.enums import CurveInterpolation
 
 
 def draw_linear(
@@ -63,6 +62,7 @@ def draw_log(
     *,
     color: tuple[int, int, int, int] = (255, 255, 255, 255),
     thickness: int = 1,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -86,8 +86,8 @@ def draw_log(
         p1,
         color=color,
         thickness=thickness,
-        #segments=64,
         parent=parent,
+        segments=segments,
         tag=tag,
         **kwargs,
     )
@@ -100,6 +100,7 @@ def draw_exp(
     *,
     color: tuple[int, int, int, int] = (255, 255, 255, 255),
     thickness: int = 1,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -123,8 +124,8 @@ def draw_exp(
         p1,
         color=color,
         thickness=thickness,
-        #segments=64,
         parent=parent,
+        segments=segments,
         tag=tag,
         **kwargs,
     )
@@ -136,6 +137,7 @@ def draw_scurve(
     *,
     color: tuple[int, int, int, int] = (255, 255, 255, 255),
     thickness: int = 1,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -157,8 +159,8 @@ def draw_scurve(
         p1,
         color=color,
         thickness=thickness,
-        #segments=64,
         parent=parent,
+        segments=segments,
         tag=tag,
         **kwargs,
     )
@@ -170,6 +172,7 @@ def draw_inv_scurve(
     *,
     color: tuple[int, int, int, int] = (255, 255, 255, 255),
     thickness: int = 1,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -191,8 +194,8 @@ def draw_inv_scurve(
         p1,
         color=color,
         thickness=thickness,
-        #segments=64,
         parent=parent,
+        segments=segments,
         tag=tag,
         **kwargs,
     )
@@ -201,9 +204,11 @@ def draw_inv_scurve(
 def draw_sine(
     p0: tuple[float, float],
     p1: tuple[float, float],
+    reciprocal: bool = False,
     *,
     color: tuple[int, int, int, int] = (255, 255, 255, 255),
     thickness: int = 1,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -228,8 +233,10 @@ def draw_sine(
     #   - descending segment (dy > 0): bow downward → add cp_off
     #   - ascending segment  (dy < 0): bow upward   → subtract cp_off
     arch_sign = 1.0 if dy >= 0 else -1.0
-    cp_off = arch_sign * (math.pi / 3.0) * arch_h
+    if reciprocal:
+        arch_sign *= -1
 
+    cp_off = arch_sign * (math.pi / 3.0) * arch_h
     cp1 = (p0[0] + dx / 3.0, p0[1] + dy / 3.0 - cp_off)
     cp2 = (p1[0] - dx / 3.0, p1[1] - dy / 3.0 - cp_off)
 
@@ -240,24 +247,25 @@ def draw_sine(
         (p1[0], p1[1]),
         color=color,
         thickness=thickness,
-        #segments=64,
         parent=parent,
+        segments=segments,
         tag=tag,
         **kwargs,
     )
 
 
-_LOG_STRENGTH = {"Log1": 0.5, "Log2": 0.75, "Log3": 0.95}
-_EXP_STRENGTH = {"Exp1": 0.5, "Exp2": 0.75, "Exp3": 0.95}
+_LOG_STRENGTH = {CurveInterpolation.Log1: 0.5, CurveInterpolation.Log3: 0.8}
+_EXP_STRENGTH = {CurveInterpolation.Exp1: 0.5, CurveInterpolation.Exp3: 0.8}
 
 
 def draw_curve(
     p0: tuple,
     p1: tuple | None = None,
-    interp: str = "Linear",
+    interp: CurveInterpolation = CurveInterpolation.Linear,
     *,
     color: tuple = (255, 255, 255, 255),
     thickness: int = 2,
+    segments: int = 32,
     parent: str = 0,
     tag: str = 0,
     **kwargs,
@@ -283,7 +291,7 @@ def draw_curve(
 
     Returns
     -------
-    int | str
+    Hash
         The DPG item id/tag of the drawn primitive.
     """
     if p1 is None:
@@ -297,12 +305,12 @@ def draw_curve(
             **kwargs,
         )
 
-    if interp == "Linear":
+    if interp == CurveInterpolation.Linear:
         return draw_linear(
             p0, p1, color=color, thickness=thickness, parent=parent, tag=tag, **kwargs
         )
 
-    if interp == "Constant":
+    if interp == CurveInterpolation.Constant:
         return draw_constant(
             p0,
             p1,
@@ -321,6 +329,7 @@ def draw_curve(
             color=color,
             thickness=thickness,
             parent=parent,
+            segments=segments,
             tag=tag,
             **kwargs,
         )
@@ -333,23 +342,59 @@ def draw_curve(
             color=color,
             thickness=thickness,
             parent=parent,
+            segments=segments,
             tag=tag,
             **kwargs,
         )
 
-    if interp == "SCurve":
+    if interp == CurveInterpolation.SCurve:
         return draw_scurve(
-            p0, p1, color=color, thickness=thickness, parent=parent, tag=tag, **kwargs
+            p0,
+            p1,
+            color=color,
+            thickness=thickness,
+            parent=parent,
+            segments=segments,
+            tag=tag,
+            **kwargs,
         )
 
-    if interp == "InvSCurve":
+    if interp == CurveInterpolation.InvSCurve:
         return draw_inv_scurve(
-            p0, p1, color=color, thickness=thickness, parent=parent, tag=tag, **kwargs
+            p0,
+            p1,
+            color=color,
+            thickness=thickness,
+            parent=parent,
+            segments=segments,
+            tag=tag,
+            **kwargs,
         )
 
-    if interp == "Sine":
+    if interp == CurveInterpolation.Sine:
         return draw_sine(
-            p0, p1, color=color, thickness=thickness, parent=parent, tag=tag, **kwargs
+            p0,
+            p1,
+            False,
+            color=color,
+            thickness=thickness,
+            parent=parent,
+            segments=segments,
+            tag=tag,
+            **kwargs,
+        )
+
+    if interp == CurveInterpolation.SineRecip:
+        return draw_sine(
+            p0,
+            p1,
+            True,
+            color=color,
+            thickness=thickness,
+            parent=parent,
+            segments=segments,
+            tag=tag,
+            **kwargs,
         )
 
     raise ValueError(f"Unknown interpolation type {interp}")
@@ -367,17 +412,16 @@ if __name__ == "__main__":
     CELL_H = (CANVAS_H - PAD) // 3
 
     COLORS = {
-        "Linear": (100, 200, 255, 255),
-        "Log1": (255, 160, 60, 255),
-        "Log2": (255, 120, 20, 255),
-        "Log3": (220, 80, 0, 255),
-        "SCurve": (80, 220, 120, 255),
-        "InvSCurve": (40, 180, 80, 255),
-        "Exp1": (200, 100, 255, 255),
-        "Exp2": (170, 60, 230, 255),
-        "Exp3": (140, 20, 200, 255),
-        "Sin": (255, 220, 60, 255),
-        "Constant": (180, 180, 180, 255),
+        CurveInterpolation.Linear: (100, 200, 255, 255),
+        CurveInterpolation.Log1: (255, 160, 60, 255),
+        CurveInterpolation.Log3: (220, 80, 0, 255),
+        CurveInterpolation.SCurve: (80, 220, 120, 255),
+        CurveInterpolation.InvSCurve: (40, 180, 80, 255),
+        CurveInterpolation.Exp1: (200, 100, 255, 255),
+        CurveInterpolation.Exp3: (140, 20, 200, 255),
+        CurveInterpolation.Sine: (255, 220, 60, 255),
+        CurveInterpolation.SineRecip: (255, 220, 140, 255),
+        CurveInterpolation.Constant: (180, 180, 180, 255),
     }
 
     dpg.create_context()
@@ -393,7 +437,7 @@ if __name__ == "__main__":
     ):
         with dpg.drawlist(width=CANVAS_W, height=CANVAS_H) as dl:
             with dpg.draw_layer(parent=dl):
-                for idx, name in enumerate(get_args(CurveType)):
+                for idx, curve_type in enumerate(CurveInterpolation):
                     col = idx % COL_COUNT
                     row = idx // COL_COUNT
                     ox = PAD + col * CELL_W
@@ -419,7 +463,7 @@ if __name__ == "__main__":
                     )
 
                     # Sin uses start y = end y (it's an arch)
-                    if name == "Sin":
+                    if curve_type == CurveInterpolation.Sine:
                         mid_y = (oy + 8 + oy + CELL_H - PAD - 8) / 2
                         p0 = (ox + 8, oy + CELL_H - PAD - 8)
                         p1 = (ox + CELL_W - PAD - 8, oy + CELL_H - PAD - 8)
@@ -427,11 +471,13 @@ if __name__ == "__main__":
                         p0 = (ox + 8, oy + CELL_H - PAD - 8)
                         p1 = (ox + CELL_W - PAD - 8, oy + 8)
 
-                    draw_curve(p0, p1, interp=name, color=COLORS[name], thickness=2)
+                    draw_curve(
+                        p0, p1, interp=curve_type, color=COLORS[curve_type], thickness=2
+                    )
 
                     dpg.draw_text(
                         (ox + 10, oy + CELL_H - PAD - 22),
-                        name,
+                        curve_type.name,
                         color=(220, 220, 220, 220),
                         size=13,
                     )

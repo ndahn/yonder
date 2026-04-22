@@ -65,7 +65,7 @@ def prune_ids(ids: list[str]) -> list[str]:
 
 def collect_event_map(
     src_bnk: Soundbank, dst_bnk: Soundbank, src_ids: list[str], dst_ids: list[str]
-) -> dict[int | str, str]:
+) -> dict[Hash, str]:
     src_ids = prune_ids(src_ids)
     dst_ids = prune_ids(dst_ids)
 

@@ -3,6 +3,7 @@ from enum import IntFlag
 from dearpygui import dearpygui as dpg
 
 from yonder.util import logger
+from yonder.gui.localization import µ
 
 
 def add_flag_checkboxes(
@@ -68,7 +69,9 @@ def add_flag_checkboxes(
             active_flags = flag_type(active_flags)
         except ValueError:
             logger.error(
-                f"{active_flags} is not valid for flag type {flag_type.__name__}"
+                µ("{active_flags} is not valid for flag type {type}", "log").format(
+                    flag=active_flags, type=flag_type.__name__
+                )
             )
             active_flags = 0
 

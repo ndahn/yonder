@@ -1,10 +1,10 @@
+from __future__ import annotations
 from typing import Any, Callable, Iterable, TYPE_CHECKING
 from collections.abc import MutableMapping
 import sys
-import os
 import re
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, fields, asdict
 from docstring_parser import parse as doc_parse
 import inspect
 import builtins
@@ -14,6 +14,7 @@ import shutil
 import networkx as nx
 
 from yonder.enums import SoundType
+from yonder.hash import calc_hash
 
 if TYPE_CHECKING:
     from yonder import Soundbank
@@ -23,7 +24,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="[%(levelname)s]\t%(message)s",
     handlers=[
-        #logging.FileHandler(logfile),
+        # logging.FileHandler(logfile),
         logging.StreamHandler(),
     ],
 )
@@ -38,7 +39,7 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     res = resource_dir() / res_path
     if binary:
         return res.read_bytes()
-    return res.read_text()
+    return res.read_text(encoding="utf8")
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:
@@ -68,7 +69,7 @@ def is_event_name_valid(name: str) -> bool:
     return bool(re.match(rf"{SoundType.values()}[0-9]+"))
 
 
-def format_hierarchy(bnk: "Soundbank", graph: nx.DiGraph) -> str:
+def format_hierarchy(bnk: Soundbank, graph: nx.DiGraph) -> str:
     visited = set()
     ret = ""
 
@@ -82,7 +83,7 @@ def format_hierarchy(bnk: "Soundbank", graph: nx.DiGraph) -> str:
         children = list(graph.successors(nid))
 
         for i, child_id in enumerate(children):
-            is_last = (i == len(children) - 1)
+            is_last = i == len(children) - 1
             branch = "└──" if is_last else "├──"
             node = bnk.get(child_id, f"#{child_id}")
             ret += f"{prefix}{branch} {node}\n"
@@ -135,7 +136,10 @@ def get_function_spec(
             if ptype and isinstance(ptype, str):
                 # If it's a primitive type we can parse it, otherwise ignore it
                 # NOTE use the proper builtins module here, __builtins__ is unreliable
-                ptype = getattr(builtins, ptype, None)
+                if hasattr(builtins, ptype):
+                    ptype = getattr(builtins, ptype)
+                else:
+                    ptype = resolve_typehint(ptype, func.__module__)
 
         if param.default is not inspect.Parameter.empty:
             default = param.default
@@ -150,73 +154,102 @@ def get_function_spec(
     return func_args
 
 
-def deepmerge(base: dict, updates: dict, delete_missing: bool = False) -> None:
-    def merge(target: dict, source: Any) -> Any:
-        if isinstance(target, dict) and isinstance(source, dict):
-            if delete_missing:
-                keys_to_remove = set(target.keys()) - set(source.keys())
-                for key in keys_to_remove:
-                    del target[key]
-            for key, value in source.items():
-                if (
-                    key in target
-                    and isinstance(target[key], (dict, list))
-                    and isinstance(value, (dict, list))
-                ):
-                    target[key] = merge(target[key], value)
-                else:
-                    target[key] = value
-        elif isinstance(target, list) and isinstance(source, list):
-            target.clear()
-            target.extend(source)
-        else:
-            # Caller will assign the return value
-            return source
+def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
+    def apply_dict(obj, data: dict) -> None:
+        for f in fields(obj):
+            if f.name not in data:
+                continue
 
-        return target
+            if hasattr(type(obj), f.name):
+                true_field_type = type(getattr(type(obj), f.name))
+                if issubclass(true_field_type, property):
+                    if not true_field_type.fset:
+                        continue
 
-    merge(base, updates)
+            value = data[f.name]
+            current = getattr(obj, f.name)
+
+            if is_dataclass(current):
+                apply_dict(current, value)
+            elif isinstance(current, dict):
+                current.clear()
+                current.update(value)
+            elif isinstance(current, list):
+                current.clear()
+                current.extend(value)
+            else:
+                setattr(obj, f.name, value)
+
+    if is_dataclass(updates):
+        updates = asdict(updates)
+
+    return apply_dict(base, updates)
 
 
-class PathDict(MutableMapping):
-    @classmethod
-    def from_paths(cls, paths: Iterable[tuple[str, Any]]) -> "PathDict":
-        d = PathDict({})
-        for key, val in paths:
-            d[key] = val
+def get_module_for_field(obj, field_name: str) -> str:
+    """Walk the MRO to find which class originally declared a dataclass field."""
+    for cls in reversed(type(obj).mro()):
+        if hasattr(cls, '__dataclass_fields__') and field_name in cls.__dataclass_fields__:
+            return cls.__module__
+    
+    # Fallback
+    return obj.__module__
+
+
+def resolve_typehint(hint: str, context_module: str | object) -> type:
+    if isinstance(hint, type):
+        return hint
+    
+    # get_type_hints can have some weird effects I don't want to encounter again,
+    # like two different versions of the same class, so we use a much simpler way
+    if isinstance(context_module, str):
+        module = sys.modules[context_module]
+    
+    return eval(hint, vars(module))
+
+
+def to_typed_dict(data: dataclass, resolve_strings: bool) -> dict[str, tuple[type, Any]]:
+    def delve(d: Any) -> Any:
+        if is_dataclass(d):
+            ret = {}
+            for f in fields(d):
+                val = getattr(d, f.name)
+                tp = f.type
+                if resolve_strings and isinstance(tp, str):
+                    tp = resolve_typehint(f.type, d.__module__)
+
+                ret[f.name] = (tp, delve(val))
+            return ret
+
+        elif isinstance(d, dict):
+            return {k: delve(v) for k, v in d.items()}
+
+        elif isinstance(d, list):
+            return [delve(x) for x in d]
 
         return d
 
-    def __init__(self, d: dict):
-        self._d = d
+    return delve(data)
 
-    def __getitem__(self, key: Any) -> Any:
-        if isinstance(key, str) and "/" in key:
-            node = self._d
-            for k in key.split("/"):
-                node = node[k]
-            return node
 
-        return self._d[key]
+def parse_state_path(state_path: list[str]) -> list[int]:
+    """Convert a string state path to a list of integer hashes.
 
-    def __setitem__(self, key: Any, value: Any) -> None:
-        if isinstance(key, str) and "/" in key:
-            *parts, last = key.split("/")
-            node = self._d
-            for k in parts:
-                node = node[k]
-            node[last] = value
+    ``"*"`` maps to 0 (wildcard), ``"#N"`` is parsed as a raw integer,
+    and any other string is hashed via ``calc_hash``.
+    """
+    keys = []
+    for val in state_path:
+        if isinstance(val, int):
+            keys.append(val)
+        elif val == "*":
+            keys.append(0)
+        elif val.startswith("#"):
+            try:
+                keys.append(int(val[1:]))
+            except ValueError:
+                raise ValueError(f"{val}: value is not a valid hash")
         else:
-            self._d[key] = value
+            keys.append(calc_hash(val))
 
-    def __delitem__(self, key):
-        del self._d[key]
-
-    def __iter__(self):
-        return iter(self._d)
-
-    def __len__(self):
-        return len(self._d)
-
-    def __getattr__(self, name) -> Any:
-        return getattr(self._d, name)
+    return keys

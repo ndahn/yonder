@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Generator, TYPE_CHECKING
 import sys
 import yaml
@@ -10,12 +11,13 @@ from yonder.util import logger
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 if TYPE_CHECKING:
-    from yonder.soundbank import Soundbank
+    from yonder.types.soundbank import Soundbank
 
 
 @dataclass
 class Config:
     recent_files: list[str] = field(default_factory=list)
+    language: str = "en"
 
     bnk2json_exe: str = None
     wwise_exe: str = None
@@ -94,7 +96,9 @@ class Config:
             else:
                 global_hash_dict.update(load_lookup_table(path))
 
-    def find_external_sounds(self, source_id: int, bnk: "Soundbank" = None) -> Generator[Path, None, None]:
+    def find_external_sounds(
+        self, source_id: int, bnk: Soundbank = None
+    ) -> Generator[Path, None, None]:
         bnkdirs = [Path(p) for p in self.bankdirs]
         if bnk:
             # Soundbanks unpacked in the game folder

@@ -1,0 +1,60 @@
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import ClassVar
+
+from yonder.hash import Hash
+from yonder.enums import DecisionTreeMode, GroupType, PropID
+from .hirc_node import HIRCNode
+from .base_types import (
+    GameSync,
+    DecisionTreeNode,
+    PropBundle,
+    PropRangedModifiers,
+)
+from .mixins import PropertyMixin
+
+
+@dataclass(repr=False)
+class DialogueEvent(PropertyMixin, HIRCNode):
+    body_type: ClassVar[int] = 15
+    probability: int = 100
+    tree_depth: int = 0
+    arguments: list[GameSync] = field(default_factory=list)
+    group_types: list[GroupType] = field(default_factory=list)
+    tree_size: int = 0
+    tree_mode: DecisionTreeMode = DecisionTreeMode.BestMatch
+    tree: DecisionTreeNode = field(default_factory=lambda: DecisionTreeNode(0, 0))
+    prop_bundle: list[PropBundle] = field(default_factory=list)
+    ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
+
+    @classmethod
+    def new(cls, nid: Hash, props: dict[PropID, float]) -> DialogueEvent:
+        obj = cls(nid)
+
+        if props:
+            for prop, val in props.items():
+                obj.set_property(prop, val)
+
+        return obj
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.prop_bundle
+
+    def get_tree_size(self) -> int:
+        num_tree_nodes = 1
+        todo = [self.tree]
+        while todo:
+            item = todo.pop()
+            num_tree_nodes += len(item.children)
+            todo.extend(item.children)
+
+    def validate(self) -> None:
+        if len(self.group_types) != len(self.arguments):
+            raise ValueError("Found mismatch between group_types and arguments")
+
+        # TODO verify all branches have the correct depth
+
+    # TODO add same management stuff as MusicSwitchContainer
+    # TODO children should be kept in sync with the decision tree
+    # (or be updated during validate)

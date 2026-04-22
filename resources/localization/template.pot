@@ -1,0 +1,1570 @@
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-04-21 21:13+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../yonder/gui/dialogs/about_dialog.py:25
+msgid "About"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/about_dialog.py:43
+msgid "Written by Nikolas Dahn"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/about_dialog.py:56
+msgid "Bugs, questions, feature request?"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/about_dialog.py:60
+msgid "Find me on ?ServerName? @Managarm!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:137
+msgctxt "msg"
+msgid "Name has non-standard format"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:171
+#, python-brace-format
+msgid "Group {idx}: {name}"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:201
+msgid "Select Audio Files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:203
+#: ../../yonder/gui/widgets/wav_player.py:204
+msgctxt "filetypes"
+msgid "Audio Files (.wav, .wem)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:204
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:144
+msgctxt "filetypes"
+msgid "Wave (.wav)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:205
+msgctxt "filetypes"
+msgid "WEM (.wem)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:237
+msgctxt "msg"
+msgid "No groups defined"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:241
+msgctxt "msg"
+msgid "ActorMixer of first group cannot be empty"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:249
+#, python-brace-format
+msgctxt "msg"
+msgid "Group {name} has no files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:257
+#, python-brace-format
+msgctxt "msg"
+msgid "Group {name} already exists in soundbank"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:275
+#, python-brace-format
+msgctxt "msg"
+msgid "Duplicate group {name}"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:311
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:121
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:214
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:80
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:212
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:86
+msgctxt "msg"
+msgid "Success!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:312
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:122
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:215
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:81
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:213
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:87
+msgid "Yay!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:335
+msgid "Groups"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:345
+msgid "Add Group"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:346
+msgid "Files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:346
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:394
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:98
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:80
+#: ../../yonder/gui/widgets/rtpc_table.py:109
+msgid "Name"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:351
+msgid "Bulk Operations"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:354
+msgctxt "button"
+msgid "Groups from Files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:367
+msgid "Apply"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:395
+msgid "Leave empty to generate from first audio file"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:413
+msgid "Playback Mode"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:422
+msgid "Random Mode"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:432
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:112
+#: ../../yonder/gui/widgets/node_reference.py:48
+#: ../../yonder/gui/widgets/node_widgets.py:202
+msgid "Properties"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:445
+msgid "Sound Files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:446
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:120
+msgid "+ Add Sounds"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py:470
+msgctxt "button"
+msgid "For the Horde!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/calc_hash_dialog.py:30
+msgid "Calculates an FNV-1a 32bit hash"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/choice_dialog.py:138
+#: ../../yonder/gui/dialogs/edit_markers_dialog.py:151
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:120
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:244
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py:187
+msgctxt "button"
+msgid "Okay"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:49
+msgctxt "msg"
+msgid "No wave files selected"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:53
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:55
+msgctxt "msg"
+msgid "Invalid output directory"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:60
+msgctxt "msg"
+msgid "Wwise exe not found"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:65
+msgid "Converting..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:72
+msgid "Trimming silence..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:86
+msgid "Creating prefetch snippets..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:100
+msgid "Adjusting volume..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:112
+#, python-brace-format
+msgid "Converting {num} files..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:143
+msgid "Wave files"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:167
+msgid "Target volume"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:181
+msgid "Silence threshold"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:195
+msgid "Snippet length"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:205
+msgid "Convert to .wem"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py:215
+msgctxt "button"
+msgid "Beat it!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:59
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:178
+msgctxt "msg"
+msgid "Select MusicSwitchContainer first"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:128
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:183
+msgctxt "msg"
+msgid "BgmEnemyType not set"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:187
+msgctxt "msg"
+msgid "Must add at least one BGM track"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:264
+msgctxt "button"
+msgid "State Path"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:301
+msgctxt "button"
+msgid "Bring the heat!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_node_dialog.py:87
+msgctxt "button"
+msgid "Make!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_node_dialog.py:110
+#, python-brace-format
+msgctxt "log"
+msgid "Type of argument {name} is not supported yet"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:33
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:174
+msgctxt "msg"
+msgid "Name not specified"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:49
+msgid "Target ID not set"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:72
+msgctxt "msg"
+msgid "No events created"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:103
+msgid "Allow arbitrary names"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:110
+msgid "Target node"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:118
+msgid "Create play action"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:123
+msgid "Create stop action"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:146
+msgctxt "button"
+msgid "Chop chop!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:86
+msgid "Hash"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:96
+msgctxt "hirc"
+msgid "ActorMixer"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:105
+msgid "Avoid Repeats"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:119
+msgid "Sounds"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:143
+msgctxt "button"
+msgid "Summon!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:178
+msgctxt "msg"
+msgid "An event with this name already exists"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:183
+msgctxt "msg"
+msgid "ActorMixer not specified"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:187
+msgctxt "msg"
+msgid "No sounds specified"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:139
+msgctxt "msg"
+msgid "Leaf node ID not set"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:146
+msgctxt "msg"
+msgid "Keys must not be empty"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:118
+msgid "File"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:131
+#, python-brace-format
+msgid "Edit Transition ({node_id})"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:146
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:194
+msgid "Transition time (ms)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:158
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:206
+msgid "Fade offset (ms)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:170
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:216
+msgid "Fade curve"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py:179
+msgid "Sync Type"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:51
+msgctxt "msg"
+msgid "No soundbank loaded"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:62
+msgctxt "loading"
+msgid "Converting..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:110
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:275
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:284
+msgctxt "filetypes"
+msgid "Soundbanks (.bnk, .json)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:118
+msgid "Output folder"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:127
+msgid "Export full sounds for streamed"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:132
+msgid "Convert to wav"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py:142
+msgctxt "button"
+msgid "Yoink!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:55
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:162
+msgctxt "msg"
+msgid "No source bank selected"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:59
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:166
+msgctxt "msg"
+msgid "No destination bank selected"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:173
+msgctxt "msg"
+msgid "No source IDs selected"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:189
+#, python-brace-format
+msgctxt "msg"
+msgid "{name} not found in source bank"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:206
+#, python-brace-format
+msgctxt "msg"
+msgid "{name} already exists in destination bank"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:272
+msgid "Source Soundbank"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:281
+msgid "Destination Soundbank"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:292
+msgid "Source Wwise IDs"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:303
+msgid "Destination Wwise IDs"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:315
+msgid "Select IDs..."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:320
+msgid "Swap Banks"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:325
+msgid "Swap IDs"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:350
+msgctxt "button"
+msgid "Scotty, beam them!"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:355
+#: ../../yonder/gui/dialogs/settings_dialog.py:136
+msgctxt "button"
+msgid "Save"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:361
+msgctxt "button"
+msgid "Repack"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py:172
+msgid "Node (id)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py:178
+msgid "Hold Ctrl or click multiple rows to select several nodes."
+msgstr ""
+
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py:193
+msgctxt "button"
+msgid "Invert"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:49
+msgid "External Tools"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:62
+msgid "For unpacking and repacking soundbanks"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:76
+msgid "For wonverting wav to wem"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:90
+msgid "For converting wem to wav and playback"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:96
+msgid "Data Sources"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:104
+msgid "Soundbank folders"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:109
+msgid "Used to locate external sounds"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:119
+msgid "Hash dictionaries"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:120
+msgid "Text files (.txt)"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py:125
+msgid "Used for reversing hashes"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:223
+msgctxt "button"
+msgid "Clear"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:395
+msgid "+ Add Paths"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:395
+msgid "+ Add Files"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:555
+#: ../../yonder/gui/widgets/editable_table.py:714
+#: ../../yonder/gui/widgets/node_widgets.py:1034
+#, python-brace-format
+msgid "Track #{idx}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:587
+#: ../../yonder/gui/widgets/editable_table.py:742
+msgid "Select Audio"
+msgstr ""
+
+#: ../../yonder/gui/widgets/editable_table.py:588
+#: ../../yonder/gui/widgets/editable_table.py:743
+msgctxt "filetypes"
+msgid "Audio (.wem, .wav)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/flags_widget.py:72
+#, python-brace-format
+msgctxt "log"
+msgid "{active_flags} is not valid for flag type {type}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/generic_input_widget.py:240
+#: ../../yonder/gui/widgets/wav_player.py:790
+msgctxt "button"
+msgid "Browse"
+msgstr ""
+
+#: ../../yonder/gui/widgets/graph_view.py:216
+msgid "(not found)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/interpolation_curve.py:91
+msgid "Input"
+msgstr ""
+
+#: ../../yonder/gui/widgets/interpolation_curve.py:92
+msgid "Output"
+msgstr ""
+
+#: ../../yonder/gui/widgets/interpolation_curve.py:123
+msgctxt "button"
+msgid "Add"
+msgstr ""
+
+#: ../../yonder/gui/widgets/interpolation_curve.py:128
+msgctxt "button"
+msgid "Remove"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_reference.py:32
+msgid "Used by:"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_reference.py:36
+msgid "States:"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_reference.py:45
+#, python-brace-format
+msgid "Children: {num}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:110
+msgctxt "loading"
+msgid "loading..."
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:142
+msgid "Children"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:228
+msgid "RTPC"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:260
+msgid "Let me know what you want here!"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:261
+msgid "Find me on ?ServerName? @managarm"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:335
+#, python-brace-format
+msgctxt "log"
+msgid "Placed prefetch snippet in {file}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:346
+#, python-brace-format
+msgid "Copy WEMs to soundbank {bank}?"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:347
+msgid "Yes"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:347
+msgid "No"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:349
+msgid "Copy?"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:570
+#: ../../yonder/gui/widgets/node_widgets.py:598
+#: ../../yonder/gui/widgets/node_widgets.py:601
+#, python-brace-format
+msgid "Curve #{idx}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:592
+msgid "Curves to use"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:614
+msgid "Scaling Type"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:618
+msgid "Cone params"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:621
+msgid "Cone enabled"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:629
+msgctxt "Attenuation"
+msgid "inside_degrees"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:641
+msgctxt "Attenuation"
+msgid "outside_degrees"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:653
+msgctxt "Attenuation"
+msgid "outside_volume"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:665
+msgctxt "Attenuation"
+msgid "low_pass"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:677
+msgctxt "Attenuation"
+msgid "high_pass"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:750
+#: ../../yonder/gui/widgets/node_widgets.py:754
+#: ../../yonder/gui/widgets/node_widgets.py:875
+#: ../../yonder/gui/widgets/node_widgets.py:1199
+#: ../../yonder/gui/widgets/node_widgets.py:1358
+#, python-brace-format
+msgid "#{node} (not found)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:762
+msgid "Actions"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:763
+msgid "+ Add Action"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:848
+#: ../../yonder/gui/widgets/properties_table.py:66
+msgid "Value"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:894
+msgid "Decision Tree"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:903
+msgctxt "button"
+msgid "Add State Path"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1026
+msgid "+ Add Marker"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1027
+msgid "Markers"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1039
+msgctxt "button"
+msgid "Edit on Track"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1108
+#, python-brace-format
+msgctxt "log"
+msgid "Unknown clip automation type {type}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1139
+msgid "Track has multiple sources, might not be handled correctly"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1172
+msgid "Clips"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1173
+msgid "+ Add Clip"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1219
+msgctxt "RandomSequenceContainer"
+msgid "Playback mode"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1233
+msgctxt "RandomSequenceContainer"
+msgid "Randomization"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1246
+msgctxt "RandomSequenceContainer"
+msgid "Loop count"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1256
+msgctxt "RandomSequenceContainer"
+msgid "Avoid repetitions"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1272
+msgctxt "RandomSequenceContainer"
+msgid "Playlist"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1274
+msgctxt "table"
+msgid "Item"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1274
+msgctxt "table"
+msgid "Weight"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1328
+msgid "Show empty switches"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py:1336
+msgctxt "SwitchContainer"
+msgid "Switches"
+msgstr ""
+
+#: ../../yonder/gui/widgets/properties_table.py:63
+msgid "Property"
+msgstr ""
+
+#: ../../yonder/gui/widgets/properties_table.py:120
+msgid "+ Add Property"
+msgstr ""
+
+#: ../../yonder/gui/widgets/rtpc_table.py:123
+msgctxt "RTPC"
+msgid "Type"
+msgstr ""
+
+#: ../../yonder/gui/widgets/rtpc_table.py:130
+msgctxt "RTPC"
+msgid "Accumulation"
+msgstr ""
+
+#: ../../yonder/gui/widgets/rtpc_table.py:142
+msgctxt "RTPC"
+msgid "Parameter"
+msgstr ""
+
+#: ../../yonder/gui/widgets/rtpc_table.py:149
+msgctxt "RTPC"
+msgid "Curve scaling"
+msgstr ""
+
+#: ../../yonder/gui/widgets/rtpc_table.py:175
+msgid "+ Add RTPC"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py:185
+msgid "See Events tab"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py:234
+msgid "Entries"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py:236
+msgctxt "table"
+msgid "Bank ID"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py:236
+msgctxt "table"
+msgid "Name"
+msgstr ""
+
+#: ../../yonder/gui/widgets/transition_matrix.py:238
+msgctxt "menu"
+msgid "Add rule"
+msgstr ""
+
+#: ../../yonder/gui/widgets/transition_matrix.py:243
+msgctxt "menu"
+msgid "Delete rule"
+msgstr ""
+
+#: ../../yonder/gui/widgets/transition_matrix.py:331
+#, python-brace-format
+msgid "Rule #{rule_idx}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/transition_matrix.py:337
+#, python-brace-format
+msgid "Total transition time: {time}ms"
+msgstr ""
+
+#: ../../yonder/gui/widgets/transition_matrix.py:342
+#, python-brace-format
+msgid "Sync type: {sync_type}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:236
+#, python-brace-format
+msgctxt "log"
+msgid "Audio {file} is not a file"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:245
+#, python-brace-format
+msgctxt "log"
+msgid "Converting {file} to wav for playback"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:256
+#, python-brace-format
+msgctxt "log"
+msgid "Audio {file} is not a wav or wem file"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:697
+#: ../../yonder/gui/widgets/wav_player.py:702
+#, python-brace-format
+msgctxt "msg"
+msgid "Audio {file} not found"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:709
+#, python-brace-format
+msgctxt "log"
+msgid "Error reading file: {exc}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:826
+msgid "markers"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:855
+#: ../../yonder/gui/widgets/wav_player.py:1026
+msgctxt "marker"
+msgid "loop_start"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:863
+msgctxt "marker"
+msgid "L0"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:870
+#: ../../yonder/gui/widgets/wav_player.py:1034
+msgctxt "marker"
+msgid "loop_end"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:878
+msgctxt "marker"
+msgid "L1"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:887
+#: ../../yonder/gui/widgets/wav_player.py:1046
+msgctxt "marker"
+msgid "begin_trim"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:895
+msgctxt "marker"
+msgid "T0"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:901
+#: ../../yonder/gui/widgets/wav_player.py:1056
+msgctxt "marker"
+msgid "end_trim"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:909
+msgctxt "marker"
+msgid "T1"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:932
+#, python-brace-format
+msgctxt "marker"
+msgid "m{idx}"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:947
+msgid "amp"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:954
+msgid "time"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:981
+msgid "Loop"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:987
+msgid "Test"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:1000
+msgctxt "button"
+msgid "Markers"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py:1008
+msgctxt "button"
+msgid "Edit"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:108
+msgctxt "log"
+msgid "Hello :3"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:149
+msgctxt "menu"
+msgid "File"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:153
+msgctxt "menu"
+msgid "Open..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:159
+msgctxt "menu"
+msgid "Recent files"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:164
+msgctxt "menu"
+msgid "Save"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:170
+msgctxt "menu"
+msgid "Save As..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:177
+msgctxt "menu"
+msgid "Repack"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:184
+msgctxt "menu"
+msgid "New Soundbank..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:191
+msgctxt "menu"
+msgid "Bank"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:193
+msgctxt "menu"
+msgid "Pin Orphans"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:200
+msgctxt "menu"
+msgid "Solve HIRC"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:205
+msgctxt "menu"
+msgid "Verify"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:212
+msgctxt "menu"
+msgid "Advanced"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:216
+msgctxt "menu"
+msgid "Delete unused wems"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:221
+msgctxt "menu"
+msgid "Delete orphans"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:226
+msgctxt "menu"
+msgid "Create"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:228
+msgctxt "menu"
+msgid "New Play/Stop Event"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:233
+msgctxt "menu"
+msgid "Simple Sound"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:238
+msgctxt "menu"
+msgid "Boss Track"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:243
+msgctxt "menu"
+msgid "Ambience Track"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:250
+msgctxt "menu"
+msgid "Batch Sound Builder"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:257
+msgctxt "menu"
+msgid "Tools"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:259
+msgctxt "menu"
+msgid "Calc Hash"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:264
+msgctxt "menu"
+msgid "Mass Transfer"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:269
+msgctxt "menu"
+msgid "Export Sounds"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:274
+msgctxt "menu"
+msgid "Waves to Wems"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:280
+msgctxt "menu"
+msgid "Yonder"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:282
+msgctxt "menu"
+msgid "Language"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:299
+msgctxt "menu"
+msgid "Settings"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:305
+msgctxt "menu"
+msgid "Open Temp Dir"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:310
+msgctxt "menu"
+msgid "Force Refresh"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:316
+msgctxt "menu"
+msgid "dearpygui"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:318 ../../yonder/gui/yonder.py:352
+msgctxt "menu"
+msgid "About"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:322
+msgctxt "menu"
+msgid "Metrics"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:326
+msgctxt "menu"
+msgid "Documentation"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:330
+msgctxt "menu"
+msgid "Debug"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:334
+msgctxt "menu"
+msgid "Style Editor"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:338
+msgctxt "menu"
+msgid "Font Manager"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:342
+msgctxt "menu"
+msgid "Item Registry"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:346
+msgctxt "menu"
+msgid "Stack Tool"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:387
+msgid "Events"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:390
+msgid "Search on enter"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:441 ../../yonder/gui/yonder.py:466
+msgid "Node"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:446
+msgid "Globals"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:471
+msgid "Sections"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:481
+msgid "Section"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:498
+msgid "Pinned Nodes"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:526
+msgctxt "button"
+msgid "Apply"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:531
+msgctxt "button"
+msgid "Reload Json"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:536
+msgctxt "button"
+msgid "Reset Node"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:572
+msgctxt "menu"
+msgid "Show Graph"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:577
+msgctxt "menu"
+msgid "Pin"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:584
+msgctxt "menu"
+msgid "Copy"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:586 ../../yonder/gui/yonder.py:611
+msgctxt "menu"
+msgid "Node"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:591
+msgctxt "menu"
+msgid "Hierarchy"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:596
+msgctxt "menu"
+msgid "Attach"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:598
+msgctxt "menu"
+msgid "Paste"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:603
+msgctxt "menu"
+msgid "New object"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:609
+msgctxt "menu"
+msgid "Delete"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:616
+msgctxt "menu"
+msgid "Tree"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:675
+msgid "Save soundbank first?"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:677
+msgid "Save"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:678
+msgid "Save as"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:680
+msgid "Just do it"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:683
+msgid "Continue?"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:760
+#, python-brace-format
+msgid "Found {num} orphaned nodes"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:769
+#, python-brace-format
+msgctxt "log"
+msgid "Node {node} no longer exists"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:791
+msgid "Unpin"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:797
+msgid "Unpin All"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:803
+msgid "Jump To"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:843
+msgid "Save Soundbank"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:845 ../../yonder/gui/yonder.py:891
+msgctxt "filetypes"
+msgid "JSON (.json)"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:848
+msgctxt "loading"
+msgid "Saving soundbank..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:850
+#, python-brace-format
+msgctxt "log"
+msgid "Saving soundbank to {name}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:852
+msgctxt "log"
+msgid "Don't forget to repack!"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:863
+msgctxt "loading"
+msgid "Repacking..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:865
+msgctxt "log"
+msgid "Repacking soundbank"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:870
+#, python-brace-format
+msgctxt "log"
+msgid "Repack failed: {error}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:875
+msgid "Choose Empty Directory"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:880
+msgctxt "log"
+msgid "Directory not empty"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:888
+msgid "Open"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:890
+msgctxt "filetypes"
+msgid "Supported files"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:892
+msgctxt "filetypes"
+msgid "Soundbanks (.bnk)"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:915
+#, python-brace-format
+msgid "Soundbank {soundbank} was already unpacked. Open the json instead?"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:917
+msgid "Open json"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:917
+msgid "Unpack again"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:920
+msgid "Bnk or json?"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:935
+#, python-brace-format
+msgctxt "log"
+msgid "File not found: {name}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:943
+#, python-brace-format
+msgctxt "log"
+msgid "Unpacking soundbank {name}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:944
+msgctxt "loading"
+msgid "Unpacking..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:952
+#, python-brace-format
+msgctxt "log"
+msgid "Loading soundbank {name}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:953
+msgctxt "loading"
+msgid "Loading soundbank..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:969
+#, python-brace-format
+msgid "Loaded soundbank {name} with {num_nodes} nodes"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1151
+#, python-brace-format
+msgid "Showing {num}/{total} globals"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1298
+#, python-brace-format
+msgid "Could not find an event subgraph containing node {node}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1335
+#, python-brace-format
+msgid "Could not locate root item row for node {node} in {table}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1344
+msgctxt "loading"
+msgid "Solving..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1351
+msgctxt "loading"
+msgid "Verifying..."
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1369
+#, python-brace-format
+msgid "Copied node {node} to clipboard"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1380
+#, python-brace-format
+msgctxt "log"
+msgid "Subtree has reference to unknown node {node}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1391
+#, python-brace-format
+msgid "Copied {node} and {num} descendants to clipboard"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1407
+#, python-brace-format
+msgid "Attached new node {node} to {parent}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1456
+#, python-brace-format
+msgid "Attached {node} and {num} descendants to {parent}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1468
+#, python-brace-format
+msgctxt "log"
+msgid "Deleted {node}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1482
+#, python-brace-format
+msgid "Deleted {node} and {num} children"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1546
+#, python-brace-format
+msgctxt "log"
+msgid "Created node {node}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1601
+#, python-brace-format
+msgctxt "log"
+msgid "Created new event {node}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1622
+#, python-brace-format
+msgid "Created new simple sound {name}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1647
+#, python-brace-format
+msgid "Created {num} simple sounds"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1664
+#, python-brace-format
+msgid "Added boss bgm for {bgm_enemy_type}"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py:1685
+#, python-brace-format
+msgctxt "log"
+msgid "Added ambience track {name}"
+msgstr ""
+

@@ -484,8 +484,11 @@ char_ids = [
 def generate_names() -> Iterable[str]:
     # NOTE Adjust this as needed
     for chr in tqdm(char_ids):
-        for i in tqdm(1000):
-            
+        for i in range(10):
+            for j in range(10):
+                for k in range(100):
+                    yield f"Play_c{chr:04d}0{i}{j}{k:02d}"
+                    yield f"Stop_c{chr:04d}0{i}{j}{k:02d}"
 
 
 def expand_hash_dict(dict_path: Path, write: bool = True) -> tuple[int, list[str]]:

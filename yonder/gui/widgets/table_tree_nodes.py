@@ -81,7 +81,7 @@ def is_row_visible(table: str, row: str | int) -> bool:
     return is_row_index_visible(table, desc.level, row_idx)
 
 
-def get_foldable_child_rows(table: str, row: int | str) -> Generator[str, None, None]:
+def get_foldable_child_rows(table: str, row: str) -> Generator[str, None, None]:
     if row in (None, "", 0):
         return
 
@@ -92,7 +92,7 @@ def get_foldable_child_rows(table: str, row: int | str) -> Generator[str, None, 
     row_idx = rows.index(row)
 
     if row_idx >= 0:
-        rows = rows[row_idx + 1:]
+        rows = rows[row_idx + 1 :]
 
     for child_row in rows:
         if not is_foldable_row(child_row):
@@ -101,7 +101,7 @@ def get_foldable_child_rows(table: str, row: int | str) -> Generator[str, None, 
         yield child_row
 
 
-def get_foldable_row_parent(table: str, row: int | str) -> int:
+def get_foldable_row_parent(table: str, row: str) -> int:
     if isinstance(row, str):
         row = dpg.get_alias_id(row)
 
@@ -149,7 +149,7 @@ def apply_row_indent(
     table: str,
     indent_level: int,
     parent_row: str,
-    until: int | str = 0,
+    until: str = 0,
 ) -> Generator[str, None, None]:
     try:
         yield
@@ -256,6 +256,7 @@ def table_tree_node(
     finally:
         dpg.set_item_user_data(table, cur_level)
         set_foldable_row_status(tag, not folded)
+
 
 @contextmanager
 def table_tree_leaf(
@@ -386,9 +387,7 @@ def _on_row_clicked(sender: str, value: Any, desc: RowDescriptor):
                 # Child is close to one of its siblings, show it
                 dpg.show_item(child_row)
                 hide_level = (
-                    10000
-                    if is_foldable_row_expanded(child_row)
-                    else child_desc.level
+                    10000 if is_foldable_row_expanded(child_row) else child_desc.level
                 )
 
 

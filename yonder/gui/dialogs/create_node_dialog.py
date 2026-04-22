@@ -1,102 +1,153 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank
-from yonder.node_types import WwiseNode
+from yonder import Soundbank, HIRCNode
+from yonder.gui.localization import µ
 from yonder.util import get_function_spec, logger
 from yonder.gui import style
-from yonder.gui.widgets import add_generic_widget
+from yonder.gui.widgets import DpgItem, add_generic_widget
 
 
-def create_node_dialog(
-    bnk: Soundbank,
-    callback: Callable[[WwiseNode], None],
-    *,
-    title: str = "Create Node",
-    tag: str = None,
-) -> str:
-    if not tag:
-        tag = dpg.generate_uuid()
-    elif dpg.does_item_exist(tag):
-        dpg.delete_item(tag)
+class create_node_dialog(DpgItem):
+    """A modal dialog for creating a new ``HIRCNode`` of any registered type.
 
-    nid = bnk.new_id()
-    node_types = {t.__name__: t for t in WwiseNode.__subclasses__()}
-    selected_type = next(t for t in node_types.keys())
-    node_args = {}
+    Presents a type selector combo, a read-only ID field, and dynamically
+    generated argument widgets derived from the selected type's ``new()``
+    signature. Confirming calls ``callback`` with the constructed node and
+    closes the window.
 
-    def set_arg(sender: str, app_data: Any, key: str) -> None:
-        node_args[key] = app_data
+    If ``tag`` already exists as a DPG item it is deleted and recreated,
+    allowing the dialog to be reopened without stale state.
 
-    def on_type_selected(sender: str, type_name: str, user_data: Any):
-        nonlocal selected_type
-        if type_name == selected_type:
+    Parameters
+    ----------
+    bnk : Soundbank
+        Used to allocate the new node ID via ``bnk.new_id()``.
+    callback : callable
+        Called as ``callback(node)`` when the user confirms.
+    title : str
+        Window title bar label.
+    tag : int or str, optional
+        Explicit tag; auto-generated if None.
+    """
+
+    def __init__(
+        self,
+        bnk: Soundbank,
+        callback: Callable[[HIRCNode], None],
+        *,
+        title: str = "Create Node",
+        tag: str = None,
+    ) -> None:
+        if tag and dpg.does_item_exist(tag):
+            dpg.delete_item(tag)
+
+        super().__init__(tag)
+
+        self._bnk = bnk
+        self._callback = callback
+        self._nid = bnk.new_id()
+        self._node_types: dict[str, type] = {
+            c.__name__: c for c in HIRCNode.__subclasses__() if c.__name__ != "Action"
+        }
+        self._selected_type: str = next(iter(self._node_types))
+        self._node_args: dict[str, Any] = {}
+        self._window: str = None
+
+        self._build(title)
+        self._on_type_selected(None, self._selected_type, None)
+
+    # === Build =========================================================
+
+    def _build(self, title: str) -> None:
+        with dpg.window(
+            label=title,
+            width=400,
+            height=400,
+            autosize=True,
+            no_saved_settings=True,
+            tag=self._tag,
+            on_close=lambda: dpg.delete_item(self._window),
+        ) as self._window:
+            dpg.add_combo(
+                list(self._node_types.keys()),
+                default_value=self._selected_type,
+                callback=self._on_type_selected,
+                width=300,
+                tag=self._t("node_type"),
+            )
+            with dpg.child_window(auto_resize_y=True, tag=self._t("node_args")):
+                pass
+
+            dpg.add_separator()
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label=µ("Make!", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("create_node/button_okay"),
+                )
+
+    # === DPG callbacks =================================================
+
+    def _set_arg(self, sender: str, app_data: Any, key: str) -> None:
+        self._node_args[key] = app_data
+
+    def _on_type_selected(self, sender: str, type_name: str, ud: Any) -> None:
+        if type_name == self._selected_type and sender is not None:
             return
 
-        selected_type = type_name
-        type_class = node_types[type_name]
-        spec = get_function_spec(type_class.new, None)
-        node_args.clear()
+        self._selected_type = type_name
+        spec = get_function_spec(self._node_types[type_name].new, None)
+        self._node_args.clear()
 
-        dpg.delete_item(f"{tag}_node_args", children_only=True, slot=1)
+        dpg.delete_item(self._t("node_args"), children_only=True, slot=1)
 
         for name, arg in spec.items():
-            if name in ("nid", "parent"):
+            if not arg.type:
+                logger.debug(
+                    µ("Type of argument {name} is not supported yet", "log").format(
+                        name=name
+                    )
+                )
                 continue
 
-            node_args[name] = arg.default
+            self._node_args[name] = arg.default
             add_generic_widget(
                 arg.type,
                 name,
-                set_arg,
+                self._set_arg,
+                not_supported_ok=True,
                 default=arg.default,
                 user_data=name,
-                parent=f"{tag}_node_args",
-                tag=f"{tag}_arg_{name}",
+                parent=self._t("node_args"),
+                tag=self._t(f"arg_{name}"),
             )
 
-    def on_okay() -> None:
-        node_args["nid"] = nid
-        type_class = node_types[selected_type]
-        node = type_class.new(**node_args)
-        logger.info(f"Created new node {node}")
+    def _on_okay(self) -> None:
+        self._node_args["nid"] = self._nid
+        node_cls = self._node_types[self._selected_type]
+        node = node_cls.new(**self._node_args)
+        
+        self._bnk.add_nodes(node)
+        self._callback(node)
+        dpg.delete_item(self._window)
 
-        callback(node)
-        dpg.delete_item(window)
+    # === Public ========================================================
 
-    with dpg.window(
-        label=title,
-        width=400,
-        height=400,
-        autosize=True,
-        no_saved_settings=True,
-        tag=tag,
-        on_close=lambda: dpg.delete_item(window),
-    ) as window:
-        dpg.add_combo(
-            [t for t in node_types.keys()],
-            default_value=selected_type,
-            callback=on_type_selected,
-            width=300,
-            tag=f"{tag}_node_type",
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
+        """Show or hide the notification label below the separator.
+
+        Pass ``msg=None`` to hide it.
+        """
+        if not msg:
+            dpg.hide_item(self._t("notification"))
+            return
+
+        dpg.configure_item(
+            self._t("notification"),
+            default_value=msg,
+            color=color,
+            show=True,
         )
-
-        dpg.add_input_text(
-            label="id",
-            readonly=True,
-            enabled=False,
-            default_value=str(nid),
-            tag=f"{tag}_node_id",
-        )
-
-        with dpg.child_window(auto_resize_y=True, tag=f"{tag}_node_args"):
-            pass
-
-        dpg.add_separator()
-        dpg.add_text(show=False, tag=f"{tag}_notification", color=style.red)
-
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="Make!", callback=on_okay, tag=f"{tag}_button_okay")
-
-    on_type_selected(f"{tag}_node_type", selected_type, None)
-    return tag
