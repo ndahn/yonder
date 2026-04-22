@@ -68,6 +68,9 @@ class Soundbank:
     @classmethod
     def load(cls, bnk_path: Path | str) -> Soundbank:
         bnk_path: Path = Path(bnk_path).absolute()
+        if bnk_path.suffix == ".bnk":
+            bnk_path = bnk_path.parent / bnk_path.stem
+
         if bnk_path.is_dir():
             json_path = bnk_path / "soundbank.json"
         else:
