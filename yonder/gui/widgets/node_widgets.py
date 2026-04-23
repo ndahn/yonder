@@ -144,6 +144,20 @@ def create_node_widgets(
                         child = bnk.get(child_id, child_id)
                         add_node_link(str(child), child, on_node_selected)
 
+            if isinstance(node, Action):
+                with dpg.group(horizontal=True):
+                    dpg.add_text(µ("Target: "), bullet=True)
+                    ext = bnk.get(node.external_id)
+                    if ext:
+                        add_node_link(
+                            str(ext),
+                            ext.id,
+                            on_node_selected,
+                            user_data=user_data,
+                        )
+                    else:
+                        dpg.add_text(µ("#{node} (not found)").format(node=node.external_id))
+
             dpg.add_spacer(height=3)
             dpg.add_separator()
             dpg.add_spacer(height=3)
@@ -541,19 +555,6 @@ def _create_attributes_action(
                     not_supported_ok=True,
                 )
 
-    with dpg.group(horizontal=True):
-        dpg.add_text(µ("Target:"), bullet=True)
-        ext = bnk.get(node.external_id)
-        if ext:
-            add_node_link(
-                str(ext),
-                ext.id,
-                on_node_selected,
-                user_data=user_data,
-            )
-        else:
-            dpg.add_text(µ("#{node} (not found)").format(node=node.external_id))
-
     dpg.add_checkbox(
         label="target is bus",
         default_value=bool(node.is_bus),
@@ -566,7 +567,6 @@ def _create_attributes_action(
             int,
         ),
     )
-
     dpg.add_spacer(height=5)
 
     params = node.params
@@ -1075,8 +1075,10 @@ def _create_attributes_musicsegment(
     tracks = [cid for cid in node.children if isinstance(bnk.get(cid), MusicTrack)]
     if tracks:
         with dpg.group(horizontal=True):
+            track_labels = [µ("Track #{idx}").format(idx=t) for t in tracks]
             dpg.add_combo(
-                [µ("Track #{idx}").format(idx=t) for t in tracks],
+                track_labels,
+                default_value=track_labels[0],
                 width=140,
                 tag=f"{base_tag}/child_tracks",
             )

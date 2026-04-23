@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from yonder import Soundbank, HIRCNode
+from yonder import Soundbank, HIRCNode, Hash
 from yonder.types import (
     Event,
     Action,
@@ -126,7 +126,7 @@ def create_simple_sound(
 def create_boss_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
-    state_path: str | list[str | int],
+    state_path: Hash | list[Hash],
     tracks: list[Path] | Path,
     *,
     loop_markers: list[tuple[float, float]] = None,
@@ -164,7 +164,7 @@ def create_boss_bgm(
             raise ValueError("All tracks must be .wem files")
 
     # Prepare the new master state path
-    if isinstance(state_path, str):
+    if isinstance(state_path, (str, int)):
         bgm_enemy_type = state_path
         state_path: list[str] = []
         for arg in master.arguments:
@@ -364,3 +364,40 @@ def create_boss_bgm(
     # Add nodes to soundbank
     bnk.add_nodes(*new_nodes)
     return new_nodes
+
+
+# NOTE for the dialog
+# - select master MSC
+# - master args:
+#   - FallenLeaves yes/no
+#   - BgmPlaceType
+#   - StateWeatherType
+#   - Set_State_EnvPlaceType
+# - ambience args (optional except 1st)
+#   - OutdoorIndoor (*, Outdoor, IndoorAll, IndoorHalf)
+#   - BgmPlaceType (Bgm_550_RoadFortress)
+#   - StateWeatherType (_60_SandStorm)
+#   - TimeZone (*) 
+#   - CommonPlaceType (_14)
+# - All tracks should have the loop property and use trims (no loop markers)
+def create_ambience(
+    bnk: Soundbank,
+    master: MusicSwitchContainer,
+    state_path: Hash | list[Hash],
+    room_states: Hash | list[Hash],
+    room_tracks: dict[tuple[str], Path],
+    *,
+    trims: list[tuple[float, float]] = None,
+) -> list[HIRCNode]:
+    if isinstance(state_path, (str, int)):
+        state_path = [state_path]
+
+    # TODO top state should always be OutdoorIndoor
+    if isinstance(room_states, (str, int)):
+        room_states = [room_states]
+
+    ambience_msc = MusicSwitchContainer.new(
+        bnk.new_id(),
+        [(rs, GroupType.State) for rs in room_states],
+        props={PropID.Priority, 80.0},
+    )
