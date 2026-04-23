@@ -4,7 +4,7 @@ from docstring_parser import parse as doc_parse
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode
+from yonder import Soundbank, HIRCNode, Hash
 from yonder.hash import lookup_name
 from yonder.types import (
     Action,
@@ -506,6 +506,11 @@ def _create_attributes_action(
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
+    type_overrides: dict[str, type] = {
+        "switch_group_id": Hash,
+        "switch_state_id": Hash,
+    }
+
     def create_generic_widgets_recursive(
         d: dict[str, tuple[type, Any]], path: str = ""
     ) -> None:
@@ -516,6 +521,8 @@ def _create_attributes_action(
 
             elif isinstance(val, list):
                 if is_simple_type(tp):
+                    # TODO need to match path with list index
+                    tp = type_overrides.get(key, tp)
                     add_generic_widget(
                         tp, key, lambda s, a, u: set_value(path, a), default=val
                     )
@@ -525,6 +532,7 @@ def _create_attributes_action(
                         create_generic_widgets_recursive(item, item_path)
 
             else:
+                tp = type_overrides.get(key, tp)
                 add_generic_widget(
                     tp,
                     µ(key, tp),
@@ -532,6 +540,34 @@ def _create_attributes_action(
                     default=val,
                     not_supported_ok=True,
                 )
+
+    with dpg.group(horizontal=True):
+        dpg.add_text(µ("Target:"), bullet=True)
+        ext = bnk.get(node.external_id)
+        if ext:
+            add_node_link(
+                str(ext),
+                ext.id,
+                on_node_selected,
+                user_data=user_data,
+            )
+        else:
+            dpg.add_text(µ("#{node} (not found)").format(node=node.external_id))
+
+    dpg.add_checkbox(
+        label="target is bus",
+        default_value=bool(node.is_bus),
+        callback=make_setter(
+            node,
+            µ("is_bus"),
+            base_tag,
+            on_node_changed,
+            user_data,
+            int,
+        ),
+    )
+
+    dpg.add_spacer(height=5)
 
     params = node.params
     # PlayEvents will have a string here
@@ -567,7 +603,9 @@ def _create_attributes_attenuation(
             curve_type = CurveScaling[curve.curve_type]
             node.curves.append(ConversionTable(curve_type, points=curve.points))
 
-        curve_items = ["-"] + [µ("Curve #{idx}").format(idx=i) for i in range(len(curves))]
+        curve_items = ["-"] + [
+            µ("Curve #{idx}").format(idx=i) for i in range(len(curves))
+        ]
         for i in range(len(node.curves_to_use)):
             dpg.configure_item(
                 f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
@@ -595,10 +633,15 @@ def _create_attributes_attenuation(
         ):
             for i, curve in enumerate(node.curves_to_use):
                 param = CurveParameters(i).name
-                default_value = µ("Curve #{idx}").format(idx=curve) if curve >= 0 else "-"
+                default_value = (
+                    µ("Curve #{idx}").format(idx=curve) if curve >= 0 else "-"
+                )
 
                 dpg.add_combo(
-                    ["-"] + [µ("Curve #{idx}").format(idx=i) for i in range(len(node.curves))],
+                    ["-"]
+                    + [
+                        µ("Curve #{idx}").format(idx=i) for i in range(len(node.curves))
+                    ],
                     default_value=default_value,
                     label=param,
                     callback=on_curve_param_changed,
@@ -744,7 +787,9 @@ def _create_attributes_event(
                 dpg.add_text(">")
                 target = bnk.get(action.external_id)
                 if target:
-                    add_node_link(str(target), target.id, on_node_selected)
+                    add_node_link(
+                        str(target), target.id, on_node_selected, user_data=user_data
+                    )
                 else:
                     dpg.add_text(
                         µ("#{node} (not found)").format(node=action.external_id)
@@ -1194,7 +1239,7 @@ def _create_attributes_randomsequencecontainer(
     def create_playlist_row(item: tuple[int, int], idx: int) -> None:
         target = bnk.get(item[0])
         if target:
-            add_node_link(str(target), target, on_node_selected)
+            add_node_link(str(target), target, on_node_selected, user_data=user_data)
         else:
             dpg.add_text(µ("#{node} (not found)").format(node=item[0]))
 
