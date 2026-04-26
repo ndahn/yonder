@@ -164,8 +164,19 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
-            raise ValueError("Found mismatch between group_types and arguments")
+            raise ValueError(f"Found mismatch between group_types and arguments in {self}")
 
-        # TODO verify all branches have the correct depth
+        def delve(branch: DecisionTreeNode, path: list) -> None:
+            if len(path) == len(self.arguments) and branch.children:
+                raise ValueError(f"Branch {path} of {self} is deeper than number of arguments ({len(self.arguments)})")
+
+            if len(path) != len(self.arguments) and not branch.children:
+                raise ValueError(f"Branch {path} of {self} does not reach the required depth ({len(self.arguments)})")
+
+            branch.children.sort(key=lambda c: c.key)
+            for child in branch.children:
+                delve(child, path + [branch.key])
+
+        delve(self.tree, [])
 
     # TODO transition rule helper

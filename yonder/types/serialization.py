@@ -172,7 +172,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
 
     ctx = str(obj)
     wrong_fields: list[str] = []
-    mismatches: list[type, type] = []
+    mismatches: list[tuple[type, type]] = []
 
     def has_valid_type(val: Any, types: type | tuple[type]) -> bool:
         if isinstance(types, type):
@@ -202,16 +202,20 @@ def verify_values(obj, raise_on_error: bool) -> None:
             if not has_valid_type(val, (origin, str, int)):
                 wrong_fields.append(f.name)
                 mismatches.append((type(val), origin))
+            
+            continue
 
         if origin is Union:
             logger.warning(f"{ctx}: field {f.name} has union type")
-            return
+            continue
 
         if not has_valid_type(val, origin):
             wrong_fields.append(f.name)
             mismatches.append((type(val), origin))
 
-        if isinstance(val, list):
+        if is_dataclass(val):
+            verify_values(val, raise_on_error)
+        elif isinstance(val, list):
             args = get_args(tp)
             if not args:
                 logger.warning(

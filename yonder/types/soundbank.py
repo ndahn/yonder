@@ -521,8 +521,8 @@ class Soundbank:
                     nodes.append(node)
 
             # Sort by type first, then ID
-            nodes.sort(key=lambda n: f"{n.type_name} {n.id:010d}")
-            objects.extend(n for n in nodes)
+            nodes.sort(key=lambda n: (n.type_name, n.id))
+            objects.extend(nodes)
 
         # Actions are usually interleaved with their events, but this way
         # is both easier and more reliable
@@ -538,7 +538,7 @@ class Soundbank:
 
     def verify(self) -> int:
         severity = 0
-        discovered_ids = set([0])
+        discovered_ids = {0}
 
         def _verify_hirc_node(node: HIRCNode):
             nonlocal severity
@@ -576,9 +576,14 @@ class Soundbank:
                         severity = max(severity, 2)
 
             for _, ref in node.get_references():
-                if ref in self and ref not in discovered_ids:
-                    logger.error(f"{node}: defined before referenced node {ref}")
-                    severity = max(severity, 2)
+                if ref in self:
+                    if ref not in discovered_ids:
+                        logger.error(f"{node}: defined before referenced node {ref}")
+                        severity = max(severity, 2)
+                # Happens often and is fine
+                #else:
+                #    logger.warning(f"{node}: reference to non-existing node {ref}")
+                #    severity = max(severity, 1)
 
             if hasattr(node, "children"):
                 prev_child_id = -1
@@ -611,6 +616,7 @@ class Soundbank:
 
         for sec in self.sections.values():
             try:
+                # Note: recursive
                 verify_values(sec, True)
             except WrongValueTypeError as e:
                 severity = max(severity, 3)
@@ -619,9 +625,6 @@ class Soundbank:
             if isinstance(sec, HIRCSection):
                 for node in sec.objects:
                     _verify_hirc_node(node)
-
-            if hasattr(sec, "validate") and callable(sec.validate):
-                sec.validate()
 
         if severity == 0:
             logger.info("Seems surprisingly fine - yay!")
