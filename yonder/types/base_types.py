@@ -393,7 +393,7 @@ class AdvSettingsParams:
     use_virtual_behavior: bool = False
     kill_newest: bool = False
     virtual_queue_behavior: VirtualQueueBehavior = (
-        VirtualQueueBehavior.PlayFromBeginning
+        VirtualQueueBehavior.PlayFromElapsedTime
     )
     max_instance_count: int = 0
     below_threshold_behavior: BelowThresholdBehavior = (
@@ -706,7 +706,7 @@ class SwitchNodeParams:
 
 @dataclass(slots=True)
 class MeterInfo:
-    grid_period: float = 0.0
+    grid_period: float = 1000.0
     grid_offset: float = 0.0
     tempo: float = 120.0
     time_signature_beat_count: int = 4

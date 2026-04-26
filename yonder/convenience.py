@@ -26,8 +26,9 @@ from yonder.enums import (
     ClipAutomationType,
     CurveInterpolation,
     MarkerId,
-    PlaybackMode, 
+    PlaybackMode,
     RandomMode,
+    VirtualQueueBehavior,
 )
 from yonder.util import logger, parse_state_path
 
@@ -182,6 +183,9 @@ def create_boss_bgm(
         props={PropID.Priority: 80.0},
     )
 
+    # Seems to be set on most boss bgms?
+    boss_msc.music_trans_node_params.music_node_params.node_base_params.adv_settings_params.virtual_queue_behavior = VirtualQueueBehavior.PlayFromElapsedTime
+
     # Default and heatup tracks
     boss_phases = ["*"]
     if len(tracks) > 1:
@@ -195,6 +199,8 @@ def create_boss_bgm(
         bgm = bnk.add_wem(bgm, SourceType.Streaming)
 
         phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
+        phase_mrsc.music_trans_node_params.music_node_params.node_base_params.adv_settings_params.virtual_queue_behavior = VirtualQueueBehavior.PlayFromElapsedTime
+
         phase_masters.append(phase_mrsc)
 
         has_intro = False
@@ -279,6 +285,7 @@ def create_boss_bgm(
             )
         else:
             base_rule = phase_mrsc.music_trans_node_params.transition_rules[0]
+            base_rule.source_transition_rule.sync_type = SyncType.ExitMarker
             base_rule.destination_transition_rule.play_pre_entry = 1
 
         # Add markers for looping
@@ -377,7 +384,7 @@ def create_boss_bgm(
 #   - OutdoorIndoor (*, Outdoor, IndoorAll, IndoorHalf)
 #   - BgmPlaceType (Bgm_550_RoadFortress)
 #   - StateWeatherType (_60_SandStorm)
-#   - TimeZone (*) 
+#   - TimeZone (*)
 #   - CommonPlaceType (_14)
 # - All tracks should have the loop property and use trims (no loop markers)
 def create_ambience(

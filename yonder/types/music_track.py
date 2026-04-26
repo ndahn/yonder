@@ -29,7 +29,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
     sources: list[BankSourceData] = field(default_factory=list)
     playlist_item_count: int = 0
     playlist: list[TrackSrcInfo] = field(default_factory=list)
-    subtrack_count: int = 0
+    subtrack_count: int = 1
     clip_item_count: int = 0
     clip_items: list[ClipAutomation] = field(default_factory=list)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)

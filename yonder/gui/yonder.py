@@ -288,6 +288,14 @@ class BanksOfYonder(DpgItem):
 
             dpg.add_separator()
             with dpg.menu(label=µ("Yonder", "menu")):
+                dpg.add_menu_item(
+                    label=µ("Settings", "menu"),
+                    callback=self._open_settings_dialog,
+                    tag=self._t("menu/settings"),
+                )
+
+                dpg.add_separator()
+
                 with dpg.menu(
                     label=µ("Language", "menu"),
                     tag=self._t("menu/language"),
@@ -297,65 +305,57 @@ class BanksOfYonder(DpgItem):
                         default_value=get_active_language(True),
                         callback=lambda s, a, u: self._change_language(a),
                     )
-                    # dpg.add_separator()
-                    # dpg.add_menu_item(
-                    #     label=µ("Save Reference Dict"),
-                    #     callback=self._save_reference_dict,
-                    #     tag=self._t("menu/save_reference_dict"),
-                    # )
 
-                (
+                with dpg.menu(label=µ("Debug", "menu")):
                     dpg.add_menu_item(
-                        label=µ("Settings", "menu"),
-                        callback=self._open_settings_dialog,
-                        tag=self._t("menu/settings"),
-                    ),
-                )
-                dpg.add_menu_item(
-                    label=µ("Open Temp Dir", "menu"),
-                    callback=lambda s, a, u: os.startfile(tmp_dir.name),
-                    tag=self._t("menu/open_temp"),
-                )
-                dpg.add_menu_item(
-                    label=(µ("Force Refresh", "menu")),
-                    callback=self.regenerate,
-                    tag=self._t("menu/force_refresh"),
-                )
+                        label=µ("Open Temp Dir", "menu"),
+                        callback=lambda s, a, u: os.startfile(tmp_dir.name),
+                        tag=self._t("menu/open_temp"),
+                    )
+                    dpg.add_menu_item(
+                        label=(µ("Force Refresh", "menu")),
+                        callback=self.regenerate,
+                        tag=self._t("menu/force_refresh"),
+                    )
+                    dpg.add_menu_item(
+                        label=(µ("Save Unsolved", "menu")),
+                        callback=self._save_soundbank_unsolved,
+                        tag=self._t("menu/save_unsolved"),
+                    )
 
-                dpg.add_separator()
-                with dpg.menu(label=µ("dearpygui", "menu")):
-                    dpg.add_menu_item(
-                        label=µ("About", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_About),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Metrics", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Metrics),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Documentation", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Doc),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Debug", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Debug),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Style Editor", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Style),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Font Manager", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Font),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Item Registry", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_ItemRegistry),
-                    )
-                    dpg.add_menu_item(
-                        label=µ("Stack Tool", "menu"),
-                        callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
-                    )
+                    with dpg.menu(label=µ("dearpygui", "menu")):
+                        dpg.add_menu_item(
+                            label=µ("About", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_About),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Metrics", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Metrics),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Documentation", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Doc),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Debug", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Debug),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Style Editor", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Style),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Font Manager", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Font),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Item Registry", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_ItemRegistry),
+                        )
+                        dpg.add_menu_item(
+                            label=µ("Stack Tool", "menu"),
+                            callback=lambda: dpg.show_tool(dpg.mvTool_Stack),
+                        )
 
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -771,7 +771,7 @@ class BanksOfYonder(DpgItem):
 
     def pin_lost_objects(self) -> None:
         orphans = self.bnk.find_orphans()
-        logger.info(µ("Found {num} orphaned nodes").format(len(orphans)))
+        logger.info(µ("Found {num} orphaned nodes").format(num=len(orphans)))
         for node in orphans:
             self.add_pinned_object(node)
 
@@ -847,7 +847,13 @@ class BanksOfYonder(DpgItem):
         if not self.bnk:
             return
 
-        self.bnk.save()
+        loading = loading_indicator(µ("Saving soundbank...", "loading"))
+        try:
+            logger.info(µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path))
+            self.bnk.save(solve=False)
+            return True
+        finally:
+            dpg.delete_item(loading)
 
     def _save_soundbank_as(self) -> bool:
         if not self.bnk:
@@ -861,7 +867,7 @@ class BanksOfYonder(DpgItem):
         if path:
             loading = loading_indicator(µ("Saving soundbank...", "loading"))
             try:
-                logger.info(µ("Saving soundbank to {name}", "log").format(name=path))
+                logger.info(µ("Saving soundbank to {path}", "log").format(path=path))
                 self.bnk.save(path)
                 logger.info(µ("Don't forget to repack!", "log"))
                 return True
@@ -869,6 +875,18 @@ class BanksOfYonder(DpgItem):
                 dpg.delete_item(loading)
 
         return False
+
+    def _save_soundbank_unsolved(self) -> None:
+        if not self.bnk:
+            return
+
+        loading = loading_indicator(µ("Saving soundbank...", "loading"))
+        try:
+            logger.warning(µ("Saving soundbank without solving!", "log"))
+            self.bnk.save(solve=False)
+            return True
+        finally:
+            dpg.delete_item(loading)
 
     def _repack_soundbank(self) -> None:
         if not self.bnk:
@@ -1249,18 +1267,19 @@ class BanksOfYonder(DpgItem):
     def _on_node_selected(
         self, sender: str, app_data: Any, node: int | HIRCNode
     ) -> None:
+        # Deselect previous selectable
+        if self._selected_root and dpg.does_item_exist(self._selected_root):
+            dpg.set_value(self._selected_root, False)
+
+        if sender is not None:
+            dpg.set_value(sender, True)
+
         # Prevent refresh when the item is already selected so context 
         # menus can open on nodes with long loading times
         if sender == self._selected_root:
             return
 
-        # Deselect previous selectable
-        if self._selected_root and dpg.does_item_exist(self._selected_root):
-            dpg.set_value(self._selected_root, False)
-
         self._selected_root = sender
-        if sender is not None:
-            dpg.set_value(sender, True)
 
         if isinstance(node, int):
             node: HIRCNode = self.bnk[node]

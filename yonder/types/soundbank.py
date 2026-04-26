@@ -200,12 +200,13 @@ class Soundbank:
 
         logger.info(f"Removed {len(removed)} unused wems")
 
-    def save(self, path: Path | str = None, backup: bool = True) -> None:
+    def save(self, path: Path | str = None, backup: bool = True, solve: bool = True) -> None:
         logger.info(f"Saving {self}")
 
         # Solve the dependency graph
-        self.solve()
-        self.verify()
+        if solve:
+            self.solve()
+            self.verify()
 
         if path:
             path = Path(path).absolute()
