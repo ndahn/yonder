@@ -52,7 +52,7 @@ class add_wav_player(DpgItem):
         Initial begin trim position.
     end_trim : float
         Initial end trim position (negative = from end).
-    on_trim_marker_changed : callable, optional
+    on_trims_changed : callable, optional
         Fired as ``on_trim_marker_changed(tag, (begin, end), user_data)``.
     user_markers_enabled : bool
         Enable named user-defined drag line markers.
@@ -93,7 +93,7 @@ class add_wav_player(DpgItem):
         trim_enabled: bool = False,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
-        on_trim_marker_changed: Callable[[str, tuple[float, float], Any], None] = None,
+        on_trims_changed: Callable[[str, tuple[float, float], Any], None] = None,
         user_markers_enabled: bool = False,
         user_markers: dict[Hash, float] = None,
         on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
@@ -124,7 +124,7 @@ class add_wav_player(DpgItem):
         # Callbacks
         self._on_file_changed = on_file_changed
         self._on_loop_changed = on_loop_changed
-        self._on_trim_marker_changed = on_trim_marker_changed
+        self._on_trim_marker_changed = on_trims_changed
         self._on_user_markers_changed = on_user_markers_changed
 
         self._user_data = user_data
@@ -685,7 +685,7 @@ class add_wav_player(DpgItem):
     def regenerate(self) -> None:
         """Rebuild the waveform plot from the current audio file."""
         dpg.delete_item(self._t("xaxis"), children_only=True)
-        
+
         if not self._get_wav_path():
             return
 

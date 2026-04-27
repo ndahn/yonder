@@ -262,7 +262,7 @@ class add_widget_table(DpgItem):
     def _on_clear_clicked(self) -> None:
         self._values.clear()
         self._selected_idx = -1
-        
+
         self.refresh()
         if self._on_remove:
             self._on_remove(self.tag, (0, None, self._values), self._user_data)
@@ -627,7 +627,7 @@ class add_player_table(DpgItem):
                 loop_markers_enabled=bool(self._on_loop_changed),
                 on_loop_changed=self._on_loop_edit,
                 trim_enabled=bool(self._on_trim_changed),
-                on_trim_marker_changed=self._on_trim_edit,
+                on_trims_changed=self._on_trim_edit,
                 user_markers_enabled=bool(self._on_user_marker_changed),
                 user_markers=list(self._initial_user_markers),
                 on_user_markers_changed=self._on_user_marker_edit,

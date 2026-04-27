@@ -156,7 +156,9 @@ def create_node_widgets(
                             user_data=user_data,
                         )
                     else:
-                        dpg.add_text(µ("#{node} (not found)").format(node=node.external_id))
+                        dpg.add_text(
+                            µ("#{node} (not found)").format(node=node.external_id)
+                        )
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
@@ -947,7 +949,7 @@ def _create_attributes_musicswitchcontainer(
         dpg.add_button(
             label=µ("Add State Path", "button"),
             callback=lambda: edit_state_path_dialog(
-                bnk, node, on_state_path_created, raw=True
+                bnk, node.arguments, on_state_path_created, raw=True
             ),
             tag=f"{base_tag}/musicswitchconainer/button_add_state_path",
         )
@@ -1207,7 +1209,7 @@ def _create_attributes_musictrack(
                 trim_enabled=True,
                 begin_trim=trims[0],
                 end_trim=trims[1],
-                on_trim_marker_changed=set_trims,
+                on_trims_changed=set_trims,
                 user_data=i,
             )
             players.append(player)

@@ -376,7 +376,7 @@ def create_boss_bgm(
 # NOTE for the dialog
 # - select master MSC
 # - master args:
-#   - FallenLeaves yes/no
+#   - FallenLeaves (yes/no)
 #   - BgmPlaceType
 #   - StateWeatherType
 #   - Set_State_EnvPlaceType

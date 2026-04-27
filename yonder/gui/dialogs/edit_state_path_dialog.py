@@ -3,8 +3,8 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.util import parse_state_path
-from yonder.types.music_switch_container import MusicSwitchContainer
 from yonder.hash import lookup_name
+from yonder.types.base_types import GameSync
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_node_reference
@@ -23,8 +23,8 @@ class edit_state_path_dialog(DpgItem):
     ----------
     bnk : Soundbank
         Used to query available leaf nodes.
-    node : MusicSwitchContainer
-        Container whose arguments define the path fields.
+    arguments : list[str]
+        The arguments that define the path fields.
     callback : callable
         Called as ``callback(tag, keys, leaf_node_id)`` on confirm.
     state_path : list of str, optional
@@ -44,14 +44,14 @@ class edit_state_path_dialog(DpgItem):
     def __init__(
         self,
         bnk: Soundbank,
-        node: MusicSwitchContainer,
+        arguments: list[int | str | GameSync],
         callback: Callable[[str, list[str] | list[int], int], None],
         *,
         state_path: list[str] = None,
         hide_node_id: bool = False,
         node_id: int = None,
         raw: bool = False,
-        title: str = "New State Path",
+        title: str = "Edit State Path",
         tag: str = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
@@ -59,13 +59,13 @@ class edit_state_path_dialog(DpgItem):
 
         super().__init__(tag)
 
-        if state_path and len(state_path) != len(node.arguments):
+        if state_path and len(state_path) != len(arguments):
             raise ValueError(
                 "State path must have the same length as MusicSwitchContainer arguments"
             )
 
         self._bnk = bnk
-        self._node = node
+        self._arguments = arguments
         self._callback = callback
         self._state_path = state_path
         self._hide_node_id = hide_node_id
@@ -76,6 +76,15 @@ class edit_state_path_dialog(DpgItem):
         self._build(title, state_path, hide_node_id, node_id)
 
     # === Build =========================================================
+
+    def _get_name(self, arg: int | str | GameSync) -> str:
+        if isinstance(arg, GameSync):
+            arg = arg.group_id
+
+        if isinstance(arg, int):
+            return lookup_name(arg, f"#{arg}")
+        
+        return arg
 
     def _build(
         self,
@@ -93,13 +102,13 @@ class edit_state_path_dialog(DpgItem):
             tag=self._tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
-            # For decision trees all branches have the same length
-            for i, arg in enumerate(self._node.arguments):
-                name = lookup_name(arg.group_id, f"#{arg.group_id}")
+            # All branches have the same length
+            for i, arg in enumerate(self._arguments):
+                name = self._get_name(arg)
                 dpg.add_input_text(
                     label=name,
                     default_value=state_path[i] if state_path else "*",
-                    tag=self._t(f"arg_{arg.group_id}"),
+                    tag=self._t(f"arg_{name}"),
                 )
 
             dpg.add_spacer(height=3)
@@ -140,8 +149,9 @@ class edit_state_path_dialog(DpgItem):
             return
 
         keys: list[str] = []
-        for arg in self._node.arguments:
-            key = dpg.get_value(self._t(f"arg_{arg.group_id}"))
+        for arg in self._arguments:
+            name = self._get_name(arg)
+            key = dpg.get_value(self._t(f"arg_{name}"))
             if not key:
                 self.show_message(µ("Keys must not be empty", "msg"))
                 return

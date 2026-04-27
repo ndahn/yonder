@@ -135,7 +135,7 @@ class edit_markers_dialog(DpgItem):
                 trim_enabled=self._trim_enabled,
                 begin_trim=begin_trim,
                 end_trim=end_trim,
-                on_trim_marker_changed=self._dlg_on_trim_marker_changed,
+                on_trims_changed=self._dlg_on_trim_marker_changed,
                 markers_in_ms=markers_in_ms,
                 max_points=10000,
                 width=-1,

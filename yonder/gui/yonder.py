@@ -62,6 +62,7 @@ from .dialogs.mass_transfer_dialog import mass_transfer_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
+from .dialogs.create_ambience_track_dialog import create_ambience_track_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .widgets.splash import add_splash
 
@@ -254,7 +255,6 @@ class BanksOfYonder(DpgItem):
                 dpg.add_menu_item(
                     label=µ("Ambience Track", "menu"),
                     callback=self._open_ambience_track_dialog,
-                    enabled=False,  # TODO
                     tag=self._t("menu/create_ambience"),
                 )
                 dpg.add_separator()
@@ -1574,7 +1574,7 @@ class BanksOfYonder(DpgItem):
                 self._selected_section.merge_partial(self._backup)
             else:
                 self._selected_section.merge(self._backup)
-            
+
             self.select_section(self._selected_section)
 
     def apply_json(self) -> None:

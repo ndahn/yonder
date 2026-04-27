@@ -6,6 +6,15 @@ class Game(IntEnum):
     Nightreign = 1
 
 
+GameStates_EldenRing = {
+    "OutdoorIndoor": ["Outdoor", "IndoorHalf", "IndoorAll"],
+    "BgmPlaceType": [],
+    "StateWeatherType": [],
+    "TimeZone": [],
+    "CommonPlaceType": [],
+}
+
+
 class RTPCParameter_EldenRing(IntEnum):
     UNKNOWN = -1
     Volume = 0
@@ -89,6 +98,7 @@ class RTPCParameter_EldenRing(IntEnum):
 class GameObjects:
     selected_game: Game = Game.EldenRing
     RTPCParameter = RTPCParameter_EldenRing
+    GameStates = GameStates_EldenRing
 
     @classmethod
     def set_game(cls, game: Game) -> None:
@@ -98,6 +108,7 @@ class GameObjects:
         
         if game == Game.EldenRing:
             cls.RTPCParameter = RTPCParameter_EldenRing
+            cls.GameStates = GameStates_EldenRing
         else:
             logger.warning(
                 f"Game {game} is not supported yet, using EldenRing settings"
