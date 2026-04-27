@@ -116,7 +116,7 @@ class MusicTransitionObject:
 class MusicTransSrcRule:
     transition_time: int = 0
     fade_curve: CurveInterpolation = CurveInterpolation.Linear
-    fade_offet: int = 0  # TODO typo in bnk2json
+    fade_offet: int = 0  # NOTE typo in bnk2json
     sync_type: SyncType = SyncType.Immediate
     clue_filter_hash: int = 0
     play_post_exit: int = 0
@@ -126,7 +126,7 @@ class MusicTransSrcRule:
 class MusicTransDstRule:
     transition_time: int = 0
     fade_curve: CurveInterpolation = CurveInterpolation.Linear
-    fade_offet: int = 0  # TODO typo in bnk2json
+    fade_offet: int = 0  # NOTE typo in bnk2json
     clue_filter_hash: int = 0
     jump_to_id: int = 0
     jump_to_type: int = 0
@@ -212,7 +212,9 @@ class TrackSrcInfo:
     source_duration: float = 0.0
 
     def get_references(self) -> list[tuple[str, int]]:
-        # TODO not sure about track_id and event_id
+        # TODO not sure about track_id 
+        # event_id is a reference to an event but events appear later 
+        # and this could create loops in our graph
         # source_id might also match an fx effect
         return [("source_id", self.source_id)]
 
@@ -378,7 +380,7 @@ class AuxParams:
             ("aux2", self.aux2),
             ("aux3", self.aux3),
             ("aux4", self.aux4),
-            ("reflection_aux_bus", self.reflection_aux_bus),
+            ("reflection_aux_bus", self.reflections_aux_bus),
         ]
 
 
@@ -415,8 +417,7 @@ class AkState:
     state_instance_id: int = 0
 
     def get_references(self) -> list[tuple[str, int]]:
-        # TODO not sure about this one
-        return [("state_id", self.state_id)]
+        return [("state_instance_id", self.state_instance_id)]
 
 
 @dataclass(slots=True)
@@ -494,6 +495,8 @@ class PropBundle:
     def get_references(self) -> list[tuple[str, int]]:
         if self.prop_id in (PropID.AttachedPluginFXID, PropID.AttenuationID):
             return [("value", int(self.value))]
+
+        return []
 
     @classmethod
     def from_dict(cls, data: dict) -> PropBundle:

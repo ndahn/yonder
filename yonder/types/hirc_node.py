@@ -116,8 +116,8 @@ class HIRCNode(DataNode):
                     if isinstance(val, int) and val > 0:
                         ret.append((f"{path}/{key}", val))
 
-                # get_references() already handled this object's subtree
-                return ret
+                # Only this function is recursive, others can be shallow,
+                # so we shouldn't return just yet
 
             if is_dataclass(obj):
                 for f in fields(obj):
@@ -135,6 +135,9 @@ class HIRCNode(DataNode):
 
     def __hash__(self) -> int:
         return self.id
+
+    def __eq__(self, other: Any) -> bool:
+        return (self == other)
 
     def __lt__(self, other: HIRCNode) -> bool:
         return self.id < other.id

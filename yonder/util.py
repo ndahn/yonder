@@ -31,7 +31,10 @@ logger = logging.getLogger("yonder")
 
 
 def resource_dir() -> Path:
-    return Path(sys.argv[0]).parent / "resources"
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent / "resources"
+
+    return Path(__file__).parent.parent / "resources"
 
 
 def resource_data(res_path: str, binary: bool = False) -> str | bytes:
