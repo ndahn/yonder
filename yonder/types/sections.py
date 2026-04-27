@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Any
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 from yonder.hash import calc_hash, lookup_name
+from yonder.util import deepmerge
 from .base_types import (
     IAkPlugin,
     ObsConversionTable,
@@ -118,14 +119,12 @@ class HIRCSection(Section):
     objects: list[HIRCNode] = field(default_factory=list)
 
     def copy_partial(self) -> HIRCSection:
-        return HIRCSection(replace(self._header), len(self.objects), ["..."])
+        result = HIRCSection()
+        deepmerge(result, self, exclude={"objects"})
+        return result
 
-    def merge_partial(self, other: dict | HIRCSection) -> None:
-        if isinstance(other, HIRCSection):
-            other = other.to_dict()
-
-        other.pop("objects", None)
-        self.merge(other)
+    def merge_partial(self, other: HIRCSection) -> None:
+        deepmerge(self, other, exclude={"objects"})
 
 
 @dataclass
@@ -144,7 +143,7 @@ class PLATSection(Section):
 class STIDSectionEntry:
     bnk_id: int = 0
     name_length: int = 0
-    name: str = field(default_factory=list)
+    name: str = field(default_factory=str)
 
 
 @dataclass

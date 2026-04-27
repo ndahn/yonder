@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING, get_args
 import sys
 import re
 from pathlib import Path
-from dataclasses import dataclass, is_dataclass, fields, asdict
+from dataclasses import dataclass, is_dataclass, fields
 from docstring_parser import parse as doc_parse
 import inspect
 import builtins
@@ -156,36 +156,47 @@ def get_function_spec(
     return func_args
 
 
-def deepmerge(base: dataclass, updates: "dict | dataclass") -> None:
-    def apply_dict(obj, data: dict) -> None:
+def deepmerge(base: dataclass, updates: dataclass, exclude: set[str] = None) -> None:
+    def apply(obj, data) -> None:
         for f in fields(obj):
-            if f.name not in data:
+            if exclude and f.name in exclude:
                 continue
-
+            
+            # skip read-only properties
             if hasattr(type(obj), f.name):
                 true_field_type = type(getattr(type(obj), f.name))
-                if issubclass(true_field_type, property):
-                    if not true_field_type.fset:
-                        continue
+                if issubclass(true_field_type, property) and not true_field_type.fset:
+                    continue
 
-            value = data[f.name]
+            value = getattr(data, f.name)
             current = getattr(obj, f.name)
 
             if is_dataclass(current):
-                apply_dict(current, value)
-            elif isinstance(current, dict):
-                current.clear()
-                current.update(value)
+                apply(current, value)
             elif isinstance(current, list):
+                fmod = get_module_for_field(obj, f.name)
+                tp = resolve_typehint(f.type, fmod)
+                args = get_args(tp)
+                item_type = args[0] if args else None
+
+                new_items = []
+                for item in value:
+                    if item_type and is_dataclass(item_type):
+                        instance = item_type()
+                        apply(instance, item)
+                        new_items.append(instance)
+                    else:
+                        new_items.append(item)
+
                 current.clear()
-                current.extend(value)
+                current.extend(new_items)
             else:
                 setattr(obj, f.name, value)
 
-    if is_dataclass(updates):
-        updates = asdict(updates)
+    if type(base) is not type(updates):
+        raise ValueError("base and updates must be the same type")
 
-    return apply_dict(base, updates)
+    apply(base, updates)
 
 
 def get_module_for_field(obj, field_name: str) -> str:

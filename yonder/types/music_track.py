@@ -84,6 +84,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
     def add_source_from_wem(
         self,
         wem: Path,
+        event: int | HIRCNode = 0,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Embedded,
@@ -101,6 +102,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
             wem_id,
             size,
             duration,
+            event=event,
             begin_trim=begin_trim,
             end_trim=end_trim,
             source_type=source_type,
@@ -111,6 +113,7 @@ class MusicTrack(PropertyMixin, HIRCNode):
         source_id: int,
         media_size: int,
         duration_ms: float,
+        event: int | HIRCNode = 0,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
         source_type: SourceType = SourceType.Embedded,
@@ -118,16 +121,27 @@ class MusicTrack(PropertyMixin, HIRCNode):
         if duration_ms < 500.0:
             logger.warning(f"{self}: duration of new source {source_id} is very short, not in ms?")
 
+        if self.playlist and not event:
+            logger.warning(f"{self}: additional tracks should have an event ID associated")
+
+        if isinstance(event, HIRCNode):
+            event = event.id
+        elif not event:
+            event = 0
+
         self.sources.append(
             BankSourceData(
                 source_type=source_type,
                 media_information=MediaInformation(int(source_id), media_size),
             )
         )
+
         begin_trim = abs(begin_trim)
         self.playlist.append(
             TrackSrcInfo(
+                # track_id is always 0
                 source_id=source_id,
+                event_id=event,
                 play_at=-begin_trim,
                 begin_trim_offset=begin_trim,
                 end_trim_offset=-abs(end_trim),

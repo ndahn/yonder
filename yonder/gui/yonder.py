@@ -320,7 +320,7 @@ class BanksOfYonder(DpgItem):
                         tag=self._t("menu/force_refresh"),
                     )
                     dpg.add_menu_item(
-                        label=(µ("Save Unsolved", "menu")),
+                        label=(µ("Save Unsolved Bnk", "menu")),
                         callback=self._save_soundbank_unsolved,
                         tag=self._t("menu/save_unsolved"),
                     )
@@ -854,8 +854,7 @@ class BanksOfYonder(DpgItem):
             logger.info(
                 µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path)
             )
-            self.bnk.save(solve=False)
-            return True
+            self.bnk.save()
         finally:
             dpg.delete_item(loading)
 
@@ -888,7 +887,6 @@ class BanksOfYonder(DpgItem):
         try:
             logger.warning(µ("Saving soundbank without solving!", "log"))
             self.bnk.save(solve=False)
-            return True
         finally:
             dpg.delete_item(loading)
 
@@ -1213,7 +1211,7 @@ class BanksOfYonder(DpgItem):
         sender = None
         if section:
             # Jump to sections tab
-            dpg.set_value(self._t("tabs", self._t("tab_sections")))
+            dpg.set_value(self._t("tabs"), self._t("tab_sections"))
             sec_name = section if isinstance(section, str) else section.name
             sender = self._t(f"sections_{sec_name}")
 
@@ -1251,7 +1249,10 @@ class BanksOfYonder(DpgItem):
         self, sender: str, app_data: Any, user_data: tuple[str, HIRCNode]
     ) -> None:
         item, node = user_data
-        self._on_node_selected(item, app_data, node)
+
+        if item != self._selected_root:
+            # Don't regenerate when the node is already selected
+            self._on_node_selected(item, app_data, node)
 
         # NOTE hide or show context menu items here if needed
         if hasattr(self._selected_node, "attach"):
@@ -1281,11 +1282,6 @@ class BanksOfYonder(DpgItem):
 
         if sender is not None:
             dpg.set_value(sender, True)
-
-        # Prevent refresh when the item is already selected so context
-        # menus can open on nodes with long loading times
-        if sender == self._selected_root:
-            return
 
         self._selected_root = sender
 
@@ -1560,7 +1556,9 @@ class BanksOfYonder(DpgItem):
             value = self._selected_node.json()
         elif self._selected_section:
             if isinstance(self._selected_section, HIRCSection):
-                value = self._selected_section.copy_partial().json()
+                data = self._selected_section.copy_partial().to_dict()
+                data["body"]["HIRC"]["objects"] = ["..."]
+                value = json.dumps(data, indent=2)
             else:
                 value = self._selected_section.json()
 

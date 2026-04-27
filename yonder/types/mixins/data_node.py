@@ -73,7 +73,7 @@ class DataNode:
 
         return delve(self)
 
-    def merge(self, other: dict | DataNode) -> None:
+    def merge(self, other: DataNode) -> None:
         deepmerge(self, other)
 
     def glob(self, pattern: str) -> list[tuple[str, object]]:

@@ -81,7 +81,7 @@ class _ItemContainer(Generic[_T]):
 
 @dataclass(slots=True)
 class GameSync:
-    group_id: int
+    group_id: int = 0
 
 
 @dataclass(slots=True)
@@ -229,7 +229,7 @@ class ClipAutomation:
 
 @dataclass(slots=True)
 class IAkPlugin:
-    plugin_id: PluginId
+    plugin_id: PluginId = PluginId.VORBIS
     dll_name_length: int = 0
     dll_name: str = ""
 
@@ -673,7 +673,7 @@ class FxBaseInitialValues:
 
 @dataclass(slots=True)
 class SwitchPackage:
-    switch_id: int
+    switch_id: int = 0
     node_count: int = 0
     nodes: list[int] = field(default_factory=list)
 
@@ -683,7 +683,7 @@ class SwitchPackage:
 
 @dataclass(slots=True)
 class SwitchNodeParams:
-    node_id: int
+    node_id: int = 0
     unk1: bool = False
     unk2: bool = False
     unk3: bool = False
@@ -749,7 +749,7 @@ class DecisionTreeNode:
 
 @dataclass(slots=True)
 class AssociatedChildData:
-    associated_child_id: int
+    associated_child_id: int = 0
     graph_point_count: int = 0
     graph_points: list[RTPCGraphPoint] = field(default_factory=list)
 
@@ -759,7 +759,7 @@ class AssociatedChildData:
 
 @dataclass(slots=True)
 class Layer:
-    layer_id: int
+    layer_id: int = 0
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
     rtpc_id: int = 0
     rtpc_type: RtpcType = RtpcType.GameParameter
@@ -769,7 +769,7 @@ class Layer:
 
 @dataclass(slots=True)
 class PlaylistItem:
-    play_id: int
+    play_id: int = 0
     weight: int = 50000
 
     def get_references(self) -> list[tuple[str, int]]:
@@ -804,7 +804,7 @@ class MusicTransNodeParams:
 
 @dataclass(slots=True)
 class MusicRanSeqPlaylistItem:
-    segment_id: int
+    segment_id: int = 0
     playlist_item_id: int = 0
     child_count: int = 0
     ers_type: int = 0
@@ -822,7 +822,7 @@ class MusicRanSeqPlaylistItem:
 
 @dataclass(slots=True)
 class MusicMarkerWwise:
-    id: int
+    id: int = 0
     position: float = 0.0
     string_length: int = 0
     string: str = ""
