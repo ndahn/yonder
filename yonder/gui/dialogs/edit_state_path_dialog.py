@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.util import parse_state_path
 from yonder.hash import lookup_name
+from yonder.game import GameObjects
 from yonder.types.base_types import GameSync
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -105,11 +106,20 @@ class edit_state_path_dialog(DpgItem):
             # All branches have the same length
             for i, arg in enumerate(self._arguments):
                 name = self._get_name(arg)
-                dpg.add_input_text(
-                    label=name,
-                    default_value=state_path[i] if state_path else "*",
-                    tag=self._t(f"arg_{name}"),
-                )
+                values = ["*"] + GameObjects.GameStates.get(name, [])
+
+                with dpg.group(horizontal=True):
+                    dpg.add_input_text(
+                        label=name,
+                        default_value=state_path[i] if state_path else "*",
+                        tag=self._t(f"arg_{name}"),
+                    )
+                    dpg.add_combo(
+                        values,
+                        no_preview=True,
+                        callback=lambda a, s, u: dpg.set_value(self._t(f"arg_{u}"), s),
+                        user_data=name,
+                    )
 
             dpg.add_spacer(height=3)
             if not hide_node_id:

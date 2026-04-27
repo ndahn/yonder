@@ -448,10 +448,21 @@ def create_ambience(
         props={PropID.Priority: 80.0},
         parent=master,
     )
-
     new_nodes.append(ambience_msc)
-    location_branches = location_tree.flatten()
+    
+    # Setup default transition
+    base_rule = ambience_msc.music_trans_node_params.transition_rules[0]
+    base_rule.configure(
+        src_transition_time = 3000,
+        src_fade_offset = 3000,
+        src_fade_curve = CurveInterpolation.Sine,
+        src_sync_type = SyncType.Immediate,
+        dst_transition_time = 3000,
+        dst_fade_curve = CurveInterpolation.Sine,
+    )
 
+    # Create the ambience tracks
+    location_branches = location_tree.flatten()
     for branch, track in location_branches.items():
         bnk.add_wem(track, SourceType.Streaming)
 
@@ -461,6 +472,17 @@ def create_ambience(
         # All tracks should have the loop property
         branch_track = MusicTrack.new(
             bnk.new_id(), Path(track), props={PropID.Loop: 0.0}
+        )
+
+        # Transition rule (might matter for looping?)
+        branch_rule = branch_mrsc.music_trans_node_params.transition_rules[0]
+        branch_rule.configure(
+            src_transition_time=1000,
+            src_fade_offset=1000,
+            src_fade_curve=CurveInterpolation.Log1,
+            src_sync_type=SyncType.ExitMarker,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.Log1,
         )
 
         # Connect the items

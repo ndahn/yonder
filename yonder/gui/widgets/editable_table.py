@@ -285,7 +285,7 @@ class add_widget_table(DpgItem):
     @property
     def items(self) -> list[_T]:
         """Current item list (read-only copy)."""
-        return list(self._values)
+        return self._values
 
     @items.setter
     def items(self, items: list[_T]) -> None:

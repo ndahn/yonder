@@ -8,6 +8,7 @@ from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
 from yonder.convenience import create_ambience, DecisionNode
+from yonder.game import GameObjects
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -98,8 +99,6 @@ class create_ambience_track_dialog(DpgItem):
         on_created: Callable[[list[HIRCNode]], None],
         *,
         initial_ambience_args: list[str] = ("OutdoorIndoor",),
-        get_values_for_arg: Callable[[int], list[int]] = None,
-        lock_first_arg: bool = True,
         title: str = "New Ambience",
         tag: str = None,
     ) -> None:
@@ -111,8 +110,6 @@ class create_ambience_track_dialog(DpgItem):
 
         self.msc: MusicSwitchContainer = None
         self.location_state_path: list[str] = []
-        self._get_values_for_arg = get_values_for_arg
-        self._lock_first_arg = lock_first_arg
 
         self._track_entries: list[TrackEntry] = []
         self._bgm_tracks: list[Path] = []
@@ -152,6 +149,12 @@ Ambience tree:
 
         dpg.set_value(self._t("summary_text"), summary)
 
+    def _get_values_for_arg(self, arg: int | str) -> list[str]:
+        if isinstance(arg, int):
+            arg = lookup_name(arg, f"#{arg}")
+
+        return ["*"] + GameObjects.GameStates.get(arg, [])
+
     def _rebuild_location_tab(self) -> None:
         """Regenerate the per-argument input rows after an MSC change."""
         dpg.delete_item(self._t("location_args_group"), children_only=True)
@@ -163,9 +166,7 @@ Ambience tree:
 
         for idx, arg in enumerate(self.msc.arguments):
             name = lookup_name(arg.group_id, f"#{arg.group_id}")
-            values = []
-            if self._get_values_for_arg:
-                values = self._get_values_for_arg(arg.group_id)
+            values = self._get_values_for_arg(arg.group_id)
 
             with dpg.group(
                 horizontal=True,
@@ -210,28 +211,26 @@ Ambience tree:
 
     def _on_location_val_changed(self, sender: str, value: str, idx: int) -> None:
         self.location_state_path[idx] = value
-        # keep the input_text in sync when the combo fires
         input_tag = self._t(f"location_val:{idx}")
         if dpg.does_item_exist(input_tag) and sender != input_tag:
             dpg.set_value(input_tag, value)
 
     def _ambience_arg_to_row(self, arg: str, idx: int) -> None:
         """Render one ambience-arg row: input + combo(no_preview) + locked hint."""
-        values = self._get_values_for_arg(0) if self._get_values_for_arg else []
-        locked = self._lock_first_arg and idx == 0
+        values = list(GameObjects.GameStates.keys())
         with dpg.group(horizontal=True):
             dpg.add_input_text(
                 default_value=arg,
                 width=200,
-                enabled=not locked,
                 callback=self._on_ambience_arg_name_changed,
+                tag=self._t(f"ambience_state:{idx}"),
                 user_data=idx,
             )
             dpg.add_combo(
                 values,
                 no_preview=True,
-                enabled=not locked,
                 callback=self._on_ambience_arg_name_changed,
+                tag=self._t(f"ambience_state_combo:{idx}"),
                 user_data=idx,
             )
 
@@ -247,6 +246,8 @@ Ambience tree:
         for entry in self._track_entries:
             entry.conditions.setdefault(value, _WILDCARD)
 
+        dpg.set_value(self._t(f"ambience_state:{idx}"), value)
+        dpg.set_value(self._t(f"ambience_state_combo:{idx}"), value)
         self._rebuild_ambience_rows()
         self._update_summary()
 
@@ -328,8 +329,6 @@ Ambience tree:
         user_data: Any,
     ) -> None:
         idx = info[0]
-        if self._lock_first_arg and idx == 0:
-            return
 
         self.ambience_args = [a for i, a in enumerate(self.ambience_args) if i != idx]
         self._rebuild_ambience_rows()
@@ -409,7 +408,10 @@ Ambience tree:
             return
 
         for key in self.location_state_path:
-            if key != _WILDCARD:
+            if not key:
+                self.show_message(µ("Invalid state value {key}").format(key=key))
+                return
+            if key not in (_WILDCARD, "0"):
                 break
         else:
             self.show_message(µ("Location state path not specified"))
@@ -533,7 +535,7 @@ Ambience tree:
                 µ(
                     """\
                         - Your location can use additional states
-                        - IndoorOutdoor should always be at the top
+                        - OutdoorIndoor should always be at the top
                         - Check other controllers for known state values
                     """,
                     "tips",

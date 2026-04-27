@@ -47,7 +47,7 @@ class _ItemContainer(Generic[_T]):
 
         if isinstance(item, HIRCNode):
             item = item.id
-        
+
         try:
             self.items.remove(item)
         except ValueError:
@@ -153,6 +153,42 @@ class MusicTransitionRule:
         default_factory=MusicTransitionObject
     )
 
+    def configure(
+        self,
+        src_transition_time: int = None,
+        src_fade_offset: int = None,
+        src_fade_curve: CurveInterpolation = None,
+        src_sync_type: SyncType = None,
+        dst_transition_time: int = None,
+        dst_fade_offset: int = None,
+        dst_fade_curve: CurveInterpolation = None,
+        src_ids: list[int] = None,
+        dst_ids: list[int] = None,
+    ) -> None:
+        src_rule = self.source_transition_rule
+        dst_rule = self.destination_transition_rule
+
+        if src_transition_time is not None:
+            src_rule.transition_time = src_transition_time
+        if src_fade_offset is not None:
+            src_rule.fade_offet = src_fade_offset
+        if src_fade_curve is not None:
+            src_rule.fade_curve = src_fade_curve
+        if src_sync_type is not None:
+            src_rule.sync_type = src_sync_type
+
+        if dst_transition_time is not None:
+            dst_rule.transition_time = dst_transition_time
+        if dst_fade_offset is not None:
+            dst_rule.fade_offet = dst_fade_offset
+        if dst_fade_curve is not None:
+            dst_rule.fade_curve = dst_fade_curve
+        
+        if src_ids:
+            self.source_ids = src_ids
+        if dst_ids:
+            self.destination_ids = dst_ids
+
     def get_references(self) -> list[tuple[str, int]]:
         refs = []
         refs.extend([(f"source_ids:{i}", sid) for i, sid in enumerate(self.source_ids)])
@@ -212,8 +248,8 @@ class TrackSrcInfo:
     source_duration: float = 0.0
 
     def get_references(self) -> list[tuple[str, int]]:
-        # TODO not sure about track_id 
-        # event_id is a reference to an event but events appear later 
+        # TODO not sure about track_id
+        # event_id is a reference to an event but events appear later
         # and this could create loops in our graph
         # source_id might also match an fx effect
         return [("source_id", self.source_id)]
@@ -459,7 +495,7 @@ class RTPC:
 
     def __str__(self) -> str:
         from yonder.game import GameObjects
-        
+
         try:
             param = GameObjects.RTPCParameter(self.param_id).name
         except KeyError:
