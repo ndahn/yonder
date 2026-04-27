@@ -184,7 +184,7 @@ class create_boss_track_dialog(DpgItem):
             return
 
         if not self.bgm_tracks:
-            self.show_message(µ("Must add at least one BGM track", "msg"))
+            self.show_message(µ("No tracks added", "msg"))
             return
 
         self.show_message()
@@ -245,6 +245,7 @@ class create_boss_track_dialog(DpgItem):
                     tag=self._t("bgm_enemy_type"),
                 )
                 dpg.add_combo(
+                    # TODO these are ER specific
                     [
                         "EventBoss_Reserved15",
                         "EventBoss_Reserved14",
@@ -280,8 +281,8 @@ class create_boss_track_dialog(DpgItem):
             add_paragraphs(
                 µ(
                     """\
-                        - Boss tracks need to be added to cs_smain
-                        - Use the main MusicSwitchContainer (1001573296 in Elden Ring)
+                        - Boss tracks need to be added to cs_Smain (sssss!)
+                        - Use the main music controller (1001573296 in Elden Ring)
                         - Additional tracks will be used for 'heatup' phases
                         - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
                         - Only already existing BgmEnemyType strings can be used!

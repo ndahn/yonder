@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Any
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from yonder import Soundbank, HIRCNode, Hash
@@ -31,6 +34,49 @@ from yonder.enums import (
     VirtualQueueBehavior,
 )
 from yonder.util import logger, parse_state_path
+
+
+@dataclass
+class DecisionNode:
+    arg: str = ""
+    value: str = "*"
+    children: list[DecisionNode] = field(default_factory=list)
+    leaf_value: Any = None
+
+    @property
+    def is_leaf(self) -> bool:
+        return self.leaf_value is not None
+
+    def all_args(self) -> list[str]:
+        args = []
+        node = self.children[0] if self.children else None
+        while node and not node.is_leaf:
+            args.append(node.arg)
+            node = node.children[0] if node.children else None
+
+        return args
+
+    def flatten(self) -> dict[tuple[str, ...], Any]:
+        def delve(node: DecisionNode, path: list[str]):
+            if node.is_leaf:
+                yield (tuple(path), node.leaf_value)
+            else:
+                for child in node.children:
+                    child_val = [] if child.is_leaf else [child.value]
+                    yield from delve(child, path + child_val)
+
+        return dict(delve(self, []))
+
+    def format_tree(self, indent: int = 0) -> str:
+        """Produce a compact text representation of a DecisionNode tree."""
+        pad = "  " * indent
+        if self.is_leaf:
+            name = self.leaf_value.name if self.leaf_value else "<none>"
+            return f"{pad} -> {name}\n"
+
+        val = self.value if self.value is not None else "*"
+        head = f"{pad}[{self.arg} = {val}]\n" if self.arg else ""
+        return head + "".join(c.format_tree(indent + 1) for c in self.children)
 
 
 def create_simple_sound(
@@ -183,9 +229,6 @@ def create_boss_bgm(
         props={PropID.Priority: 80.0},
     )
 
-    # Seems to be set on most boss bgms?
-    boss_msc.music_trans_node_params.music_node_params.node_base_params.adv_settings_params.virtual_queue_behavior = VirtualQueueBehavior.PlayFromElapsedTime
-
     # Default and heatup tracks
     boss_phases = ["*"]
     if len(tracks) > 1:
@@ -199,8 +242,6 @@ def create_boss_bgm(
         bgm = bnk.add_wem(bgm, SourceType.Streaming)
 
         phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
-        phase_mrsc.music_trans_node_params.music_node_params.node_base_params.adv_settings_params.virtual_queue_behavior = VirtualQueueBehavior.PlayFromElapsedTime
-
         phase_masters.append(phase_mrsc)
 
         has_intro = False
@@ -386,25 +427,50 @@ def create_boss_bgm(
 #   - StateWeatherType (_60_SandStorm)
 #   - TimeZone (*)
 #   - CommonPlaceType (_14)
-# - All tracks should have the loop property and use trims (no loop markers)
+
+
 def create_ambience(
     bnk: Soundbank,
     master: MusicSwitchContainer,
-    state_path: Hash | list[Hash],
-    room_states: Hash | list[Hash],
-    room_tracks: dict[tuple[str], Path],
+    master_branch: Hash | list[Hash],
+    location_tree: DecisionNode,
     *,
     trims: list[tuple[float, float]] = None,
 ) -> list[HIRCNode]:
-    if isinstance(state_path, (str, int)):
-        state_path = [state_path]
+    if isinstance(master_branch, (str, int)):
+        master_branch = [master_branch]
 
-    # TODO top state should always be OutdoorIndoor
-    if isinstance(room_states, (str, int)):
-        room_states = [room_states]
+    new_nodes = []
 
     ambience_msc = MusicSwitchContainer.new(
         bnk.new_id(),
-        [(rs, GroupType.State) for rs in room_states],
-        props={PropID.Priority, 80.0},
+        [(arg, GroupType.State) for arg in location_tree.all_args()],
+        props={PropID.Priority: 80.0},
+        parent=master,
     )
+
+    new_nodes.append(ambience_msc)
+    location_branches = location_tree.flatten()
+
+    for branch, track in location_branches.items():
+        bnk.add_wem(track, SourceType.Streaming)
+
+        branch_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=ambience_msc)
+        # TODO trims
+        branch_seg = MusicSegment.new(bnk.new_id(), parent=branch_mrsc)
+        # All tracks should have the loop property
+        branch_track = MusicTrack.new(
+            bnk.new_id(), Path(track), props={PropID.Loop: 0.0}
+        )
+
+        # Connect the items
+        branch_seg.attach(branch_track)
+        branch_mrsc.add_playlist_item(bnk.new_id(), branch_seg, ers_type=0)
+        ambience_msc.add_branch(parse_state_path(branch), branch_mrsc.id)
+
+        new_nodes.extend([branch_mrsc, branch_seg, branch_track])
+
+    master.add_branch(parse_state_path(master_branch), ambience_msc.id)
+
+    bnk.add_nodes(*new_nodes)
+    return new_nodes
