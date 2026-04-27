@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from dataclasses import dataclass, field
-import json
+from dataclasses import dataclass, field, replace
 
 from yonder.hash import calc_hash, lookup_name
 from .base_types import (
@@ -118,10 +117,15 @@ class HIRCSection(Section):
     object_count: int = 0
     objects: list[HIRCNode] = field(default_factory=list)
 
-    def json_short(self) -> str:
-        data = self.to_dict()
-        data["body"]["HIRC"]["objects"] = "<skipped>"
-        return json.dumps(data, indent=2)
+    def copy_partial(self) -> HIRCSection:
+        return HIRCSection(replace(self._header), len(self.objects), ["..."])
+
+    def merge_partial(self, other: dict | HIRCSection) -> None:
+        if isinstance(other, HIRCSection):
+            other = other.to_dict()
+
+        other.pop("objects", None)
+        self.merge(other)
 
 
 @dataclass

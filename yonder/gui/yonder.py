@@ -89,7 +89,9 @@ class BanksOfYonder(DpgItem):
         self._set_bnk_menus_enabled(False)
 
         add_splash(tag=self._t("splash"))
-        dpg.set_frame_callback(dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash")))
+        dpg.set_frame_callback(
+            dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash"))
+        )
 
         # Call late to get all created items translated
         # self._change_language(self.config.language)
@@ -849,7 +851,9 @@ class BanksOfYonder(DpgItem):
 
         loading = loading_indicator(µ("Saving soundbank...", "loading"))
         try:
-            logger.info(µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path))
+            logger.info(
+                µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path)
+            )
             self.bnk.save(solve=False)
             return True
         finally:
@@ -1229,7 +1233,11 @@ class BanksOfYonder(DpgItem):
 
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
         if section:
-            self._backup = section.copy()
+            # Don't copy the HIRC section!
+            if isinstance(section, HIRCSection):
+                self._backup = section.copy_partial()
+            else:
+                self._backup = section.copy()
 
             create_section_widgets(
                 self.bnk,
@@ -1274,7 +1282,7 @@ class BanksOfYonder(DpgItem):
         if sender is not None:
             dpg.set_value(sender, True)
 
-        # Prevent refresh when the item is already selected so context 
+        # Prevent refresh when the item is already selected so context
         # menus can open on nodes with long loading times
         if sender == self._selected_root:
             return
@@ -1552,7 +1560,7 @@ class BanksOfYonder(DpgItem):
             value = self._selected_node.json()
         elif self._selected_section:
             if isinstance(self._selected_section, HIRCSection):
-                value = self._selected_section.json_short()
+                value = self._selected_section.copy_partial().json()
             else:
                 value = self._selected_section.json()
 
@@ -1564,7 +1572,11 @@ class BanksOfYonder(DpgItem):
             self._selected_node.merge(self._backup)
             self.select_node(self._selected_node)
         elif self._selected_section:
-            self._selected_section.merge(self._backup)
+            if isinstance(self._selected_section, HIRCSection):
+                self._selected_section.merge_partial(self._backup)
+            else:
+                self._selected_section.merge(self._backup)
+            
             self.select_section(self._selected_section)
 
     def apply_json(self) -> None:
