@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class Config:
     recent_files: list[str] = field(default_factory=list)
     language: str = "en"
+    playback_volume: float = 1.0
 
     bnk2json_exe: str = None
     wwise_exe: str = None

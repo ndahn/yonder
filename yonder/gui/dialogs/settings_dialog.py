@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.helpers import shorten_path
+from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, add_filepaths_table
 
@@ -38,17 +38,29 @@ class settings_dialog(DpgItem):
 
         with dpg.window(
             label=title,
-            width=400,
-            height=400,
+            width=480,
+            height=600,
             autosize=True,
+            min_size=(480, 200),
             no_saved_settings=True,
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
+            with dpg.tree_node(label=µ("General"), default_open=True):
+                dpg.add_slider_double(
+                    label=µ("Playback Volume"),
+                    default_value=config.playback_volume,
+                    min_value=0.1,
+                    max_value=2.0,
+                    clamped=True,
+                    no_input=True,
+                    callback=lambda s, a, u: setattr(config, "playback_volume", a),
+                )
+
+            dpg.add_spacer(height=5)
             with dpg.tree_node(
                 label=µ("External Tools"),
-                default_open=True,
-                tag=self._t("settings/external_tools"),
+                tag=self._t("external_tools"),
             ):
                 w = add_generic_widget(
                     Path,
@@ -61,7 +73,7 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For unpacking and repacking soundbanks"),
                         color=style.light_blue,
-                        tag=self._t("settings/hint_bnk2json"),
+                        tag=self._t("hint_bnk2json"),
                     )
 
                 w = add_generic_widget(
@@ -75,7 +87,7 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For wonverting wav to wem"),
                         color=style.light_blue,
-                        tag=self._t("settings/hint_wwise"),
+                        tag=self._t("hint_wwise"),
                     )
 
                 w = add_generic_widget(
@@ -89,48 +101,39 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For converting wem to wav and playback"),
                         color=style.light_blue,
-                        tag=self._t("settings/hint_vgmstream"),
+                        tag=self._t("hint_vgmstream"),
                     )
 
+            dpg.add_spacer(height=5)
             with dpg.tree_node(
                 label=µ("Data Sources"),
-                default_open=True,
-                tag=self._t("settings/data_sources"),
+                tag=self._t("data_sources"),
             ):
+                dpg_section(µ("Soundbank folders"), style.muted_blue, spacer=0)
+                dpg.add_text(µ("Used to locate external sounds"))
                 w = add_filepaths_table(
                     config.bankdirs,
                     self._on_bankdirs_changed,
+                    label=None,
                     folders=True,
-                    label=µ("Soundbank folders"),
-                    tag=self._t("settings/soundbank_dirs"),
+                    tag=self._t("soundbank_dirs"),
                 )
-                with dpg.tooltip(w):
-                    dpg.add_text(
-                        µ("Used to locate external sounds"),
-                        color=style.light_blue,
-                        tag=self._t("settings/hint_soundbank_dirs"),
-                    )
 
-                dpg.add_spacer(height=3)
-
+                dpg_section(µ("Hash dictionaries"), style.muted_rose, spacer=0)
+                dpg.add_text(µ("Used for reversing hashes"))
                 w = add_filepaths_table(
                     config.hash_dicts,
                     self._on_hashdicts_changed,
-                    label=µ("Hash dictionaries"),
+                    label=None,
                     filetypes={µ("Text files (.txt)"): "*.txt"},
-                    tag=self._t("settings/hash_dirs"),
+                    tag=self._t("hash_dirs"),
                 )
-                with dpg.tooltip(w):
-                    dpg.add_text(
-                        µ("Used for reversing hashes"),
-                        color=style.light_blue,
-                        tag=self._t("settings/hint_hash_dirs"),
-                    )
 
-            dpg.add_spacer(height=3)
+            dpg.add_spacer(height=2)
             dpg.add_separator()
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
+            dpg.add_spacer(height=4)
             with dpg.group(horizontal=True):
                 dpg.add_button(
                     label=µ("Save", "button"),

@@ -1008,9 +1008,9 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
             self._set_bnk_menus_enabled(True)
             logger.info(
-                µ("Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)").format(
-                    name=self.bnk.name, num_nodes=len(self.bnk), time=diff
-                )
+                µ(
+                    "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
+                ).format(name=self.bnk.name, num_nodes=len(self.bnk), time=diff)
             )
         finally:
             dpg.delete_item(loading)

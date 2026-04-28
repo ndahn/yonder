@@ -74,9 +74,14 @@ class RGBA(tuple):
         a = ratio * self.a + (1 - ratio) * other[3]
         return RGBA(r, g, b, a)
 
-    def brightness(self, brightness: int) -> RGBA:
+    def shift(self, amount: int) -> RGBA:
+        h, s, v = colorsys.rgb_to_hsv(*self.as_floats()[:3])
+        r, g, b = colorsys.hsv_to_rgb(h, (s + amount) % 1.0, v)
+        return RGBA.from_floats(r, g, b, self.a / 255)
+
+    def brightness(self, brightness: float) -> RGBA:
         h, s, _ = colorsys.rgb_to_hsv(*self.as_floats()[:3])
-        r, g, b = colorsys.hsv_to_rgb(h, s, brightness / 255)
+        r, g, b = colorsys.hsv_to_rgb(h, s, brightness)
         return RGBA.from_floats(r, g, b, self.a / 255)
 
     def __or__(self, other: "tuple | RGBA") -> RGBA:

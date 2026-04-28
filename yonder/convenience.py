@@ -414,21 +414,6 @@ def create_boss_bgm(
     return new_nodes
 
 
-# NOTE for the dialog
-# - select master MSC
-# - master args:
-#   - FallenLeaves (yes/no)
-#   - BgmPlaceType
-#   - StateWeatherType
-#   - Set_State_EnvPlaceType
-# - ambience args (optional except 1st)
-#   - OutdoorIndoor (*, Outdoor, IndoorAll, IndoorHalf)
-#   - BgmPlaceType (Bgm_550_RoadFortress)
-#   - StateWeatherType (_60_SandStorm)
-#   - TimeZone (*)
-#   - CommonPlaceType (_14)
-
-
 def create_ambience(
     bnk: Soundbank,
     master: MusicSwitchContainer,

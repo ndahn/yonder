@@ -118,6 +118,7 @@ class add_wav_player(DpgItem):
         self._edit_markers_inplace = edit_markers_inplace
         self._max_points = max_points
         self._markers_in_ms = markers_in_ms
+        self._config = get_config()
         self._height = height
         self._parent = parent
 
@@ -240,7 +241,7 @@ class add_wav_player(DpgItem):
         if self._audio.suffix == ".wem":
             wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
             if not wav.is_file():
-                vgmstream = get_config().locate_vgmstream()
+                vgmstream = self._config.locate_vgmstream()
                 logger.info(
                     µ("Converting {file} to wav for playback", "log").format(
                         file=self._audio.name
@@ -371,15 +372,29 @@ class add_wav_player(DpgItem):
         return interpolate(p0.interpolation, t, p0.to, p1.to)
 
     def get_volume_at(self, pos: float) -> float:
-        vol_lin = 10 ** (self._interpolate_curve(self.volume, pos, default=0.0) / 20)
+        vol_db = dpg.get_value(self._t("volume_slider"))
+        if vol_db == 0:
+            vol_db = self._interpolate_curve(self.volume, pos, default=0.0)
+
+        vol_lin = 10 ** (vol_db / 20)
         fadein = self._interpolate_curve(self.fadein, pos, default=1.0)
         fadeout = 1.0 - self._interpolate_curve(self.fadeout, pos, default=0.0)
-        return vol_lin * fadein * fadeout
+        global_f = self._config.playback_volume
+
+        return vol_lin * fadein * fadeout * global_f
 
     def get_lowpass_at(self, pos: float) -> float:
+        user_lpf = dpg.get_value(self._t("lowpass_slider"))
+        if user_lpf > 0:
+            return user_lpf
+
         return self._interpolate_curve(self.lowpass, pos)
 
     def get_highpass_at(self, pos: float) -> float:
+        user_hpf = dpg.get_value(self._t("highpass_slider"))
+        if user_hpf > 0:
+            return user_hpf
+
         return self._interpolate_curve(self.highpass, pos)
 
     def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
@@ -974,6 +989,48 @@ class add_wav_player(DpgItem):
                     direction=dpg.mvDir_Right,
                     callback=self.play_pause,
                 )
+
+                # Slider popup
+                dpg.add_button(label="F")
+                with dpg.popup(dpg.last_item(), dpg.mvMouseButton_Left):
+                    dpg.add_slider_int(
+                        label=µ("Volume (dB)"),
+                        default_value=0,
+                        min_value=-10,
+                        max_value=10,
+                        clamped=True,
+                        tag=self._t("volume_slider"),
+                    )
+                    dpg.bind_item_theme(
+                        dpg.last_item(),
+                        self._make_slider_theme(style.purple.but(a=162)),
+                    )
+
+                    dpg.add_slider_int(
+                        label=µ("Lowpass (Hz)"),
+                        default_value=0,
+                        min_value=0,
+                        max_value=24000,
+                        clamped=True,
+                        tag=self._t("lowpass_slider"),
+                    )
+                    dpg.bind_item_theme(
+                        dpg.last_item(), self._make_slider_theme(style.blue.but(a=162))
+                    )
+
+                    dpg.add_slider_int(
+                        label=µ("Highpass (Hz)"),
+                        default_value=0,
+                        min_value=0,
+                        max_value=24000,
+                        clamped=True,
+                        tag=self._t("highpass_slider"),
+                    )
+                    dpg.bind_item_theme(
+                        dpg.last_item(),
+                        self._make_slider_theme(style.light_blue.but(a=162)),
+                    )
+
                 dpg.add_text("|")
 
                 if self._loop_markers_enabled:
@@ -1077,3 +1134,18 @@ class add_wav_player(DpgItem):
                         user_data=mid,
                         tag=self._t(f"marker_{mid}_value"),
                     )
+
+    def _make_slider_theme(self, color: style.RGBA, tag: str = None) -> str:
+        if not tag:
+            tag = dpg.generate_uuid()
+
+        with dpg.theme(tag=tag):
+            with dpg.theme_component(0):
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, color)
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_SliderGrab, color.brightness(0.7).shift(0.2)
+                )
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, color.shift(0.2))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, color.shift(0.1))
+
+        return tag
