@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-28 10:00+0200\n"
+"POT-Creation-Date: 2026-04-28 12:52+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -719,6 +719,16 @@ msgctxt "button"
 msgid "Invert"
 msgstr "反转"
 
+#: ../../yonder/gui/dialogs/settings_dialog.py
+msgid "General"
+msgstr ""
+
+# ../../yonder/gui/widgets/node_widgets.py:1185
+#: ../../yonder/gui/dialogs/settings_dialog.py
+#, fuzzy
+msgid "Playback Volume"
+msgstr "播放模式"
+
 # ../../yonder/gui/dialogs/settings_dialog.py:49
 #: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "External Tools"
@@ -759,15 +769,15 @@ msgstr "用于定位外部音频"
 msgid "Hash dictionaries"
 msgstr "哈希字典"
 
-# ../../yonder/gui/dialogs/settings_dialog.py:120
-#: ../../yonder/gui/dialogs/settings_dialog.py
-msgid "Text files (.txt)"
-msgstr "文本文件（.txt）"
-
 # ../../yonder/gui/dialogs/settings_dialog.py:125
 #: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Used for reversing hashes"
 msgstr "用于反查哈希"
+
+# ../../yonder/gui/dialogs/settings_dialog.py:120
+#: ../../yonder/gui/dialogs/settings_dialog.py
+msgid "Text files (.txt)"
+msgstr "文本文件（.txt）"
 
 # ../../yonder/gui/widgets/editable_table.py:154
 #: ../../yonder/gui/widgets/editable_table.py
@@ -1304,6 +1314,24 @@ msgstr "振幅"
 #: ../../yonder/gui/widgets/wav_player.py
 msgid "time"
 msgstr "时间"
+
+# ../../yonder/gui/dialogs/select_nodes_dialog.py:163
+#: ../../yonder/gui/widgets/wav_player.py
+#, fuzzy
+msgid "Volume (dB)"
+msgstr "节点（id）"
+
+# ../../yonder/gui/widgets/node_widgets.py:629
+#: ../../yonder/gui/widgets/wav_player.py
+#, fuzzy
+msgid "Lowpass (Hz)"
+msgstr "低通滤波"
+
+# ../../yonder/gui/widgets/node_widgets.py:641
+#: ../../yonder/gui/widgets/wav_player.py
+#, fuzzy
+msgid "Highpass (Hz)"
+msgstr "高通滤波"
 
 # ../../yonder/gui/widgets/wav_player.py:981
 #: ../../yonder/gui/widgets/wav_player.py
@@ -1893,7 +1921,7 @@ msgstr "正在加载 Soundbank..."
 #: ../../yonder/gui/yonder.py
 #, fuzzy, python-brace-format
 msgid "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
-msgstr "已加载 Soundbank {name}，共 {num_nodes} 个节点"
+msgstr "已加载 Soundbank {name}，共 {num_nodes} 个节点 ({time:.3f}s)"
 
 # ../../yonder/gui/yonder.py:1138
 #: ../../yonder/gui/yonder.py

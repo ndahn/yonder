@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-28 10:00+0200\n"
+"POT-Creation-Date: 2026-04-28 12:52+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -576,6 +576,14 @@ msgid "Invert"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/settings_dialog.py
+msgid "General"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py
+msgid "Playback Volume"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "External Tools"
 msgstr ""
 
@@ -608,11 +616,11 @@ msgid "Hash dictionaries"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/settings_dialog.py
-msgid "Text files (.txt)"
+msgid "Used for reversing hashes"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/settings_dialog.py
-msgid "Used for reversing hashes"
+msgid "Text files (.txt)"
 msgstr ""
 
 #: ../../yonder/gui/widgets/editable_table.py
@@ -1045,6 +1053,18 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
 msgid "time"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Volume (dB)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Lowpass (Hz)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Highpass (Hz)"
 msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
