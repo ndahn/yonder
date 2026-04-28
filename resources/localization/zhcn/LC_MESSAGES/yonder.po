@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-28 00:52+0200\n"
+"POT-Creation-Date: 2026-04-28 10:00+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -19,131 +19,131 @@ msgstr ""
 "Generated-By: Babel 2.18.0\n"
 
 # ../../yonder/gui/dialogs/about_dialog.py:25
-#: ../../yonder/gui/dialogs/about_dialog.py:23
+#: ../../yonder/gui/dialogs/about_dialog.py
 msgid "About"
 msgstr "关于"
 
 # ../../yonder/gui/dialogs/about_dialog.py:43
-#: ../../yonder/gui/dialogs/about_dialog.py:42
+#: ../../yonder/gui/dialogs/about_dialog.py
 msgid "Written by Nikolas Dahn"
 msgstr "作者：Nikolas Dahn"
 
 # ../../yonder/gui/dialogs/about_dialog.py:56
-#: ../../yonder/gui/dialogs/about_dialog.py:55
+#: ../../yonder/gui/dialogs/about_dialog.py
 msgid "Bugs, questions, feature request?"
 msgstr "Bug、问题、功能请求？"
 
 # ../../yonder/gui/dialogs/about_dialog.py:60
-#: ../../yonder/gui/dialogs/about_dialog.py:59
+#: ../../yonder/gui/dialogs/about_dialog.py
 msgid "Find me on ?ServerName? @Managarm!"
 msgstr "在 ?ServerName? @Managarm 找我！"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:133
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:137
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "msg"
 msgid "Name has non-standard format"
 msgstr "名称格式不符合标准"
 
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:171
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, python-brace-format
 msgid "Group {idx}: {name}"
 msgstr "组 {idx}：{name}"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:174
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:201
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Select Audio Files"
 msgstr "选择音频文件"
 
 # ../../yonder/gui/widgets/wav_player.py:201
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:203
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:275
-#: ../../yonder/gui/widgets/wav_player.py:204
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "filetypes"
 msgid "Audio Files (.wav, .wem)"
 msgstr "音频文件（.wav, .wem）"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:176
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:145
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:204
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:144
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgctxt "filetypes"
 msgid "Wave (.wav)"
 msgstr "Wave（.wav）"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:177
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:205
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "filetypes"
 msgid "WEM (.wem)"
 msgstr "WEM（.wem）"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:207
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:237
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "msg"
 msgid "No groups defined"
 msgstr "未定义任何分组"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:214
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:241
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "msg"
 msgid "ActorMixer of first group cannot be empty"
 msgstr "第一个分组的 ActorMixer 不能为空"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:220
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:249
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, python-brace-format
 msgctxt "msg"
 msgid "Group {name} has no files"
 msgstr "分组 {name} 没有文件"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:239
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:257
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, python-brace-format
 msgctxt "msg"
 msgid "Group {name} already exists in soundbank"
 msgstr "分组 {name} 已存在于 Soundbank 中"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:262
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:275
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, python-brace-format
 msgctxt "msg"
 msgid "Duplicate group {name}"
 msgstr "重复的分组 {name}"
 
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:311
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:121
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:455
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:214
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:80
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:222
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:86
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgctxt "msg"
 msgid "Success!"
 msgstr "成功！"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:86
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:312
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:122
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:456
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:215
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:81
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:223
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:87
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 #, fuzzy
 msgid "Yay!"
 msgstr "完成！"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:323
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:335
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Groups"
 msgstr "分组"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:324
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:345
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Add Group"
 msgstr "添加分组"
 
 # ../../yonder/gui/yonder.py:151
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:346
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, fuzzy
 msgid "Files"
 msgstr "文件"
@@ -152,79 +152,78 @@ msgstr "文件"
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:78
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:89
 # ../../yonder/gui/widgets/rtpc_table.py:114
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:346
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:394
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:98
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:80
-#: ../../yonder/gui/widgets/rtpc_table.py:109
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgid "Name"
 msgstr "名称"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:330
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:351
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, fuzzy
 msgid "Bulk Operations"
 msgstr "批量操作"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:345
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:354
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "button"
 msgid "Groups from Files"
 msgstr "从文件创建分组"
 
 # ../../yonder/gui/yonder.py:523
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:367
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, fuzzy
 msgid "Apply"
 msgstr "应用"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:364
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:395
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Leave empty to generate from first audio file"
 msgstr "留空则根据第一个音频文件自动生成"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:378
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:413
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:107
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgid "Playback Mode"
 msgstr "播放模式"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:386
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:422
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:113
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgid "Random Mode"
 msgstr "随机模式"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:393
 # ../../yonder/gui/widgets/node_widgets.py:165
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:432
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:119
-#: ../../yonder/gui/widgets/node_reference.py:48
-#: ../../yonder/gui/widgets/node_widgets.py:218
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
+#: ../../yonder/gui/widgets/node_reference.py
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Properties"
 msgstr "属性"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:405
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:445
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Sound Files"
 msgstr "音频文件"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:406
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:118
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:446
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:127
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 #, fuzzy
 msgid "+ Add Sounds"
 msgstr "+ 添加音效"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:415
-#: ../../yonder/gui/dialogs/batch_sound_builder.py:470
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "button"
 msgid "For the Horde!"
 msgstr "开始批量创建！"
 
 # ../../yonder/gui/dialogs/calc_hash_dialog.py:30
-#: ../../yonder/gui/dialogs/calc_hash_dialog.py:30
+#: ../../yonder/gui/dialogs/calc_hash_dialog.py
 msgid "Calculates an FNV-1a 32bit hash"
 msgstr "计算 FNV-1a 32 位哈希"
 
@@ -233,213 +232,209 @@ msgstr "计算 FNV-1a 32 位哈希"
 # ../../yonder/gui/dialogs/edit_state_path_dialog.py:117
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:246
 # ../../yonder/gui/dialogs/select_nodes_dialog.py:178
-#: ../../yonder/gui/dialogs/choice_dialog.py:138
-#: ../../yonder/gui/dialogs/edit_markers_dialog.py:151
-#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:139
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:244
-#: ../../yonder/gui/dialogs/select_nodes_dialog.py:187
+#: ../../yonder/gui/dialogs/choice_dialog.py
+#: ../../yonder/gui/dialogs/edit_markers_dialog.py
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgctxt "button"
 msgid "Okay"
 msgstr "确定"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:52
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:49
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgctxt "msg"
 msgid "No wave files selected"
 msgstr "未选择 wave 文件"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:56
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:55
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:53
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:55
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgctxt "msg"
 msgid "Invalid output directory"
 msgstr "输出目录无效"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:63
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:60
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgctxt "msg"
 msgid "Wwise exe not found"
 msgstr "未找到 Wwise 可执行文件"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:68
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:65
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Converting..."
 msgstr "转换中..."
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:75
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:72
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Trimming silence..."
 msgstr "正在裁剪静音..."
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:89
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:86
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Creating prefetch snippets..."
 msgstr "正在创建预取片段..."
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:103
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:100
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Adjusting volume..."
 msgstr "正在调整音量..."
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:116
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:112
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 #, python-brace-format
 msgid "Converting {num} files..."
 msgstr "正在转换 {num} 个文件..."
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:144
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:143
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Wave files"
 msgstr "Wave 文件"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:168
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:167
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Target volume"
 msgstr "目标音量"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:182
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:181
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Silence threshold"
 msgstr "静音阈值"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:196
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:195
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Snippet length"
 msgstr "片段长度"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:206
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:205
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgid "Convert to .wem"
 msgstr "转换为 .wem"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:216
-#: ../../yonder/gui/dialogs/convert_wav_dialog.py:215
+#: ../../yonder/gui/dialogs/convert_wav_dialog.py
 msgctxt "button"
 msgid "Beat it!"
 msgstr "开始转换！"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:141
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:553
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 msgid "<nothing to see here>"
 msgstr "<空>"
 
 # ../../yonder/gui/widgets/editable_table.py:432
 # ../../yonder/gui/widgets/editable_table.py:585
 # ../../yonder/gui/widgets/node_widgets.py:1000
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:259
-#: ../../yonder/gui/widgets/editable_table.py:555
-#: ../../yonder/gui/widgets/editable_table.py:714
-#: ../../yonder/gui/widgets/node_widgets.py:1080
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/widgets/editable_table.py
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgid "Track #{idx}"
 msgstr "音轨 #{idx}"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:267
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:261
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:265
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "button"
 msgid "State Path"
 msgstr "状态路径"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:66
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:185
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:403
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:59
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:178
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "Select MusicSwitchContainer first"
 msgstr "请先选择 MusicSwitchContainer"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:407
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:187
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "No tracks added"
 msgstr "未添加音轨"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:412
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, python-brace-format
 msgid "Invalid state value {key}"
 msgstr "无效的状态值 {key}"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:165
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:32
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:417
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgid "Location state path not specified"
 msgstr "未指定名称"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:424
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, python-brace-format
 msgid "State path {idx} is redundant"
 msgstr "状态路径 {idx} 重复"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:479
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 msgid "location branch"
 msgstr "位置分支"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:66
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:185
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:480
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgid "MusicSwitchContainer"
 msgstr "请先选择 MusicSwitchContainer"
 
 # ../../yonder/gui/yonder.py:245
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:511
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgid "Ambience tree"
 msgstr "环境音轨"
 
 # ../../yonder/gui/widgets/editable_table.py:287
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:519
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgid "+ Add State"
 msgstr "+ 添加路径"
 
 # ../../yonder/gui/widgets/rtpc_table.py:180
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:530
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgid "+ Add Branch"
 msgstr "+ 添加 RTPC"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:547
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 msgid "Summary"
 msgstr "摘要"
 
 # ../../yonder/gui/widgets/node_widgets.py:860
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:548
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 #, fuzzy
 msgctxt "tips"
 msgid "Ambience decision tree:"
 msgstr "决策树"
 
-#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py:568
+#: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
 msgctxt "button"
 msgid "Let there be light!"
 msgstr "让世界充满光！"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:135
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:190
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:128
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:183
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "BgmEnemyType not set"
 msgstr "未设置 BgmEnemyType"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:303
-#: ../../yonder/gui/dialogs/create_boss_track_dialog.py:302
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "button"
 msgid "Bring the heat!"
 msgstr "创建 Boss 音乐！"
 
 # ../../yonder/gui/dialogs/create_node_dialog.py:94
-#: ../../yonder/gui/dialogs/create_node_dialog.py:87
+#: ../../yonder/gui/dialogs/create_node_dialog.py
 msgctxt "button"
 msgid "Make!"
 msgstr "创建！"
 
-#: ../../yonder/gui/dialogs/create_node_dialog.py:110
+#: ../../yonder/gui/dialogs/create_node_dialog.py
 #, python-brace-format
 msgctxt "log"
 msgid "Type of argument {name} is not supported yet"
@@ -447,148 +442,145 @@ msgstr "参数 {name} 的类型暂不支持"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:165
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:32
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:33
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:181
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "msg"
 msgid "Name not specified"
 msgstr "未指定名称"
 
 # ../../yonder/gui/dialogs/edit_state_path_dialog.py:140
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:49
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 #, fuzzy
 msgid "Target ID not set"
 msgstr "未设置叶子节点 ID"
 
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:69
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:72
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 msgctxt "msg"
 msgid "No events created"
 msgstr "未创建任何事件"
 
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:93
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:103
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 msgid "Allow arbitrary names"
 msgstr "允许任意命名"
 
 # ../../yonder/gui/yonder.py:533
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:110
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 #, fuzzy
 msgid "Target node"
 msgstr "重置节点"
 
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:106
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:118
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 msgid "Create play action"
 msgstr "创建 Play 行为"
 
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:111
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:123
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 msgid "Create stop action"
 msgstr "创建 Stop 行为"
 
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:121
-#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py:146
+#: ../../yonder/gui/dialogs/create_playstop_event_dialog.py
 msgctxt "button"
 msgid "Chop chop!"
 msgstr "立即创建！"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:84
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:86
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgid "Hash"
 msgstr "哈希"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:94
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:96
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "hirc"
 msgid "ActorMixer"
 msgstr "ActorMixer"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:117
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:126
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgid "Sounds"
 msgstr "音效"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:127
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:150
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "button"
 msgid "Summon!"
 msgstr "创建音效！"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:171
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:185
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "msg"
 msgid "An event with this name already exists"
 msgstr "同名事件已存在"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:178
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:190
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "msg"
 msgid "ActorMixer not specified"
 msgstr "未指定 ActorMixer"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:182
-#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py:194
+#: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 msgctxt "msg"
 msgid "No sounds specified"
 msgstr "未指定音效"
 
 # ../../yonder/gui/dialogs/edit_state_path_dialog.py:140
-#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:158
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py
 msgctxt "msg"
 msgid "Leaf node ID not set"
 msgstr "未设置叶子节点 ID"
 
 # ../../yonder/gui/dialogs/edit_state_path_dialog.py:147
-#: ../../yonder/gui/dialogs/edit_state_path_dialog.py:166
+#: ../../yonder/gui/dialogs/edit_state_path_dialog.py
 msgctxt "msg"
 msgid "Keys must not be empty"
 msgstr "键不能为空"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:118
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:118
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 msgid "File"
 msgstr "文件"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:132
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:131
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 #, python-brace-format
 msgid "Edit Transition ({node_id})"
 msgstr "编辑过渡（{node_id}）"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:148
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:196
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:146
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:194
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 msgid "Transition time (ms)"
 msgstr "过渡时间（ms）"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:160
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:208
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:158
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:206
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 msgid "Fade offset (ms)"
 msgstr "淡入淡出偏移（ms）"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:172
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:218
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:170
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:216
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 msgid "Fade curve"
 msgstr "淡入淡出曲线"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:181
-#: ../../yonder/gui/dialogs/edit_transition_dialog.py:179
+#: ../../yonder/gui/dialogs/edit_transition_dialog.py
 msgid "Sync Type"
 msgstr "同步类型"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:51
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:51
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgctxt "msg"
 msgid "No soundbank loaded"
 msgstr "未加载 Soundbank"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:62
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:62
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgctxt "loading"
 msgid "Converting..."
 msgstr "转换中..."
@@ -596,223 +588,218 @@ msgstr "转换中..."
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:106
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:278
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:285
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:110
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:275
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:284
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "filetypes"
 msgid "Soundbanks (.bnk, .json)"
 msgstr "Soundbank（.bnk, .json）"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:114
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:118
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgid "Output folder"
 msgstr "输出文件夹"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:123
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:127
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgid "Export full sounds for streamed"
 msgstr "为流式音频导出完整音频"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:128
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:132
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgid "Convert to wav"
 msgstr "转换为 wav"
 
 # ../../yonder/gui/dialogs/export_sounds_dialog.py:138
-#: ../../yonder/gui/dialogs/export_sounds_dialog.py:142
+#: ../../yonder/gui/dialogs/export_sounds_dialog.py
 msgctxt "button"
 msgid "Yoink!"
 msgstr "开始导出！"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:55
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:162
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:55
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:162
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "msg"
 msgid "No source bank selected"
 msgstr "未选择源 Soundbank"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:59
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:166
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:59
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:166
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "msg"
 msgid "No destination bank selected"
 msgstr "未选择目标 Soundbank"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:173
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:173
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "msg"
 msgid "No source IDs selected"
 msgstr "未选择源 ID"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:190
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:189
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 #, python-brace-format
 msgctxt "msg"
 msgid "{name} not found in source bank"
 msgstr "在源 Soundbank 中未找到 {name}"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:210
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:206
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 #, python-brace-format
 msgctxt "msg"
 msgid "{name} already exists in destination bank"
 msgstr "{name} 已存在于目标 Soundbank 中"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:276
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:272
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Source Soundbank"
 msgstr "源 Soundbank"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:283
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:281
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Destination Soundbank"
 msgstr "目标 Soundbank"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:292
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:292
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Source Wwise IDs"
 msgstr "源 Wwise ID"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:303
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:303
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Destination Wwise IDs"
 msgstr "目标 Wwise ID"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:315
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:315
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Select IDs..."
 msgstr "选择 ID..."
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:320
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:320
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Swap Banks"
 msgstr "交换 Soundbank"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:325
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:325
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgid "Swap IDs"
 msgstr "交换 ID"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:349
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:350
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "button"
 msgid "Scotty, beam them!"
 msgstr "开始转移！"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:354
 # ../../yonder/gui/dialogs/settings_dialog.py:136
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:355
-#: ../../yonder/gui/dialogs/settings_dialog.py:136
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgctxt "button"
 msgid "Save"
 msgstr "保存"
 
 # ../../yonder/gui/dialogs/mass_transfer_dialog.py:360
-#: ../../yonder/gui/dialogs/mass_transfer_dialog.py:361
+#: ../../yonder/gui/dialogs/mass_transfer_dialog.py
 msgctxt "button"
 msgid "Repack"
 msgstr "重新打包"
 
 # ../../yonder/gui/dialogs/select_nodes_dialog.py:163
-#: ../../yonder/gui/dialogs/select_nodes_dialog.py:172
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgid "Node (id)"
 msgstr "节点（id）"
 
 # ../../yonder/gui/dialogs/select_nodes_dialog.py:169
-#: ../../yonder/gui/dialogs/select_nodes_dialog.py:178
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgid "Hold Ctrl or click multiple rows to select several nodes."
 msgstr "按住 Ctrl 或点击多行以选择多个节点。"
 
-#: ../../yonder/gui/dialogs/select_nodes_dialog.py:193
+#: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgctxt "button"
 msgid "Invert"
 msgstr "反转"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:49
-#: ../../yonder/gui/dialogs/settings_dialog.py:49
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "External Tools"
 msgstr "外部工具"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:62
-#: ../../yonder/gui/dialogs/settings_dialog.py:62
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "For unpacking and repacking soundbanks"
 msgstr "用于解包与重新打包 Soundbank"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:76
-#: ../../yonder/gui/dialogs/settings_dialog.py:76
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "For wonverting wav to wem"
 msgstr "用于将 wav 转换为 wem"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:90
-#: ../../yonder/gui/dialogs/settings_dialog.py:90
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "For converting wem to wav and playback"
 msgstr "用于将 wem 转换为 wav 并播放"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:96
-#: ../../yonder/gui/dialogs/settings_dialog.py:96
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Data Sources"
 msgstr "数据来源"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:104
-#: ../../yonder/gui/dialogs/settings_dialog.py:104
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Soundbank folders"
 msgstr "Soundbank 文件夹"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:109
-#: ../../yonder/gui/dialogs/settings_dialog.py:109
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Used to locate external sounds"
 msgstr "用于定位外部音频"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:119
-#: ../../yonder/gui/dialogs/settings_dialog.py:119
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Hash dictionaries"
 msgstr "哈希字典"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:120
-#: ../../yonder/gui/dialogs/settings_dialog.py:120
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Text files (.txt)"
 msgstr "文本文件（.txt）"
 
 # ../../yonder/gui/dialogs/settings_dialog.py:125
-#: ../../yonder/gui/dialogs/settings_dialog.py:125
+#: ../../yonder/gui/dialogs/settings_dialog.py
 msgid "Used for reversing hashes"
 msgstr "用于反查哈希"
 
 # ../../yonder/gui/widgets/editable_table.py:154
-#: ../../yonder/gui/widgets/editable_table.py:223
+#: ../../yonder/gui/widgets/editable_table.py
 msgctxt "button"
 msgid "Clear"
 msgstr "清空"
 
 # ../../yonder/gui/widgets/editable_table.py:287
-#: ../../yonder/gui/widgets/editable_table.py:395
+#: ../../yonder/gui/widgets/editable_table.py
 msgid "+ Add Paths"
 msgstr "+ 添加路径"
 
 # ../../yonder/gui/widgets/editable_table.py:287
-#: ../../yonder/gui/widgets/editable_table.py:395
+#: ../../yonder/gui/widgets/editable_table.py
 msgid "+ Add Files"
 msgstr "+ 添加文件"
 
 # ../../yonder/gui/widgets/editable_table.py:463
 # ../../yonder/gui/widgets/editable_table.py:611
-#: ../../yonder/gui/widgets/editable_table.py:587
-#: ../../yonder/gui/widgets/editable_table.py:742
+#: ../../yonder/gui/widgets/editable_table.py
 msgid "Select Audio"
 msgstr "选择音频"
 
 # ../../yonder/gui/widgets/editable_table.py:464
 # ../../yonder/gui/widgets/editable_table.py:612
-#: ../../yonder/gui/widgets/editable_table.py:588
-#: ../../yonder/gui/widgets/editable_table.py:743
+#: ../../yonder/gui/widgets/editable_table.py
 msgctxt "filetypes"
 msgid "Audio (.wem, .wav)"
 msgstr "音频（.wem, .wav）"
 
 # ../../yonder/gui/widgets/flags_widget.py:73
-#: ../../yonder/gui/widgets/flags_widget.py:72
+#: ../../yonder/gui/widgets/flags_widget.py
 #, python-brace-format
 msgctxt "log"
 msgid "{active_flags} is not valid for flag type {type}"
@@ -820,64 +807,64 @@ msgstr "{active_flags} 对于标志类型 {type} 无效"
 
 # ../../yonder/gui/widgets/generic_input_widget.py:240
 # ../../yonder/gui/widgets/wav_player.py:790
-#: ../../yonder/gui/widgets/generic_input_widget.py:240
-#: ../../yonder/gui/widgets/wav_player.py:790
+#: ../../yonder/gui/widgets/generic_input_widget.py
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "button"
 msgid "Browse"
 msgstr "浏览"
 
 # ../../yonder/gui/widgets/graph_view.py:219
-#: ../../yonder/gui/widgets/graph_view.py:216
+#: ../../yonder/gui/widgets/graph_view.py
 msgid "(not found)"
 msgstr "（未找到）"
 
 # ../../yonder/gui/widgets/interpolation_curve.py:91
-#: ../../yonder/gui/widgets/interpolation_curve.py:91
+#: ../../yonder/gui/widgets/interpolation_curve.py
 msgid "Input"
 msgstr "输入"
 
 # ../../yonder/gui/widgets/interpolation_curve.py:92
-#: ../../yonder/gui/widgets/interpolation_curve.py:92
+#: ../../yonder/gui/widgets/interpolation_curve.py
 msgid "Output"
 msgstr "输出"
 
 # ../../yonder/gui/widgets/interpolation_curve.py:123
-#: ../../yonder/gui/widgets/interpolation_curve.py:123
+#: ../../yonder/gui/widgets/interpolation_curve.py
 msgctxt "button"
 msgid "Add"
 msgstr "添加"
 
 # ../../yonder/gui/widgets/interpolation_curve.py:126
-#: ../../yonder/gui/widgets/interpolation_curve.py:128
+#: ../../yonder/gui/widgets/interpolation_curve.py
 msgctxt "button"
 msgid "Remove"
 msgstr "移除"
 
-#: ../../yonder/gui/widgets/node_reference.py:32
+#: ../../yonder/gui/widgets/node_reference.py
 msgid "Used by:"
 msgstr "使用者："
 
-#: ../../yonder/gui/widgets/node_reference.py:36
+#: ../../yonder/gui/widgets/node_reference.py
 msgid "States:"
 msgstr "状态："
 
-#: ../../yonder/gui/widgets/node_reference.py:45
+#: ../../yonder/gui/widgets/node_reference.py
 #, python-brace-format
 msgid "Children: {num}"
 msgstr "子项：{num}"
 
 # ../../yonder/gui/widgets/node_widgets.py:84
-#: ../../yonder/gui/widgets/node_widgets.py:110
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "loading"
 msgid "loading..."
 msgstr "加载中..."
 
-#: ../../yonder/gui/widgets/node_widgets.py:142
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Children"
 msgstr "子项"
 
 # ../../yonder/gui/yonder.py:533
-#: ../../yonder/gui/widgets/node_widgets.py:149
+#: ../../yonder/gui/widgets/node_widgets.py
 #, fuzzy
 msgid "Target: "
 msgstr "重置节点"
@@ -887,350 +874,343 @@ msgstr "重置节点"
 # ../../yonder/gui/widgets/node_widgets.py:841
 # ../../yonder/gui/widgets/node_widgets.py:1165
 # ../../yonder/gui/widgets/node_widgets.py:1323
-#: ../../yonder/gui/widgets/node_widgets.py:160
-#: ../../yonder/gui/widgets/node_widgets.py:797
-#: ../../yonder/gui/widgets/node_widgets.py:801
-#: ../../yonder/gui/widgets/node_widgets.py:922
-#: ../../yonder/gui/widgets/node_widgets.py:1248
-#: ../../yonder/gui/widgets/node_widgets.py:1407
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgid "#{node} (not found)"
 msgstr "#{node}（未找到）"
 
 # ../../yonder/gui/widgets/node_widgets.py:191
-#: ../../yonder/gui/widgets/node_widgets.py:244
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "RTPC"
 msgstr "RTPC"
 
 # ../../yonder/gui/widgets/node_widgets.py:223
-#: ../../yonder/gui/widgets/node_widgets.py:276
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Let me know what you want here!"
 msgstr "告诉我你希望这里显示什么！"
 
 # ../../yonder/gui/widgets/node_widgets.py:224
-#: ../../yonder/gui/widgets/node_widgets.py:277
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Find me on ?ServerName? @managarm"
 msgstr "在 ?ServerName? @managarm 找我"
 
 # ../../yonder/gui/widgets/node_widgets.py:299
-#: ../../yonder/gui/widgets/node_widgets.py:351
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgctxt "log"
 msgid "Placed prefetch snippet in {file}"
 msgstr "已将预取片段放入 {file}"
 
 # ../../yonder/gui/widgets/node_widgets.py:310
-#: ../../yonder/gui/widgets/node_widgets.py:362
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgid "Copy WEMs to soundbank {bank}?"
 msgstr "将 WEM 复制到 Soundbank {bank} 吗？"
 
 # ../../yonder/gui/widgets/node_widgets.py:311
-#: ../../yonder/gui/widgets/node_widgets.py:363
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Yes"
 msgstr "是"
 
 # ../../yonder/gui/widgets/node_widgets.py:311
-#: ../../yonder/gui/widgets/node_widgets.py:363
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "No"
 msgstr "否"
 
 # ../../yonder/gui/widgets/node_widgets.py:313
-#: ../../yonder/gui/widgets/node_widgets.py:365
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Copy?"
 msgstr "复制吗？"
 
-#: ../../yonder/gui/widgets/node_widgets.py:565
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "is_bus"
 msgstr ""
 
 # ../../yonder/gui/widgets/node_widgets.py:534
 # ../../yonder/gui/widgets/node_widgets.py:562
 # ../../yonder/gui/widgets/node_widgets.py:565
-#: ../../yonder/gui/widgets/node_widgets.py:609
-#: ../../yonder/gui/widgets/node_widgets.py:639
-#: ../../yonder/gui/widgets/node_widgets.py:645
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgid "Curve #{idx}"
 msgstr "曲线 #{idx}"
 
 # ../../yonder/gui/widgets/node_widgets.py:556
-#: ../../yonder/gui/widgets/node_widgets.py:632
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Curves to use"
 msgstr "使用曲线"
 
 # ../../yonder/gui/widgets/node_widgets.py:578
-#: ../../yonder/gui/widgets/node_widgets.py:659
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Scaling Type"
 msgstr "缩放类型"
 
 # ../../yonder/gui/widgets/node_widgets.py:582
-#: ../../yonder/gui/widgets/node_widgets.py:663
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Cone params"
 msgstr "锥体参数"
 
 # ../../yonder/gui/widgets/node_widgets.py:585
-#: ../../yonder/gui/widgets/node_widgets.py:666
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Cone enabled"
 msgstr "启用锥体"
 
 # ../../yonder/gui/widgets/node_widgets.py:593
-#: ../../yonder/gui/widgets/node_widgets.py:674
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "Attenuation"
 msgid "inside_degrees"
 msgstr "内角度"
 
 # ../../yonder/gui/widgets/node_widgets.py:605
-#: ../../yonder/gui/widgets/node_widgets.py:686
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "Attenuation"
 msgid "outside_degrees"
 msgstr "外角度"
 
 # ../../yonder/gui/widgets/node_widgets.py:617
-#: ../../yonder/gui/widgets/node_widgets.py:698
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "Attenuation"
 msgid "outside_volume"
 msgstr "外角音量衰减"
 
 # ../../yonder/gui/widgets/node_widgets.py:629
-#: ../../yonder/gui/widgets/node_widgets.py:710
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "Attenuation"
 msgid "low_pass"
 msgstr "低通滤波"
 
 # ../../yonder/gui/widgets/node_widgets.py:641
-#: ../../yonder/gui/widgets/node_widgets.py:722
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "Attenuation"
 msgid "high_pass"
 msgstr "高通滤波"
 
 # ../../yonder/gui/widgets/node_widgets.py:728
-#: ../../yonder/gui/widgets/node_widgets.py:809
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Actions"
 msgstr "行为"
 
 # ../../yonder/gui/widgets/node_widgets.py:729
-#: ../../yonder/gui/widgets/node_widgets.py:810
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "+ Add Action"
 msgstr "+ 添加行为"
 
 # ../../yonder/gui/widgets/node_widgets.py:814
 # ../../yonder/gui/widgets/properties_table.py:66
-#: ../../yonder/gui/widgets/node_widgets.py:895
-#: ../../yonder/gui/widgets/properties_table.py:66
+#: ../../yonder/gui/widgets/node_widgets.py
+#: ../../yonder/gui/widgets/properties_table.py
 msgid "Value"
 msgstr "值"
 
 # ../../yonder/gui/widgets/node_widgets.py:860
-#: ../../yonder/gui/widgets/node_widgets.py:941
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Decision Tree"
 msgstr "决策树"
 
 # ../../yonder/gui/widgets/node_widgets.py:869
-#: ../../yonder/gui/widgets/node_widgets.py:950
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "button"
 msgid "Add State Path"
 msgstr "添加状态路径"
 
 # ../../yonder/gui/widgets/node_widgets.py:992
-#: ../../yonder/gui/widgets/node_widgets.py:1073
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "+ Add Marker"
 msgstr "+ 添加标记"
 
 # ../../yonder/gui/widgets/node_widgets.py:993
-#: ../../yonder/gui/widgets/node_widgets.py:1074
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Markers"
 msgstr "标记"
 
 # ../../yonder/gui/yonder.py:240
-#: ../../yonder/gui/widgets/node_widgets.py:1088
+#: ../../yonder/gui/widgets/node_widgets.py
 #, fuzzy
 msgctxt "button"
 msgid "Edit on Track"
 msgstr "创建Boss音乐"
 
 # ../../yonder/gui/widgets/node_widgets.py:1074
-#: ../../yonder/gui/widgets/node_widgets.py:1157
+#: ../../yonder/gui/widgets/node_widgets.py
 #, python-brace-format
 msgctxt "log"
 msgid "Unknown clip automation type {type}"
 msgstr "未知的片段自动化类型 {type}"
 
 # ../../yonder/gui/widgets/node_widgets.py:1105
-#: ../../yonder/gui/widgets/node_widgets.py:1188
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Track has multiple sources, might not be handled correctly"
 msgstr "该音轨有多个源，可能无法被正确处理"
 
 # ../../yonder/gui/widgets/node_widgets.py:1138
-#: ../../yonder/gui/widgets/node_widgets.py:1221
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Clips"
 msgstr "片段"
 
 # ../../yonder/gui/widgets/node_widgets.py:1139
-#: ../../yonder/gui/widgets/node_widgets.py:1222
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "+ Add Clip"
 msgstr "+ 添加片段"
 
 # ../../yonder/gui/widgets/node_widgets.py:1185
-#: ../../yonder/gui/widgets/node_widgets.py:1268
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "RandomSequenceContainer"
 msgid "Playback mode"
 msgstr "播放模式"
 
 # ../../yonder/gui/widgets/node_widgets.py:1199
-#: ../../yonder/gui/widgets/node_widgets.py:1282
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "RandomSequenceContainer"
 msgid "Randomization"
 msgstr "随机化"
 
 # ../../yonder/gui/widgets/node_widgets.py:1212
-#: ../../yonder/gui/widgets/node_widgets.py:1295
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "RandomSequenceContainer"
 msgid "Loop count"
 msgstr "循环次数"
 
 # ../../yonder/gui/widgets/node_widgets.py:1222
-#: ../../yonder/gui/widgets/node_widgets.py:1305
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "RandomSequenceContainer"
 msgid "Avoid repetitions"
 msgstr "避免重复"
 
 # ../../yonder/gui/widgets/node_widgets.py:1238
-#: ../../yonder/gui/widgets/node_widgets.py:1321
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "RandomSequenceContainer"
 msgid "Playlist"
 msgstr "播放列表"
 
 # ../../yonder/gui/widgets/node_widgets.py:1240
-#: ../../yonder/gui/widgets/node_widgets.py:1323
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "table"
 msgid "Item"
 msgstr "项目"
 
 # ../../yonder/gui/widgets/node_widgets.py:1240
-#: ../../yonder/gui/widgets/node_widgets.py:1323
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "table"
 msgid "Weight"
 msgstr "权重"
 
 # ../../yonder/gui/widgets/node_widgets.py:1294
-#: ../../yonder/gui/widgets/node_widgets.py:1377
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "Show empty switches"
 msgstr "显示空开关"
 
 # ../../yonder/gui/widgets/node_widgets.py:1302
-#: ../../yonder/gui/widgets/node_widgets.py:1385
+#: ../../yonder/gui/widgets/node_widgets.py
 msgctxt "SwitchContainer"
 msgid "Switches"
 msgstr "开关"
 
 # ../../yonder/gui/widgets/properties_table.py:63
-#: ../../yonder/gui/widgets/properties_table.py:63
+#: ../../yonder/gui/widgets/properties_table.py
 msgid "Property"
 msgstr "属性"
 
 # ../../yonder/gui/widgets/properties_table.py:126
-#: ../../yonder/gui/widgets/properties_table.py:120
+#: ../../yonder/gui/widgets/properties_table.py
 msgid "+ Add Property"
 msgstr "+ 添加属性"
 
 # ../../yonder/gui/widgets/rtpc_table.py:128
-#: ../../yonder/gui/widgets/rtpc_table.py:123
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgctxt "RTPC"
 msgid "Type"
 msgstr "类型"
 
 # ../../yonder/gui/widgets/rtpc_table.py:135
-#: ../../yonder/gui/widgets/rtpc_table.py:130
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgctxt "RTPC"
 msgid "Accumulation"
 msgstr "累加"
 
 # ../../yonder/gui/widgets/rtpc_table.py:147
-#: ../../yonder/gui/widgets/rtpc_table.py:142
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgctxt "RTPC"
 msgid "Parameter"
 msgstr "参数"
 
 # ../../yonder/gui/widgets/rtpc_table.py:154
-#: ../../yonder/gui/widgets/rtpc_table.py:149
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgctxt "RTPC"
 msgid "Curve scaling"
 msgstr "曲线缩放"
 
 # ../../yonder/gui/widgets/rtpc_table.py:180
-#: ../../yonder/gui/widgets/rtpc_table.py:175
+#: ../../yonder/gui/widgets/rtpc_table.py
 msgid "+ Add RTPC"
 msgstr "+ 添加 RTPC"
 
 # ../../yonder/gui/widgets/section_widgets.py:185
-#: ../../yonder/gui/widgets/section_widgets.py:185
+#: ../../yonder/gui/widgets/section_widgets.py
 msgid "See Events tab"
 msgstr "请查看事件页签"
 
 # ../../yonder/gui/widgets/section_widgets.py:233
-#: ../../yonder/gui/widgets/section_widgets.py:234
+#: ../../yonder/gui/widgets/section_widgets.py
 msgid "Entries"
 msgstr "条目"
 
 # ../../yonder/gui/widgets/section_widgets.py:235
-#: ../../yonder/gui/widgets/section_widgets.py:236
+#: ../../yonder/gui/widgets/section_widgets.py
 msgctxt "table"
 msgid "Bank ID"
 msgstr "Bank ID"
 
 # ../../yonder/gui/widgets/section_widgets.py:235
-#: ../../yonder/gui/widgets/section_widgets.py:236
+#: ../../yonder/gui/widgets/section_widgets.py
 msgctxt "table"
 msgid "Name"
 msgstr "名称"
 
 # ../../yonder/gui/widgets/transition_matrix.py:240
-#: ../../yonder/gui/widgets/transition_matrix.py:238
+#: ../../yonder/gui/widgets/transition_matrix.py
 msgctxt "menu"
 msgid "Add rule"
 msgstr "添加规则"
 
 # ../../yonder/gui/widgets/transition_matrix.py:245
-#: ../../yonder/gui/widgets/transition_matrix.py:243
+#: ../../yonder/gui/widgets/transition_matrix.py
 msgctxt "menu"
 msgid "Delete rule"
 msgstr "删除规则"
 
 # ../../yonder/gui/widgets/transition_matrix.py:334
-#: ../../yonder/gui/widgets/transition_matrix.py:331
+#: ../../yonder/gui/widgets/transition_matrix.py
 #, python-brace-format
 msgid "Rule #{rule_idx}"
 msgstr "规则 #{rule_idx}"
 
 # ../../yonder/gui/widgets/transition_matrix.py:341
-#: ../../yonder/gui/widgets/transition_matrix.py:337
+#: ../../yonder/gui/widgets/transition_matrix.py
 #, python-brace-format
 msgid "Total transition time: {time}ms"
 msgstr "总过渡时间：{time}ms"
 
 # ../../yonder/gui/widgets/transition_matrix.py:347
-#: ../../yonder/gui/widgets/transition_matrix.py:342
+#: ../../yonder/gui/widgets/transition_matrix.py
 #, python-brace-format
 msgid "Sync type: {sync_type}"
 msgstr "同步类型：{sync_type}"
 
 # ../../yonder/gui/widgets/wav_player.py:255
-#: ../../yonder/gui/widgets/wav_player.py:236
+#: ../../yonder/gui/widgets/wav_player.py
 #, fuzzy, python-brace-format
 msgctxt "log"
 msgid "Audio {file} is not a file"
 msgstr "音频 {file} 不是 wav 或 wem 文件"
 
 # ../../yonder/gui/widgets/wav_player.py:243
-#: ../../yonder/gui/widgets/wav_player.py:245
+#: ../../yonder/gui/widgets/wav_player.py
 #, python-brace-format
 msgctxt "log"
 msgid "Converting {file} to wav for playback"
 msgstr "正在将 {file} 转换为 wav 以便播放"
 
 # ../../yonder/gui/widgets/wav_player.py:255
-#: ../../yonder/gui/widgets/wav_player.py:256
+#: ../../yonder/gui/widgets/wav_player.py
 #, python-brace-format
 msgctxt "log"
 msgid "Audio {file} is not a wav or wem file"
@@ -1238,797 +1218,791 @@ msgstr "音频 {file} 不是 wav 或 wem 文件"
 
 # ../../yonder/gui/widgets/wav_player.py:694
 # ../../yonder/gui/widgets/wav_player.py:702
-#: ../../yonder/gui/widgets/wav_player.py:697
-#: ../../yonder/gui/widgets/wav_player.py:702
+#: ../../yonder/gui/widgets/wav_player.py
 #, python-brace-format
 msgctxt "msg"
 msgid "Audio {file} not found"
 msgstr "未找到音频 {file}"
 
 # ../../yonder/gui/widgets/wav_player.py:709
-#: ../../yonder/gui/widgets/wav_player.py:709
+#: ../../yonder/gui/widgets/wav_player.py
 #, python-brace-format
 msgctxt "log"
 msgid "Error reading file: {exc}"
 msgstr "读取文件出错：{exc}"
 
 # ../../yonder/gui/widgets/wav_player.py:826
-#: ../../yonder/gui/widgets/wav_player.py:826
+#: ../../yonder/gui/widgets/wav_player.py
 msgid "markers"
 msgstr "标记"
 
 # ../../yonder/gui/widgets/wav_player.py:855
 # ../../yonder/gui/widgets/wav_player.py:1026
-#: ../../yonder/gui/widgets/wav_player.py:855
-#: ../../yonder/gui/widgets/wav_player.py:1026
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "loop_start"
 msgstr "循环开始"
 
 # ../../yonder/gui/widgets/wav_player.py:863
-#: ../../yonder/gui/widgets/wav_player.py:863
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "L0"
 msgstr "L0"
 
 # ../../yonder/gui/widgets/wav_player.py:870
 # ../../yonder/gui/widgets/wav_player.py:1034
-#: ../../yonder/gui/widgets/wav_player.py:870
-#: ../../yonder/gui/widgets/wav_player.py:1034
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "loop_end"
 msgstr "循环结束"
 
 # ../../yonder/gui/widgets/wav_player.py:878
-#: ../../yonder/gui/widgets/wav_player.py:878
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "L1"
 msgstr "L1"
 
 # ../../yonder/gui/widgets/wav_player.py:887
 # ../../yonder/gui/widgets/wav_player.py:1046
-#: ../../yonder/gui/widgets/wav_player.py:887
-#: ../../yonder/gui/widgets/wav_player.py:1046
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "begin_trim"
 msgstr "裁剪起点"
 
 # ../../yonder/gui/widgets/wav_player.py:895
-#: ../../yonder/gui/widgets/wav_player.py:895
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "T0"
 msgstr "T0"
 
 # ../../yonder/gui/widgets/wav_player.py:901
 # ../../yonder/gui/widgets/wav_player.py:1056
-#: ../../yonder/gui/widgets/wav_player.py:901
-#: ../../yonder/gui/widgets/wav_player.py:1056
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "end_trim"
 msgstr "裁剪终点"
 
 # ../../yonder/gui/widgets/wav_player.py:909
-#: ../../yonder/gui/widgets/wav_player.py:909
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "T1"
 msgstr "T1"
 
 # ../../yonder/gui/widgets/wav_player.py:932
-#: ../../yonder/gui/widgets/wav_player.py:932
+#: ../../yonder/gui/widgets/wav_player.py
 #, python-brace-format
 msgctxt "marker"
 msgid "m{idx}"
 msgstr "m{idx}"
 
 # ../../yonder/gui/widgets/wav_player.py:947
-#: ../../yonder/gui/widgets/wav_player.py:947
+#: ../../yonder/gui/widgets/wav_player.py
 msgid "amp"
 msgstr "振幅"
 
 # ../../yonder/gui/widgets/wav_player.py:954
-#: ../../yonder/gui/widgets/wav_player.py:954
+#: ../../yonder/gui/widgets/wav_player.py
 msgid "time"
 msgstr "时间"
 
 # ../../yonder/gui/widgets/wav_player.py:981
-#: ../../yonder/gui/widgets/wav_player.py:981
+#: ../../yonder/gui/widgets/wav_player.py
 msgid "Loop"
 msgstr "循环"
 
 # ../../yonder/gui/widgets/wav_player.py:987
-#: ../../yonder/gui/widgets/wav_player.py:987
+#: ../../yonder/gui/widgets/wav_player.py
 msgid "Test"
 msgstr "测试"
 
 # ../../yonder/gui/widgets/wav_player.py:1000
-#: ../../yonder/gui/widgets/wav_player.py:1000
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "button"
 msgid "Markers"
 msgstr "标记"
 
 # ../../yonder/gui/widgets/node_widgets.py:1004
 # ../../yonder/gui/widgets/wav_player.py:1008
-#: ../../yonder/gui/widgets/wav_player.py:1008
+#: ../../yonder/gui/widgets/wav_player.py
 msgctxt "button"
 msgid "Edit"
 msgstr "编辑"
 
 # ../../yonder/gui/yonder.py:108
-#: ../../yonder/gui/yonder.py:115
+#: ../../yonder/gui/yonder.py
 msgctxt "log"
 msgid "Hello :3"
 msgstr "你好 :3"
 
 # ../../yonder/gui/yonder.py:151
-#: ../../yonder/gui/yonder.py:156
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "File"
 msgstr "文件"
 
 # ../../yonder/gui/yonder.py:155
-#: ../../yonder/gui/yonder.py:160
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Open..."
 msgstr "打开..."
 
 # ../../yonder/gui/yonder.py:161
-#: ../../yonder/gui/yonder.py:166
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Recent files"
 msgstr "最近文件"
 
 # ../../yonder/gui/yonder.py:166
-#: ../../yonder/gui/yonder.py:171
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Save"
 msgstr "保存"
 
 # ../../yonder/gui/yonder.py:172
-#: ../../yonder/gui/yonder.py:177
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Save As..."
 msgstr "另存为..."
 
 # ../../yonder/gui/yonder.py:179
-#: ../../yonder/gui/yonder.py:184
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Repack"
 msgstr "重新打包"
 
 # ../../yonder/gui/yonder.py:307
-#: ../../yonder/gui/yonder.py:191
+#: ../../yonder/gui/yonder.py
 #, fuzzy
 msgctxt "menu"
 msgid "Open Bank Dir..."
 msgstr "打开临时目录"
 
 # ../../yonder/gui/yonder.py:186
-#: ../../yonder/gui/yonder.py:197
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "New Soundbank..."
 msgstr "新建 Soundbank..."
 
 # ../../yonder/gui/yonder.py:193
-#: ../../yonder/gui/yonder.py:204
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Bank"
 msgstr "音频库"
 
 # ../../yonder/gui/yonder.py:195
-#: ../../yonder/gui/yonder.py:206
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Pin Orphans"
 msgstr "固定孤立节点"
 
 # ../../yonder/gui/yonder.py:202
-#: ../../yonder/gui/yonder.py:213
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Solve HIRC"
 msgstr "整理 HIRC"
 
 # ../../yonder/gui/yonder.py:207
-#: ../../yonder/gui/yonder.py:218
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Verify"
 msgstr "验证"
 
 # ../../yonder/gui/yonder.py:214
-#: ../../yonder/gui/yonder.py:225
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Advanced"
 msgstr "高级"
 
 # ../../yonder/gui/yonder.py:218
-#: ../../yonder/gui/yonder.py:229
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Delete unused wems"
 msgstr "删除未使用 wem"
 
 # ../../yonder/gui/yonder.py:223
-#: ../../yonder/gui/yonder.py:234
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Delete orphans"
 msgstr "删除孤立节点"
 
 # ../../yonder/gui/yonder.py:228
-#: ../../yonder/gui/yonder.py:239
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Create"
 msgstr "创建"
 
 # ../../yonder/gui/yonder.py:252
-#: ../../yonder/gui/yonder.py:241
+#: ../../yonder/gui/yonder.py
 #, fuzzy
 msgctxt "menu"
 msgid "New Play/Stop Event"
 msgstr "新建 Wwise 事件"
 
 # ../../yonder/gui/yonder.py:230
-#: ../../yonder/gui/yonder.py:246
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Simple Sound"
 msgstr "创建音效"
 
 # ../../yonder/gui/yonder.py:240
-#: ../../yonder/gui/yonder.py:251
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Boss Track"
 msgstr "创建Boss音乐"
 
 # ../../yonder/gui/yonder.py:245
-#: ../../yonder/gui/yonder.py:256
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Ambience Track"
 msgstr "环境音轨"
 
 # ../../yonder/gui/yonder.py:235
-#: ../../yonder/gui/yonder.py:262
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Batch Sound Builder"
 msgstr "批量创建音效"
 
 # ../../yonder/gui/yonder.py:259
-#: ../../yonder/gui/yonder.py:269
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Tools"
 msgstr "工具"
 
 # ../../yonder/gui/yonder.py:261
-#: ../../yonder/gui/yonder.py:271
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Calc Hash"
 msgstr "计算哈希"
 
 # ../../yonder/gui/yonder.py:266
-#: ../../yonder/gui/yonder.py:276
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Mass Transfer"
 msgstr "批量转移"
 
 # ../../yonder/gui/yonder.py:271
-#: ../../yonder/gui/yonder.py:281
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Export Sounds"
 msgstr "导出音效"
 
 # ../../yonder/gui/yonder.py:276
-#: ../../yonder/gui/yonder.py:286
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Waves to Wems"
 msgstr "Wave 转 WEM"
 
 # ../../yonder/gui/yonder.py:282
-#: ../../yonder/gui/yonder.py:292
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Yonder"
 msgstr "Yonder"
 
 # ../../yonder/gui/yonder.py:301
-#: ../../yonder/gui/yonder.py:294
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Settings"
 msgstr "设置"
 
 # ../../yonder/gui/yonder.py:284
-#: ../../yonder/gui/yonder.py:302
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Language"
 msgstr "语言"
 
 # ../../yonder/gui/yonder.py:327
-#: ../../yonder/gui/yonder.py:311 ../../yonder/gui/yonder.py:342
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Debug"
 msgstr "调试"
 
 # ../../yonder/gui/yonder.py:307
-#: ../../yonder/gui/yonder.py:313
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Open Temp Dir"
 msgstr "打开临时目录"
 
-#: ../../yonder/gui/yonder.py:318
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Force Refresh"
 msgstr "强制刷新"
 
 # ../../yonder/gui/yonder.py:836
-#: ../../yonder/gui/yonder.py:323
+#: ../../yonder/gui/yonder.py
 #, fuzzy
 msgctxt "menu"
 msgid "Save Unsolved Bnk"
 msgstr "保存 Soundbank"
 
 # ../../yonder/gui/yonder.py:313
-#: ../../yonder/gui/yonder.py:328
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "dearpygui"
 msgstr "DearPyGui"
 
 # ../../yonder/gui/yonder.py:315 ../../yonder/gui/yonder.py:349
-#: ../../yonder/gui/yonder.py:330 ../../yonder/gui/yonder.py:364
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "About"
 msgstr "关于"
 
 # ../../yonder/gui/yonder.py:319
-#: ../../yonder/gui/yonder.py:334
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Metrics"
 msgstr "性能统计"
 
 # ../../yonder/gui/yonder.py:323
-#: ../../yonder/gui/yonder.py:338
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Documentation"
 msgstr "文档"
 
 # ../../yonder/gui/yonder.py:331
-#: ../../yonder/gui/yonder.py:346
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Style Editor"
 msgstr "样式编辑器"
 
 # ../../yonder/gui/yonder.py:335
-#: ../../yonder/gui/yonder.py:350
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Font Manager"
 msgstr "字体管理"
 
 # ../../yonder/gui/yonder.py:339
-#: ../../yonder/gui/yonder.py:354
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Item Registry"
 msgstr "控件注册表"
 
 # ../../yonder/gui/yonder.py:343
-#: ../../yonder/gui/yonder.py:358
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Stack Tool"
 msgstr "堆栈工具"
 
 # ../../yonder/gui/yonder.py:384
-#: ../../yonder/gui/yonder.py:400
+#: ../../yonder/gui/yonder.py
 msgid "Events"
 msgstr "事件"
 
 # ../../yonder/gui/yonder.py:387
-#: ../../yonder/gui/yonder.py:403
+#: ../../yonder/gui/yonder.py
 msgid "Search on enter"
 msgstr "回车执行搜索"
 
 # ../../yonder/gui/yonder.py:438 ../../yonder/gui/yonder.py:463
-#: ../../yonder/gui/yonder.py:454 ../../yonder/gui/yonder.py:479
+#: ../../yonder/gui/yonder.py
 msgid "Node"
 msgstr "节点"
 
 # ../../yonder/gui/yonder.py:443
-#: ../../yonder/gui/yonder.py:459
+#: ../../yonder/gui/yonder.py
 msgid "Globals"
 msgstr "全局"
 
 # ../../yonder/gui/yonder.py:468
-#: ../../yonder/gui/yonder.py:484
+#: ../../yonder/gui/yonder.py
 msgid "Sections"
 msgstr "区段"
 
 # ../../yonder/gui/yonder.py:478
-#: ../../yonder/gui/yonder.py:494
+#: ../../yonder/gui/yonder.py
 msgid "Section"
 msgstr "区段"
 
 # ../../yonder/gui/yonder.py:495
-#: ../../yonder/gui/yonder.py:511
+#: ../../yonder/gui/yonder.py
 msgid "Pinned Nodes"
 msgstr "已固定节点"
 
 # ../../yonder/gui/yonder.py:523
-#: ../../yonder/gui/yonder.py:539
+#: ../../yonder/gui/yonder.py
 msgctxt "button"
 msgid "Apply"
 msgstr "应用"
 
 # ../../yonder/gui/yonder.py:528
-#: ../../yonder/gui/yonder.py:544
+#: ../../yonder/gui/yonder.py
 msgctxt "button"
 msgid "Reload Json"
 msgstr "重载 Json"
 
 # ../../yonder/gui/yonder.py:533
-#: ../../yonder/gui/yonder.py:549
+#: ../../yonder/gui/yonder.py
 msgctxt "button"
 msgid "Reset Node"
 msgstr "重置节点"
 
 # ../../yonder/gui/yonder.py:569
-#: ../../yonder/gui/yonder.py:585
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Show Graph"
 msgstr "显示图谱"
 
 # ../../yonder/gui/yonder.py:574
-#: ../../yonder/gui/yonder.py:590
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Pin"
 msgstr "固定"
 
 # ../../yonder/gui/yonder.py:581
-#: ../../yonder/gui/yonder.py:597
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Copy"
 msgstr "复制"
 
 # ../../yonder/gui/yonder.py:583 ../../yonder/gui/yonder.py:608
-#: ../../yonder/gui/yonder.py:599 ../../yonder/gui/yonder.py:624
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Node"
 msgstr "节点"
 
 # ../../yonder/gui/yonder.py:588
-#: ../../yonder/gui/yonder.py:604
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Hierarchy"
 msgstr "层级"
 
 # ../../yonder/gui/yonder.py:595
-#: ../../yonder/gui/yonder.py:609
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Attach"
 msgstr "附加"
 
 # ../../yonder/gui/yonder.py:593
-#: ../../yonder/gui/yonder.py:611
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Paste"
 msgstr "粘贴"
 
-#: ../../yonder/gui/yonder.py:616
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "New object"
 msgstr "新建对象"
 
 # ../../yonder/gui/yonder.py:606
-#: ../../yonder/gui/yonder.py:622
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Delete"
 msgstr "删除"
 
 # ../../yonder/gui/yonder.py:613
-#: ../../yonder/gui/yonder.py:629
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Tree"
 msgstr "树"
 
 # ../../yonder/gui/yonder.py:672
-#: ../../yonder/gui/yonder.py:691
+#: ../../yonder/gui/yonder.py
 msgid "Save soundbank first?"
 msgstr "是否先保存 soundbank？"
 
 # ../../yonder/gui/yonder.py:674
-#: ../../yonder/gui/yonder.py:693
+#: ../../yonder/gui/yonder.py
 msgid "Save"
 msgstr "保存"
 
 # ../../yonder/gui/yonder.py:675
-#: ../../yonder/gui/yonder.py:694
+#: ../../yonder/gui/yonder.py
 msgid "Save as"
 msgstr "另存为"
 
 # ../../yonder/gui/yonder.py:677
-#: ../../yonder/gui/yonder.py:696
+#: ../../yonder/gui/yonder.py
 msgid "Just do it"
 msgstr "直接继续"
 
 # ../../yonder/gui/yonder.py:680
-#: ../../yonder/gui/yonder.py:699
+#: ../../yonder/gui/yonder.py
 msgid "Continue?"
 msgstr "继续吗？"
 
-#: ../../yonder/gui/yonder.py:776
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Found {num} orphaned nodes"
 msgstr "发现 {num} 个孤立节点"
 
 # ../../yonder/gui/yonder.py:764
-#: ../../yonder/gui/yonder.py:785
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Node {node} no longer exists"
 msgstr "节点 {node} 已不存在"
 
 # ../../yonder/gui/yonder.py:785
-#: ../../yonder/gui/yonder.py:807
+#: ../../yonder/gui/yonder.py
 msgid "Unpin"
 msgstr "取消固定"
 
 # ../../yonder/gui/yonder.py:791
-#: ../../yonder/gui/yonder.py:813
+#: ../../yonder/gui/yonder.py
 msgid "Unpin All"
 msgstr "取消全部固定"
 
 # ../../yonder/gui/yonder.py:796
-#: ../../yonder/gui/yonder.py:819
+#: ../../yonder/gui/yonder.py
 msgid "Jump To"
 msgstr "跳转到"
 
 # ../../yonder/gui/yonder.py:841
-#: ../../yonder/gui/yonder.py:852 ../../yonder/gui/yonder.py:871
-#: ../../yonder/gui/yonder.py:886
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Saving soundbank..."
 msgstr "正在保存 Soundbank..."
 
 # ../../yonder/gui/yonder.py:843
-#: ../../yonder/gui/yonder.py:855 ../../yonder/gui/yonder.py:873
+#: ../../yonder/gui/yonder.py
 #, fuzzy, python-brace-format
 msgctxt "log"
 msgid "Saving soundbank to {path}"
 msgstr "正在保存 Soundbank 到 {name}"
 
 # ../../yonder/gui/yonder.py:836
-#: ../../yonder/gui/yonder.py:866
+#: ../../yonder/gui/yonder.py
 msgid "Save Soundbank"
 msgstr "保存 Soundbank"
 
 # ../../yonder/gui/yonder.py:838 ../../yonder/gui/yonder.py:884
-#: ../../yonder/gui/yonder.py:868 ../../yonder/gui/yonder.py:926
+#: ../../yonder/gui/yonder.py
 msgctxt "filetypes"
 msgid "JSON (.json)"
 msgstr "JSON（.json）"
 
 # ../../yonder/gui/yonder.py:845
-#: ../../yonder/gui/yonder.py:875
+#: ../../yonder/gui/yonder.py
 msgctxt "log"
 msgid "Don't forget to repack!"
 msgstr "别忘了重新打包！"
 
 # ../../yonder/gui/yonder.py:843
-#: ../../yonder/gui/yonder.py:888
-#, fuzzy, python-brace-format
+#: ../../yonder/gui/yonder.py
+#, fuzzy
 msgctxt "log"
 msgid "Saving soundbank without solving!"
 msgstr "正在保存 Soundbank 到 {name}"
 
 # ../../yonder/gui/yonder.py:856
-#: ../../yonder/gui/yonder.py:897
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Repacking..."
 msgstr "重新打包中..."
 
 # ../../yonder/gui/yonder.py:858
-#: ../../yonder/gui/yonder.py:899
+#: ../../yonder/gui/yonder.py
 msgctxt "log"
 msgid "Repacking soundbank"
 msgstr "正在重新打包 Soundbank"
 
-#: ../../yonder/gui/yonder.py:902
+#: ../../yonder/gui/yonder.py
 msgctxt "log"
 msgid "Done!"
 msgstr "完成！"
 
 # ../../yonder/gui/yonder.py:863
-#: ../../yonder/gui/yonder.py:905
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Repack failed: {error}"
 msgstr "重新打包失败：{error}"
 
 # ../../yonder/gui/yonder.py:868
-#: ../../yonder/gui/yonder.py:910
+#: ../../yonder/gui/yonder.py
 msgid "Choose Empty Directory"
 msgstr "选择空目录"
 
 # ../../yonder/gui/yonder.py:873
-#: ../../yonder/gui/yonder.py:915
+#: ../../yonder/gui/yonder.py
 msgctxt "log"
 msgid "Directory not empty"
 msgstr "目录不为空"
 
 # ../../yonder/gui/yonder.py:881
-#: ../../yonder/gui/yonder.py:923
+#: ../../yonder/gui/yonder.py
 msgid "Open"
 msgstr "打开"
 
 # ../../yonder/gui/yonder.py:883
-#: ../../yonder/gui/yonder.py:925
+#: ../../yonder/gui/yonder.py
 msgctxt "filetypes"
 msgid "Supported files"
 msgstr "支持的文件"
 
 # ../../yonder/gui/yonder.py:885
-#: ../../yonder/gui/yonder.py:927
+#: ../../yonder/gui/yonder.py
 msgctxt "filetypes"
 msgid "Soundbanks (.bnk)"
 msgstr "Soundbank（.bnk）"
 
 # ../../yonder/gui/yonder.py:908
-#: ../../yonder/gui/yonder.py:950
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Soundbank {soundbank} was already unpacked. Open the json instead?"
 msgstr "Soundbank {soundbank} 已经解包，是否改为打开 json？"
 
 # ../../yonder/gui/yonder.py:910
-#: ../../yonder/gui/yonder.py:952
+#: ../../yonder/gui/yonder.py
 msgid "Open json"
 msgstr "打开 json"
 
 # ../../yonder/gui/yonder.py:910
-#: ../../yonder/gui/yonder.py:952
+#: ../../yonder/gui/yonder.py
 msgid "Unpack again"
 msgstr "重新解包"
 
 # ../../yonder/gui/yonder.py:913
-#: ../../yonder/gui/yonder.py:955
+#: ../../yonder/gui/yonder.py
 msgid "Bnk or json?"
 msgstr "打开 bnk 还是 json？"
 
 # ../../yonder/gui/yonder.py:924
-#: ../../yonder/gui/yonder.py:973
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "File not found: {name}"
 msgstr "文件未找到：{name}"
 
 # ../../yonder/gui/yonder.py:932
-#: ../../yonder/gui/yonder.py:981
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Unpacking soundbank {name}"
 msgstr "正在解包 Soundbank {name}"
 
 # ../../yonder/gui/yonder.py:933
-#: ../../yonder/gui/yonder.py:982
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Unpacking..."
 msgstr "解包中..."
 
 # ../../yonder/gui/yonder.py:941
-#: ../../yonder/gui/yonder.py:990
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Loading soundbank {name}"
 msgstr "正在加载 Soundbank {name}"
 
 # ../../yonder/gui/yonder.py:942
-#: ../../yonder/gui/yonder.py:991
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Loading soundbank..."
 msgstr "正在加载 Soundbank..."
 
 # ../../yonder/gui/yonder.py:958
-#: ../../yonder/gui/yonder.py:1007
-#, python-brace-format
-msgid "Loaded soundbank {name} with {num_nodes} nodes"
+#: ../../yonder/gui/yonder.py
+#, fuzzy, python-brace-format
+msgid "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
 msgstr "已加载 Soundbank {name}，共 {num_nodes} 个节点"
 
 # ../../yonder/gui/yonder.py:1138
-#: ../../yonder/gui/yonder.py:1192
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Showing {num}/{total} globals"
 msgstr "显示 {num}/{total} 个全局项"
 
 # ../../yonder/gui/yonder.py:1281
-#: ../../yonder/gui/yonder.py:1361
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Could not find an event subgraph containing node {node}"
 msgstr "无法找到包含节点 {node} 的事件子图"
 
 # ../../yonder/gui/yonder.py:1317
-#: ../../yonder/gui/yonder.py:1398
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Could not locate root item row for node {node} in {table}"
 msgstr "在 {table} 中找不到节点 {node} 的根条目行"
 
 # ../../yonder/gui/yonder.py:1326
-#: ../../yonder/gui/yonder.py:1407
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Solving..."
 msgstr "整理中..."
 
 # ../../yonder/gui/yonder.py:1333
-#: ../../yonder/gui/yonder.py:1414
+#: ../../yonder/gui/yonder.py
 msgctxt "loading"
 msgid "Verifying..."
 msgstr "验证中..."
 
 # ../../yonder/gui/yonder.py:1351
-#: ../../yonder/gui/yonder.py:1432
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Copied node {node} to clipboard"
 msgstr "已将节点 {node} 复制到剪贴板"
 
 # ../../yonder/gui/yonder.py:1362
-#: ../../yonder/gui/yonder.py:1443
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Subtree has reference to unknown node {node}"
 msgstr "子树包含对未知节点 {node} 的引用"
 
 # ../../yonder/gui/yonder.py:1373
-#: ../../yonder/gui/yonder.py:1454
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Copied {node} and {num} descendants to clipboard"
 msgstr "已将 {node} 及其 {num} 个后代复制到剪贴板"
 
 # ../../yonder/gui/yonder.py:1389
-#: ../../yonder/gui/yonder.py:1470
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Attached new node {node} to {parent}"
 msgstr "已将新节点 {node} 附加到 {parent}"
 
 # ../../yonder/gui/yonder.py:1434
-#: ../../yonder/gui/yonder.py:1519
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Attached {node} and {num} descendants to {parent}"
 msgstr "已将 {node} 及其 {num} 个后代附加到 {parent}"
 
 # ../../yonder/gui/yonder.py:1445
-#: ../../yonder/gui/yonder.py:1531
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Deleted {node}"
 msgstr "已删除 {node}"
 
 # ../../yonder/gui/yonder.py:1456
-#: ../../yonder/gui/yonder.py:1545
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Deleted {node} and {num} children"
 msgstr "已删除 {node} 及其 {num} 个子节点"
 
 # ../../yonder/gui/yonder.py:1518
-#: ../../yonder/gui/yonder.py:1615
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Created node {node}"
 msgstr "已创建节点 {node}"
 
 # ../../yonder/gui/yonder.py:1572
-#: ../../yonder/gui/yonder.py:1670
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Created new event {node}"
 msgstr "已创建新事件 {node}"
 
 # ../../yonder/gui/yonder.py:1572
-#: ../../yonder/gui/yonder.py:1691
+#: ../../yonder/gui/yonder.py
 #, fuzzy, python-brace-format
 msgid "Created new simple sound {name}"
 msgstr "已创建新事件 {node}"
 
 # ../../yonder/gui/yonder.py:230
-#: ../../yonder/gui/yonder.py:1716
+#: ../../yonder/gui/yonder.py
 #, fuzzy, python-brace-format
 msgid "Created {num} simple sounds"
 msgstr "创建音效"
 
 # ../../yonder/gui/yonder.py:1626
-#: ../../yonder/gui/yonder.py:1733
+#: ../../yonder/gui/yonder.py
 #, fuzzy, python-brace-format
 msgid "Added boss bgm for {bgm_enemy_type}"
 msgstr "已添加 Boss 音轨 {bgm_enemy_type}"
 
 # ../../yonder/gui/yonder.py:1647
-#: ../../yonder/gui/yonder.py:1754
+#: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
 msgid "Added ambience track {name}"

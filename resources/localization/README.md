@@ -10,7 +10,7 @@ pip install Babel
 2. Extract catalog:
 ```bash
 # Two variants: µ(msgid) and µ(msgid, ctx)
-pybabel.exe extract --keyword=µ:1,1t --keyword=µ:1,2c,2t --output-file=template.pot --sort-by-file --input-dirs=../../yonder/gui
+pybabel.exe extract --keyword=µ:1,1t --keyword=µ:1,2c,2t --sort-by-file --add-location=file --input-dirs=../../yonder/gui --output-file=template.pot 
 ```
 
 # Updating a Localization
