@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sys
-from typing import Any, Type, get_origin, get_args, Union
+from typing import Any, Type, get_origin, get_args
+from types import UnionType
 from dataclasses import is_dataclass, fields, InitVar
 from functools import cache
 import keyword
@@ -109,6 +110,9 @@ def _parse_value(target_type: Type, value: Any) -> Any:
     origin = get_origin(target_type) or target_type
     args = get_args(target_type) or [Any, Any]
 
+    if origin is UnionType:
+        origin = args[0]
+
     if isinstance(origin, InitVar):
         origin = origin.type
 
@@ -120,6 +124,7 @@ def _parse_value(target_type: Type, value: Any) -> Any:
             if issubclass(origin, StrEnum):
                 if value in origin:
                     return origin(value)
+            
             return origin[value]
         return origin(value)
 
@@ -159,7 +164,8 @@ def _get_hints(target_type: Type) -> dict[str, Any]:
                 try:
                     hint = eval(hint, globalns)
                 except NameError:
-                    pass  # leave unresolvable hints as strings
+                    # leave unresolvable hints as strings
+                    pass
             hints[name] = hint
 
     return hints
@@ -179,6 +185,8 @@ def verify_values(obj, raise_on_error: bool) -> None:
     def has_valid_type(val: Any, types: type | tuple[type]) -> bool:
         if isinstance(types, type):
             types = (types,)
+        elif isinstance(types, UnionType):
+            types = get_args(types)
 
         types = tuple(types)
 
@@ -203,17 +211,16 @@ def verify_values(obj, raise_on_error: bool) -> None:
         if issubclass(origin, Enum):
             if not has_valid_type(val, (origin, str, int)):
                 wrong_fields.append(f.name)
-                mismatches.append((type(val), origin))
+                mismatches.append((origin, type(val)))
             
             continue
 
-        if origin is Union:
-            logger.warning(f"{ctx}: field {f.name} has union type")
-            continue
+        if origin is UnionType:
+            origin = tp
 
         if not has_valid_type(val, origin):
             wrong_fields.append(f.name)
-            mismatches.append((type(val), origin))
+            mismatches.append((origin, type(val)))
 
         if is_dataclass(val):
             verify_values(val, raise_on_error)
@@ -228,7 +235,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
                 for idx, item in enumerate(val):
                     if not has_valid_type(item, item_tp):
                         wrong_fields.append(f"{f.name}:{idx}")
-                        mismatches.append((type(item), item_tp))
+                        mismatches.append((item_tp, type(item)))
                     verify_values(item, raise_on_error)
 
     if wrong_fields:

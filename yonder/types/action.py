@@ -17,7 +17,7 @@ class Action(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 3
     action_type: int = 0
     external_id: int = 0
-    params: ActionParams = None
+    params: ActionParams | str = None
     is_bus: int = 0  # NOTE not a bool!
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)

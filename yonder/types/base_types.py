@@ -537,10 +537,18 @@ class PropBundle:
     @classmethod
     def from_dict(cls, data: dict) -> PropBundle:
         prop_id, value = next(iter(data.items()))
-        return cls(PropID[prop_id], value)
+        return cls(PropID[prop_id], float(value))
 
     def to_dict(self) -> dict:
-        return {self.prop_id.name: self.value}
+        value = self.value
+        
+        # bnk2json shenanigans
+        if self.prop_id == PropID.DelayTime:
+            value = int(value)
+        elif self.prop_id == PropID.TransitionTime:
+            value = int(abs(value))
+
+        return {self.prop_id.name: value}
 
     def __str__(self) -> str:
         return f"{self.prop_enum.name}={self.value:.2f}"
