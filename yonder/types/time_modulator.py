@@ -8,7 +8,7 @@ from .hirc_node import HIRCNode
 from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class TimeModulator(HIRCNode):
     body_type: ClassVar[int] = 22
     prop_bundle: list[PropBundle] = field(default_factory=list)

@@ -9,7 +9,7 @@ from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC
 from .mixins import PropertyMixin
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class Bus(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 8
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)

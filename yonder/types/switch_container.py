@@ -17,7 +17,7 @@ from .base_types import (
 from .mixins import PropertyMixin
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class SwitchContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)

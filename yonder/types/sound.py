@@ -17,7 +17,7 @@ from .base_types import (
 from .mixins import PropertyMixin
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class Sound(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 2
     bank_source_data: BankSourceData = field(default_factory=BankSourceData)

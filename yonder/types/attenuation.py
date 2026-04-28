@@ -8,7 +8,7 @@ from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class Attenuation(HIRCNode):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0

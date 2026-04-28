@@ -19,7 +19,7 @@ from .base_types import (
 from .mixins import PropertyMixin
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_trans_node_params: MusicTransNodeParams = field(

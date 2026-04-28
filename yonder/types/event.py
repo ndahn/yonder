@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .soundbank import Soundbank
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class Event(HIRCNode):
     body_type: ClassVar[int] = 4
     action_count: int = 0

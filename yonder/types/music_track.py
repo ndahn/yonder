@@ -21,7 +21,7 @@ from .base_types import (
 from .mixins import PropertyMixin
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class MusicTrack(PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0

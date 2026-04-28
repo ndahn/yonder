@@ -7,7 +7,7 @@ from .hirc_node import HIRCNode
 from .base_types import FxBaseInitialValues, RTPC
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class EffectCustom(HIRCNode):
     body_type: ClassVar[int] = 17
     fx_base_initial_values: FxBaseInitialValues = field(

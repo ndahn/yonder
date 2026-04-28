@@ -25,7 +25,7 @@ class HIRCNodeHeader:
         return _deserialize_fields(cls, data)
 
 
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class HIRCNode(DataNode):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
