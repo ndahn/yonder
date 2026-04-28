@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from dataclasses import dataclass, is_dataclass, fields
 from docstring_parser import parse as doc_parse
+from functools import cache
 import inspect
 import builtins
 import logging
@@ -209,6 +210,7 @@ def get_module_for_field(obj, field_name: str) -> str:
     return obj.__module__
 
 
+@cache
 def resolve_typehint(hint: str, context_module: str | object) -> type:
     if isinstance(hint, type):
         return hint

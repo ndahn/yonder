@@ -1,7 +1,8 @@
 from __future__ import annotations
 import sys
 from typing import Any, Type, get_origin, get_args, Union
-from dataclasses import is_dataclass, fields, InitVar, Field
+from dataclasses import is_dataclass, fields, InitVar
+from functools import cache
 import keyword
 import inspect
 from enum import Enum, StrEnum
@@ -143,6 +144,7 @@ def _parse_value(target_type: Type, value: Any) -> Any:
     return value
 
 
+@cache
 def _get_hints(target_type: Type) -> dict[str, Any]:
     hints = {}
     for cls in reversed(target_type.__mro__):

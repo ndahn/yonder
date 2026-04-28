@@ -4,6 +4,7 @@ import sys
 import os
 import logging
 import json
+import time
 from pathlib import Path
 import subprocess
 import pyperclip
@@ -994,7 +995,10 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("events_filter"), "")
             dpg.set_value(self._t("globals_filter"), "")
 
+            now = time.time()
             self.bnk = Soundbank.load(path)
+            diff = time.time() - now
+
             # NOTE: don't translate to avoid bakemoji on some windows configurations
             dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
             self.config.add_recent_file(path)
@@ -1004,8 +1008,8 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
             self._set_bnk_menus_enabled(True)
             logger.info(
-                µ("Loaded soundbank {name} with {num_nodes} nodes").format(
-                    name=self.bnk.name, num_nodes=len(self.bnk)
+                µ("Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)").format(
+                    name=self.bnk.name, num_nodes=len(self.bnk), time=diff
                 )
             )
         finally:
