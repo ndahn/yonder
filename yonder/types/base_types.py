@@ -183,7 +183,7 @@ class MusicTransitionRule:
             dst_rule.fade_offet = dst_fade_offset
         if dst_fade_curve is not None:
             dst_rule.fade_curve = dst_fade_curve
-        
+
         if src_ids:
             self.source_ids = src_ids
         if dst_ids:
@@ -541,11 +541,15 @@ class PropBundle:
 
     def to_dict(self) -> dict:
         value = self.value
-        
+
         # bnk2json shenanigans
         if self.prop_id == PropID.DelayTime:
             value = int(value)
-        elif self.prop_id == PropID.TransitionTime:
+        elif self.prop_id in (
+            PropID.TransitionTime,
+            PropID.AttachedPluginFXID,
+            PropID.AttenuationID,
+        ):
             value = int(abs(value))
 
         return {self.prop_id.name: value}
