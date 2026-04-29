@@ -241,13 +241,18 @@ class add_wav_player(DpgItem):
         if self._audio.suffix == ".wem":
             wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
             if not wav.is_file():
-                vgmstream = self._config.locate_vgmstream()
-                logger.info(
-                    µ("Converting {file} to wav for playback", "log").format(
-                        file=self._audio.name
+                try:
+                    vgmstream = get_config().locate_vgmstream()
+                    logger.info(
+                        µ("Converting {file} to wav for playback", "log").format(
+                            file=self._audio.name
+                        )
                     )
-                )
-                wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
+                    wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
+                except ValueError as e:
+                    logger.error(f"Failed to convert wav file: {e}", exc_info=e)
+                    return None
+                    
             return wav
 
         if self._audio.suffix == ".wav":
