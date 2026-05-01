@@ -1,5 +1,5 @@
 __author__ = "Nikolas Dahn"
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 from .types.soundbank import Soundbank
 from .types.hirc_node import HIRCNode
