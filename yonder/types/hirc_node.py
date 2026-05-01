@@ -136,8 +136,10 @@ class HIRCNode(DataNode):
     def __hash__(self) -> int:
         return self.id
 
-    def __eq__(self, other: Any) -> bool:
-        return (self == other)
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HIRCNode):
+            return NotImplemented
+        return self.id == other.id
 
     def __lt__(self, other: HIRCNode) -> bool:
         return self.id < other.id
