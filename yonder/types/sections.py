@@ -3,7 +3,7 @@ from typing import Any
 from dataclasses import dataclass, field
 
 from yonder.hash import calc_hash, lookup_name
-from yonder.util import deepmerge
+from yonder.util import deepmerge, logger
 from .base_types import (
     IAkPlugin,
     ObsConversionTable,
@@ -117,6 +117,25 @@ class ENVSSection(Section):
 class HIRCSection(Section):
     object_count: int = 0
     objects: list[HIRCNode] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        seen = set()
+        duplicates = set()
+        prev = None
+
+        for idx, node in enumerate(self.objects):
+            if node.id in seen:
+                logger.error(f"Duplicate node #{node} at index {idx} (right after node {prev}) will be skipped, edit the json manually and give it a unique ID if you want to keep it")
+                duplicates.add(idx)
+            else:
+                seen.add(node.id)
+            
+            prev = node
+
+        if duplicates:
+            self.objects = [n for idx, n in enumerate(self.objects) if idx not in duplicates]
+            self.object_count = len(self.objects)
+            logger.warning(f"{len(duplicates)} duplicate nodes have been skipped")
 
     def copy_partial(self) -> HIRCSection:
         result = HIRCSection()

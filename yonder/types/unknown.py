@@ -20,7 +20,7 @@ class UnknownObject(HIRCNode):
         return self.node_type
 
     @classmethod
-    def from_dict(cls, data: dict, node_type: str = "Unknown") -> UnknownObject:
+    def from_dict(cls, data: dict, node_type: str) -> UnknownObject:
         # Should only ever be called from HIRCNode
         body_type = data.pop("_header")["body_type"]
         oid = data.pop("id")
