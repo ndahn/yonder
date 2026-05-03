@@ -1,5 +1,5 @@
-//! Elden Ring has two arrays defining allowed BGM state strings. This dll will patch 
-//! these with whatever state the caller wants to set, effectively disabling 
+//! Elden Ring has two arrays defining allowed BGM state strings. This dll will patch
+//! these with whatever state the caller wants to set, effectively disabling
 //! verification and allowing for arbitrary strings.
 //!
 //! - SetBossBgm    -> CSSoundBgmController+0x238 (WwiseValueToStrParam_BgmBossChrIdConv)
@@ -7,24 +7,22 @@
 
 #![allow(non_snake_case)]
 
-use retour::static_detour;
-use std::ffi::c_void;
-use std::time::Duration;
 use pelite::pe64::Pe;
+use retour::static_detour;
+use std::ffi::{c_void};
+use std::time::Duration;
 
 use eldenring::cs::*;
 use eldenring::util::system::wait_for_system_init;
 use shared::program::Program;
-use shared::FromStatic;
-
+use shared::{arxan, FromStatic};
 
 const GLOBAL_FIELD_AREA_RVA: u32 = 0x3d691d8;
 const GLOBAL_WORLDSOUNDMAN_RVA: u32 = 0x3d6f708;
 const SETBOSSBGM_RVA: u32 = 0xdb2f70;
 const AREA_BGM_UPDATE_RVA: u32 = 0xdae090;
-const BOSS_BGM_STATE_IDX: u8 = 0;
+const BOSS_BGM_STATE_IDX: u8 = 1;  // 0 is "None" and not checked
 const AREA_BGM_STATE_IDX: u8 = 0;
-
 
 static_detour! {
     static SetBossBgmHook: unsafe extern "C" fn(usize, u32, i32) -> ();
@@ -41,8 +39,8 @@ unsafe fn write_param_str(slot: *mut u8, param_str: &str) {
 /// Returns None if FieldArea is null (original uses 0 in that case).
 unsafe fn resolve_area_param_id(cssound: usize, program: &Program) -> i16 {
     // --- FieldArea branch ---
-    let field_area_ptr = *(program.rva_to_va(GLOBAL_FIELD_AREA_RVA).unwrap()
-        as *const *const FieldArea);
+    let field_area_ptr =
+        *(program.rva_to_va(GLOBAL_FIELD_AREA_RVA).unwrap() as *const *const FieldArea);
     let mut area_param_id: i16 = if field_area_ptr.is_null() {
         0
     } else {
@@ -62,8 +60,7 @@ unsafe fn resolve_area_param_id(cssound: usize, program: &Program) -> i16 {
     };
 
     // --- WorldSoundMan branch ---
-    let wsm_ptr = *(program.rva_to_va(GLOBAL_WORLDSOUNDMAN_RVA).unwrap()
-        as *const usize);
+    let wsm_ptr = *(program.rva_to_va(GLOBAL_WORLDSOUNDMAN_RVA).unwrap() as *const usize);
     if wsm_ptr != 0 {
         let inner = *((wsm_ptr + 0x5c28) as *const usize);
         if inner != 0 {
@@ -101,6 +98,8 @@ unsafe fn setbossbgm_detour(bgmctrl: usize, bgm_boss_conv_param_id: u32, boss_bg
 
     if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
         let slot = (bgmctrl + 0x238 + BOSS_BGM_STATE_IDX as usize * 32) as *mut u8;
+        //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
+        println!("unlock_wwise_states: enabling boss bgm {param_str}");
         write_param_str(slot, param_str);
     }
 
@@ -135,6 +134,8 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
 
             if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
                 let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
+                //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
+                println!("unlock_wwise_states: enabling area bgm {param_str}");
                 write_param_str(slot, param_str);
             }
         }
@@ -161,6 +162,8 @@ pub unsafe extern "system" fn DllMain(
 
         unsafe {
             let program = Program::current();
+            arxan::disable_code_restoration(&program)
+                .expect("Could not disable arxan code restoration");
 
             let resolve = |rva, label| -> Option<u64> {
                 let va = program.rva_to_va(rva).ok();
@@ -170,8 +173,12 @@ pub unsafe extern "system" fn DllMain(
                 va
             };
 
-            let Some(boss_va) = resolve(SETBOSSBGM_RVA, "SetBossBgm") else { return };
-            let Some(area_va) = resolve(AREA_BGM_UPDATE_RVA, "AreaBgmUpdate") else { return };
+            let Some(boss_va) = resolve(SETBOSSBGM_RVA, "SetBossBgm") else {
+                return;
+            };
+            let Some(area_va) = resolve(AREA_BGM_UPDATE_RVA, "AreaBgmUpdate") else {
+                return;
+            };
 
             let boss_fn =
                 std::mem::transmute::<u64, unsafe extern "C" fn(usize, u32, i32) -> ()>(boss_va);
