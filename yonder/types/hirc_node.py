@@ -100,7 +100,9 @@ class HIRCNode(DataNode):
             if sub.__name__ == node_type:
                 return _deserialize_fields(sub, trans)
 
-        raise ValueError(f"Unknown node type {node_type}")
+        from .unknown import UnknownObject
+
+        return UnknownObject.from_dict(trans, node_type)
 
     def get_references(self) -> list[tuple[str, int]]:
         def delve(obj: Any, path: str = "") -> list[tuple[str, int]]:
@@ -148,11 +150,11 @@ class HIRCNode(DataNode):
         name = self.get_name(None)
         if name:
             return f"{name} #{self.id}"
-        return f"[{type(self).__name__}] #{self.id}"
+        return f"[{self.type_name}] #{self.id}"
 
     def __repr__(self) -> str:
         name = self.get_name("<?>")
-        return f"[{type(self).__name__}] {name} #{self.id}"
+        return f"[{self.type_name}] {name} #{self.id}"
 
 
 NODE_TYPE_MAP = {cls.body_type: cls for cls in HIRCNode.__subclasses__()}

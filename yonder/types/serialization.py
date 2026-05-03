@@ -216,7 +216,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
             continue
 
         if origin is UnionType:
-            origin = tp
+            origin = tuple(get_origin(sub) or sub for sub in get_args(tp))
 
         if not has_valid_type(val, origin):
             wrong_fields.append(f.name)

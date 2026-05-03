@@ -33,4 +33,4 @@ from .sections import (
 from .switch_container import SwitchContainer
 from .time_modulator import TimeModulator
 from .soundbank import Soundbank
-from .unknown import TodoObject
+from .unknown import UnknownObject
