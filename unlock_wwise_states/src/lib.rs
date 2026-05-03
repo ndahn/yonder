@@ -9,7 +9,7 @@
 
 use pelite::pe64::Pe;
 use retour::static_detour;
-use std::ffi::{c_void};
+use std::ffi::c_void;
 use std::time::Duration;
 
 use eldenring::cs::*;
@@ -17,6 +17,8 @@ use eldenring::util::system::wait_for_system_init;
 use shared::program::Program;
 use shared::{arxan, FromStatic};
 
+// TODO use AOBs instead
+// https://github.com/vswarte/fromsoftware-rs/tree/main/tools/binary-mapper
 const GLOBAL_FIELD_AREA_RVA: u32 = 0x3d691d8;
 const GLOBAL_WORLDSOUNDMAN_RVA: u32 = 0x3d6f708;
 const SETBOSSBGM_RVA: u32 = 0xdb2f70;
