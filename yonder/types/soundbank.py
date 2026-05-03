@@ -200,7 +200,9 @@ class Soundbank:
 
         logger.info(f"Removed {len(removed)} unused wems")
 
-    def save(self, path: Path | str = None, backup: bool = True, solve: bool = True) -> None:
+    def save(
+        self, path: Path | str = None, backup: bool = True, solve: bool = True
+    ) -> None:
         logger.info(f"Saving {self}")
 
         # Solve the dependency graph
@@ -578,10 +580,20 @@ class Soundbank:
             for _, ref in node.get_references():
                 if ref in self:
                     if ref not in discovered_ids:
-                        logger.error(f"{node}: defined before referenced node {ref}")
-                        severity = max(severity, 2)
+                        if (
+                            isinstance(node, Action)
+                            and node.action_type_enum == ActionType.PlayEvent
+                        ):
+                            # Actions (or at least PlayEvent actions) may refer to stuff in other 
+                            # soundbanks it seems
+                            pass
+                        else:
+                            logger.error(
+                                f"{node}: defined before referenced node {ref}"
+                            )
+                            severity = max(severity, 2)
                 # Happens often and is fine
-                #else:
+                # else:
                 #    logger.warning(f"{node}: reference to non-existing node {ref}")
                 #    severity = max(severity, 1)
 
