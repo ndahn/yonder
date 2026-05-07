@@ -2,7 +2,8 @@ from typing import Callable, Any
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.hash import Hash
+from yonder.hash import Hash, lookup_name
+from yonder.util import logger
 from yonder.types.sections import (
     Section,
     BKHDSection,
@@ -160,11 +161,31 @@ def _create_widgets_bkhd(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> str:
+    from yonder.gui.dialogs.rename_bank_dialog import rename_bank_dialog
+
+    def on_bank_renamed(sender: str, bnk: Soundbank, cb_user_data: Any) -> None:
+        hash_widget.hash_value = bnk.bank_id
+        if on_section_changed:
+            on_section_changed(base_tag, section, user_data)
+
+    with dpg.group(horizontal=True):
+        hash_widget = add_hash_widget(
+            bnk.bank_id,
+            allow_edit_hash=False,
+            allow_edit_name=False,
+            hash_label=None,
+        )
+        dpg.add_button(
+            label=µ("Rename"),
+            callback=lambda s, a, u: rename_bank_dialog(bnk, on_bank_renamed),
+        )
+        dpg.add_text("bank_id")
+
+    dpg.add_spacer(height=5)
     _add_widgets(
         section,
         [
             "version",
-            ("bank_id", Hash),
             ("language_fnv_hash", Hash),
             ("project_id", Hash),
         ],

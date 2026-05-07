@@ -143,6 +143,7 @@ class edit_markers_dialog(DpgItem):
             )
 
             dpg.add_separator()
+            dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             if self._accept_on_okay:

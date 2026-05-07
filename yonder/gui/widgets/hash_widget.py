@@ -180,3 +180,11 @@ class add_hash_widget(DpgItem):
     def string_value(self, value: str) -> None:
         dpg.set_value(self._t("string"), value)
         self._on_string_update(None, value, None)
+
+    @property
+    def known_value(self) -> str | int:
+        s = self.string_value
+        if s != "<?>":
+            return s
+
+        return self.hash_value

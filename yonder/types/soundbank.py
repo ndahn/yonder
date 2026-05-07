@@ -7,7 +7,7 @@ import json
 import shutil
 import networkx as nx
 
-from yonder.hash import calc_hash, Hash
+from yonder.hash import Hash, calc_hash, lookup_name
 from yonder.util import logger, resource_data
 from yonder.query import query_nodes
 from yonder.enums import SourceType
@@ -15,7 +15,7 @@ from yonder.enums import SourceType
 from .sections import Section, BKHDSection, HIRCSection
 from .hirc_node import HIRCNode
 from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
-from .action import ActionType
+from .action import ActionType, ActionPlay
 
 from . import (
     Action,
@@ -109,12 +109,32 @@ class Soundbank:
     def name(self) -> str:
         return self.bkhd.bank_name
 
-    @name.setter
-    def name(self, new_name: str) -> None:
-        self.bkhd.bank_name = new_name
-
     def get_name(self, default: str = None) -> str:
         return self.bkhd.get_bank_name(default)
+
+    def rename(self, new_id: str | int, rename_dir: bool) -> None:
+        old_id = self.bank_id
+        hash_val = calc_hash(new_id) if isinstance(new_id, str) else new_id
+        action: Action
+
+        for action in self.query("type=Action"):
+            params = action.params
+            if isinstance(params, ActionPlay) and params.bank_id == old_id:
+                params.bank_id = hash_val
+
+        self.bkhd.bank_id = hash_val
+        
+        if rename_dir:
+            if isinstance(new_id, int):
+                new_id = lookup_name(new_id)
+
+            if new_id in (None, "<?>"):
+                logger.warning(
+                    "Hash string is unknown, please rename your soundbank folder manually"
+                )
+            else:
+                new_path = self.bnk_dir.rename(self.bnk_dir.parent / new_id)
+                self.json_path = new_path / self.json_path.name
 
     @property
     def bnk_dir(self) -> Path:

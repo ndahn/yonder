@@ -133,10 +133,17 @@ def add_generic_widget(
             **kwargs,
         )
     elif value_type is Hash:
+        if callback:
+            cb = lambda s, a, u: callback(s, a[0], u)
+        else:
+            cb = None
+
         add_hash_widget(
             hash_label=label,
             default_value=int(default) if default is not None else 0,
-            on_hash_changed=lambda s, a, u: callback(s, a[0], u),
+            on_hash_changed=cb,
+            allow_edit_hash=not readonly,
+            allow_edit_name=not readonly,
             parent=parent,
             tag=tag,
             user_data=user_data,

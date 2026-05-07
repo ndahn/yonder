@@ -237,6 +237,7 @@ class edit_transition_dialog(DpgItem):
                     self._build_id_table("destination_ids")
 
             dpg.add_separator()
+            dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
             with dpg.group(horizontal=True):
