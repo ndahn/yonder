@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 00:11+0200\n"
+"POT-Creation-Date: 2026-05-08 01:53+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,6 +41,14 @@ msgstr ""
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, python-brace-format
 msgid "Group {idx}: {name}"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Start must not be empty"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Step must not be 0"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
@@ -139,12 +147,20 @@ msgid "Bulk Operations"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-msgctxt "button"
-msgid "Groups from Files"
+msgid "Type"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-msgid "Apply"
+msgid "Start"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Step"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgctxt "button"
+msgid "Groups from Files"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py

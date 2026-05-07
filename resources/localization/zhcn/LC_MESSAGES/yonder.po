@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 00:11+0200\n"
+"POT-Creation-Date: 2026-05-08 01:53+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -48,6 +48,18 @@ msgstr "名称格式不符合标准"
 #, python-brace-format
 msgid "Group {idx}: {name}"
 msgstr "组 {idx}：{name}"
+
+# ../../yonder/gui/dialogs/edit_state_path_dialog.py:147
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Start must not be empty"
+msgstr "起始值不能为空"
+
+# ../../yonder/gui/dialogs/edit_state_path_dialog.py:147
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Step must not be 0"
+msgstr "步长不能为 0"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:174
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
@@ -166,17 +178,29 @@ msgstr "名称"
 msgid "Bulk Operations"
 msgstr "批量操作"
 
+# ../../yonder/gui/widgets/rtpc_table.py:128
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Type"
+msgstr "类型"
+
+# ../../yonder/gui/yonder.py:533
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Start"
+msgstr "起始值"
+
+# ../../yonder/gui/yonder.py:593
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Step"
+msgstr "步长"
+
 # ../../yonder/gui/dialogs/batch_sound_builder.py:345
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgctxt "button"
 msgid "Groups from Files"
 msgstr "从文件创建分组"
-
-# ../../yonder/gui/yonder.py:523
-#: ../../yonder/gui/dialogs/batch_sound_builder.py
-#, fuzzy
-msgid "Apply"
-msgstr "应用"
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:364
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
@@ -1447,7 +1471,7 @@ msgstr "固定孤立节点"
 #: ../../yonder/gui/widgets/section_widgets.py ../../yonder/gui/yonder.py
 #, fuzzy
 msgid "Rename"
-msgstr "名称"
+msgstr "重命名"
 
 # ../../yonder/gui/yonder.py:202
 #: ../../yonder/gui/yonder.py
@@ -2160,4 +2184,8 @@ msgstr "已添加环境音轨 {name}"
 # ../../yonder/gui/widgets/node_widgets.py:313
 #~ msgid "Copy?"
 #~ msgstr "复制吗？"
+
+# ../../yonder/gui/yonder.py:523
+#~ msgid "Apply"
+#~ msgstr "应用"
 

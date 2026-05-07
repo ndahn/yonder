@@ -77,17 +77,26 @@ class create_batch_sound_builder_dialog(DpgItem):
         val = re.findall(r"\((\w)\)", choice)[0]
         return SoundType(val)
 
+    def _bank_base_id(self, default: str = "000000000") -> str:
+        if self._bnk.name:
+            parts = re.split(r"c(?=\d{4})", self._bnk.name)
+            if parts[0] != self._bnk.name:
+                base_id = int(parts[-1]) * 10**6
+                return f"{base_id:09}"
+
+        return default
+
     def _new_group_name(self, group_idx: int = None) -> str:
         if group_idx is None:
             group_idx = len(self._groups)
 
-        if self._bnk.name:
-            parts = re.split(r"c(?=\d{4})", self._bnk.name)
-            if parts[0] != self._bnk.name:
-                base_id = int(parts[-1]) * 10**6 + 10000 + group_idx
-                return f"{base_id:09}"
+        base_id = int(self._bank_base_id())
+        step = dpg.get_value(self._t("bulk/step"))
+        if not step:
+            step = 10000
 
-        return f"{(group_idx + 1) * 1000:09}"
+        gid = base_id + step * (group_idx + 1)
+        return f"{gid:09}"
 
     def _make_name(self, prefix: str, soundtype: SoundType, name: Hash) -> str:
         ret = (prefix or "") + soundtype.value
@@ -187,7 +196,7 @@ class create_batch_sound_builder_dialog(DpgItem):
     # === Batch Operations ==========
 
     def _batch_apply_soundtype(self) -> None:
-        choice = dpg.get_value(self._t("batch_sound_builder/batch_soundtype"))
+        choice = dpg.get_value(self._t("bulk/soundtype"))
         soundtype = self._soundtype_choice_to_enum(choice)
         for g in self._groups:
             g.soundtype = soundtype
@@ -197,6 +206,18 @@ class create_batch_sound_builder_dialog(DpgItem):
         self._w_groups.refresh()
 
     def _batch_groups_from_files(self) -> None:
+        start = dpg.get_value(self._t("bulk/start"))
+        if not start:
+            self.show_message(µ("Start must not be empty"))
+            return
+
+        step = dpg.get_value(self._t("bulk/step"))
+        if step == 0:
+            self.show_message(µ("Step must not be 0"))
+            return
+
+        self.show_message()
+
         ret = open_multiple_dialog(
             title=µ("Select Audio Files"),
             filetypes={
@@ -209,14 +230,20 @@ class create_batch_sound_builder_dialog(DpgItem):
         if not ret:
             return
 
-        choice = dpg.get_value(self._t("batch_sound_builder/batch_soundtype"))
+        choice = dpg.get_value(self._t("bulk/soundtype"))
         soundtype = self._soundtype_choice_to_enum(choice)
+        group_id = abs(int(start))
+
         for f in ret:
             g = BatchGroup(
-                self._new_group_name(), soundtype=soundtype, soundfiles=[Path(f)]
+                f"{group_id:09}", soundtype=soundtype, soundfiles=[Path(f)]
             )
             self._w_groups.append(g)
             self._groups.append(g)
+            group_id += step
+
+            if group_id < 0:
+                group_id = 10_000_000_000 - abs(step)
 
     # === User Things ===============
 
@@ -309,9 +336,9 @@ class create_batch_sound_builder_dialog(DpgItem):
             self._callback(created_pairs)
 
         self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("batch_sound_builder/button_okay"), µ("Yay!"))
+        dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
         dpg.set_item_callback(
-            self._t("batch_sound_builder/button_okay"),
+            self._t("button_okay"),
             lambda s, a, u: dpg.delete_item(self.tag),
         )
 
@@ -320,8 +347,8 @@ class create_batch_sound_builder_dialog(DpgItem):
     def _build(self):
         with dpg.window(
             label=self._title,
-            width=920,
-            height=670,
+            width=1020,
+            height=680,
             autosize=False,
             no_saved_settings=True,
             tag=self.tag,
@@ -330,7 +357,7 @@ class create_batch_sound_builder_dialog(DpgItem):
             with dpg.group(horizontal=True):
                 # Left panel: group list + bulk ops
                 with dpg.child_window(
-                    width=260, height=500, auto_resize_x=False, auto_resize_y=True
+                    width=260, height=510, auto_resize_x=False, auto_resize_y=True
                 ):
                     dpg_section(µ("Groups"), color=style.muted_orange, spacer=0)
                     self._w_groups = add_widget_table(
@@ -350,28 +377,37 @@ class create_batch_sound_builder_dialog(DpgItem):
                     dpg_section(
                         µ("Bulk Operations"), color=style.muted_purple, spacer=0
                     )
+
+                    dpg.add_combo(
+                        [str(st) for st in SoundType],
+                        label=µ("Type"),
+                        default_value=str(SoundType.Sfx),
+                        tag=self._t("bulk/soundtype"),
+                        width=180,
+                    )
+                    dpg.add_input_text(
+                        label=µ("Start"),
+                        default_value="000000000",
+                        decimal=True,
+                        width=180,
+                        tag=self._t("bulk/start"),
+                    )
+                    dpg.add_input_int(
+                        label=µ("Step"),
+                        default_value=100,
+                        width=180,
+                        tag=self._t("bulk/step"),
+                    )
                     dpg.add_button(
                         label=µ("Groups from Files", "button"),
                         callback=self._batch_groups_from_files,
-                        tag=self._t("batch_sound_builder/groups_from_files"),
+                        tag=self._t("groups_from_files"),
                     )
-
-                    with dpg.group(horizontal=True):
-                        dpg.add_combo(
-                            [str(st) for st in SoundType],
-                            default_value=str(SoundType.Sfx),
-                            tag=self._t("batch_sound_builder/batch_soundtype"),
-                            width=140,
-                        )
-                        dpg.add_button(
-                            label=µ("Apply"),
-                            callback=self._batch_apply_soundtype,
-                        )
 
                 # Right panel: per-group settings
                 with dpg.child_window(
                     width=-1,
-                    height=500,
+                    height=510,
                     auto_resize_y=True,
                 ):
                     dpg_section(
@@ -469,7 +505,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("For the Horde!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("batch_sound_builder/button_okay"),
+                    tag=self._t("button_okay"),
                 )
 
     @property
