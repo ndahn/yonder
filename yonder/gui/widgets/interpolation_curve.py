@@ -225,15 +225,20 @@ class add_interpolation_curve(DpgItem):
         # NOTE this will crash if breakpoints are set anywhere in here!
 
         # Save some cpu cycles when no updates are needed
-        if not self._first_draw and not (
+        if not (
             self._dirty
+            or self._first_draw
             or dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
             or dpg.is_item_hovered(dpg.get_item_parent(self._t("canvas")))
         ):
             return
 
-        self._first_draw = False
-        self._dirty = False
+        # Allow for a second render pass after startup to settle axis ranges
+        if self._first_draw:
+            self._first_draw = False
+        else:
+            self._dirty = False
+
         self._hovered = -1
 
         helper_data = series_data[0]
