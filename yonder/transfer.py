@@ -35,11 +35,8 @@ def copy_event(
         if action:
             # Some actions make references to other soundbanks
             action = action.copy()
-            if (
-                hasattr(action.params, "bank_id")
-                and action.params.bank_id == src_bnk.id
-            ):
-                action.params.bank_id = dst_bnk.id
+            if getattr(action.params, "bank_id", None) == src_bnk.bank_id:
+                action.params.bank_id = dst_bnk.bank_id
 
             actions.append(action)
         else:
@@ -156,12 +153,12 @@ def copy_wwise_events(
             action: Action = src_bnk[action_id]
 
             # NOTE action_bnk_id will already be translated from src_bnk to dst_bnk
-            if hasattr(action.params, "bank_id"):
-                if action.params.bank_id != 0 and action.params.bank_id != dst_bnk.id:
-                    logger.info(
-                        f"Action {action.id} references external soundbank {action.params.bank_id}"
-                    )
-                    continue
+            bnk_id = getattr(action.params, "bank_id", None)
+            if bnk_id not in (None, 0, dst_bnk.bank_id):
+                logger.info(
+                    f"Action {action.id} references external soundbank {action.params.bank_id}"
+                )
+                continue
 
             entrypoint = src_bnk[action.external_id]
             new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)

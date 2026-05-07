@@ -24,7 +24,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="[%(levelname)s]\t%(message)s",
     handlers=[
-        logging.FileHandler(Path() / "yonder.log", mode="w"),
+        logging.FileHandler(Path() / "yonder.log", mode="w", encoding="utf-8"),
         logging.StreamHandler(),
     ],
 )

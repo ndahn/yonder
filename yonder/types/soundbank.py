@@ -118,9 +118,8 @@ class Soundbank:
         action: Action
 
         for action in self.query("type=Action"):
-            params = action.params
-            if isinstance(params, ActionPlay) and params.bank_id == old_id:
-                params.bank_id = hash_val
+            if getattr(action.params, "bank_id", None) == old_id:
+                action.params.bank_id = hash_val
 
         self.bkhd.bank_id = hash_val
         

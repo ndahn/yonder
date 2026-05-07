@@ -274,7 +274,7 @@ class mass_transfer_dialog(DpgItem):
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },
-                tag=self._t("mass_transfer/source_bnk"),
+                tag=self._t("source_bnk"),
             )
             add_generic_widget(
                 Path,
@@ -283,7 +283,7 @@ class mass_transfer_dialog(DpgItem):
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },
-                tag=self._t("mass_transfer/dest_bnk"),
+                tag=self._t("dest_bnk"),
             )
 
             with dpg.group(horizontal=True):
@@ -296,7 +296,7 @@ class mass_transfer_dialog(DpgItem):
                     dpg.add_input_text(
                         multiline=True,
                         height=300,
-                        tag=self._t("mass_transfer/source_ids"),
+                        tag=self._t("source_ids"),
                     )
                 with dpg.group():
                     dpg_section(
@@ -307,24 +307,24 @@ class mass_transfer_dialog(DpgItem):
                     dpg.add_input_text(
                         multiline=True,
                         height=300,
-                        tag=self._t("mass_transfer/dest_ids"),
+                        tag=self._t("dest_ids"),
                     )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
                     label=µ("Select IDs..."),
                     callback=self._select_nodes,
-                    tag=self._t("mass_transfer/button_select_ids"),
+                    tag=self._t("button_select_ids"),
                 )
                 dpg.add_button(
                     label=µ("Swap Banks"),
                     callback=self._swap_banks,
-                    tag=self._t("mass_transfer/button_swap_banks"),
+                    tag=self._t("button_swap_banks"),
                 )
                 dpg.add_button(
                     label=µ("Swap IDs"),
                     callback=self._swap_ids,
-                    tag=self._t("mass_transfer/button_swap_ids"),
+                    tag=self._t("button_swap_ids"),
                 )
 
             dpg.add_separator()
@@ -336,7 +336,7 @@ class mass_transfer_dialog(DpgItem):
                     - Wwise names will be resolved to Play_ and Stop_ events
                     - You cannot pair a name/hash with a wwise name
                     """,
-                    "mass_transfer/tips",
+                    "tips",
                 ),
                 color=style.light_blue,
             )
@@ -349,7 +349,7 @@ class mass_transfer_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Scotty, beam them!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("mass_transfer/button_okay"),
+                    tag=self._t("button_okay"),
                 )
                 dpg.add_button(
                     label=µ("Save", "button"),
