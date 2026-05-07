@@ -52,7 +52,7 @@ from yonder.enums import (
     RandomMode,
     PlaybackMode,
 )
-from yonder.wem import wav2wem, create_prefetch_snippet
+from yonder.wem import wav2wem, wem2wav, create_prefetch_snippet
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
@@ -271,6 +271,120 @@ def add_node_link(
     return tag
 
 
+def add_change_source_type(
+    bnk: Soundbank,
+    source: BankSourceData,
+    on_source_changed: Callable[[str, tuple[SourceType, Path], Any], None] = None,
+    *,
+    tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
+    from yonder.gui.dialogs.file_dialog import open_file_dialog
+
+    current_source_type = source.source_type
+    current_source_id = source.media_information.source_id
+
+    def on_move_sound_file_choice(
+        sender: str, choice: int, new_source_type: SourceType
+    ) -> None:
+        nonlocal current_source_type
+
+        if choice != 0:
+            return
+
+        if (
+            current_source_type == SourceType.PrefetchStreaming
+            and new_source_type == SourceType.Streaming
+        ):
+            # Only need to remove the prefetch snippet
+            snippet = bnk.bnk_dir / f"{current_source_id}.wem"
+            if snippet.is_file():
+                snippet.unlink()
+        elif (
+            current_source_type == SourceType.Streaming
+            and new_source_type== SourceType.PrefetchStreaming
+        ):
+            # Only need to create the prefetch snippet
+            wem = bnk.get_wem_path(current_source_id, current_source_type)
+            wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
+            create_prefetch_snippet(wav, out_file=bnk.bnk_dir / wem.name)
+            wav.unlink()
+        else:
+            wem = bnk.get_wem_path(current_source_id, current_source_type)
+            bnk.add_wem(wem, new_source_type)
+            wem.unlink()
+
+        current_source_type = new_source_type
+        source.source_type = new_source_type
+
+        if on_source_changed:
+            current_wem = bnk.get_wem_path(current_source_id, current_source_type)
+            on_source_changed(tag, (current_source_type, current_wem), user_data)
+
+    def on_source_type_changed(
+        sender: str, new_source_type: str, user_data: int
+    ) -> None:
+        new_source_type = SourceType[new_source_type]
+        if new_source_type == current_source_type:
+            return
+
+        simple_choice_dialog(
+            µ("Move sound file?"),
+            [µ("Yes"), µ("No")],
+            on_move_sound_file_choice,
+            title=µ("Source Type"),
+            user_data=new_source_type,
+        )
+
+    def select_source_file():
+        current_wem = bnk.get_wem_path(current_source_id, current_source_type)
+        ret = open_file_dialog(
+            title=µ("Select Audio File"),
+            default_file=str(current_wem),
+            filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
+        )
+
+        if ret:
+            ret = Path(ret)
+            if ret.suffix == "wav":
+                ret = wav2wem(get_config().locate_wwise(), ret)[0]
+
+            if current_wem.is_file():
+                current_wem.unlink()
+
+            ret = bnk.add_wem(ret, current_source_type)
+            source.media_information.source_id = int(ret.stem)
+            source.media_information.in_memory_media_size = ret.stat().st_size
+            dpg.set_value(f"{tag}_source_id", ret.stem)
+
+            if on_source_changed:
+                on_source_changed(tag, (current_source_type, ret), user_data)
+
+    with dpg.group(horizontal=True, tag=tag):
+        dpg.add_combo(
+            [st.name for st in SourceType],
+            default_value=current_source_type.name,
+            callback=on_source_type_changed,
+            width=200,
+            tag=f"{tag}_source_type",
+        )
+        dpg.add_input_text(
+            default_value=str(source.media_information.source_id),
+            decimal=True,
+            readonly=True,
+            enabled=False,
+            width=200,
+            tag=f"{tag}_source_id",
+        )
+        dpg.add_button(
+            # arrow=True,
+            # direction=dpg.mvDir_Right,
+            label=µ("Browse", "button"),
+            callback=select_source_file,
+        )
+
+
 def add_letmeknow() -> None:
     with dpg.child_window(auto_resize_x=True, auto_resize_y=True):
         dpg.add_text(µ("Let me know what you want here!"))
@@ -297,10 +411,8 @@ def make_setter(
     return setter
 
 
-def get_sound_path(bnk: Soundbank, source: BankSourceData) -> Path:
-    source_id = source.media_information.source_id
-    source_type = source.source_type
-
+# TODO move to Soundbank
+def get_sound_path(bnk: Soundbank, source_id: int, source_type: SourceType) -> Path:
     wem = bnk.bnk_dir / f"{source_id}.wem"
     if source_type != SourceType.PrefetchStreaming and wem.is_file():
         return wem
@@ -1050,7 +1162,8 @@ def _create_attributes_musicsegment(
         if track.sources[0].source_type == SourceType.Embedded:
             path = track.get_source_path(bnk, 0)
         else:
-            path = get_sound_path(bnk, track.sources[0])
+            source = track.sources[0]
+            path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
 
         loop_start = node.get_marker_pos(MarkerId.LoopStart, 1000.0)
         loop_end = node.get_marker_pos(MarkerId.LoopEnd, -1000.0)
@@ -1195,9 +1308,10 @@ def _create_attributes_musictrack(
     # TODO Otherwise we need a player table here.
     with dpg.group():
         for i, source in enumerate(node.sources):
-            path = get_sound_path(bnk, source)
+            path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
             trims = node.get_trims(i)
 
+            # FIXME
             player = add_wav_player(
                 path,
                 on_file_changed=on_source_changed,
@@ -1334,6 +1448,9 @@ def _create_attributes_sound(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
+    def on_source_changed(sender: str, info: tuple[SourceType, Path], user_data: Any) -> None:
+        player.set_file(info[1])
+
     def on_filepath_selected(sender: str, filepath: Path, sound: Sound) -> None:
         if filepath.name.endswith(".wav"):
             wwise = get_config().locate_wwise()
@@ -1347,10 +1464,12 @@ def _create_attributes_sound(
         dpg.set_value(sender, wem_path.stem)
         on_node_changed(base_tag, sound, user_data)
 
-    path = get_sound_path(bnk, node.bank_source_data)
+    source = node.bank_source_data
+    path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
 
     with dpg.group():
-        add_wav_player(path, on_file_changed=on_filepath_selected)
+        add_change_source_type(bnk, node.bank_source_data, on_source_changed)
+        player = add_wav_player(path, allow_change_file=False)
 
         dpg.add_spacer(height=3)
         dpg.add_separator()

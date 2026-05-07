@@ -174,7 +174,7 @@ class Soundbank:
             return target
 
         elif source_type == SourceType.PrefetchStreaming:
-            # TODO create snippet
+            # FIXME create snippet
             # Sounds in cs_smain are all <= 20kB
             if wem.stat().st_size > 20000:
                 raise ValueError("Wem is too large for a prefetch snippet")
@@ -191,6 +191,19 @@ class Soundbank:
 
         else:
             raise ValueError(f"Unknown source type {source_type}")
+
+    def get_wem_path(self, source_id: int, source_type: SourceType) -> Path:
+        wem = self.bnk_dir / f"{source_id}.wem"
+        if source_type == SourceType.Embedded:
+            return wem
+
+        # Find the largest external wem (if any)
+        if source_type != SourceType.Embedded:
+            ext = self.bnk_dir.parent / "wem" / str(source_id)[:2] / f"{source_id}.wem"
+            if ext.is_file():
+                return ext
+
+        return None
 
     def delete_unused_wems(self) -> None:
         used = set(self.source_ids())
@@ -587,7 +600,7 @@ class Soundbank:
                             isinstance(node, Action)
                             and node.action_type_enum == ActionType.PlayEvent
                         ):
-                            # Actions (or at least PlayEvent actions) may refer to stuff in other 
+                            # Actions (or at least PlayEvent actions) may refer to stuff in other
                             # soundbanks it seems
                             pass
                         else:
