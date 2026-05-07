@@ -137,10 +137,13 @@ class Soundbank:
         yield from self.bnk_dir.glob("*.wem")
 
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
-        try:
-            int(wem.stem)
-        except ValueError:
+        if not wem.stem.isnumeric():
             new_file = wem.parent / (str(calc_hash(wem.stem)) + wem.suffix)
+            shutil.copy(wem, new_file)
+            logger.info(f"Renamed {wem.name} to {new_file.name}")
+            wem = new_file
+        elif wem.stem.startswith("0"):
+            new_file = wem.parent / (str(int(wem.stem)) + wem.suffix)
             shutil.copy(wem, new_file)
             logger.info(f"Renamed {wem.name} to {new_file.name}")
             wem = new_file
