@@ -128,6 +128,7 @@ class themes:
     item_default = None
     item_highlight = None
     link_button = None
+    transparent_button = None
     no_padding = None
     plot_blue = None
     plot_red = None
@@ -241,6 +242,10 @@ def init_themes():
                 (255, 255, 255, 80),
                 category=dpg.mvThemeCat_Core,
             )
+
+    with dpg.theme() as themes.transparent_button:
+        with dpg.theme_component(dpg.mvAll):
+            dpg.add_theme_color(dpg.mvThemeCol_Button, (0, 0, 0, 0))
 
     with dpg.theme() as themes.no_padding:
         with dpg.theme_component(dpg.mvAll):
