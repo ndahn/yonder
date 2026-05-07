@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-28 12:52+0200\n"
+"POT-Creation-Date: 2026-05-07 23:14+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -57,6 +57,7 @@ msgstr "选择音频文件"
 # ../../yonder/gui/widgets/wav_player.py:201
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 #: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "filetypes"
 msgid "Audio Files (.wav, .wem)"
@@ -704,6 +705,16 @@ msgctxt "button"
 msgid "Repack"
 msgstr "重新打包"
 
+# ../../yonder/gui/yonder.py:533
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
+#, fuzzy
+msgid "Rename folder"
+msgstr "重置节点"
+
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
+msgid "Commence"
+msgstr "开始"
+
 # ../../yonder/gui/dialogs/select_nodes_dialog.py:163
 #: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgid "Node (id)"
@@ -818,6 +829,7 @@ msgstr "{active_flags} 对于标志类型 {type} 无效"
 # ../../yonder/gui/widgets/generic_input_widget.py:240
 # ../../yonder/gui/widgets/wav_player.py:790
 #: ../../yonder/gui/widgets/generic_input_widget.py
+#: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "button"
 msgid "Browse"
@@ -894,28 +906,9 @@ msgstr "#{node}（未找到）"
 msgid "RTPC"
 msgstr "RTPC"
 
-# ../../yonder/gui/widgets/node_widgets.py:223
 #: ../../yonder/gui/widgets/node_widgets.py
-msgid "Let me know what you want here!"
-msgstr "告诉我你希望这里显示什么！"
-
-# ../../yonder/gui/widgets/node_widgets.py:224
-#: ../../yonder/gui/widgets/node_widgets.py
-msgid "Find me on ?ServerName? @managarm"
-msgstr "在 ?ServerName? @managarm 找我"
-
-# ../../yonder/gui/widgets/node_widgets.py:299
-#: ../../yonder/gui/widgets/node_widgets.py
-#, python-brace-format
-msgctxt "log"
-msgid "Placed prefetch snippet in {file}"
-msgstr "已将预取片段放入 {file}"
-
-# ../../yonder/gui/widgets/node_widgets.py:310
-#: ../../yonder/gui/widgets/node_widgets.py
-#, python-brace-format
-msgid "Copy WEMs to soundbank {bank}?"
-msgstr "将 WEM 复制到 Soundbank {bank} 吗？"
+msgid "Move sound file to correct location?"
+msgstr "将音频文件移动到正确位置？"
 
 # ../../yonder/gui/widgets/node_widgets.py:311
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -927,10 +920,28 @@ msgstr "是"
 msgid "No"
 msgstr "否"
 
-# ../../yonder/gui/widgets/node_widgets.py:313
+# ../../yonder/gui/dialogs/settings_dialog.py:96
 #: ../../yonder/gui/widgets/node_widgets.py
-msgid "Copy?"
-msgstr "复制吗？"
+#, fuzzy
+msgid "Update Source Type"
+msgstr "数据来源"
+
+# ../../yonder/gui/dialogs/batch_sound_builder.py:174
+#: ../../yonder/gui/widgets/node_widgets.py
+#: ../../yonder/gui/widgets/wav_player.py
+#, fuzzy
+msgid "Select Audio File"
+msgstr "选择音频文件"
+
+# ../../yonder/gui/widgets/node_widgets.py:223
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Let me know what you want here!"
+msgstr "告诉我你希望这里显示什么！"
+
+# ../../yonder/gui/widgets/node_widgets.py:224
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Find me on ?ServerName? @managarm"
+msgstr "在 ?ServerName? @managarm 找我"
 
 #: ../../yonder/gui/widgets/node_widgets.py
 msgid "is_bus"
@@ -1152,6 +1163,12 @@ msgstr "曲线缩放"
 #: ../../yonder/gui/widgets/rtpc_table.py
 msgid "+ Add RTPC"
 msgstr "+ 添加 RTPC"
+
+# ../../yonder/gui/widgets/section_widgets.py:235
+#: ../../yonder/gui/widgets/section_widgets.py
+#, fuzzy
+msgid "Rename"
+msgstr "名称"
 
 # ../../yonder/gui/widgets/section_widgets.py:185
 #: ../../yonder/gui/widgets/section_widgets.py
@@ -2121,4 +2138,17 @@ msgstr "已添加环境音轨 {name}"
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:103
 #~ msgid "Avoid Repeats"
 #~ msgstr "避免重复"
+
+# ../../yonder/gui/widgets/node_widgets.py:299
+#~ msgctxt "log"
+#~ msgid "Placed prefetch snippet in {file}"
+#~ msgstr "已将预取片段放入 {file}"
+
+# ../../yonder/gui/widgets/node_widgets.py:310
+#~ msgid "Copy WEMs to soundbank {bank}?"
+#~ msgstr "将 WEM 复制到 Soundbank {bank} 吗？"
+
+# ../../yonder/gui/widgets/node_widgets.py:313
+#~ msgid "Copy?"
+#~ msgstr "复制吗？"
 

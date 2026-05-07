@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-28 12:52+0200\n"
+"POT-Creation-Date: 2026-05-07 23:14+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,6 +49,7 @@ msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 #: ../../yonder/gui/dialogs/create_ambience_track_dialog.py
+#: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "filetypes"
 msgid "Audio Files (.wav, .wem)"
@@ -562,6 +563,14 @@ msgctxt "button"
 msgid "Repack"
 msgstr ""
 
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
+msgid "Rename folder"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
+msgid "Commence"
+msgstr ""
+
 #: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgid "Node (id)"
 msgstr ""
@@ -652,6 +661,7 @@ msgid "{active_flags} is not valid for flag type {type}"
 msgstr ""
 
 #: ../../yonder/gui/widgets/generic_input_widget.py
+#: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "button"
 msgid "Browse"
@@ -715,22 +725,7 @@ msgid "RTPC"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
-msgid "Let me know what you want here!"
-msgstr ""
-
-#: ../../yonder/gui/widgets/node_widgets.py
-msgid "Find me on ?ServerName? @managarm"
-msgstr ""
-
-#: ../../yonder/gui/widgets/node_widgets.py
-#, python-brace-format
-msgctxt "log"
-msgid "Placed prefetch snippet in {file}"
-msgstr ""
-
-#: ../../yonder/gui/widgets/node_widgets.py
-#, python-brace-format
-msgid "Copy WEMs to soundbank {bank}?"
+msgid "Move sound file to correct location?"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -742,7 +737,20 @@ msgid "No"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
-msgid "Copy?"
+msgid "Update Source Type"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Select Audio File"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Let me know what you want here!"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Find me on ?ServerName? @managarm"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -922,6 +930,10 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/rtpc_table.py
 msgid "+ Add RTPC"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py
+msgid "Rename"
 msgstr ""
 
 #: ../../yonder/gui/widgets/section_widgets.py

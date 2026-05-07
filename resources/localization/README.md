@@ -1,13 +1,13 @@
 # Updating the Template
 
-> Note: If you're not me you can probably skip the first two steps, the template will already be included.
+> IMPORTANT: If you're not me, you can probably skip the first two steps, the template will already be included.
 
 1. Get [pybabel](https://babel.pocoo.org):
 ```bash
 pip install Babel
 ```
 
-2. Extract catalog:
+2. Extract catalog/update template:
 ```bash
 # Two variants: µ(msgid) and µ(msgid, ctx)
 pybabel.exe extract --keyword=µ:1,1t --keyword=µ:1,2c,2t --sort-by-file --add-location=file --input-dirs=../../yonder/gui --output-file=template.pot 
