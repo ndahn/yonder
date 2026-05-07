@@ -1,6 +1,7 @@
 import webbrowser
 from dearpygui import dearpygui as dpg
 
+from yonder.gui.localization import µ
 from yonder.util import resource_dir
 from yonder.gui import style
 
@@ -28,6 +29,6 @@ def add_kofi_button(pos: tuple = tuple(), *, tag: str = 0) -> str:
         )
         dpg.bind_item_theme(dpg.last_item(), style.themes.transparent_button)
         with dpg.tooltip(dpg.last_item()):
-            dpg.add_text("Buy me a ko-fi?")
+            dpg.add_text(µ("Buy me a ko-fi?"))
 
     return tag

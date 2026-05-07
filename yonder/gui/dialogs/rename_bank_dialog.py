@@ -13,7 +13,7 @@ class rename_bank_dialog(DpgItem):
     def __init__(
         self,
         bnk: Soundbank,
-        on_bank_renamed: Callable[[str, Soundbank, Any], None] = None,
+        on_bank_renamed: Callable[[Soundbank], None] = None,
         *,
         title: str = "Rename Bank",
         tag: str = None,
@@ -28,7 +28,7 @@ class rename_bank_dialog(DpgItem):
 
             new_hash = hash_widget.known_value
             rename_dir = dpg.get_value(self._t("rename_dir"))
-            logger.info(f"Changing bank_id to {new_hash}")
+            logger.info(µ("Renaming bank to {new_id}").format(new_id=new_hash))
             bnk.rename(new_hash, rename_dir)
 
             if on_bank_renamed:
@@ -42,6 +42,7 @@ class rename_bank_dialog(DpgItem):
             width=340,
             height=160,
             no_saved_settings=True,
+            tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             hash_widget = add_hash_widget(bnk.bank_id, None, horizontal=False)

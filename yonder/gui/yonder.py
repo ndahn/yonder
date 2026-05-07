@@ -65,6 +65,7 @@ from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
 from .dialogs.create_ambience_track_dialog import create_ambience_track_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
+from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 
@@ -200,6 +201,11 @@ class BanksOfYonder(DpgItem):
                     label=µ("Pin Orphans", "menu"),
                     callback=self.pin_lost_objects,
                     tag=self._t("menu/pin_orphans"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Rename"),
+                    callback=self._open_bank_rename_dialog,
+                    tag=self._t("menu/rename_bank"),
                 )
 
                 dpg.add_separator()
@@ -1674,6 +1680,18 @@ class BanksOfYonder(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             add_graph_widget(self.bnk, node, on_graph_node_click, width=-1, height=-1)
+
+    def _open_bank_rename_dialog(self) -> None:
+        tag = self._t("rename_bank_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        rename_bank_dialog(self.bnk, lambda bnk: self.regenerate(), tag=tag)
+
+        dpg.split_frame()
+        center_window(tag)
 
     def _open_new_wwise_event_dialog(self) -> None:
         tag = self._t("new_wwise_event_dialog")

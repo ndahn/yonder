@@ -163,7 +163,7 @@ def _create_widgets_bkhd(
 ) -> str:
     from yonder.gui.dialogs.rename_bank_dialog import rename_bank_dialog
 
-    def on_bank_renamed(sender: str, bnk: Soundbank, cb_user_data: Any) -> None:
+    def on_bank_renamed(bnk: Soundbank) -> None:
         hash_widget.hash_value = bnk.bank_id
         if on_section_changed:
             on_section_changed(base_tag, section, user_data)

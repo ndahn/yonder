@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-07 23:14+0200\n"
+"POT-Creation-Date: 2026-05-08 00:11+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -705,6 +705,11 @@ msgctxt "button"
 msgid "Repack"
 msgstr "重新打包"
 
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
+#, python-brace-format
+msgid "Renaming bank to {new_id}"
+msgstr "正在将音色库重命名为 {new_id}"
+
 # ../../yonder/gui/yonder.py:533
 #: ../../yonder/gui/dialogs/rename_bank_dialog.py
 #, fuzzy
@@ -861,6 +866,10 @@ msgstr "添加"
 msgctxt "button"
 msgid "Remove"
 msgstr "移除"
+
+#: ../../yonder/gui/widgets/kofi.py
+msgid "Buy me a ko-fi?"
+msgstr "请我喝杯咖啡？"
 
 #: ../../yonder/gui/widgets/node_reference.py
 msgid "Used by:"
@@ -1164,12 +1173,6 @@ msgstr "曲线缩放"
 msgid "+ Add RTPC"
 msgstr "+ 添加 RTPC"
 
-# ../../yonder/gui/widgets/section_widgets.py:235
-#: ../../yonder/gui/widgets/section_widgets.py
-#, fuzzy
-msgid "Rename"
-msgstr "名称"
-
 # ../../yonder/gui/widgets/section_widgets.py:185
 #: ../../yonder/gui/widgets/section_widgets.py
 msgid "See Events tab"
@@ -1439,6 +1442,12 @@ msgstr "音频库"
 msgctxt "menu"
 msgid "Pin Orphans"
 msgstr "固定孤立节点"
+
+# ../../yonder/gui/widgets/section_widgets.py:235
+#: ../../yonder/gui/widgets/section_widgets.py ../../yonder/gui/yonder.py
+#, fuzzy
+msgid "Rename"
+msgstr "名称"
 
 # ../../yonder/gui/yonder.py:202
 #: ../../yonder/gui/yonder.py

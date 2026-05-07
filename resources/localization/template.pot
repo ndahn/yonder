@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-07 23:14+0200\n"
+"POT-Creation-Date: 2026-05-08 00:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -564,6 +564,11 @@ msgid "Repack"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/rename_bank_dialog.py
+#, python-brace-format
+msgid "Renaming bank to {new_id}"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/rename_bank_dialog.py
 msgid "Rename folder"
 msgstr ""
 
@@ -687,6 +692,10 @@ msgstr ""
 #: ../../yonder/gui/widgets/interpolation_curve.py
 msgctxt "button"
 msgid "Remove"
+msgstr ""
+
+#: ../../yonder/gui/widgets/kofi.py
+msgid "Buy me a ko-fi?"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_reference.py
@@ -933,10 +942,6 @@ msgid "+ Add RTPC"
 msgstr ""
 
 #: ../../yonder/gui/widgets/section_widgets.py
-msgid "Rename"
-msgstr ""
-
-#: ../../yonder/gui/widgets/section_widgets.py
 msgid "See Events tab"
 msgstr ""
 
@@ -1150,6 +1155,10 @@ msgstr ""
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Pin Orphans"
+msgstr ""
+
+#: ../../yonder/gui/widgets/section_widgets.py ../../yonder/gui/yonder.py
+msgid "Rename"
 msgstr ""
 
 #: ../../yonder/gui/yonder.py
