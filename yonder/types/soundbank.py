@@ -137,6 +137,24 @@ class Soundbank:
         yield from self.bnk_dir.glob("*.wem")
 
     def add_wem(self, wem: Path, source_type: SourceType) -> Path:
+        """Add a sound to this soundbank in the appropriate place.
+
+        This function will only add sounds, never remove them.
+
+        Note that for PrefetchStreaming the passed in wem should be the *full* sound and that the prefetch snippet will not be created automatically. To add a prefetch snippet, use [[yonder.wem.create_prefetch_snippet]] and add it with source type Embedded.
+
+        Parameters
+        ----------
+        wem : Path
+            The wem file to add.
+        source_type : SourceType
+            How much of the wem will be stored inside the soundbank.
+
+        Returns
+        -------
+        Path
+            The path to where the wem was stored.
+        """
         if not wem.stem.isnumeric():
             new_file = wem.parent / (str(calc_hash(wem.stem)) + wem.suffix)
             shutil.copy(wem, new_file)
@@ -157,9 +175,9 @@ class Soundbank:
                 target.unlink()
 
             shutil.copy(wem, target)
+            logger.info(f"Added embedded sound {wem.name} to {self.bnk_dir.name}/")
             return target
-
-        elif source_type == SourceType.Streaming:
+        else:
             streaming_dir = self.bnk_dir.parent / "wem" / wem.stem[:2]
             streaming_dir.mkdir(parents=True, exist_ok=True)
 
@@ -171,26 +189,10 @@ class Soundbank:
                 target.unlink()
 
             shutil.copy(wem, streaming_dir)
+            logger.info(
+                f"Added streaming sound {wem.name} to {self.bnk_dir.name}/wem/{wem.stem[:2]}/"
+            )
             return target
-
-        elif source_type == SourceType.PrefetchStreaming:
-            # FIXME create snippet
-            # Sounds in cs_smain are all <= 20kB
-            if wem.stat().st_size > 20000:
-                raise ValueError("Wem is too large for a prefetch snippet")
-
-            target = self.bnk_dir / f"{wem.stem}.wem"
-            if wem.is_file() and target.is_file() and wem.samefile(target):
-                return target
-
-            if target.is_file():
-                target.unlink()
-
-            shutil.copy(wem, self.bnk_dir)
-            return target
-
-        else:
-            raise ValueError(f"Unknown source type {source_type}")
 
     def get_wem_path(self, source_id: int, source_type: SourceType) -> Path:
         wem = self.bnk_dir / f"{source_id}.wem"

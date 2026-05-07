@@ -1,7 +1,6 @@
 from typing import Any, Callable
 from pathlib import Path
 from docstring_parser import parse as doc_parse
-import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, Hash
@@ -306,12 +305,17 @@ def add_change_source_type(
             and new_source_type== SourceType.PrefetchStreaming
         ):
             # Only need to create the prefetch snippet
-            wem = bnk.get_wem_path(current_source_id, current_source_type)
+            wem = get_sound_path(bnk, current_source_id, current_source_type)
             wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
             create_prefetch_snippet(wav, out_file=bnk.bnk_dir / wem.name)
             wav.unlink()
         else:
-            wem = bnk.get_wem_path(current_source_id, current_source_type)
+            if new_source_type == SourceType.PrefetchStreaming:
+                wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
+                create_prefetch_snippet(wav, out_file=bnk.bnk_dir / wem.name)
+                wav.unlink()
+
+            wem = get_sound_path(bnk, current_source_id, current_source_type)
             bnk.add_wem(wem, new_source_type)
             wem.unlink()
 
@@ -319,7 +323,7 @@ def add_change_source_type(
         source.source_type = new_source_type
 
         if on_source_changed:
-            current_wem = bnk.get_wem_path(current_source_id, current_source_type)
+            current_wem = get_sound_path(bnk, current_source_id, current_source_type)
             on_source_changed(tag, (current_source_type, current_wem), user_data)
 
     def on_source_type_changed(
@@ -330,15 +334,15 @@ def add_change_source_type(
             return
 
         simple_choice_dialog(
-            µ("Move sound file?"),
+            µ("Move sound file to correct location?"),
             [µ("Yes"), µ("No")],
             on_move_sound_file_choice,
-            title=µ("Source Type"),
+            title=µ("Update Source Type"),
             user_data=new_source_type,
         )
 
     def select_source_file():
-        current_wem = bnk.get_wem_path(current_source_id, current_source_type)
+        current_wem = get_sound_path(bnk, current_source_id, current_source_type)
         ret = open_file_dialog(
             title=µ("Select Audio File"),
             default_file=str(current_wem),
@@ -411,7 +415,6 @@ def make_setter(
     return setter
 
 
-# TODO move to Soundbank
 def get_sound_path(bnk: Soundbank, source_id: int, source_type: SourceType) -> Path:
     wem = bnk.bnk_dir / f"{source_id}.wem"
     if source_type != SourceType.PrefetchStreaming and wem.is_file():
@@ -437,45 +440,6 @@ def get_sound_path(bnk: Soundbank, source_id: int, source_type: SourceType) -> P
         return wem
 
     return None
-
-
-def copy_wems_dialog(bnk: Soundbank, wav: Path, wem: Path, source_type: SourceType):
-    from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
-
-    def copy_wems() -> None:
-        if source_type == SourceType.Embedded:
-            target = bnk.bnk_dir / wem.name
-            if target.is_file():
-                target.unlink()
-            shutil.copy(wem, target)
-
-        elif source_type in (SourceType.Streaming, SourceType.PrefetchStreaming):
-            target = bnk.bnk_dir.parent / wem / f"{wem.stem[:2]}" / wem.name
-            if target.is_file():
-                target.unlink()
-            shutil.copy(wem, target)
-
-            if source_type == SourceType.PrefetchStreaming:
-                wwise = get_config().locate_wwise()
-                snippet = create_prefetch_snippet(wav)
-                wem_snippet = wav2wem(wwise, snippet, out_dir=bnk.bnk_dir)[0]
-                logger.info(
-                    µ("Placed prefetch snippet in {file}", "log").format(
-                        file=wem_snippet
-                    )
-                )
-
-        else:
-            raise ValueError(f"Unknown source_type {source_type}")
-
-        logger.info(µ("Copied {file} to {target}", file=wem.name, dest=target))
-
-    simple_choice_dialog(
-        µ("Copy WEMs to soundbank {bank}?", bank=bnk.name),
-        [µ("Yes"), µ("No")],
-        lambda s, a, u: a == 0 and copy_wems(),
-        title=µ("Copy?"),
-    )
 
 
 def _create_type_specific_attributes(
@@ -1143,10 +1107,9 @@ def _create_attributes_musicsegment(
     def on_loop_changed(
         sender: str, loop_info: tuple[float, float, bool], user_data: Any
     ) -> None:
-        loop_start, loop_end, loop_enabled = loop_info
+        loop_start, loop_end, _ = loop_info
         node.set_marker(MarkerId.LoopStart, loop_start)
         node.set_marker(MarkerId.LoopEnd, loop_end)
-        # TODO not sure how to enable/disable looping
 
     def edit_markers_on_track() -> None:
         track_name = dpg.get_value(f"{base_tag}/child_tracks")
@@ -1219,21 +1182,8 @@ def _create_attributes_musictrack(
     user_data: Any = None,
     base_tag: str = 0,
 ) -> None:
-    def on_source_changed(sender: str, filepath: Path, source_index: int) -> None:
-        if filepath.name.endswith(".wav"):
-            wwise = get_config().locate_wwise()
-            wem_path = wav2wem(wwise, filepath)[0]
-        else:
-            wem_path = filepath
-
-        source = node.sources[i]
-        copy_wems_dialog(bnk, wem_path, source.source_type)
-
-        source_details = node.sources[source_index]["media_information"]
-        source_details["source_id"] = int(wem_path.stem)
-        source_details["in_memory_media_size"] = wem_path.stat().st_size
-
-        dpg.set_value(sender, wem_path.stem)
+    def on_source_changed(sender: str, info: tuple[SourceType, Path], source_index: int) -> None:
+        players[source_index].set_file(info[1])
         on_node_changed(base_tag, node, user_data)
 
     def on_loop_changed(
@@ -1241,8 +1191,7 @@ def _create_attributes_musictrack(
         loop_info: tuple[float, float, bool],
         cb_user_data: Any,
     ) -> None:
-        # TODO not sure where to enable or disable looping
-        loop_start, loop_end, loop_enabled = loop_info
+        loop_start, loop_end, _ = loop_info
         segment.set_marker(MarkerId.LoopStart, loop_start)
         segment.set_marker(MarkerId.LoopEnd, loop_end)
         on_node_changed(base_tag, node, user_data)
@@ -1311,10 +1260,10 @@ def _create_attributes_musictrack(
             path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
             trims = node.get_trims(i)
 
-            # FIXME
+            add_change_source_type(bnk, source, on_source_changed, user_data=i)
             player = add_wav_player(
                 path,
-                on_file_changed=on_source_changed,
+                allow_change_file=False,
                 loop_markers_enabled=markers_enabled,
                 edit_markers_inplace=False,
                 on_loop_changed=on_loop_changed,
@@ -1450,19 +1399,7 @@ def _create_attributes_sound(
 ) -> None:
     def on_source_changed(sender: str, info: tuple[SourceType, Path], user_data: Any) -> None:
         player.set_file(info[1])
-
-    def on_filepath_selected(sender: str, filepath: Path, sound: Sound) -> None:
-        if filepath.name.endswith(".wav"):
-            wwise = get_config().locate_wwise()
-            wem_path = wav2wem(wwise, filepath)[0]
-        else:
-            wem_path = filepath
-
-        copy_wems_dialog(bnk, wem_path, sound.source_type)
-
-        sound.set_source_from_wem(wem_path)
-        dpg.set_value(sender, wem_path.stem)
-        on_node_changed(base_tag, sound, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     source = node.bank_source_data
     path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
