@@ -683,6 +683,8 @@ class add_wav_player(DpgItem):
         Downsample by splitting into n_buckets and keeping min+max per bucket.
         Returns (t, y) where len == 2*n_buckets, ready to plot as a filled waveform.
         """
+        # Clamp so we never request more buckets than samples
+        n_buckets = min(n_buckets, len(signal))
         trim = (len(signal) // n_buckets) * n_buckets
         sig_buckets = signal[:trim].reshape(n_buckets, -1)
         t_buckets = time[:trim].reshape(n_buckets, -1)
