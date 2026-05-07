@@ -12,11 +12,13 @@ from .generic_input_widget import add_generic_widget
 from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
 from .interpolation_curve import add_interpolation_curve
+from .kofi import add_kofi_button
 from .loading_indicator import loading_indicator
 from .node_widgets import create_node_widgets
 from .node_reference import add_node_reference
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
 from .section_widgets import create_section_widgets
+from .splash import add_splash
 from .wav_player import add_wav_player
 from .properties_table import add_properties_table
 from .table_tree_nodes import (

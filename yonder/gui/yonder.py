@@ -66,6 +66,7 @@ from .dialogs.create_boss_track_dialog import create_boss_track_dialog
 from .dialogs.create_ambience_track_dialog import create_ambience_track_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .widgets.splash import add_splash
+from .widgets.kofi import add_kofi_button
 
 
 class BanksOfYonder(DpgItem):
@@ -82,21 +83,13 @@ class BanksOfYonder(DpgItem):
         self._backup: DataNode = None
 
         self.config: Config = get_config()
-        # Call once to
         set_active_language(self.config.language)
 
         self._setup_menu()
         self._setup_content()
         self._setup_context_menus()
+        self._setup_splash()
         self._set_bnk_menus_enabled(False)
-
-        add_splash(tag=self._t("splash"))
-        dpg.set_frame_callback(
-            dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash"))
-        )
-
-        # Call late to get all created items translated
-        # self._change_language(self.config.language)
 
         class LogHandler(logging.Handler):
             def emit(this, record: logging.LogRecord):
@@ -640,6 +633,25 @@ class BanksOfYonder(DpgItem):
                 button=dpg.mvMouseButton_Right, callback=self.open_pin_menu
             )
 
+    def _setup_splash(self) -> None:
+        add_splash(tag=self._t("splash"))
+        dpg.set_frame_callback(
+            dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash"))
+        )
+
+        with dpg.window(
+            pos=(dpg.get_viewport_width() - 65, -10),
+            no_saved_settings=True,
+            on_close=lambda: dpg.delete_item(kofi),
+            no_scrollbar=True,
+            no_scroll_with_mouse=True,
+            no_resize=True,
+            no_background=True,
+            no_title_bar=True,
+            tag=self._t("kofi")
+        ) as kofi:
+            add_kofi_button()
+
     def _on_key_press(self, sender, key: int) -> None:
         if dpg.is_key_down(dpg.mvKey_ModShift) and dpg.is_key_down(dpg.mvKey_ModCtrl):
             if key == dpg.mvKey_S:
@@ -966,6 +978,9 @@ class BanksOfYonder(DpgItem):
 
         if dpg.does_item_exist(self._t("splash")):
             dpg.delete_item(self._t("splash"))
+
+        if dpg.does_item_exist(self._t("kofi")):
+            dpg.delete_item(self._t("kofi"))
 
         if path.is_dir():
             path = path / "soundbank.json"
