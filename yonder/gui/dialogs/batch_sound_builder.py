@@ -239,7 +239,7 @@ class create_batch_sound_builder_dialog(DpgItem):
             path = Path(path)
 
             if groups_from_filenames:
-                m = re.match(rf"([{SoundType.values()}])(\d+).*", path.stem)
+                m = re.match(rf".*([{SoundType.values()}])(\d{{6,10}}).*", path.stem)
                 if m:
                     soundtype = SoundType(m.group(1))
                     name = f"{int(m.group(2)):09}"
