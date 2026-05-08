@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 14:44+0200\n"
+"POT-Creation-Date: 2026-05-08 16:32+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -269,6 +269,36 @@ msgstr "计算 FNV-1a 32 位哈希"
 msgctxt "button"
 msgid "Okay"
 msgstr "确定"
+
+# ../../yonder/gui/dialogs/mass_transfer_dialog.py:325
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Swap"
+msgstr "交换"
+
+# ../../yonder/gui/yonder.py:593
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Update"
+msgstr "粘贴"
+
+# ../../yonder/gui/yonder.py:574
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Pin"
+msgstr "固定"
+
+# ../../yonder/gui/yonder.py:796
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Jump to"
+msgstr "跳转到"
+
+# ../../yonder/gui/yonder.py:581
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Copy"
+msgstr "复制"
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:52
 #: ../../yonder/gui/dialogs/convert_wav_dialog.py
@@ -1729,6 +1759,19 @@ msgctxt "menu"
 msgid "Pin"
 msgstr "固定"
 
+#: ../../yonder/gui/yonder.py
+msgctxt "compare"
+msgid "Compare"
+msgstr "比较"
+
+#: ../../yonder/gui/yonder.py
+msgid "As left side"
+msgstr "作为左侧"
+
+#: ../../yonder/gui/yonder.py
+msgid "As right side"
+msgstr "作为右侧"
+
 # ../../yonder/gui/yonder.py:581
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
@@ -2008,7 +2051,7 @@ msgid "Verifying..."
 msgstr "验证中..."
 
 # ../../yonder/gui/yonder.py:1351
-#: ../../yonder/gui/yonder.py
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Copied node {node} to clipboard"
 msgstr "已将节点 {node} 复制到剪贴板"

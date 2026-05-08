@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 14:44+0200\n"
+"POT-Creation-Date: 2026-05-08 16:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -213,6 +213,26 @@ msgstr ""
 #: ../../yonder/gui/dialogs/select_nodes_dialog.py
 msgctxt "button"
 msgid "Okay"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Swap"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Update"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Pin"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Jump to"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Copy"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/convert_wav_dialog.py
@@ -1390,6 +1410,19 @@ msgid "Pin"
 msgstr ""
 
 #: ../../yonder/gui/yonder.py
+msgctxt "compare"
+msgid "Compare"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py
+msgid "As left side"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py
+msgid "As right side"
+msgstr ""
+
+#: ../../yonder/gui/yonder.py
 msgctxt "menu"
 msgid "Copy"
 msgstr ""
@@ -1621,7 +1654,7 @@ msgctxt "loading"
 msgid "Verifying..."
 msgstr ""
 
-#: ../../yonder/gui/yonder.py
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py ../../yonder/gui/yonder.py
 #, python-brace-format
 msgid "Copied node {node} to clipboard"
 msgstr ""

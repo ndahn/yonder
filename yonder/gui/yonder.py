@@ -66,6 +66,7 @@ from .dialogs.create_boss_track_dialog import create_boss_track_dialog
 from .dialogs.create_ambience_track_dialog import create_ambience_track_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
+from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 
@@ -591,6 +592,17 @@ class BanksOfYonder(DpgItem):
                 callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
                 tag=self._t("context/pin"),
             )
+            with dpg.menu(label=µ("Compare", "compare")):
+                dpg.add_menu_item(
+                    label=µ("As left side"),
+                    callback=self.set_comparison_left,
+                    tag=self._t("context/compare_left"),
+                )
+                dpg.add_menu_item(
+                    label=µ("As right side"),
+                    callback=self.set_comparison_right,
+                    tag=self._t("context/compare_right"),
+                )
 
             dpg.add_separator()
 
@@ -654,7 +666,7 @@ class BanksOfYonder(DpgItem):
             no_resize=True,
             no_background=True,
             no_title_bar=True,
-            tag=self._t("kofi")
+            tag=self._t("kofi"),
         ) as kofi:
             add_kofi_button()
 
@@ -1627,6 +1639,33 @@ class BanksOfYonder(DpgItem):
     def _set_json_highlight(self, highlight: bool) -> None:
         self._set_component_highlight(self._t("json"), highlight)
         self._set_component_highlight(self._t("json_apply"), highlight)
+
+    def _get_comparison_dialog(self, focus: bool = True) -> compare_nodes_dialog:
+        tag = self._t("create_node_dialog")
+
+        if not dpg.does_item_exist(tag):
+            dlg = compare_nodes_dialog(
+                pin_callback=self.add_pinned_object,
+                jump_callback=self.jump_to_node,
+                tag=tag,
+            )
+            dpg.set_item_user_data(tag, dlg)
+        else:
+            dlg = dpg.get_item_user_data(tag)
+
+        if focus:
+            dpg.show_item(dlg.tag)
+            dpg.focus_item(dlg.tag)
+
+        return dlg
+
+    def set_comparison_left(self) -> None:
+        dlg = self._get_comparison_dialog()
+        dlg.node_a = self._selected_node
+
+    def set_comparison_right(self) -> None:
+        dlg = self._get_comparison_dialog()
+        dlg.node_b = self._selected_node
 
     def _open_create_node_dialog(self) -> None:
         tag = self._t("create_node_dialog")
