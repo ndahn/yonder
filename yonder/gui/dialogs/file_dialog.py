@@ -5,6 +5,8 @@ from crossfiledialog.exceptions import FileDialogException
 
 try:
     import ctypes
+    import win32gui
+    import win32con
 except ImportError:
     raise ImportError(
         "Running 'filedialog' on Windows requires the 'pywin32' package.")
@@ -30,7 +32,6 @@ def get_preferred_cwd():
 def set_last_cwd(cwd):
     global last_cwd
     last_cwd = os.path.dirname(cwd)
-
 
 
 _dialog_open = False
@@ -85,11 +86,64 @@ def open_multiple_dialog(
     if not default_dir:
         default_dir = os.path.dirname(sys.argv[0])
 
-    ret = crossfiledialog.open_multiple(
-        title=title,
-        start_dir=default_dir,
-        filter=filetypes,
-    )
+    # increased buffer limit so more files can be selected
+    # TODO decide what to do with crossfiledialog - should we just do everything ourselves?
+    def _open_multiple():
+        win_kwargs = dict(Title=title)
+
+        if default_dir:
+            win_kwargs["InitialDir"] = default_dir
+
+        if filetypes:
+            if isinstance(filetypes, str):
+                # Filter is a single wildcard.
+                win_kwargs["Filter"] = filetypes + '\0' + filetypes + '\0'
+            elif isinstance(filetypes, list):
+                if isinstance(filetypes[0], str):
+                    # Filter is a list of wildcards.
+                    win_kwargs["Filter"] = " ".join(filetypes) + '\0' + ";".join(filetypes) + '\0'
+                elif isinstance(filetypes[0], list):
+                    # Filter is a list of list with wildcards.
+                    win_kwargs["Filter"] = "".join(
+                        " ".join(f) + '\0' + ";".join(f) + '\0' for f in filetypes
+                    )
+                else:
+                    raise ValueError("Invalid filter")
+            elif isinstance(filetypes, dict):
+                # Filter is a dictionary mapping descriptions to wildcards or lists of wildcards.
+                filters = ""
+                for key, value in filetypes.items():
+                    if isinstance(value, str):
+                        filters += "{0}\0{1}\0".format(key, value)
+                    elif isinstance(value, list):
+                        filters += "{0}\0{1}\0".format(key, ';'.join(value))
+                    else:
+                        raise ValueError("Invalid filter")
+
+                win_kwargs["Filter"] = filters
+            else:
+                raise ValueError("Invalid filter")
+
+        file_names = crossfiledialog.win32.error_handling_wrapper(
+            win32gui.GetOpenFileNameW,
+            **win_kwargs,
+            Flags=win32con.OFN_ALLOWMULTISELECT | win32con.OFN_EXPLORER,
+            MaxFile=65536,  # allows opening more files at once
+        )
+
+        if file_names:
+            file_names_list = file_names.split('\x00')
+            if len(file_names_list) > 1:
+                dirname = file_names_list[0]
+                file_names_list_nodir = file_names_list[1:]
+                file_names_list = [os.path.join(dirname, file_name) for file_name in file_names_list_nodir]
+
+            set_last_cwd(file_names_list[0])
+            return file_names_list
+
+        return []
+
+    ret = _open_multiple()
     _dialog_open = False
 
     return ret
