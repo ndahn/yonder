@@ -231,15 +231,38 @@ class create_batch_sound_builder_dialog(DpgItem):
             return
 
         choice = dpg.get_value(self._t("bulk/soundtype"))
-        soundtype = self._soundtype_choice_to_enum(choice)
+        default_soundtype = self._soundtype_choice_to_enum(choice)
         group_id = abs(int(start))
+        groups_from_filenames = dpg.get_value(self._t("bulk/groups_from_filenames"))
 
-        for f in ret:
-            g = BatchGroup(
-                f"{group_id:09}", soundtype=soundtype, soundfiles=[Path(f)]
+        for path in ret:
+            path = Path(path)
+
+            if groups_from_filenames:
+                m = re.match(rf"([{SoundType.values()}])(\d+).*", path.stem)
+                if m:
+                    soundtype = SoundType(m.group(1))
+                    name = f"{int(m.group(2)):09}"
+
+                    for g in self._groups:
+                        if g.soundtype == soundtype and g.name == name:
+                            # Found a group with the same name, append to it
+                            if path not in g.soundfiles:
+                                g.soundfiles.append(path)
+                            break
+                    else:
+                        # Create a new group based on the filename
+                        group = BatchGroup(name, soundtype=soundtype, soundfiles=[path])
+                        self._w_groups.append(group)
+                        self._groups.append(group)
+
+                    continue
+
+            group = BatchGroup(
+                f"{group_id:09}", soundtype=default_soundtype, soundfiles=[path]
             )
-            self._w_groups.append(g)
-            self._groups.append(g)
+            self._w_groups.append(group)
+            self._groups.append(group)
             group_id += step
 
             if group_id < 0:
@@ -374,9 +397,8 @@ class create_batch_sound_builder_dialog(DpgItem):
                         header_row=True,
                     )
 
-                    dpg_section(
-                        µ("Bulk Operations"), color=style.muted_purple, spacer=0
-                    )
+                    dpg.add_separator()
+                    dpg.add_spacer(height=2)
 
                     dpg.add_combo(
                         [str(st) for st in SoundType],
@@ -398,6 +420,15 @@ class create_batch_sound_builder_dialog(DpgItem):
                         width=180,
                         tag=self._t("bulk/step"),
                     )
+                    
+                    dpg.add_checkbox(
+                        label=µ("Groups from filenames"),
+                        default_value=True,
+                        tag=self._t("bulk/groups_from_filenames"),
+                    )
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text(µ("Recognizes filenames like s100200300_bang"))
+
                     dpg.add_button(
                         label=µ("Groups from Files", "button"),
                         callback=self._batch_groups_from_files,
