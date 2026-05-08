@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 01:53+0200\n"
+"POT-Creation-Date: 2026-05-08 14:44+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -143,10 +143,6 @@ msgid "Name"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-msgid "Bulk Operations"
-msgstr ""
-
-#: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Type"
 msgstr ""
 
@@ -156,6 +152,14 @@ msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 msgid "Step"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Detect group names"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Recognizes filenames like s100200300_bang"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 01:53+0200\n"
+"POT-Creation-Date: 2026-05-08 14:44+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -172,12 +172,6 @@ msgstr "文件"
 msgid "Name"
 msgstr "名称"
 
-# ../../yonder/gui/dialogs/batch_sound_builder.py:330
-#: ../../yonder/gui/dialogs/batch_sound_builder.py
-#, fuzzy
-msgid "Bulk Operations"
-msgstr "批量操作"
-
 # ../../yonder/gui/widgets/rtpc_table.py:128
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
 #, fuzzy
@@ -195,6 +189,16 @@ msgstr "起始值"
 #, fuzzy
 msgid "Step"
 msgstr "步长"
+
+# ../../yonder/gui/dialogs/batch_sound_builder.py:345
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+#, fuzzy
+msgid "Detect group names"
+msgstr "检测分组名称"
+
+#: ../../yonder/gui/dialogs/batch_sound_builder.py
+msgid "Recognizes filenames like s100200300_bang"
+msgstr ""
 
 # ../../yonder/gui/dialogs/batch_sound_builder.py:345
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
@@ -2188,4 +2192,8 @@ msgstr "已添加环境音轨 {name}"
 # ../../yonder/gui/yonder.py:523
 #~ msgid "Apply"
 #~ msgstr "应用"
+
+# ../../yonder/gui/dialogs/batch_sound_builder.py:330
+#~ msgid "Bulk Operations"
+#~ msgstr "批量操作"
 

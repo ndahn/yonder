@@ -420,9 +420,9 @@ class create_batch_sound_builder_dialog(DpgItem):
                         width=180,
                         tag=self._t("bulk/step"),
                     )
-                    
+
                     dpg.add_checkbox(
-                        label=µ("Groups from filenames"),
+                        label=µ("Detect group names"),
                         default_value=True,
                         tag=self._t("bulk/groups_from_filenames"),
                     )
