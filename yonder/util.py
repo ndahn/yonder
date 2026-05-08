@@ -62,7 +62,8 @@ def repack_soundbank(bnk2json_exe: Path, bnk_dir: Path) -> Path:
     # Rename the backup and new soundbank to make things a little easier for the user
     old_file = bnk_dir.parent / (bnk_dir.stem + ".bnk")
     new_file = bnk_dir.parent / (bnk_dir.stem + ".created.bnk")
-    shutil.move(old_file, str(old_file) + ".bak")
+    if old_file.is_file():
+        shutil.move(old_file, str(old_file) + ".bak")
     shutil.move(new_file, old_file)
 
     return bnk_dir.parent / (bnk_dir.stem + ".bnk")
