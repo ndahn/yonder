@@ -15,7 +15,7 @@ from yonder.enums import SourceType
 from .sections import Section, BKHDSection, HIRCSection
 from .hirc_node import HIRCNode
 from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
-from .action import ActionType, ActionPlay
+from .action import ActionType
 
 from . import (
     Action,
@@ -596,7 +596,7 @@ class Soundbank:
                 parent_id = node.parent
                 parent = self.get(parent_id)
 
-                if parent_id <= 0:
+                if parent_id <= 0 and node.type_name != "ActorMixer":
                     logger.warning(f"{node}: node has no parent")
                     severity = max(severity, 1)
                 elif parent_id in discovered_ids:
