@@ -788,6 +788,10 @@ class DecisionTreeNode:
     probability: int = 100
     children: list[DecisionTreeNode] = field(default_factory=list)
 
+    @property
+    def name(self) -> str:
+        return lookup_name(self.key, f"#{self.key}")
+
     def validate(self) -> None:
         self.children.sort(key=lambda x: x.key)
 

@@ -162,6 +162,20 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         if node_id > 0:
             self.children.add(node_id)
 
+    def remove_branch(self, path_to_branch: list[Hash]) -> None:
+        parent = self.tree
+        for key in path_to_branch[:-1]:
+            for child in parent.children:
+                if child.key == key:
+                    parent = child
+                    break
+            else:
+                raise ValueError(f"Could not resolve branch path {path_to_branch}")
+
+        branch = next(c for c in parent.children if c.key == path_to_branch[-1])
+        parent.children.remove(branch)
+        return branch
+
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
             raise ValueError(f"Found mismatch between group_types and arguments in {self}")

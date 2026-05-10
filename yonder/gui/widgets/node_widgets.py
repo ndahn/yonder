@@ -302,13 +302,16 @@ def add_change_source_type(
                 snippet.unlink()
         elif (
             current_source_type == SourceType.Streaming
-            and new_source_type== SourceType.PrefetchStreaming
+            and new_source_type == SourceType.PrefetchStreaming
         ):
             # Only need to create the prefetch snippet
             wem = get_sound_path(bnk, current_source_id, current_source_type)
-            wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
-            create_prefetch_snippet(wav, out_file=bnk.bnk_dir / wem.name)
-            wav.unlink()
+            if wem:
+                wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
+                create_prefetch_snippet(wav, out_file=bnk.bnk_dir / wem.name)
+                wav.unlink()
+            else:
+                logger.error("Wem not found, prefetch snippet has not been created")
         else:
             if new_source_type == SourceType.PrefetchStreaming:
                 wav = wem2wav(get_config().locate_vgmstream(), wem)[0]
@@ -316,8 +319,11 @@ def add_change_source_type(
                 wav.unlink()
 
             wem = get_sound_path(bnk, current_source_id, current_source_type)
-            bnk.add_wem(wem, new_source_type)
-            wem.unlink()
+            if wem:
+                bnk.add_wem(wem, new_source_type)
+                wem.unlink()
+            else:
+                logger.error("Wem not found, no files have been moved")
 
         current_source_type = new_source_type
         source.source_type = new_source_type
@@ -354,7 +360,7 @@ def add_change_source_type(
             if ret.suffix == "wav":
                 ret = wav2wem(get_config().locate_wwise(), ret)[0]
 
-            if current_wem.is_file():
+            if current_wem and current_wem.is_file():
                 current_wem.unlink()
 
             ret = bnk.add_wem(ret, current_source_type)
@@ -921,6 +927,7 @@ def _create_attributes_musicswitchcontainer(
     user_data: Any = None,
 ) -> None:
     from yonder.gui.dialogs.edit_state_path_dialog import edit_state_path_dialog
+    from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 
     names = {
         a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments
@@ -944,6 +951,45 @@ def _create_attributes_musicswitchcontainer(
         tree_node.key = info[0]
         update_branch_label(sender, branch, None)
 
+    def on_delete_branch(
+        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        branch, path = info
+        node.remove_branch(path)
+        logger.info(f"Removed branch {branch.name}")
+        on_node_changed(base_tag, node, user_data)
+
+        # Choice dialog
+        simple_choice_dialog(
+            µ("Delete nodes connected to branch?"),
+            [µ("Yes"), µ("No")],
+            on_delete_branch_nodes_decision,
+            title=µ("Delete branch"),
+            user_data=branch,
+        )
+
+    def on_delete_branch_nodes_decision(
+        sender: str, choice: int, branch: DecisionTreeNode
+    ) -> None:
+        if choice != 0:
+            return
+
+        nodes: set[DecisionTreeNode] = set()
+        todo = [branch]
+
+        while todo:
+            fork = todo.pop()
+            if fork.node_id > 0:
+                nodes.add(fork.node_id)
+            todo.extend(fork.children)
+
+        for node in list(nodes):
+            nodes.update(bnk.get_subtree(node).nodes)
+
+        bnk.delete_nodes(*nodes)
+        logger.info(f"Deleted {len(nodes)} nodes related to branch {branch.name}")
+        on_node_changed(base_tag, node, user_data)
+
     def update_branch_label(
         sender: str, info: tuple[DecisionTreeNode, int, str], cb_user_data: Any
     ) -> None:
@@ -956,7 +1002,9 @@ def _create_attributes_musicswitchcontainer(
         label = f"{arg_name} = {val_name}"
         dpg.set_item_label(dpg_item, label)
 
-    def bind_context_menu(item: str, tree_node: DecisionTreeNode, level: int) -> None:
+    def bind_context_menu(
+        item: str, tree_node: DecisionTreeNode, level: int, path: list[Hash]
+    ) -> None:
         arg = node.arguments[level]
         arg_name = names[arg.group_id]
         val_name = get_key(tree_node)
@@ -972,6 +1020,11 @@ def _create_attributes_musicswitchcontainer(
                 width=100,
                 user_data=(tree_node, level, item),
             )
+            dpg.add_button(
+                label=µ("Delete branch"),
+                callback=on_delete_branch,
+                user_data=(tree_node, path),
+            )
 
     def get_key(tree_node: DecisionTreeNode) -> str:
         val = tree_node.key
@@ -979,14 +1032,14 @@ def _create_attributes_musicswitchcontainer(
             return "*"
         return lookup_name(val, f"#{val}")
 
-    def delve(tree_node: DecisionTreeNode, level: int) -> None:
+    def delve(tree_node: DecisionTreeNode, level: int, path: list) -> None:
+        path = path + [tree_node.key]
         if level == len(node.arguments) - 1:
             # Leaf
             nid = tree_node.node_id
             leaf_node = bnk.get(nid)
 
             with dpg.tree_node(span_full_width=True) as dpg_item:
-                # TODO should be an input field
                 if leaf_node:
                     add_node_link(
                         str(leaf_node),
@@ -1000,9 +1053,9 @@ def _create_attributes_musicswitchcontainer(
             # Branch
             with dpg.tree_node(span_full_width=True) as dpg_item:
                 for child in tree_node.children:
-                    delve(child, level + 1)
+                    delve(child, level + 1, path)
 
-        bind_context_menu(dpg_item, tree_node, level)
+        bind_context_menu(dpg_item, tree_node, level, path)
         update_branch_label(None, (tree_node, level, dpg_item), None)
 
     with dpg.group():
@@ -1019,7 +1072,7 @@ def _create_attributes_musicswitchcontainer(
             tag=f"{base_tag}/musicswitchconainer/decision_tree",
         ):
             for child in node.tree.children:
-                delve(child, 0)
+                delve(child, 0, [])
 
         dpg.add_spacer(height=3)
         dpg.add_button(
@@ -1126,7 +1179,9 @@ def _create_attributes_musicsegment(
             path = track.get_source_path(bnk, 0)
         else:
             source = track.sources[0]
-            path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
+            path = get_sound_path(
+                bnk, source.media_information.source_id, source.source_type
+            )
 
         loop_start = node.get_marker_pos(MarkerId.LoopStart, 1000.0)
         loop_end = node.get_marker_pos(MarkerId.LoopEnd, -1000.0)
@@ -1182,7 +1237,9 @@ def _create_attributes_musictrack(
     user_data: Any = None,
     base_tag: str = 0,
 ) -> None:
-    def on_source_changed(sender: str, info: tuple[SourceType, Path], source_index: int) -> None:
+    def on_source_changed(
+        sender: str, info: tuple[SourceType, Path], source_index: int
+    ) -> None:
         players[source_index].set_file(info[1])
         on_node_changed(base_tag, node, user_data)
 
@@ -1257,7 +1314,9 @@ def _create_attributes_musictrack(
     # TODO Otherwise we need a player table here.
     with dpg.group():
         for i, source in enumerate(node.sources):
-            path = get_sound_path(bnk, source.media_information.source_id, source.source_type)
+            path = get_sound_path(
+                bnk, source.media_information.source_id, source.source_type
+            )
             trims = node.get_trims(i)
 
             add_change_source_type(bnk, source, on_source_changed, user_data=i)
@@ -1397,7 +1456,9 @@ def _create_attributes_sound(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    def on_source_changed(sender: str, info: tuple[SourceType, Path], user_data: Any) -> None:
+    def on_source_changed(
+        sender: str, info: tuple[SourceType, Path], user_data: Any
+    ) -> None:
         player.set_file(info[1])
         on_node_changed(base_tag, node, user_data)
 
