@@ -1,6 +1,7 @@
 from typing import Generator, Callable
 from difflib import SequenceMatcher
 import pyperclip
+from collections import deque
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
@@ -39,10 +40,25 @@ class compare_nodes_dialog(DpgItem):
                 dpg.add_button(label=µ("Swap"), callback=self.swap)
                 dpg.add_button(label=µ("Update"), callback=self.update)
                 dpg.add_checkbox(
-                    label=("Line numbers"),
+                    label=µ("Line numbers"),
                     default_value=True,
                     callback=self.update,
                     tag=self._t("line_numbers"),
+                )
+                dpg.add_checkbox(
+                    label=µ("Differences only"),
+                    default_value=False,
+                    callback=self.update,
+                    tag=self._t("differences_only"),
+                )
+                dpg.add_input_int(
+                    label=µ("Context"),
+                    default_value=1,
+                    min_value=0,
+                    min_clamped=True,
+                    width=100,
+                    callback=self.update,
+                    tag=self._t("diff_context"),
                 )
 
             with dpg.group(horizontal=True):
@@ -59,9 +75,8 @@ class compare_nodes_dialog(DpgItem):
                     dpg.add_group(tag=self._t("node_a_lines"))
 
                 with dpg.child_window(
+                    autosize_x=True,
                     autosize_y=True,
-                    resizable_x=True,
-                    width=330,
                     tag=self._t("right"),
                 ):
                     dpg_section(
@@ -203,6 +218,8 @@ class compare_nodes_dialog(DpgItem):
             dpg.set_value(self._t("node_b_title"), str(self._node_b))
 
         line_numbers = dpg.get_value(self._t("line_numbers"))
+        differences_only = dpg.get_value(self._t("differences_only"))
+        diff_context = dpg.get_value(self._t("diff_context"))
         idx_a = 0
         idx_b = 0
 
@@ -227,8 +244,21 @@ class compare_nodes_dialog(DpgItem):
 
         json_a = self._node_a.json().splitlines()
         json_b = self._node_b.json().splitlines()
+        prev = deque(maxlen=diff_context)
 
         for line_a, line_b, change_type in self._iter_lines(json_a, json_b):
+            if differences_only:
+                if change_type == "equal":
+                    prev.append(line_a)
+                    continue
+
+                color = self._get_change_color("equal")
+                for i, line in enumerate(prev):
+                    put_line(idx_a - len(prev) + i, line, color, lines_a)
+                    put_line(idx_b - len(prev) + i, line, color, lines_b)
+
+                prev.clear()
+
             color = self._get_change_color(change_type)
             idx_a = put_line(idx_a, line_a, color, lines_a)
             idx_b = put_line(idx_b, line_b, color, lines_b)
