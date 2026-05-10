@@ -1007,7 +1007,10 @@ def _create_attributes_musicswitchcontainer(
     ) -> None:
         arg = node.arguments[level]
         arg_name = names[arg.group_id]
-        val_name = get_key(tree_node)
+        if tree_node.key == 0:
+            val_name = "*"
+        else:
+            val_name = lookup_name(tree_node.key, "<?>")
 
         with dpg.popup(item, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)):
             dpg.add_text(arg_name)
