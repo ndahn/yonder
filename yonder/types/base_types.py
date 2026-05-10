@@ -114,9 +114,9 @@ class MusicTransitionObject:
 
 @dataclass(slots=True)
 class MusicTransSrcRule:
-    transition_time: int = 0
+    transition_time: int = 500
     fade_curve: CurveInterpolation = CurveInterpolation.Linear
-    fade_offet: int = 0  # NOTE typo in bnk2json
+    fade_offet: int = 500  # NOTE typo in bnk2json
     sync_type: SyncType = SyncType.Immediate
     clue_filter_hash: int = 0
     play_post_exit: int = 0
@@ -124,7 +124,7 @@ class MusicTransSrcRule:
 
 @dataclass(slots=True)
 class MusicTransDstRule:
-    transition_time: int = 0
+    transition_time: int = 500
     fade_curve: CurveInterpolation = CurveInterpolation.Linear
     fade_offet: int = 0  # NOTE typo in bnk2json
     clue_filter_hash: int = 0
@@ -153,15 +153,29 @@ class MusicTransitionRule:
         default_factory=MusicTransitionObject
     )
 
+    def apply_src_fade(self, fade: MusicFade) -> None:
+        src = self.source_transition_rule
+        src.fade_curve = fade.curve
+        src.transition_time = fade.transition_time
+        src.fade_offet = fade.offset
+
+    def apply_dst_fade(self, fade: MusicFade) -> None:
+        dst = self.source_transition_rule
+        dst.fade_curve = fade.curve
+        dst.transition_time = fade.transition_time
+        dst.fade_offet = fade.offset
+
     def configure(
         self,
         src_transition_time: int = None,
         src_fade_offset: int = None,
         src_fade_curve: CurveInterpolation = None,
         src_sync_type: SyncType = None,
+        src_play_post_exit: bool = None,
         dst_transition_time: int = None,
         dst_fade_offset: int = None,
         dst_fade_curve: CurveInterpolation = None,
+        dst_play_pre_entry: bool = None,
         src_ids: list[int] = None,
         dst_ids: list[int] = None,
     ) -> None:
@@ -176,6 +190,8 @@ class MusicTransitionRule:
             src_rule.fade_curve = src_fade_curve
         if src_sync_type is not None:
             src_rule.sync_type = src_sync_type
+        if src_play_post_exit is not None:
+            src_rule.play_post_exit = src_play_post_exit
 
         if dst_transition_time is not None:
             dst_rule.transition_time = dst_transition_time
@@ -183,6 +199,8 @@ class MusicTransitionRule:
             dst_rule.fade_offet = dst_fade_offset
         if dst_fade_curve is not None:
             dst_rule.fade_curve = dst_fade_curve
+        if dst_play_pre_entry is not None:
+            dst_rule.play_pre_entry = int(dst_play_pre_entry)
 
         if src_ids:
             self.source_ids = src_ids

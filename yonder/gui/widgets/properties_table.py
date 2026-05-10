@@ -40,7 +40,7 @@ class add_properties_table(DpgItem):
         super().__init__(tag)
 
         self._properties = properties
-        self._on_value_changed = on_value_changed
+        self._callback = on_value_changed
         self._user_data = user_data
 
         self._build(label)
@@ -137,12 +137,14 @@ class add_properties_table(DpgItem):
             self._properties[new_prop] = 0.0
 
         self._sync_combos()
-        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+        if self._callback:
+            self._callback(self._tag, dict(self._properties), self._user_data)
 
     def _on_prop_value_changed(self, sender: str, new_val: float, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
         self._properties[prop] = new_val
-        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+        if self._callback:
+            self._callback(self._tag, dict(self._properties), self._user_data)
 
     def _on_add_clicked(self) -> None:
         available = self._get_available_props()
@@ -150,13 +152,15 @@ class add_properties_table(DpgItem):
             return
         self._properties[available[0]] = 0.0
         self.refresh()
-        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+        if self._callback:
+            self._callback(self._tag, dict(self._properties), self._user_data)
 
     def _on_remove_clicked(self, sender: str, app_data: Any, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
         self._properties.pop(prop)
         self.refresh()
-        self._on_value_changed(self._tag, dict(self._properties), self._user_data)
+        if self._callback:
+            self._callback(self._tag, dict(self._properties), self._user_data)
 
     # === Public ========================================================
 

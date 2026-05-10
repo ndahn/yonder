@@ -178,14 +178,20 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
-            raise ValueError(f"Found mismatch between group_types and arguments in {self}")
+            raise ValueError(
+                f"Found mismatch between group_types and arguments in {self}"
+            )
 
         def delve(branch: DecisionTreeNode, path: list) -> None:
             if len(path) == len(self.arguments) and branch.children:
-                raise ValueError(f"Branch {path} of {self} is deeper than number of arguments ({len(self.arguments)})")
+                raise ValueError(
+                    f"Branch {path} of {self} is deeper than number of arguments ({len(self.arguments)})"
+                )
 
             if len(path) != len(self.arguments) and not branch.children:
-                raise ValueError(f"Branch {path} of {self} does not reach the required depth ({len(self.arguments)})")
+                raise ValueError(
+                    f"Branch {path} of {self} does not reach the required depth ({len(self.arguments)})"
+                )
 
             branch.children.sort(key=lambda c: c.key)
             for child in branch.children:
@@ -195,11 +201,15 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
     def get_references(self, true_children_only: bool = True) -> list[tuple[str, int]]:
         ret = super().get_references()
-        
+
         if true_children_only:
-            # Some vanilla soundbanks have leftover transition rules that will result 
+            # Some vanilla soundbanks have leftover transition rules that will result
             # in misleading warnings and mess up our gui's tree structure
-            ret = [(p,i) for p, i in ret if "transition_rule" not in p or i in self.children]
+            ret = [
+                (p, i)
+                for p, i in ret
+                if "transition_rule" not in p or i in self.children
+            ]
 
         return ret
 

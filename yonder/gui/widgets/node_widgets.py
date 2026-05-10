@@ -361,6 +361,9 @@ def add_change_source_type(
                 ret = wav2wem(get_config().locate_wwise(), ret)[0]
 
             if current_wem and current_wem.is_file():
+                if current_wem == ret:
+                    return
+
                 current_wem.unlink()
 
             ret = bnk.add_wem(ret, current_source_type)

@@ -15,6 +15,7 @@ from yonder.gui.widgets import (
     add_node_reference,
     add_paragraphs,
     add_player_table,
+    add_properties_table,
 )
 from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
@@ -199,7 +200,7 @@ class create_boss_track_dialog(DpgItem):
                         self.bgm_tracks[idx] = wem
 
         # TODO transition rules?
-        loop_info = [(li[0] * 1000, li[1] * 1000) for li in self.bgm_loop_infos]
+        loop_info = [(li[0], li[1]) for li in self.bgm_loop_infos]
         nodes = create_boss_bgm(
             self.bnk,
             self.msc,
@@ -207,6 +208,7 @@ class create_boss_track_dialog(DpgItem):
             self.bgm_tracks,
             loop_markers=loop_info,
             play_preloop_intro=self.play_intro_enabled,
+            properties=self._properties.properties,
         )
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
@@ -230,52 +232,61 @@ class create_boss_track_dialog(DpgItem):
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
-            add_node_reference(
-                self._get_music_switch_containers,
-                "MusicSwitchContainer",
-                self._on_music_switch_container_selected,
-                get_node_details=get_details_musicswitchcontainer,
-                node_type=MusicSwitchContainer,
-            )
+            with dpg.tab_bar():
+                with dpg.tab(label=µ("Tracks")):
+                    add_node_reference(
+                        self._get_music_switch_containers,
+                        "MusicSwitchContainer",
+                        self._on_music_switch_container_selected,
+                        get_node_details=get_details_musicswitchcontainer,
+                        node_type=MusicSwitchContainer,
+                    )
 
-            with dpg.group(horizontal=True):
-                dpg.add_input_text(
-                    callback=self._on_bgmenemytype_changed,
-                    default_value="*",
-                    tag=self._t("bgm_enemy_type"),
-                )
-                dpg.add_combo(
-                    # TODO these are ER specific
-                    [
-                        "EventBoss_Reserved15",
-                        "EventBoss_Reserved14",
-                        "EventBoss_Reserved13",
-                        "EventBoss_Reserved12",
-                        "EventBoss_Reserved11",
-                        "EventBoss_Reserved10",
-                        "EventBoss_Reserved09",
-                        "EventBoss_Reserved08",
-                        "Reserved",
-                    ],
-                    no_preview=True,
-                    callback=self._on_bgmenemytype_changed,
-                )
-                dpg.add_text("BgmEnemyType")
-            dpg.add_button(
-                label=µ("State Path", "button"),
-                callback=self._edit_state_path,
-                tag=self._t("state_path"),
-            )
+                    with dpg.group(horizontal=True):
+                        dpg.add_input_text(
+                            callback=self._on_bgmenemytype_changed,
+                            default_value="*",
+                            tag=self._t("bgm_enemy_type"),
+                        )
+                        dpg.add_combo(
+                            # TODO these are ER specific
+                            [
+                                "EventBoss_Reserved15",
+                                "EventBoss_Reserved14",
+                                "EventBoss_Reserved13",
+                                "EventBoss_Reserved12",
+                                "EventBoss_Reserved11",
+                                "EventBoss_Reserved10",
+                                "EventBoss_Reserved09",
+                                "EventBoss_Reserved08",
+                                "Reserved",
+                            ],
+                            no_preview=True,
+                            callback=self._on_bgmenemytype_changed,
+                        )
+                        dpg.add_text("BgmEnemyType")
+                    dpg.add_button(
+                        label=µ("State Path", "button"),
+                        callback=self._edit_state_path,
+                        tag=self._t("state_path"),
+                    )
+                
+                    self._players = add_player_table(
+                        [],
+                        self._on_bgm_tracks_changed,
+                        get_row_label=self.get_phase_label,
+                        on_loop_changed=self._update_loop_infos,
+                        on_trim_changed=self._update_trim_infos,
+                    )
 
-            add_player_table(
-                [],
-                self._on_bgm_tracks_changed,
-                get_row_label=self.get_phase_label,
-                on_loop_changed=self._update_loop_infos,
-                on_trim_changed=self._update_trim_infos,
-            )
-
-            dpg.add_table(tag=self._t("per_track_settings"))
+                with dpg.tab(label=µ("Settings")):
+                    self._properties = add_properties_table({}, None)
+                    
+                    dpg.add_spacer(height=4)
+                    with dpg.table(tag=self._t("per_track_settings")):
+                        dpg.add_table_column(width_fixed=True)
+                        with dpg.table_row():
+                            dpg.add_text(µ("Add a track first to adjust per-track settings"), color=style.orange)
 
             dpg.add_separator()
             add_paragraphs(

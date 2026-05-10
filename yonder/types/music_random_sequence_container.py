@@ -127,7 +127,7 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
         weight: int = 50000,
         use_weight: bool = False,
         shuffle: bool = False,
-        avoid_repeat_count: int = 1,
+        avoid_repeat_count: int = 0,
         loop_base: bool = False,
         ers_type: int = 4294967295,
         parent: int | MusicRanSeqPlaylistItem = 0,
@@ -299,3 +299,17 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
 
             for idx in reversed(indices):
                 self.playlist_items.pop(idx)
+
+    def get_references(self, true_children_only: bool = True) -> list[tuple[str, int]]:
+        ret = super().get_references()
+
+        if true_children_only:
+            # Some vanilla soundbanks have leftover transition rules that will result
+            # in misleading warnings and mess up our gui's tree structure
+            ret = [
+                (p, i)
+                for p, i in ret
+                if "transition_rule" not in p or i in self.children
+            ]
+
+        return ret
