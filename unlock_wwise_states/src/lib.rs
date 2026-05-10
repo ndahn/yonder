@@ -23,8 +23,8 @@ const GLOBAL_FIELD_AREA_RVA: u32 = 0x3d691d8;
 const GLOBAL_WORLDSOUNDMAN_RVA: u32 = 0x3d6f708;
 const SETBOSSBGM_RVA: u32 = 0xdb2f70;
 const AREA_BGM_UPDATE_RVA: u32 = 0xdae090;
-const BOSS_BGM_STATE_IDX: u8 = 1;  // 0 is "None" and not checked
-const AREA_BGM_STATE_IDX: u8 = 0;
+const BOSS_BGM_STATE_IDX: u8 = 1; // 0 is "None" and not checked
+const AREA_BGM_STATE_IDX: u8 = 1;
 
 static_detour! {
     static SetBossBgmHook: unsafe extern "C" fn(usize, u32, i32) -> ();
@@ -101,7 +101,7 @@ unsafe fn setbossbgm_detour(bgmctrl: usize, bgm_boss_conv_param_id: u32, boss_bg
     if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
         let slot = (bgmctrl + 0x238 + BOSS_BGM_STATE_IDX as usize * 32) as *mut u8;
         //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-        println!("unlock_wwise_states: enabling boss bgm {param_str}");
+        println!("[unlock_wwise_states] unlocking boss bgm {param_str}");
         write_param_str(slot, param_str);
     }
 
@@ -121,6 +121,7 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
             let repo = match SoloParamRepository::instance() {
                 Ok(r) => r,
                 Err(_) => {
+                    eprintln!("[unlock_wwise_states] failed to acquire param repository instance");
                     AreaBgmUpdateHook.call(cssound, delta);
                     return;
                 }
@@ -129,6 +130,7 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
             let row = match repo.get::<WwiseValueToStrParam_EnvPlaceType>(area_param_id as u32) {
                 Some(r) => r,
                 None => {
+                    eprintln!("[unlock_wwise_states] failed to lookup area param {area_param_id}");
                     AreaBgmUpdateHook.call(cssound, delta);
                     return;
                 }
@@ -137,7 +139,7 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
             if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
                 let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
                 //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-                println!("unlock_wwise_states: enabling area bgm {param_str}");
+                println!("[unlock_wwise_states] unlocking area bgm {param_str}");
                 write_param_str(slot, param_str);
             }
         }
@@ -158,7 +160,7 @@ pub unsafe extern "system" fn DllMain(
 
     std::thread::spawn(|| {
         if let Err(e) = wait_for_system_init(&Program::current(), Duration::MAX) {
-            eprintln!("[bgm_hooks] failed to wait for system init: {e}");
+            eprintln!("[unlock_wwise_states] failed to wait for system init: {e}");
             return;
         }
 
@@ -170,7 +172,7 @@ pub unsafe extern "system" fn DllMain(
             let resolve = |rva, label| -> Option<u64> {
                 let va = program.rva_to_va(rva).ok();
                 if va.is_none() {
-                    eprintln!("[bgm_hooks] failed to resolve RVA for {label}");
+                    eprintln!("[unlock_wwise_states] failed to resolve RVA for {label}");
                 }
                 va
             };
@@ -190,24 +192,26 @@ pub unsafe extern "system" fn DllMain(
             if let Err(e) = SetBossBgmHook.initialize(boss_fn, |bgmctrl, param, state| {
                 setbossbgm_detour(bgmctrl, param, state)
             }) {
-                eprintln!("[bgm_hooks] failed to initialize SetBossBgm detour: {e}");
+                eprintln!("[unlock_wwise_states] failed to initialize SetBossBgm detour: {e}");
                 return;
             }
             if let Err(e) = SetBossBgmHook.enable() {
-                eprintln!("[bgm_hooks] failed to enable SetBossBgm detour: {e}");
+                eprintln!("[unlock_wwise_states] failed to enable SetBossBgm detour: {e}");
                 return;
             }
 
             if let Err(e) = AreaBgmUpdateHook.initialize(area_fn, |cssound, delta| {
                 area_bgm_update_detour(cssound, delta)
             }) {
-                eprintln!("[bgm_hooks] failed to initialize AreaBgmUpdate detour: {e}");
+                eprintln!("[unlock_wwise_states] failed to initialize AreaBgmUpdate detour: {e}");
                 return;
             }
             if let Err(e) = AreaBgmUpdateHook.enable() {
-                eprintln!("[bgm_hooks] failed to enable AreaBgmUpdate detour: {e}");
+                eprintln!("[unlock_wwise_states] failed to enable AreaBgmUpdate detour: {e}");
             }
         }
+
+        println!("[unlock_wwise_states] is now active!");
     });
 
     true
