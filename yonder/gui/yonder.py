@@ -1381,9 +1381,9 @@ class BanksOfYonder(DpgItem):
                 if self._selected_node:
                     # Try to find the node in the tree with the current selection if possible
                     evt, current_graph = next(
-                        self.bnk.find_event_subgraphs_for(self._selected_node), None
+                        self.bnk.find_event_subgraphs_for(self._selected_node), (None, None)
                     )
-                    if node.id in current_graph:
+                    if current_graph and node.id in current_graph:
                         selected_graph = current_graph
 
                 if not selected_graph:

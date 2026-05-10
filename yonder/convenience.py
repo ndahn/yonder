@@ -449,14 +449,14 @@ def create_ambience(
     # Create the ambience tracks
     location_branches = location_tree.flatten()
     for branch, track in location_branches.items():
-        bnk.add_wem(track, SourceType.Streaming)
+        track = bnk.add_wem(track, SourceType.Streaming)
 
         branch_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=ambience_msc)
         # TODO trims
         branch_seg = MusicSegment.new(bnk.new_id(), parent=branch_mrsc)
         # All tracks should have the loop property
         branch_track = MusicTrack.new(
-            bnk.new_id(), Path(track), props={PropID.Loop: 0.0}
+            bnk.new_id(), track, props={PropID.Loop: 0.0}
         )
 
         # Transition rule (might matter for looping?)

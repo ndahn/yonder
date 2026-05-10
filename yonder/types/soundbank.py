@@ -596,9 +596,10 @@ class Soundbank:
                 parent_id = node.parent
                 parent = self.get(parent_id)
 
-                if parent_id <= 0 and node.type_name != "ActorMixer":
-                    logger.warning(f"{node}: node has no parent")
-                    severity = max(severity, 1)
+                if parent_id <= 0:
+                    if node.type_name != "ActorMixer":
+                        logger.warning(f"{node}: node has no parent")
+                        severity = max(severity, 1)
                 elif parent_id in discovered_ids:
                     logger.error(f"{node}: defined after its parent {parent_id}")
                     severity = max(severity, 2)
