@@ -193,4 +193,14 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
         delve(self.tree, [])
 
+    def get_references(self, true_children_only: bool = True) -> list[tuple[str, int]]:
+        ret = super().get_references()
+        
+        if true_children_only:
+            # Some vanilla soundbanks have leftover transition rules that will result 
+            # in misleading warnings and mess up our gui's tree structure
+            ret = [(p,i) for p, i in ret if "transition_rule" not in p or i in self.children]
+
+        return ret
+
     # TODO transition rule helper

@@ -1068,14 +1068,27 @@ class BanksOfYonder(DpgItem):
         def lazy_load_event_structure(
             sender: str, anchor: str, entrypoint: HIRCNode
         ) -> None:
+            filt: str = dpg.get_value(self._t("events_filter")).strip()
+            valid_nodes = set()
+
+            if filt:
+                valid_nodes.add(entrypoint.id)
+                g = bnk.get_subtree(entrypoint)
+                selected = query_nodes([bnk[n] for n in g], filt)
+                for node in selected:
+                    valid_nodes.add(node.id)
+                    valid_nodes.update(nx.ancestors(g, node.id))
+                    valid_nodes.update(nx.descendants(g, node.id))
+
             def delve(node: HIRCNode) -> None:
                 references = node.get_references()
                 seen = set()
 
-                # TODO children of first lazy node are expanded if last lazy node is expanded
-                # Test withcs_c3671
                 for _, ref_id in references:
                     if ref_id in seen:
+                        continue
+
+                    if valid_nodes and ref_id not in valid_nodes:
                         continue
 
                     sub_tag = self._t(f"node_{ref_id}")
