@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 16:32+0200\n"
+"POT-Creation-Date: 2026-05-11 02:21+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -282,6 +282,20 @@ msgstr "交换"
 msgid "Update"
 msgstr "粘贴"
 
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Line numbers"
+msgstr "行号"
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Differences only"
+msgstr "仅显示差异"
+
+# ../../yonder/gui/yonder.py:680
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+#, fuzzy
+msgid "Context"
+msgstr "上下文"
+
 # ../../yonder/gui/yonder.py:574
 #: ../../yonder/gui/dialogs/compare_nodes_dialog.py
 #, fuzzy
@@ -480,6 +494,22 @@ msgstr "让世界充满光！"
 msgctxt "msg"
 msgid "BgmEnemyType not set"
 msgstr "未设置 BgmEnemyType"
+
+# ../../yonder/gui/yonder.py:179
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+#, fuzzy
+msgid "Tracks"
+msgstr "音轨"
+
+# ../../yonder/gui/yonder.py:301
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+#, fuzzy
+msgid "Settings"
+msgstr "设置"
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+msgid "Add a track first to adjust per-track settings"
+msgstr "请先添加音轨以调整各音轨设置"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:303
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
@@ -1082,6 +1112,16 @@ msgstr "行为"
 msgid "+ Add Action"
 msgstr "+ 添加行为"
 
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Delete nodes connected to branch?"
+msgstr "删除与分支相连的节点？"
+
+# ../../yonder/gui/yonder.py:223
+#: ../../yonder/gui/widgets/node_widgets.py
+#, fuzzy
+msgid "Delete branch"
+msgstr "删除分支"
+
 # ../../yonder/gui/widgets/node_widgets.py:814
 # ../../yonder/gui/widgets/properties_table.py:66
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -1324,25 +1364,11 @@ msgstr "读取文件出错：{exc}"
 msgid "markers"
 msgstr "标记"
 
-# ../../yonder/gui/widgets/wav_player.py:855
-# ../../yonder/gui/widgets/wav_player.py:1026
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "loop_start"
-msgstr "循环开始"
-
 # ../../yonder/gui/widgets/wav_player.py:863
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "L0"
 msgstr "L0"
-
-# ../../yonder/gui/widgets/wav_player.py:870
-# ../../yonder/gui/widgets/wav_player.py:1034
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "loop_end"
-msgstr "循环结束"
 
 # ../../yonder/gui/widgets/wav_player.py:878
 #: ../../yonder/gui/widgets/wav_player.py
@@ -1350,25 +1376,11 @@ msgctxt "marker"
 msgid "L1"
 msgstr "L1"
 
-# ../../yonder/gui/widgets/wav_player.py:887
-# ../../yonder/gui/widgets/wav_player.py:1046
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "begin_trim"
-msgstr "裁剪起点"
-
 # ../../yonder/gui/widgets/wav_player.py:895
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
 msgid "T0"
 msgstr "T0"
-
-# ../../yonder/gui/widgets/wav_player.py:901
-# ../../yonder/gui/widgets/wav_player.py:1056
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "end_trim"
-msgstr "裁剪终点"
 
 # ../../yonder/gui/widgets/wav_player.py:909
 #: ../../yonder/gui/widgets/wav_player.py
@@ -1392,6 +1404,34 @@ msgstr "振幅"
 #: ../../yonder/gui/widgets/wav_player.py
 msgid "time"
 msgstr "时间"
+
+# ../../yonder/gui/widgets/wav_player.py:855
+# ../../yonder/gui/widgets/wav_player.py:1026
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "loop_start"
+msgstr "循环开始"
+
+# ../../yonder/gui/widgets/wav_player.py:870
+# ../../yonder/gui/widgets/wav_player.py:1034
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "loop_end"
+msgstr "循环结束"
+
+# ../../yonder/gui/widgets/wav_player.py:887
+# ../../yonder/gui/widgets/wav_player.py:1046
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "begin_trim"
+msgstr "裁剪起点"
+
+# ../../yonder/gui/widgets/wav_player.py:901
+# ../../yonder/gui/widgets/wav_player.py:1056
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "end_trim"
+msgstr "裁剪终点"
 
 # ../../yonder/gui/dialogs/select_nodes_dialog.py:163
 #: ../../yonder/gui/widgets/wav_player.py

@@ -23,7 +23,7 @@ pybabel update --domain=yonder --input-file=template.pot --output-dir=.
 4. Search and translate any lines with an empty `msgid` (i.e. "").
 5. Compile your translated file as follows:
 ```bash
-pybabel.exe compile --domain=yonder --locale=<lang> --directory=.
+pybabel.exe compile --domain=yonder --directory=. --locale=<lang>
 ```
 
 # Creating a new Localization

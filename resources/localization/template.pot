@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-08 16:32+0200\n"
+"POT-Creation-Date: 2026-05-11 02:21+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -224,6 +224,18 @@ msgid "Update"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Line numbers"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Differences only"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
+msgid "Context"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/compare_nodes_dialog.py
 msgid "Pin"
 msgstr ""
 
@@ -377,6 +389,18 @@ msgstr ""
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "BgmEnemyType not set"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+msgid "Tracks"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+msgid "Settings"
+msgstr ""
+
+#: ../../yonder/gui/dialogs/create_boss_track_dialog.py
+msgid "Add a track first to adjust per-track settings"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
@@ -861,6 +885,14 @@ msgid "+ Add Action"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
+msgid "Delete nodes connected to branch?"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
+msgid "Delete branch"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/properties_table.py
 msgid "Value"
 msgstr ""
@@ -1060,17 +1092,7 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
-msgid "loop_start"
-msgstr ""
-
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
 msgid "L0"
-msgstr ""
-
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "loop_end"
 msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
@@ -1080,17 +1102,7 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "marker"
-msgid "begin_trim"
-msgstr ""
-
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
 msgid "T0"
-msgstr ""
-
-#: ../../yonder/gui/widgets/wav_player.py
-msgctxt "marker"
-msgid "end_trim"
 msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
@@ -1110,6 +1122,26 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
 msgid "time"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "loop_start"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "loop_end"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "begin_trim"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgctxt "marker"
+msgid "end_trim"
 msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
