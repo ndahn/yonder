@@ -873,28 +873,12 @@ class add_wav_player(DpgItem):
                         )
 
                         if self._loop_markers_enabled:
-                            dpg.add_drag_line(
-                                label=µ("loop_start", "marker"),
-                                color=style.green,
-                                default_value=self._loop_start,
-                                callback=self._on_loop_marker_moved,
-                                no_inputs=not self._edit_markers_inplace,
-                                tag=self._t("loop_start"),
-                            )
                             dpg.add_axis_tag(
                                 label=µ("L0", "marker"),
                                 default_value=self._loop_start,
                                 color=style.green,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("loop_start_axis"),
-                            )
-                            dpg.add_drag_line(
-                                label=µ("loop_end", "marker"),
-                                color=style.green,
-                                default_value=self._loop_end,
-                                callback=self._on_loop_marker_moved,
-                                no_inputs=not self._edit_markers_inplace,
-                                tag=self._t("loop_end"),
                             )
                             dpg.add_axis_tag(
                                 label=µ("L1", "marker"),
@@ -905,27 +889,11 @@ class add_wav_player(DpgItem):
                             )
 
                         if self._trim_enabled:
-                            dpg.add_drag_rect(
-                                label=µ("begin_trim", "marker"),
-                                color=style.red,
-                                no_fit=True,
-                                no_inputs=not self._edit_markers_inplace,
-                                callback=self._on_trim_marker_moved,
-                                tag=self._t("begin_trim"),
-                            )
                             dpg.add_axis_tag(
                                 label=µ("T0", "marker"),
                                 color=style.red,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("begin_trim_axis"),
-                            )
-                            dpg.add_drag_rect(
-                                label=µ("end_trim", "marker"),
-                                color=style.red,
-                                no_fit=True,
-                                no_inputs=not self._edit_markers_inplace,
-                                callback=self._on_trim_marker_moved,
-                                tag=self._t("end_trim"),
                             )
                             dpg.add_axis_tag(
                                 label=µ("T1", "marker"),
@@ -940,15 +908,6 @@ class add_wav_player(DpgItem):
                                 color = colorgen()
                                 marker_label = self._user_marker_labels.get(
                                     mid, f"#{mid}"
-                                )
-                                dpg.add_drag_line(
-                                    label=marker_label,
-                                    color=color,
-                                    default_value=pos,
-                                    no_inputs=not self._edit_markers_inplace,
-                                    callback=self._on_user_markers_moved,
-                                    tag=self._t(f"marker_{mid}"),
-                                    user_data=mid,
                                 )
                                 dpg.add_axis_tag(
                                     label=µ("m{idx}", "marker"),
@@ -989,6 +948,59 @@ class add_wav_player(DpgItem):
                             callback=self._on_progress_moved,
                             tag=self._t("progress"),
                         )
+
+                        if self._loop_markers_enabled:
+                            dpg.add_drag_line(
+                                label=µ("loop_start", "marker"),
+                                color=style.green,
+                                default_value=self._loop_start,
+                                callback=self._on_loop_marker_moved,
+                                no_inputs=not self._edit_markers_inplace,
+                                tag=self._t("loop_start"),
+                            )
+                            dpg.add_drag_line(
+                                label=µ("loop_end", "marker"),
+                                color=style.green,
+                                default_value=self._loop_end,
+                                callback=self._on_loop_marker_moved,
+                                no_inputs=not self._edit_markers_inplace,
+                                tag=self._t("loop_end"),
+                            )
+
+                        if self._trim_enabled:
+                            dpg.add_drag_rect(
+                                label=µ("begin_trim", "marker"),
+                                color=style.red,
+                                no_fit=True,
+                                no_inputs=not self._edit_markers_inplace,
+                                callback=self._on_trim_marker_moved,
+                                tag=self._t("begin_trim"),
+                            )
+                            dpg.add_drag_rect(
+                                label=µ("end_trim", "marker"),
+                                color=style.red,
+                                no_fit=True,
+                                no_inputs=not self._edit_markers_inplace,
+                                callback=self._on_trim_marker_moved,
+                                tag=self._t("end_trim"),
+                            )
+
+                        if self._user_markers_enabled:
+                            colorgen = style.HighContrastColorGenerator()
+                            for i, (mid, pos) in enumerate(self._user_markers.items()):
+                                color = colorgen()
+                                marker_label = self._user_marker_labels.get(
+                                    mid, f"#{mid}"
+                                )
+                                dpg.add_drag_line(
+                                    label=marker_label,
+                                    color=color,
+                                    default_value=pos,
+                                    no_inputs=not self._edit_markers_inplace,
+                                    callback=self._on_user_markers_moved,
+                                    tag=self._t(f"marker_{mid}"),
+                                    user_data=mid,
+                                )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
