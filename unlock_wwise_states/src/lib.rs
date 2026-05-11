@@ -111,37 +111,44 @@ unsafe fn setbossbgm_detour(bgmctrl: usize, bgm_boss_conv_param_id: u32, boss_bg
 unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
     let program = Program::current();
     let area_param_id = resolve_area_param_id(cssound, &program);
-
-    // Mirror the original's early-out: only act when the value changed
     let current = *((cssound + 0x2f0) as *const i16);
-    if current != area_param_id {
+    
+    if current != 0 {
         let controller_ptr = *((cssound + 0x328) as *const usize);
+        if controller_ptr == 0 {
+            AreaBgmUpdateHook.call(cssound, delta);
+            return;
+        }
 
-        if controller_ptr != 0 {
-            let repo = match SoloParamRepository::instance() {
-                Ok(r) => r,
-                Err(_) => {
-                    eprintln!("[unlock_wwise_states] failed to acquire param repository instance");
-                    AreaBgmUpdateHook.call(cssound, delta);
-                    return;
-                }
-            };
-
-            let row = match repo.get::<WwiseValueToStrParam_EnvPlaceType>(area_param_id as u32) {
-                Some(r) => r,
-                None => {
-                    eprintln!("[unlock_wwise_states] failed to lookup area param {area_param_id}");
-                    AreaBgmUpdateHook.call(cssound, delta);
-                    return;
-                }
-            };
-
-            if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
-                let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
-                //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-                println!("[unlock_wwise_states] unlocking area bgm {param_str}");
-                write_param_str(slot, param_str);
+        let repo = match SoloParamRepository::instance() {
+            Ok(r) => r,
+            Err(_) => {
+                eprintln!("[unlock_wwise_states] failed to acquire param repository instance");
+                AreaBgmUpdateHook.call(cssound, delta);
+                return;
             }
+        };
+
+        let row = match repo.get::<WwiseValueToStrParam_EnvPlaceType>(area_param_id as u32) {
+            Some(r) => r,
+            None => {
+                eprintln!("[unlock_wwise_states] failed to lookup area param {area_param_id}");
+                AreaBgmUpdateHook.call(cssound, delta);
+                return;
+            }
+        };
+
+        if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
+            // TODO this is NOT the correct array, 0xf58 is for BgmPlaceType!
+            //let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
+            //write_param_str(slot, param_str);
+
+            // NOTE This happens quite frequently, so, keep it quiet
+            //println!("[unlock_wwise_states] unlocking area bgm {param_str}");
+            //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
+        }
+        else {
+            eprintln!("[unlock_wwise_states] area param {area_param_id} not found");
         }
     }
 
