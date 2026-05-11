@@ -7,6 +7,7 @@ from yonder.types import MusicSwitchContainer
 from yonder.hash import calc_hash
 from yonder.convenience import create_boss_bgm
 from yonder.wem import wav2wem
+from yonder.game import GameObjects
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
@@ -249,17 +250,10 @@ class create_boss_track_dialog(DpgItem):
                             tag=self._t("bgm_enemy_type"),
                         )
                         dpg.add_combo(
-                            # TODO these are ER specific
                             [
-                                "EventBoss_Reserved15",
-                                "EventBoss_Reserved14",
-                                "EventBoss_Reserved13",
-                                "EventBoss_Reserved12",
-                                "EventBoss_Reserved11",
-                                "EventBoss_Reserved10",
-                                "EventBoss_Reserved09",
-                                "EventBoss_Reserved08",
-                                "Reserved",
+                                x
+                                for x in GameObjects.GameStates["BgmEnemyType"]
+                                if "reserved" in x.lower()
                             ],
                             no_preview=True,
                             callback=self._on_bgmenemytype_changed,
@@ -270,7 +264,7 @@ class create_boss_track_dialog(DpgItem):
                         callback=self._edit_state_path,
                         tag=self._t("state_path"),
                     )
-                
+
                     self._players = add_player_table(
                         [],
                         self._on_bgm_tracks_changed,
@@ -281,12 +275,15 @@ class create_boss_track_dialog(DpgItem):
 
                 with dpg.tab(label=µ("Settings")):
                     self._properties = add_properties_table({}, None)
-                    
+
                     dpg.add_spacer(height=4)
                     with dpg.table(tag=self._t("per_track_settings")):
                         dpg.add_table_column(width_fixed=True)
                         with dpg.table_row():
-                            dpg.add_text(µ("Add a track first to adjust per-track settings"), color=style.orange)
+                            dpg.add_text(
+                                µ("Add a track first to adjust per-track settings"),
+                                color=style.orange,
+                            )
 
             dpg.add_separator()
             add_paragraphs(
@@ -303,7 +300,7 @@ class create_boss_track_dialog(DpgItem):
                 ),
                 color=style.light_blue,
             )
-            
+
             dpg.add_separator()
             dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
