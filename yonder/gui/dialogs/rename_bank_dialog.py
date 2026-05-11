@@ -32,7 +32,7 @@ class rename_bank_dialog(DpgItem):
             bnk.rename(new_hash, rename_dir)
 
             if on_bank_renamed:
-                on_bank_renamed(self.tag, bnk, user_data)
+                on_bank_renamed(bnk)
 
             dpg.delete_item(window)
 
