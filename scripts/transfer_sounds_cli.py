@@ -2,7 +2,7 @@
 import sys
 import traceback
 
-from yonder import Soundbank
+from yonder import Soundbank, Hash
 from yonder.hash import calc_hash
 from yonder.transfer import copy_wwise_events
 

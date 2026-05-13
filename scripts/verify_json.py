@@ -105,10 +105,3 @@ def verify_order(nodes: list[Any]) -> None:
             seen_ids.add(node_id)
 
         _scan_fields(node, seen_ids, node_id)
-
-
-if __name__ == "__main__":
-    bnk_path = "E:/Games/Elden Ring/Modding/Tools/yonder/test/mod/sd/cs_smain/soundbank.json"
-    bnk = Soundbank.load(bnk_path)
-
-    verify_order(bnk.hirc.objects)
