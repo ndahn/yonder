@@ -6,7 +6,7 @@ import inspect
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
-from yonder.hash import global_hash_dict, load_lookup_table
+from yonder.hash import load_lookup_table
 from yonder.util import logger
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
@@ -19,6 +19,7 @@ class Config:
     recent_files: list[str] = field(default_factory=list)
     language: str = "en"
     playback_volume: float = 1.0
+    prune_hash_tables: bool = True
 
     bnk2json_exe: str = None
     wwise_exe: str = None
@@ -93,9 +94,9 @@ class Config:
         for path in self.hash_dicts:
             path = Path(path)
             if not path.is_file():
-                logger.warning(f"Hash dict not found: {path}")
+                logger.warning(f"Hash table not found: {path}")
             else:
-                global_hash_dict.update(load_lookup_table(path))
+                load_lookup_table(path, False)
 
     def find_external_sounds(
         self, source_id: int, bnk: Soundbank = None

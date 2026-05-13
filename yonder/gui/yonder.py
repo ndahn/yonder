@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import pyperclip
 import networkx as nx
+import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -21,8 +22,15 @@ from yonder.types import (
     DataNode,
 )
 from yonder.types.serialization import serialize
+from yonder.hash import (
+    load_lookup_table,
+    unload_lookup_table,
+    get_bank_lookup_table_path,
+    get_active_lookup_table,
+)
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes
+from yonder.game import Game, GameObjects
 from .config import Config, get_config
 from .helpers import center_window, shorten_path, tmp_dir
 from .widgets import (
@@ -298,6 +306,13 @@ class BanksOfYonder(DpgItem):
                 )
 
                 dpg.add_separator()
+
+                with dpg.menu(label=µ("Presets", "menu")):
+                    dpg.add_radio_button(
+                        [g.name for g in Game],
+                        default_value=GameObjects.selected_game.name,
+                        callback=lambda s, a, u: GameObjects.set_game(Game[a]),
+                    )
 
                 with dpg.menu(
                     label=µ("Language", "menu"),
@@ -876,6 +891,18 @@ class BanksOfYonder(DpgItem):
         else:
             dpg.bind_item_theme(widget, themes.item_default)
 
+    def _save_bank_lookup_table(self) -> None:
+        if not self.bnk:
+            return
+
+        hash_table = get_active_lookup_table()
+        if hash_table:
+            # Reduce to the hashes that are actually used
+            if self.config.prune_hash_tables:
+                hash_table.prune(self.bnk.json_path.read_text("utf-8"))
+
+            hash_table.save()
+
     def _save_soundbank(self) -> None:
         if not self.bnk:
             return
@@ -886,6 +913,7 @@ class BanksOfYonder(DpgItem):
                 µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path)
             )
             self.bnk.save()
+            self._save_bank_lookup_table()
         finally:
             dpg.delete_item(loading)
 
@@ -899,10 +927,28 @@ class BanksOfYonder(DpgItem):
             filetypes={µ("JSON (.json)", "filetypes"): "*.json"},
         )
         if path:
+            path = Path(path)
             loading = loading_indicator(µ("Saving soundbank...", "loading"))
             try:
                 logger.info(µ("Saving soundbank to {path}", "log").format(path=path))
                 self.bnk.save(path)
+
+                # Move the hash dict to the new location
+                dst = get_bank_lookup_table_path(self.bnk)
+                table = get_active_lookup_table()
+
+                if table.file != dst:
+                    if dst.is_file():
+                        logger.warning(
+                            "A lookup table already exists in the new bank location, original table was not moved"
+                        )
+                    else:
+                        shutil.move(table.file, dst)
+                        table.file = dst
+                        logger.info(f"Moved lookup table to {dst}")
+
+                self._save_bank_lookup_table()
+
                 logger.info(µ("Don't forget to repack!", "log"))
                 return True
             finally:
@@ -1028,9 +1074,14 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("events_filter"), "")
             dpg.set_value(self._t("globals_filter"), "")
 
+            if self.bnk:
+                unload_lookup_table(get_bank_lookup_table_path(self.bnk))
+
             now = time.time()
             self.bnk = Soundbank.load(path)
             diff = time.time() - now
+
+            load_lookup_table(get_bank_lookup_table_path(self.bnk), True)
 
             # NOTE: don't translate to avoid bakemoji on some windows configurations
             dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
@@ -1394,7 +1445,8 @@ class BanksOfYonder(DpgItem):
                 if self._selected_node:
                     # Try to find the node in the tree with the current selection if possible
                     evt, current_graph = next(
-                        self.bnk.find_event_subgraphs_for(self._selected_node), (None, None)
+                        self.bnk.find_event_subgraphs_for(self._selected_node),
+                        (None, None),
                     )
                     if current_graph and node.id in current_graph:
                         selected_graph = current_graph

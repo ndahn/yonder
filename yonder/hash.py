@@ -1,56 +1,71 @@
-from typing import Any, Container, NewType
+from typing import Any, Container, NewType, TYPE_CHECKING
 from pathlib import Path
+import re
 from random import randrange
+
+if TYPE_CHECKING:
+    from yonder import Soundbank
 
 
 Hash = NewType("Hash", int)
-global_hash_dict: dict[Hash, str] = {}
 
 
-def calc_hash(input: str) -> Hash:
-    # This is the FNV-1a 32-bit hash taken from rewwise
-    # https://github.com/vswarte/rewwise/blob/127d665ab5393fb7b58f1cade8e13a46f71e3972/analysis/src/fnv.rs#L6
-    FNV_BASE = 2166136261
-    FNV_PRIME = 16777619
+class LookupTable:
+    def __init__(self, data: dict[int, str] | Path = None, enable_write: bool = False):
+        self._table = {}
+        self.file = None
+        self.enable_write = enable_write
 
-    input_bytes = input.lower().encode()
+        if isinstance(data, dict):
+            self._table.update(data)
+        elif isinstance(data, Path):
+            self.file = data
 
-    result = FNV_BASE
-    for byte in input_bytes:
-        result *= FNV_PRIME
-        # Ensure it stays within 32-bit range
-        result &= 0xFFFFFFFF
-        result ^= byte
+            if data.is_file():
+                for x in data.read_text("utf-8").splitlines():
+                    x = x.strip()
+                    if x.startswith("#"):
+                        continue
 
-    return result
+                    h = calc_hash(x)
+                    self._table[h] = x.strip(" \n")
 
+    def prune(self, corpus: str) -> None:
+        # Reduce to the hashes that are actually found in the corpus
+        all_ints = set(re.findall(r"\d+", corpus))
+        self._table = {k: v for k, v in self._table.items() if k in all_ints}
 
-def load_lookup_table(path: Path = None) -> dict[Hash, str]:
-    from yonder.util import resource_data
-    
-    if not path:
-        pairs = resource_data("wwise_ids.txt").splitlines()
-    else:
-        pairs = [x.strip() for x in path.read_text().splitlines()]
+    def save(self, path: Path = None) -> None:
+        if not path:
+            path = self.file
 
-    table = {}
-    for x in pairs:
-        if x.startswith("#"):
-            continue
+        if not path:
+            raise ValueError(
+                "Path was None and this lookup table was not loaded from a file"
+            )
 
-        h = calc_hash(x)
-        table[h] = x.strip(" \n")
+        path.write_text("\n".join(list(self._table.values())))
+        self.file = path
 
-    return table
+    def lookup_name(self, h: Hash, default: Any = None) -> str:
+        return self._table.get(h, default)
 
+    def __len__(self) -> int:
+        return len(self._table)
 
-def lookup_name(h: Hash, default: Any = None) -> str:
-    global global_hash_dict
+    def __contains__(self, item: Hash) -> bool:
+        return bool(self.lookup_name(item))
 
-    if not global_hash_dict:
-        global_hash_dict.update(load_lookup_table())
+    def __getitem__(self, key: Hash) -> str:
+        return self.lookup_name(key)
 
-    return global_hash_dict.get(h, default)
+    def __setitem__(self, key: Hash, value: str) -> None:
+        if not self.enable_write:
+            raise ValueError("Write is disabled for this lookup table")
+
+        self._table[key] = value
+        if self.file:
+            self.save()
 
 
 class UniqueIdGenerator:
@@ -69,4 +84,81 @@ class UniqueIdGenerator:
                 return id
 
 
+def get_default_lookup_table_path() -> Path:
+    from yonder.util import resource_dir
+
+    return resource_dir() / "wwise_ids.txt"
+
+
+def get_bank_lookup_table_path(bnk: "Soundbank") -> Path:
+    return bnk.bnk_dir.parent / f"{bnk.name}_strings.txt"
+
+
+def get_active_lookup_table() -> LookupTable:
+    return _active_table
+
+
+def load_lookup_table(path: Path, mark_active: bool = False) -> LookupTable:
+    global _active_table
+
+    # Reload it instead of doing nothing
+    unload_lookup_table(path)
+
+    # The active table will be used to calculate unknown hashes
+    table = LookupTable(path, mark_active)
+    _lookup_tables.insert(0, table)
+
+    if mark_active:
+        _active_table = table
+
+    return table
+
+
+def unload_lookup_table(path: Path) -> LookupTable:
+    for t in _lookup_tables:
+        if t.file == path:
+            _lookup_tables.remove(t)
+            return t
+
+
+def fnv_1a(input: str) -> Hash:
+    # This is the FNV-1a 32-bit hash
+    FNV_BASE = 2166136261
+    FNV_PRIME = 16777619
+
+    input_bytes = input.lower().encode()
+
+    result = FNV_BASE
+    for byte in input_bytes:
+        result *= FNV_PRIME
+        # Ensure it stays within 32-bit range
+        result &= 0xFFFFFFFF
+        result ^= byte
+
+    return result
+
+
+def calc_hash(input: str) -> Hash:
+    h = fnv_1a(input)
+
+    if _active_table is not None and h not in _active_table:
+        _active_table[h] = input
+
+    return h
+
+
+def lookup_name(h: Hash, default: Any = None) -> str:
+    for table in _lookup_tables:
+        res = table.lookup_name(h)
+        if res:
+            return res
+
+    return default
+
+
 global_id_generator = UniqueIdGenerator()
+_lookup_tables: list[LookupTable] = []
+_active_table: LookupTable = None
+
+# Load our default hash lookup dict
+load_lookup_table(get_default_lookup_table_path(), False)

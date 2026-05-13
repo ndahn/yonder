@@ -6,7 +6,12 @@ from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
-from yonder.gui.widgets import DpgItem, add_generic_widget, add_filepaths_table
+from yonder.gui.widgets import (
+    DpgItem,
+    add_generic_widget,
+    add_filepaths_table,
+    add_paragraphs,
+)
 
 
 class settings_dialog(DpgItem):
@@ -73,7 +78,7 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For unpacking and repacking soundbanks"),
                         color=style.light_blue,
-                        tag=self._t("hint_bnk2json"),
+                        tag=self._t("hint/bnk2json"),
                     )
 
                 w = add_generic_widget(
@@ -87,7 +92,7 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For wonverting wav to wem"),
                         color=style.light_blue,
-                        tag=self._t("hint_wwise"),
+                        tag=self._t("hint/wwise"),
                     )
 
                 w = add_generic_widget(
@@ -101,7 +106,7 @@ class settings_dialog(DpgItem):
                     dpg.add_text(
                         µ("For converting wem to wav and playback"),
                         color=style.light_blue,
-                        tag=self._t("hint_vgmstream"),
+                        tag=self._t("hint/vgmstream"),
                     )
 
             dpg.add_spacer(height=5)
@@ -128,6 +133,19 @@ class settings_dialog(DpgItem):
                     filetypes={µ("Text files (.txt)"): "*.txt"},
                     tag=self._t("hash_dirs"),
                 )
+
+                dpg.add_checkbox(
+                    label=µ("Prune bank lookup table on save"),
+                    default_value=config.prune_hash_tables,
+                    callback=lambda s, a, u: setattr(config, "prune_hash_tables", a),
+                    tag=self._t("prune_hash_tables"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ("Saved as a text file next to the soundbank"),
+                        color=style.light_blue,
+                        tag=self._t("hint/prune_hash_tables"),
+                    )
 
             dpg.add_spacer(height=2)
             dpg.add_separator()
