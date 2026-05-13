@@ -11,10 +11,7 @@ def dpg_init():
     # Default font
     with dpg.font_registry():
         font_path = resource_dir() / "NotoSansMonoCJKsc-Regular.otf"
-        with dpg.font(str(font_path), 18) as default_font:
-            dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
-            dpg.add_font_range_hint(dpg.mvFontRangeHint_Chinese_Simplified_Common)
-
+        default_font = dpg.add_font(str(font_path), 18)
         dpg.bind_font(default_font)
 
     # Themes
