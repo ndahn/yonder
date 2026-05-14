@@ -84,6 +84,14 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
 
+    def add_playlist_item(self, child_id: int | HIRCNode) -> None:
+        if isinstance(child_id, HIRCNode):
+            child_id = child_id.id
+        
+        child_id = int(child_id)
+        self.children.add(child_id)
+        self.playlist.add(PlaylistItem(child_id))
+
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
@@ -93,7 +101,7 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
             other.parent = self.id
             other = other.id
 
-        self.children.add(other)
+        self.add_playlist_item(other)
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -117,11 +125,3 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
-
-    def add_playlist_item(self, child_id: int | HIRCNode) -> None:
-        if isinstance(child_id, HIRCNode):
-            child_id = child_id.id
-        
-        child_id = int(child_id)
-        self.children.add(child_id)
-        self.playlist.items.append(PlaylistItem(child_id))

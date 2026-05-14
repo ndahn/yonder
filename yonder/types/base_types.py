@@ -28,13 +28,12 @@ _T = TypeVar("_T")
 
 @dataclass(slots=True)
 class _ItemContainer(Generic[_T]):
-    def add(self, item: int) -> None:
+    def add(self, item: _T) -> None:
         from .hirc_node import HIRCNode
 
         if isinstance(item, HIRCNode):
-            item = item.id
+            raise ValueError("Item containers do not accept HIRCNodes")
 
-        item = int(item)
         if item not in self.items:
             self.items.append(item)
             self.items.sort()

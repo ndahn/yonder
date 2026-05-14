@@ -158,6 +158,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
             parent = branch
 
         # Set the node ID on the leaf child
+        node_id = int(node_id)
         branch.node_id = node_id
         if node_id > 0:
             self.children.add(node_id)

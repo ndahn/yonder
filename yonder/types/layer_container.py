@@ -66,10 +66,6 @@ class LayerContainer(PropertyMixin, HIRCNode):
         return self.node_base_params.initial_rtpc.rtpcs
 
     def add_layer(self, nodes: list[int]) -> Layer:
-        # TODO
-        logger.warning(
-            "Layer containers have not been properly researched yet, adding layers may lead to invalid soundbanks"
-        )
         self.layers.append(
             Layer(associated_children=[AssociatedChildData(int(nid)) for nid in nodes])
         )
