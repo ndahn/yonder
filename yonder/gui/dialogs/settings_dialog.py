@@ -10,7 +10,6 @@ from yonder.gui.widgets import (
     DpgItem,
     add_generic_widget,
     add_filepaths_table,
-    add_paragraphs,
 )
 
 

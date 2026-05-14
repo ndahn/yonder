@@ -113,13 +113,20 @@ class create_node_dialog(DpgItem):
                 )
                 continue
 
+            label = name
+            default = arg.default
+
+            if name == "nid":
+                label = "Object ID"
+                default = self._bnk.new_id()
+
             self._node_args[name] = arg.default
             add_generic_widget(
                 arg.type,
-                name,
+                label,
                 self._set_arg,
                 not_supported_ok=True,
-                default=arg.default,
+                default=default,
                 user_data=name,
                 parent=self._t("node_args"),
                 tag=self._t(f"arg_{name}"),
