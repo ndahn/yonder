@@ -1574,7 +1574,6 @@ class BanksOfYonder(DpgItem):
                 )
             )
 
-            # TODO no need to regenerate everything
             self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
