@@ -59,8 +59,7 @@ class export_sounds_dialog(DpgItem):
         export_full = dpg.get_value(self._t("export_sounds/export_full"))
         convert_to_wav = dpg.get_value(self._t("export_sounds/convert_to_wav"))
 
-        loading = loading_indicator(µ("Converting...", "loading"))
-        try:
+        with loading_indicator(µ("Converting...", "loading")):
             config = get_config()
             if export_full:
                 wems = []
@@ -89,8 +88,6 @@ class export_sounds_dialog(DpgItem):
                 self._t("export_sounds/button_okay"),
                 lambda s, a, u: dpg.delete_item(self.tag),
             )
-        finally:
-            dpg.delete_item(loading)
 
     def _build(self, title: str):
         with dpg.window(

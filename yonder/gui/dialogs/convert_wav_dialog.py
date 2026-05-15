@@ -62,8 +62,7 @@ class convert_wavs_dialog(DpgItem):
 
         self.show_message()
 
-        loading = loading_indicator(µ("Converting..."))
-        try:
+        with loading_indicator(µ("Converting...")):
             out_files = list(self.wav_paths)
 
             if dpg.get_value(self._t("trim_silence")):
@@ -112,8 +111,6 @@ class convert_wavs_dialog(DpgItem):
                     µ("Converting {num} files...").format(num=len(out_files)),
                 )
                 out_files = wav2wem(wwise_exe, out_files, out_dir=self.output_dir)
-        finally:
-            dpg.delete_item(loading)
 
         if self.callback:
             self.callback(out_files)

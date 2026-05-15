@@ -907,15 +907,12 @@ class BanksOfYonder(DpgItem):
         if not self.bnk:
             return
 
-        loading = loading_indicator(µ("Saving soundbank...", "loading"))
-        try:
+        with loading_indicator(µ("Saving soundbank...", "loading")):
             logger.info(
                 µ("Saving soundbank to {path}", "log").format(path=self.bnk.json_path)
             )
             self.bnk.save()
             self._save_bank_lookup_table()
-        finally:
-            dpg.delete_item(loading)
 
     def _save_soundbank_as(self) -> bool:
         if not self.bnk:
@@ -928,8 +925,7 @@ class BanksOfYonder(DpgItem):
         )
         if path:
             path = Path(path)
-            loading = loading_indicator(µ("Saving soundbank...", "loading"))
-            try:
+            with loading_indicator(µ("Saving soundbank...", "loading")):
                 logger.info(µ("Saving soundbank to {path}", "log").format(path=path))
                 self.bnk.save(path)
 
@@ -951,8 +947,6 @@ class BanksOfYonder(DpgItem):
 
                 logger.info(µ("Don't forget to repack!", "log"))
                 return True
-            finally:
-                dpg.delete_item(loading)
 
         return False
 
@@ -960,29 +954,24 @@ class BanksOfYonder(DpgItem):
         if not self.bnk:
             return
 
-        loading = loading_indicator(µ("Saving soundbank...", "loading"))
-        try:
+        with loading_indicator(µ("Saving soundbank...", "loading")):
             logger.warning(µ("Saving soundbank without solving!", "log"))
             self.bnk.save(solve=False)
-        finally:
-            dpg.delete_item(loading)
 
     def _repack_soundbank(self) -> None:
         if not self.bnk:
             return
 
-        loading = loading_indicator(µ("Repacking...", "loading"))
-        try:
-            logger.info(µ("Repacking soundbank", "log"))
-            bnk2json = self.config.locate_bnk2json()
-            repack_soundbank(bnk2json, self.bnk.bnk_dir)
-            logger.info(µ("Done!", "log"))
-        except subprocess.CalledProcessError as e:
-            error_msg = f"(E{e.returncode})\n{e.output}"
-            logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
-        finally:
-            dpg.delete_item(loading)
-
+        with loading_indicator(µ("Repacking...", "loading")):
+            try:
+                logger.info(µ("Repacking soundbank", "log"))
+                bnk2json = self.config.locate_bnk2json()
+                repack_soundbank(bnk2json, self.bnk.bnk_dir)
+                logger.info(µ("Done!", "log"))
+            except subprocess.CalledProcessError as e:
+                error_msg = f"(E{e.returncode})\n{e.output}"
+                logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
+        
     def _create_empty_soundbank(self) -> None:
         path = choose_folder(title=µ("Choose Empty Directory"))
         if path:
@@ -1068,8 +1057,7 @@ class BanksOfYonder(DpgItem):
                 dpg.split_frame()  # to enable the next modal loading indicator
 
         logger.info(µ("Loading soundbank {name}", "log").format(name=path))
-        loading = loading_indicator(µ("Loading soundbank...", "loading"))
-        try:
+        with loading_indicator(µ("Loading soundbank...", "loading")):
             self.remove_all_pinned_objects()
             dpg.set_value(self._t("events_filter"), "")
             dpg.set_value(self._t("globals_filter"), "")
@@ -1096,8 +1084,6 @@ class BanksOfYonder(DpgItem):
                     "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
                 ).format(name=self.bnk.name, num_nodes=len(self.bnk), time=diff)
             )
-        finally:
-            dpg.delete_item(loading)
 
     def _create_root_entry(self, node: HIRCNode, table: str) -> str:
         bnk = self.bnk
@@ -1204,7 +1190,7 @@ class BanksOfYonder(DpgItem):
         filt: str = dpg.get_value(self._t("events_filter")).strip()
         if filt:
             # Find the events associated with visible nodes
-            g = self.bnk.get_full_tree()
+            g = self.bnk.tree
             selected = self.bnk.query(filt)
             events = set()
 
@@ -1506,18 +1492,12 @@ class BanksOfYonder(DpgItem):
         self._on_node_selected(self._selected_root, True, self._selected_node)
 
     def _bank_solve_hirc(self) -> None:
-        loading = loading_indicator(µ("Solving...", "loading"))
-        try:
+        with loading_indicator(µ("Solving...", "loading")):
             self.bnk.solve()
-        finally:
-            dpg.delete_item(loading)
 
     def _bank_verify(self) -> None:
-        loading = loading_indicator(µ("Verifying...", "loading"))
-        try:
+        with loading_indicator(µ("Verifying...", "loading")):
             self.bnk.verify()
-        finally:
-            dpg.delete_item(loading)
 
     def _bank_remove_unused_wems(self) -> None:
         self.bnk.delete_unused_wems()
@@ -1791,7 +1771,11 @@ class BanksOfYonder(DpgItem):
             dpg.focus_item(tag)
             return
 
-        rename_bank_dialog(self.bnk, lambda bnk: self.regenerate(), tag=tag)
+        def on_bank_renamed(bnk: Soundbank) -> None:
+            # TODO copy streamed wems to new location
+            self.regenerate()
+
+        rename_bank_dialog(self.bnk, on_bank_renamed, tag=tag)
 
         dpg.split_frame()
         center_window(tag)

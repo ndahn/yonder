@@ -19,6 +19,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_wav_player,
     add_widget_table,
+    loading_indicator,
 )
 from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
@@ -426,28 +427,29 @@ Ambience tree:
 
         self.show_message()
 
-        # convert .wav → .wem
-        waves = [f for f in self._bgm_tracks if f.suffix == ".wav"]
-        if waves:
-            wwise = get_config().locate_wwise()
-            converted = {p.stem: q for p, q in zip(waves, wav2wem(wwise, waves))}
-            for entry in self._track_entries:
-                if entry.leaf_value and entry.leaf_value.suffix == ".wav":
-                    entry.leaf_value = converted.get(
-                        entry.leaf_value.stem, entry.leaf_value
-                    )
-            self._bgm_tracks = [e.leaf_value for e in self._track_entries]
+        with loading_indicator(µ("Working")):
+            # convert .wav → .wem
+            waves = [f for f in self._bgm_tracks if f.suffix == ".wav"]
+            if waves:
+                wwise = get_config().locate_wwise()
+                converted = {p.stem: q for p, q in zip(waves, wav2wem(wwise, waves))}
+                for entry in self._track_entries:
+                    if entry.leaf_value and entry.leaf_value.suffix == ".wav":
+                        entry.leaf_value = converted.get(
+                            entry.leaf_value.stem, entry.leaf_value
+                        )
+                self._bgm_tracks = [e.leaf_value for e in self._track_entries]
 
-        # TODO transition rules?
-        ambience_tree = build_tree(self._track_entries, self.ambience_args)
+            # TODO transition rules?
+            ambience_tree = build_tree(self._track_entries, self.ambience_args)
 
-        nodes = create_ambience(
-            self.bnk,
-            self.msc,
-            self.location_state_path,
-            ambience_tree,
-            trims=self._trim_infos,
-        )
+            nodes = create_ambience(
+                self.bnk,
+                self.msc,
+                self.location_state_path,
+                ambience_tree,
+                trims=self._trim_infos,
+            )
 
         if self.on_created:
             self.on_created(nodes)

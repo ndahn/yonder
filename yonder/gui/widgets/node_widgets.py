@@ -106,8 +106,7 @@ def create_node_widgets(
     if not tag:
         tag = dpg.generate_uuid()
 
-    loading = loading_indicator(µ("loading...", "loading"))
-    try:
+    with loading_indicator(µ("loading...", "loading")):
         with dpg.group(tag=tag, parent=parent):
             # Heading
             color = type_colors.get(type(node), style.white)
@@ -188,8 +187,6 @@ def create_node_widgets(
                 add_node_rtpc(
                     bnk, node, on_node_changed, base_tag=tag, user_data=user_data
                 )
-    finally:
-        dpg.delete_item(loading)
 
     return tag
 

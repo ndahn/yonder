@@ -52,6 +52,8 @@ class Soundbank:
         self.json_path = json_path
         self.sections = {sec.name: sec for sec in sections}
 
+        self._tree: nx.DiGraph = None
+
         # A helper dict for mapping object IDs to HIRC indices
         self._id2index: dict[int, int] = {}
         self._regenerate_index_table()
@@ -64,6 +66,12 @@ class Soundbank:
             table[obj.id] = idx
             if obj.name:
                 table[obj.name] = idx
+
+        self.regenerate_tree()
+
+    @property
+    def tree(self) -> nx.DiGraph:
+        return self._tree
 
     @classmethod
     def load(cls, bnk_path: Path | str) -> Soundbank:
@@ -112,7 +120,7 @@ class Soundbank:
     def get_name(self, default: str = None) -> str:
         return self.bkhd.get_bank_name(default)
 
-    def rename(self, new_id: str | int, rename_dir: bool) -> None:
+    def rename_bank(self, new_id: str | int, rename_dir: bool) -> None:
         old_id = self.bank_id
         hash_val = calc_hash(new_id) if isinstance(new_id, str) else new_id
         action: Action
@@ -122,7 +130,7 @@ class Soundbank:
                 action.params.bank_id = hash_val
 
         self.bkhd.bank_id = hash_val
-        
+
         if rename_dir:
             if isinstance(new_id, int):
                 new_id = lookup_name(new_id)
@@ -286,6 +294,33 @@ class Soundbank:
 
         self._regenerate_index_table()
 
+    def rename_node(self, node: int | HIRCNode, new_id: Hash | str) -> None:
+        if not isinstance(HIRCNode):
+            node = self[node]
+
+        if isinstance(new_id, str):
+            new_id = calc_hash(new_id)
+
+        if new_id in self:
+            raise ValueError(f"Hash {new_id} already exists in bank")
+
+        old_id = node.id
+        node.id = new_id
+
+        for parent_id in self.tree.predecessors(old_id):
+            parent = self[parent_id]
+            for path, ref in parent.get_references():
+                if ref == old_id:
+                    parent.set_value(path, new_id)
+
+        if hasattr(node, "children"):
+            for child_id in node.children:
+                child = self.get(child_id)
+                if child and hasattr(child, "parent"):
+                    child.parent = new_id
+
+        self._regenerate_index_table()
+
     def delete_nodes(self, *nodes: int | HIRCNode) -> None:
         abandoned = []
         for n in nodes:
@@ -322,7 +357,7 @@ class Soundbank:
 
         self._regenerate_index_table()
 
-    def get_full_tree(self, valid_only: bool = True) -> nx.DiGraph:
+    def regenerate_tree(self, valid_only: bool = True) -> None:
         g = nx.DiGraph()
 
         for node in self.hirc.objects:
@@ -332,7 +367,7 @@ class Soundbank:
                 if not valid_only or ref in self:
                     g.add_edge(node.id, ref)
 
-        return g
+        self._tree = g
 
     def get_subtree(
         self,
@@ -430,7 +465,7 @@ class Soundbank:
         return next(self.query(query), default)
 
     def find_orphans(self) -> list[HIRCNode]:
-        g = self.get_full_tree()
+        g = self.tree
 
         search_types = {
             c.__name__
@@ -453,7 +488,7 @@ class Soundbank:
         ]
 
     def delete_orphans(self, cascade: bool = True) -> None:
-        g = self.get_full_tree()
+        g = self.tree
         indices = set()
 
         search_types = {
@@ -521,7 +556,7 @@ class Soundbank:
         # TODO cache full graph
         events: list[Event] = list(self.query("type=Event"))
 
-        g = self.get_full_tree()
+        g = self.tree
         if isinstance(node, Event):
             desc = nx.descendants(g, node.id)
             yield node, g.subgraph({node.id} | desc)
@@ -533,7 +568,7 @@ class Soundbank:
                 yield evt, g.subgraph({evt.id} | desc)
 
     def solve(self) -> None:
-        g = self.get_full_tree()
+        g = self.tree
         objects = []
 
         if not nx.is_directed_acyclic_graph(g):

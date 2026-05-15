@@ -22,6 +22,7 @@ from yonder.gui.widgets import (
     add_player_table_compact,
     add_node_reference,
     add_paragraphs,
+    loading_indicator,
 )
 from yonder.gui.widgets.node_reference import ActorMixerDetailProvider
 from .file_dialog import open_multiple_dialog
@@ -328,32 +329,34 @@ class create_batch_sound_builder_dialog(DpgItem):
 
             names_seen.add(g.name)
 
-        # Convert wavs to wems
-        all_waves = [
-            f for g in self._groups for f in g.soundfiles if f.suffix.lower() == ".wav"
-        ]
-        if all_waves:
-            wwise = get_config().locate_wwise()
-            converted = wav2wem(wwise, all_waves)
-            stem2wem = {w.stem: w for w in converted}
+        self.show_message()
+        with loading_indicator(µ("Working")):
+            # Convert wavs to wems
+            all_waves = [
+                f for g in self._groups for f in g.soundfiles if f.suffix.lower() == ".wav"
+            ]
+            if all_waves:
+                wwise = get_config().locate_wwise()
+                converted = wav2wem(wwise, all_waves)
+                stem2wem = {w.stem: w for w in converted}
+                for g in self._groups:
+                    g.soundfiles = [stem2wem.get(f.stem, f) for f in g.soundfiles]
+
+            # Create sound events
+            created_pairs: list[tuple[Event, Event]] = []
             for g in self._groups:
-                g.soundfiles = [stem2wem.get(f.stem, f) for f in g.soundfiles]
+                amx = g.actormixer or self._groups[0].actormixer
 
-        # Create sound events
-        created_pairs: list[tuple[Event, Event]] = []
-        for g in self._groups:
-            amx = g.actormixer or self._groups[0].actormixer
-
-            (play_evt, stop_evt), _, _ = create_simple_sound(
-                self._bnk,
-                self._make_name("", g.soundtype, g.name),
-                g.soundfiles,
-                amx,
-                playback_mode=g.playback_mode,
-                random_mode=g.random_mode,
-                properties=g.properties,
-            )
-            created_pairs.append((play_evt, stop_evt))
+                (play_evt, stop_evt), _, _ = create_simple_sound(
+                    self._bnk,
+                    self._make_name("", g.soundtype, g.name),
+                    g.soundfiles,
+                    amx,
+                    playback_mode=g.playback_mode,
+                    random_mode=g.random_mode,
+                    properties=g.properties,
+                )
+                created_pairs.append((play_evt, stop_evt))
 
         if self._callback:
             self._callback(created_pairs)

@@ -9,7 +9,7 @@ from yonder.hash import calc_hash
 from yonder.util import repack_soundbank
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs
+from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
 from .select_nodes_dialog import select_nodes_of_type
@@ -235,9 +235,10 @@ class mass_transfer_dialog(DpgItem):
                     event_map[stop_evt] = f"Stop_{did}"
 
         self.show_message()
-        copy_wwise_events(self._src_bnk, self._dst_bnk, event_map)
-        self.show_message("Yay!", color=style.blue)
+        with loading_indicator(µ("Transferring")):
+            copy_wwise_events(self._src_bnk, self._dst_bnk, event_map)
 
+        self.show_message("Yay!", color=style.blue)
         dpg.show_item(self._t("button_save"))
         dpg.show_item(self._t("button_repack"))
 

@@ -9,24 +9,56 @@ from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
 from .dpg_item import DpgItem
 
 if TYPE_CHECKING:
-    from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
+    from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
 
 
 class ActorMixerDetailProvider:
     def __init__(self, bnk: Soundbank):
         self.bnk = bnk
+        self._cache: dict[int, list[int]] = {}
 
-    def __call__(self, am: ActorMixer) -> list[str]:
-        events = set()
-        for child_id in am.children:
-            child = self.bnk.get(child_id)
-            if child:
-                for evt, _ in self.bnk.find_event_subgraphs_for(child):
-                    name = evt.get_wwise_name(f"#{evt.id}")
-                    events.add(name)
+        for amx in bnk.query("type=ActorMixer"):
+            self._load_details(amx)
 
-        used_by = sorted(events)[:10]
-        if len(events) > 10:
+    def _load_details(self, amx: ActorMixer) -> None:
+        todo: list[HIRCNode] = [amx]
+        dependents = set()
+
+        while todo:
+            node = todo.pop()
+            if not hasattr(node, "children"):
+                continue
+
+            for child_id in node.children:
+                child = self.bnk.get(child_id)
+                if not child:
+                    continue
+
+                if isinstance(child, ActorMixer):
+                    dependents.add(child_id)
+                else:
+                    dependents.update(
+                        evt.id for evt, _ in self.bnk.find_event_subgraphs_for(child)
+                    )
+
+        ret = sorted(dependents)
+        self._cache[node.id] = ret
+        return ret
+
+    def __call__(self, amx: ActorMixer) -> list[str]:
+        dependents = self._cache.get(amx.id)
+        if dependents is None:
+            dependents = self._load_details(amx)
+
+        used_by = [ ]
+        for n in dependents[:10]:
+            node = self.bnk[n]
+            if isinstance(node, Event):
+                used_by.append("Event " + self.bnk[n].get_wwise_name(f"#{n}"))
+            else:
+                used_by.append(node.get_name(f"{node.type_name} #{node.id}"))
+
+        if len(dependents) > 10:
             used_by.append("...")
 
         return [µ("Used by:")] + used_by

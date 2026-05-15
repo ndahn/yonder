@@ -29,7 +29,7 @@ class rename_bank_dialog(DpgItem):
             new_hash = hash_widget.known_value
             rename_dir = dpg.get_value(self._t("rename_dir"))
             logger.info(µ("Renaming bank to {new_id}").format(new_id=new_hash))
-            bnk.rename(new_hash, rename_dir)
+            bnk.rename_bank(new_hash, rename_dir)
 
             if on_bank_renamed:
                 on_bank_renamed(bnk)

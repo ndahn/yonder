@@ -17,6 +17,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_player_table,
     add_properties_table,
+    loading_indicator,
 )
 from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
@@ -191,26 +192,28 @@ class create_boss_track_dialog(DpgItem):
 
         self.show_message()
 
-        waves = [f for f in self.bgm_tracks if f.name.endswith(".wav")]
-        if waves:
-            wwise = get_config().locate_wwise()
-            converted_wavs = wav2wem(wwise, waves)
-            for wem in converted_wavs:
-                for idx, f in enumerate(self.bgm_tracks):
-                    if f.stem == wem.stem:
-                        self.bgm_tracks[idx] = wem
+        with loading_indicator(µ("Working")):
+            waves = [f for f in self.bgm_tracks if f.name.endswith(".wav")]
+            if waves:
+                wwise = get_config().locate_wwise()
+                converted_wavs = wav2wem(wwise, waves)
+                for wem in converted_wavs:
+                    for idx, f in enumerate(self.bgm_tracks):
+                        if f.stem == wem.stem:
+                            self.bgm_tracks[idx] = wem
 
-        # TODO transition rules?
-        loop_info = [(li[0], li[1]) for li in self.bgm_loop_infos]
-        nodes = create_boss_bgm(
-            self.bnk,
-            self.msc,
-            self.current_state_path,
-            self.bgm_tracks,
-            loop_markers=loop_info,
-            play_preloop_intro=self.play_intro_enabled,
-            properties=self._properties.properties,
-        )
+            # TODO transition rules?
+            loop_info = [(li[0], li[1]) for li in self.bgm_loop_infos]
+            nodes = create_boss_bgm(
+                self.bnk,
+                self.msc,
+                self.current_state_path,
+                self.bgm_tracks,
+                loop_markers=loop_info,
+                play_preloop_intro=self.play_intro_enabled,
+                properties=self._properties.properties,
+            )
+        
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
