@@ -8,8 +8,8 @@ from yonder.game import GameObjects
 from yonder.types.base_types import GameSync
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_node_reference
-from yonder.gui.widgets.node_reference import get_details_generic
+from yonder.gui.widgets import DpgItem, add_select_node
+from yonder.gui.widgets.select_node import get_details_generic
 
 
 class edit_state_path_dialog(DpgItem):
@@ -84,7 +84,7 @@ class edit_state_path_dialog(DpgItem):
 
         if isinstance(arg, int):
             return lookup_name(arg, f"#{arg}")
-        
+
         return arg
 
     def _build(
@@ -123,7 +123,7 @@ class edit_state_path_dialog(DpgItem):
 
             dpg.add_spacer(height=3)
             if not hide_node_id:
-                add_node_reference(
+                add_select_node(
                     self._get_nodes,
                     "Node",
                     self._on_node_selected,

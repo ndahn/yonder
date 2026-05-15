@@ -15,13 +15,13 @@ from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     DpgItem,
-    add_node_reference,
+    add_select_node,
     add_paragraphs,
     add_wav_player,
     add_widget_table,
     loading_indicator,
 )
-from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
+from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
 from .file_dialog import open_file_dialog
 
@@ -31,8 +31,8 @@ from .file_dialog import open_file_dialog
 
 @dataclass
 class TrackEntry:
-    """One row in the condition grid: a leaf value and one condition per arg.
-    """
+    """One row in the condition grid: a leaf value and one condition per arg."""
+
     leaf_value: Path = None
     conditions: dict[str, str] = field(default_factory=dict)
 
@@ -480,7 +480,7 @@ Ambience tree:
     def _build_tab_location(self) -> None:
         with dpg.tab(label=µ("location branch")):
             dpg.add_text(µ("MusicSwitchContainer"))
-            add_node_reference(
+            add_select_node(
                 self._get_location_mscs,
                 "MusicSwitchContainer",
                 self._on_msc_selected,

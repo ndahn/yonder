@@ -20,11 +20,11 @@ from yonder.gui.widgets import (
     add_widget_table,
     add_properties_table,
     add_player_table_compact,
-    add_node_reference,
+    add_select_node,
     add_paragraphs,
     loading_indicator,
 )
-from yonder.gui.widgets.node_reference import ActorMixerDetailProvider
+from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 from .file_dialog import open_multiple_dialog
 
 
@@ -59,7 +59,7 @@ class create_batch_sound_builder_dialog(DpgItem):
         self._title = title
 
         self._w_groups: add_widget_table = None
-        self._w_actormixer: add_node_reference = None
+        self._w_actormixer: add_select_node = None
         self._w_soundfiles: add_player_table_compact = None
         self._w_properties: add_properties_table = None
 
@@ -333,7 +333,10 @@ class create_batch_sound_builder_dialog(DpgItem):
         with loading_indicator(µ("Working")):
             # Convert wavs to wems
             all_waves = [
-                f for g in self._groups for f in g.soundfiles if f.suffix.lower() == ".wav"
+                f
+                for g in self._groups
+                for f in g.soundfiles
+                if f.suffix.lower() == ".wav"
             ]
             if all_waves:
                 wwise = get_config().locate_wwise()
@@ -470,7 +473,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
                     dpg.add_spacer(height=4)
 
-                    self._w_actormixer = add_node_reference(
+                    self._w_actormixer = add_select_node(
                         lambda f: query_nodes(self._actormixers, f),
                         "ActorMixer",
                         self._make_setter("actormixer", lambda n: n.id),

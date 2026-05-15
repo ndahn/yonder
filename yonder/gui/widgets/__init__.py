@@ -15,7 +15,7 @@ from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
 from .loading_indicator import loading_indicator
 from .node_widgets import create_node_widgets
-from .node_reference import add_node_reference
+from .select_node import add_select_node
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
 from .section_widgets import create_section_widgets
 from .splash import add_splash

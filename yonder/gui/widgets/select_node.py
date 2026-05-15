@@ -50,7 +50,7 @@ class ActorMixerDetailProvider:
         if dependents is None:
             dependents = self._load_details(amx)
 
-        used_by = [ ]
+        used_by = []
         for n in dependents[:10]:
             node = self.bnk[n]
             if isinstance(node, Event):
@@ -89,7 +89,7 @@ def get_details_generic(node: HIRCNode) -> list[str]:
     return details
 
 
-class add_node_reference(DpgItem):
+class add_select_node(DpgItem):
     def __init__(
         self,
         get_items: Callable[[str], Iterable[HIRCNode]],

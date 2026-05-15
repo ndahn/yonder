@@ -7,8 +7,8 @@ from yonder.types import Event, Action
 from yonder.enums import SoundType
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_node_reference, add_paragraphs
-from yonder.gui.widgets.node_reference import get_details_generic
+from yonder.gui.widgets import DpgItem, add_select_node, add_paragraphs
+from yonder.gui.widgets.select_node import get_details_generic
 
 
 class create_wwise_event_dialog(DpgItem):
@@ -76,7 +76,7 @@ class create_wwise_event_dialog(DpgItem):
 
         if self._callback:
             self._callback(new_nodes)
-        
+
         self.show_message(µ("Success!", "msg"), color=style.blue)
         dpg.set_item_label(self._t("playstop/button_okay"), µ("Yay!"))
         dpg.set_item_callback(
@@ -105,7 +105,7 @@ class create_wwise_event_dialog(DpgItem):
                 tag=self._t("allow_arbitrary_names"),
             )
 
-            add_node_reference(
+            add_select_node(
                 self._bnk.query,
                 µ("Target node"),
                 None,
@@ -136,7 +136,7 @@ class create_wwise_event_dialog(DpgItem):
                 ),
                 color=style.light_blue,
             )
-            
+
             dpg.add_separator()
             dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)

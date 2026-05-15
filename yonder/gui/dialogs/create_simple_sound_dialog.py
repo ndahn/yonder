@@ -13,11 +13,11 @@ from yonder.gui.localization import µ
 from yonder.gui.widgets import (
     DpgItem,
     add_properties_table,
-    add_node_reference,
+    add_select_node,
     add_player_table,
     add_paragraphs,
 )
-from yonder.gui.widgets.node_reference import ActorMixerDetailProvider
+from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 
 
 class create_simple_sound_dialog(DpgItem):
@@ -91,7 +91,7 @@ class create_simple_sound_dialog(DpgItem):
             )
 
             # Actor mixer selector
-            add_node_reference(
+            add_select_node(
                 self._bnk.query,
                 µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
@@ -99,7 +99,7 @@ class create_simple_sound_dialog(DpgItem):
                 get_node_details=ActorMixerDetailProvider(self._bnk),
                 tag=self._t("actor_mixer"),
             )
-            
+
             dpg.add_spacer(height=5)
             dpg.add_combo(
                 [p.name for p in PlaybackMode],
@@ -117,7 +117,9 @@ class create_simple_sound_dialog(DpgItem):
             # Properties
             dpg.add_spacer(height=5)
             with dpg.tree_node(label=µ("Properties")):
-                add_properties_table(self._properties, self._on_properties_changed, label=None)
+                add_properties_table(
+                    self._properties, self._on_properties_changed, label=None
+                )
 
             # Sounds
             add_player_table(
@@ -204,7 +206,7 @@ class create_simple_sound_dialog(DpgItem):
                         self._soundfiles[idx] = wem
 
         self.show_message()
-        
+
         playback_mode = PlaybackMode[dpg.get_value(self._t("playback_mode"))]
         random_mode = RandomMode[dpg.get_value(self._t("random_mode"))]
 

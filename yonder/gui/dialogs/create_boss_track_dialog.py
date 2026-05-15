@@ -13,13 +13,13 @@ from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     DpgItem,
-    add_node_reference,
+    add_select_node,
     add_paragraphs,
     add_player_table,
     add_properties_table,
     loading_indicator,
 )
-from yonder.gui.widgets.node_reference import get_details_musicswitchcontainer
+from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
 
 
@@ -213,7 +213,7 @@ class create_boss_track_dialog(DpgItem):
                 play_preloop_intro=self.play_intro_enabled,
                 properties=self._properties.properties,
             )
-        
+
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
@@ -238,7 +238,7 @@ class create_boss_track_dialog(DpgItem):
         ) as window:
             with dpg.tab_bar():
                 with dpg.tab(label=µ("Tracks")):
-                    add_node_reference(
+                    add_select_node(
                         self._get_music_switch_containers,
                         "MusicSwitchContainer",
                         self._on_music_switch_container_selected,
