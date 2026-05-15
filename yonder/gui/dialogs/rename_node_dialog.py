@@ -1,7 +1,7 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank
+from yonder import Soundbank, HIRCNode
 from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -9,13 +9,14 @@ from yonder.gui.widgets.hash_widget import add_hash_widget
 from yonder.gui.widgets import DpgItem
 
 
-class rename_bank_dialog(DpgItem):
+class rename_node_dialog(DpgItem):
     def __init__(
         self,
         bnk: Soundbank,
-        on_bank_renamed: Callable[[Soundbank], None] = None,
+        node: HIRCNode,
+        on_node_renamed: Callable[[HIRCNode], None] = None,
         *,
-        title: str = "Rename Bank",
+        title: str = "Rename Node",
         tag: str = None,
     ) -> str:
         super().__init__(tag)
@@ -26,12 +27,15 @@ class rename_bank_dialog(DpgItem):
                 return
 
             new_hash = hash_widget.known_value
-            rename_dir = dpg.get_value(self._t("rename_dir"))
-            logger.info(µ("Renaming bank to {new_id}").format(new_id=new_hash))
-            bnk.rename_bank(new_hash, rename_dir)
+            logger.info(
+                µ("Renaming node {old_id} to {new_id}").format(
+                    old_id=node.id, new_id=new_hash
+                )
+            )
+            bnk.rename_node(node, new_hash)
 
-            if on_bank_renamed:
-                on_bank_renamed(bnk)
+            if on_node_renamed:
+                on_node_renamed(node)
 
             dpg.delete_item(window)
 
@@ -44,12 +48,7 @@ class rename_bank_dialog(DpgItem):
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
-            hash_widget = add_hash_widget(bnk.bank_id, None, horizontal=False)
-            dpg.add_checkbox(
-                label=µ("Rename folder"),
-                default_value=True,
-                tag=self._t("rename_dir"),
-            )
+            hash_widget = add_hash_widget(node.id, None, horizontal=False)
 
             dpg.add_separator()
             dpg.add_spacer(height=2)

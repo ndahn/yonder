@@ -1355,7 +1355,16 @@ class BanksOfYonder(DpgItem):
         if node:
             node_id = node.id if isinstance(node, HIRCNode) else node
             row = self._t(f"node_{node_id}")
+            
+            if not dpg.does_item_exist(row):
+                # Try to catch any pending structural updates
+                self.regenerate()
+            
             desc = get_foldable_row_descriptor(row)
+            if not desc:
+                logger.error(f"Could not locate widget for node {node_id}")
+                return
+
             sender = desc.selectable
 
         self._on_node_selected(sender, True, node)
@@ -1393,6 +1402,7 @@ class BanksOfYonder(DpgItem):
                 node,
                 lambda s, a, u: self.update_json_panel(),
                 lambda s, a, u: self.jump_to_node(a),
+                self.regenerate,
                 tag=self._t("attributes_"),
                 parent=self._t("attributes"),
             )

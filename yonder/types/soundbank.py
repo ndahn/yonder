@@ -295,7 +295,7 @@ class Soundbank:
         self._regenerate_index_table()
 
     def rename_node(self, node: int | HIRCNode, new_id: Hash | str) -> None:
-        if not isinstance(HIRCNode):
+        if not isinstance(node, HIRCNode):
             node = self[node]
 
         if isinstance(new_id, str):

@@ -98,6 +98,7 @@ def create_node_widgets(
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, int | HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     tag: str = 0,
     parent: str = 0,
@@ -119,16 +120,28 @@ def create_node_widgets(
                     if doc.long_description:
                         add_paragraphs(doc.long_description)
 
-            add_hash_widget(
-                node.id,
-                make_setter(
-                    node, "id", tag, on_node_changed, user_data, lambda v: v[0]
-                ),
-                allow_edit_hash=False,
-                allow_edit_name=False,
-                width=-300,
-                tag=f"{tag}_hash",
-            )
+            with dpg.group(horizontal=True):
+                dpg.add_text("#")
+                add_hash_widget(
+                    node.id,
+                    None,
+                    hash_label=None,
+                    allow_edit_hash=False,
+                    allow_edit_name=False,
+                    width=-300,
+                    tag=f"{tag}_nid",
+                )
+                dpg.add_button(
+                    label=µ("Rename"),
+                    callback=lambda s, a, u: rename_node(
+                        bnk,
+                        node,
+                        on_structure_changed,
+                        base_tag=tag,
+                        user_data=user_data,
+                    ),
+                    tag=f"{tag}_nid_rename",
+                )
 
             if hasattr(node, "parent"):
                 with dpg.group(horizontal=True):
@@ -189,6 +202,23 @@ def create_node_widgets(
                 )
 
     return tag
+
+
+def rename_node(
+    bnk: Soundbank,
+    node: HIRCNode,
+    on_structure_changed: Callable[[], None],
+    *,
+    base_tag: str = None,
+    user_data: Any = None,
+) -> None:
+    from yonder.gui.dialogs.rename_node_dialog import rename_node_dialog
+
+    def on_node_renamed(node: HIRCNode) -> None:
+        if on_structure_changed:
+            on_structure_changed()
+
+    rename_node_dialog(bnk, node, on_node_renamed, tag=f"{base_tag}_rename_node")
 
 
 def add_node_properties(
@@ -868,7 +898,7 @@ def _create_attributes_event(
                     callback=on_action_type_changed,
                     user_data=aid,
                 )
-                dpg.add_text(">")
+                dpg.add_text("=")
                 target = bnk.get(action.external_id)
                 if target:
                     add_node_link(
