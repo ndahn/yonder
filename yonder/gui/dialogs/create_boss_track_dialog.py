@@ -86,7 +86,7 @@ class create_boss_track_dialog(DpgItem):
 
         with dpg.table_row():
             dpg.add_text(
-                "Play intro before loop_start", tag=self._t("boss_bgm/intro_enabled")
+                "Play intro before loop_start", tag=self._t("intro_enabled")
             )
             for i, _ in enumerate(self.bgm_tracks):
                 dpg.add_checkbox(
@@ -218,9 +218,9 @@ class create_boss_track_dialog(DpgItem):
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
         self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("boss_bgm/button_okay"), µ("Yay!"))
+        dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
         dpg.set_item_callback(
-            self._t("boss_bgm/button_okay"),
+            self._t("button_okay"),
             lambda s, a, u: dpg.delete_item(self.tag),
         )
 
@@ -312,7 +312,7 @@ class create_boss_track_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Bring the heat!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("boss_bgm/button_okay"),
+                    tag=self._t("button_okay"),
                 )
 
     # === Public ========================================================

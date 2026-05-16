@@ -30,7 +30,7 @@ if __name__ == "__main__":
         width=1300,
         height=800,
         small_icon="yonder.ico",
-        large_icon="doc/icon256.png",
+        large_icon="resources/icon256.png",
     )
 
     with dpg.window() as main_window:

@@ -650,12 +650,18 @@ class Soundbank:
                         )
                         severity = max(severity, 2)
 
-            for _, ref in node.get_references():
+            for path, ref in node.get_references():
                 if ref in self:
                     if ref not in discovered_ids:
+                        # For some 
                         if (
-                            isinstance(node, Action)
-                            and node.action_type_enum == ActionType.PlayEvent
+                            path.endswith("fx_id")
+                            or path.endswith("bus_id")
+                            or path[:-1].endswith("aux")
+                            or (
+                                isinstance(node, Action)
+                                and node.action_type_enum == ActionType.PlayEvent
+                            )
                         ):
                             # Actions (or at least PlayEvent actions) may refer to stuff in other
                             # soundbanks it seems

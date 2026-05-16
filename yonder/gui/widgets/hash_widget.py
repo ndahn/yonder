@@ -45,7 +45,7 @@ class add_hash_widget(DpgItem):
 
     def __init__(
         self,
-        default_value: Hash = 0,
+        default_value: Hash | str = 0,
         on_hash_changed: Callable[[str, tuple[Hash, str], Any], None] = None,
         *,
         initial_string: str = None,
@@ -63,6 +63,9 @@ class add_hash_widget(DpgItem):
 
         self._on_hash_changed = on_hash_changed
         self._user_data = user_data
+
+        if not isinstance(default_value, Hash):
+            default_value = calc_hash(default_value)
 
         self._build(
             default_value,

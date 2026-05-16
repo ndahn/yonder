@@ -68,6 +68,7 @@ from .dialogs.create_simple_sound_dialog import create_simple_sound_dialog
 from .dialogs.batch_sound_builder import create_batch_sound_builder_dialog
 from .dialogs.calc_hash_dialog import calc_hash_dialog
 from .dialogs.mass_transfer_dialog import mass_transfer_dialog
+from .dialogs.new_soundbank_dialog import new_soundbank_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
@@ -200,7 +201,7 @@ class BanksOfYonder(DpgItem):
                 dpg.add_menu_item(
                     label=µ("New Soundbank...", "menu"),
                     shortcut="ctrl-n",
-                    callback=self._create_empty_soundbank,
+                    callback=self._open_new_soundbank_dialog,
                     tag=self._t("menu/new_soundbank"),
                 )
 
@@ -696,7 +697,7 @@ class BanksOfYonder(DpgItem):
             elif key == dpg.mvKey_S:
                 self._save_soundbank()
             elif key == dpg.mvKey_N:
-                self._create_empty_soundbank()
+                self._open_new_soundbank_dialog()
             # elif key == dpg.mvKey_Q:
             #     self._exit_app()
             # elif key == dpg.mvKey_Z:
@@ -972,18 +973,6 @@ class BanksOfYonder(DpgItem):
                 error_msg = f"(E{e.returncode})\n{e.output}"
                 logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
         
-    def _create_empty_soundbank(self) -> None:
-        path = choose_folder(title=µ("Choose Empty Directory"))
-        if path:
-            path = Path(path)
-            empty = not bool(next(path.iterdir(), None))
-            if not empty:
-                logger.error(µ("Directory not empty", "log"))
-                return
-
-            bnk = Soundbank.create_empty_soundbank(path, path.name)
-            self._load_soundbank(bnk.bnk_dir)
-
     def _open_soundbank(self) -> None:
         path = open_file_dialog(
             title=µ("Open"),
@@ -1720,6 +1709,22 @@ class BanksOfYonder(DpgItem):
     def set_comparison_right(self) -> None:
         dlg = self._get_comparison_dialog()
         dlg.node_b = self._selected_node
+
+    def _open_new_soundbank_dialog(self) -> None:
+        tag = self._t("new_soundbank_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        def on_soundbank_created(bnk: Soundbank) -> None:
+            # TODO show "just do it" dialog to confirm
+            self._load_soundbank(bnk.json_path)
+
+        new_soundbank_dialog(on_soundbank_created, tag=tag)
+
+        dpg.split_frame()
+        center_window(tag)
 
     def _open_create_node_dialog(self) -> None:
         tag = self._t("create_node_dialog")
