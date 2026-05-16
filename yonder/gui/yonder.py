@@ -164,7 +164,7 @@ class BanksOfYonder(DpgItem):
                 dpg.add_menu_item(
                     label=µ("Open...", "menu"),
                     shortcut="ctrl-o",
-                    callback=self._open_soundbank,
+                    callback=self._open_soundbank_file,
                     tag=self._t("menu/open"),
                 )
                 dpg.add_menu(
@@ -693,7 +693,7 @@ class BanksOfYonder(DpgItem):
 
         elif dpg.is_key_down(dpg.mvKey_ModCtrl):
             if key == dpg.mvKey_O:
-                self._open_soundbank()
+                self._open_soundbank_file()
             elif key == dpg.mvKey_S:
                 self._save_soundbank()
             elif key == dpg.mvKey_N:
@@ -721,35 +721,6 @@ class BanksOfYonder(DpgItem):
         dpg.delete_item(self._t("menu/recent_files"), slot=1, children_only=True)
         # dpg.split_frame()
 
-        def load_file_choice(sender: str, choice: int, path: Path) -> None:
-            if choice == 0:
-                self._save_soundbank()
-                self._load_soundbank_with_choice(path)
-            elif choice == 1:
-                if self._save_soundbank_as():
-                    self._load_soundbank_with_choice(path)
-            elif choice == 2:
-                self._load_soundbank_with_choice(path)
-
-        def load_file(sender: str, app_data: Any, path: Path) -> None:
-            if self.bnk:
-                # A soundbank is loaded, save before exiting?
-                simple_choice_dialog(
-                    µ("Save soundbank first?"),
-                    [
-                        µ("Save"),
-                        µ("Save as"),
-                        "|",
-                        µ("Just do it"),
-                    ],
-                    load_file_choice,
-                    title=µ("Continue?"),
-                    user_data=path,
-                )
-                return
-            else:
-                self._load_soundbank_with_choice(path)
-
         for i in range(10):
             if i < len(self.config.recent_files):
                 path = Path(self.config.recent_files[i])
@@ -758,7 +729,7 @@ class BanksOfYonder(DpgItem):
                 dpg.add_menu_item(
                     label=str(short),
                     parent=self._t("menu/recent_files"),
-                    callback=load_file,
+                    callback=lambda s, a, u: self._load_soundbank_confirm(u),
                     user_data=path,
                 )
             else:
@@ -973,7 +944,7 @@ class BanksOfYonder(DpgItem):
                 error_msg = f"(E{e.returncode})\n{e.output}"
                 logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
         
-    def _open_soundbank(self) -> None:
+    def _open_soundbank_file(self) -> None:
         path = open_file_dialog(
             title=µ("Open"),
             filetypes={
@@ -984,9 +955,39 @@ class BanksOfYonder(DpgItem):
         )
 
         if path:
-            self._load_soundbank_with_choice(Path(path))
+            self._load_soundbank_check_unpacked(Path(path))
 
-    def _load_soundbank_with_choice(self, path: Path) -> None:
+    def _load_soundbank_confirm(self, path: Path) -> None:
+        
+        def on_choice(sender: str, choice: int, path: Path) -> None:
+            if choice == 0:
+                self._save_soundbank()
+                self._load_soundbank_check_unpacked(path)
+            elif choice == 1:
+                if self._save_soundbank_as():
+                    self._load_soundbank_check_unpacked(path)
+            elif choice == 2:
+                self._load_soundbank_check_unpacked(path)
+
+        if self.bnk:
+            # A soundbank is loaded, save before exiting?
+            simple_choice_dialog(
+                µ("Save soundbank first?"),
+                [
+                    µ("Save"),
+                    µ("Save as"),
+                    "|",
+                    µ("Just do it"),
+                ],
+                on_choice,
+                title=µ("Continue?"),
+                user_data=path,
+            )
+            return
+        else:
+            self._load_soundbank_check_unpacked(path)
+
+    def _load_soundbank_check_unpacked(self, path: Path) -> None:
         if path.name.endswith(".bnk"):
             unpacked_json = path.parent / path.stem / "soundbank.json"
 
@@ -1718,8 +1719,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_soundbank_created(bnk: Soundbank) -> None:
-            # TODO show "just do it" dialog to confirm
-            self._load_soundbank(bnk.json_path)
+            self._load_soundbank_confirm(bnk.json_path)
 
         new_soundbank_dialog(on_soundbank_created, tag=tag)
 

@@ -240,6 +240,7 @@ def add_generic_widget(
                 callback=cb,
                 user_data=user_data,
                 tag=tag,
+                **kwargs,
             )
             dpg.add_button(
                 # arrow=True,
@@ -247,7 +248,8 @@ def add_generic_widget(
                 label=µ("Browse", "button"),
                 callback=select_file,
             )
-            dpg.add_text(label)
+            if label:
+                dpg.add_text(label)
     elif type_origin is list and origin_args in (int, float, bool, str, Path):
         from .editable_table import add_widget_table
 
@@ -277,6 +279,7 @@ def add_generic_widget(
             user_data=user_data,
             parent=parent,
             tag=tag,
+            **kwargs,
         )
     else:
         if not_supported_ok:

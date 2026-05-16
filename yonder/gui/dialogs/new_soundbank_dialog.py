@@ -23,6 +23,8 @@ class new_soundbank_dialog(DpgItem):
         self._on_soundbank_created = on_soundbank_created
         self._build(title)
 
+    # === Internal =====================================
+
     def _on_okay(self) -> None:
         name: str = dpg.get_value(self._t("name"))
         if not name:
@@ -65,14 +67,15 @@ class new_soundbank_dialog(DpgItem):
         ) as window:
             add_generic_widget(
                 str,
-                "name",
+                µ("Name"),
                 default="cs_c0010",
                 tag=self._t("name"),
                 no_spaces=True,
             )
             add_generic_widget(
                 Path,
-                "path",
+                None,
+                hint=µ("Soundbank path"),
                 file_mode="folder",
                 tag=self._t("path"),
             )
@@ -83,7 +86,7 @@ class new_soundbank_dialog(DpgItem):
                     """\
                         - Creates a new empty soundbank with only the basics
                         - Should be used instead of editing cs_main where possible
-                        - Add it to Torrent to have it always loaded (NpcParam 80000000)
+                        - For the Tarnished add the new bank to NpcParam 80000000
                         - Some names may not work for unknown reasons (e.g. cs_c0100)
                         - Renaming a .bnk file/folder is not enough, use Bank->Rename
                     """,
