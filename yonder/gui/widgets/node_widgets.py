@@ -522,7 +522,7 @@ def _create_type_specific_attributes(
         )
         return True
     elif isinstance(node, LayerContainer):
-        # TODO
+        # TODO manage layers, playback layer sounds in parallel
         add_letmeknow()
     elif isinstance(node, MusicRandomSequenceContainer):
         _create_attributes_musicrandomsequencecontainer(

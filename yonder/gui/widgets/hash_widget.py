@@ -64,7 +64,7 @@ class add_hash_widget(DpgItem):
         self._on_hash_changed = on_hash_changed
         self._user_data = user_data
 
-        if not isinstance(default_value, Hash):
+        if not isinstance(default_value, int):
             default_value = calc_hash(default_value)
 
         self._build(
