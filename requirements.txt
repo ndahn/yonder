@@ -2,7 +2,7 @@ dearpygui >= 2.2.0
 networkx >= 3.6.0
 pydub >= 0.25.0
 audioop-lts >= 0.2.2
-crossfiledialog @ git+https://github.com/ndahn/crossfiledialog.git@main
+crossfiledialog >= 1.2.0
 pywin32; platform_system == "Windows"
 docstring_parser
 pyperclip
