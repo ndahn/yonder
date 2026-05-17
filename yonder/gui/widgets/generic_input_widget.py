@@ -207,7 +207,6 @@ def add_generic_widget(
             if file_mode == "open":
                 ret = open_file_dialog(
                     title=label,
-                    default_file=default,
                     filetypes=filetypes,
                 )
             elif file_mode == "save":

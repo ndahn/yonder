@@ -62,7 +62,6 @@ from .dialogs.create_playstop_event_dialog import create_wwise_event_dialog
 from .dialogs.file_dialog import (
     open_file_dialog,
     save_file_dialog,
-    choose_folder,
 )
 from .dialogs.create_simple_sound_dialog import create_simple_sound_dialog
 from .dialogs.batch_sound_builder import create_batch_sound_builder_dialog
@@ -894,6 +893,7 @@ class BanksOfYonder(DpgItem):
             title=µ("Save Soundbank"),
             default_dir=str(self.bnk.bnk_dir),
             filetypes={µ("JSON (.json)", "filetypes"): "*.json"},
+            default_file="soundbank.json",
         )
         if path:
             path = Path(path)

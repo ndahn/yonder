@@ -201,7 +201,6 @@ class add_wav_player(DpgItem):
         """Open a file picker and load the chosen file."""
         ret = open_file_dialog(
             title=µ("Select Audio File"),
-            default_file=str(self._audio) if self._audio else None,
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
