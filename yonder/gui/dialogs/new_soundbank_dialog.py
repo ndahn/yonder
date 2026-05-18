@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
@@ -21,6 +21,7 @@ class new_soundbank_dialog(DpgItem):
         super().__init__(tag)
 
         self._on_soundbank_created = on_soundbank_created
+        self._path: Path = None
         self._build(title)
 
     # === Internal =====================================
@@ -31,12 +32,11 @@ class new_soundbank_dialog(DpgItem):
             self.show_message(µ("Name cannot be empty"))
             return
 
-        path: str = dpg.get_value(self._t("path"))
-        if not path:
+        if not self._path:
             self.show_message(µ("No path specified"))
             return
 
-        bnk_dir= Path(path) / name
+        bnk_dir= self._path / name
         if not bnk_dir.is_dir():
             bnk_dir.mkdir(parents=True, exist_ok=True)
         
@@ -48,12 +48,15 @@ class new_soundbank_dialog(DpgItem):
         logger.info(µ("Creating new soundbank {name}").format(name=name))
 
         with loading_indicator(µ("Working")):
-            bnk = Soundbank.create_empty_soundbank(path, name)
+            bnk = Soundbank.create_empty_soundbank(self._path, name)
         
         if self._on_soundbank_created:
             self._on_soundbank_created(bnk)
 
         dpg.delete_item(self.tag)
+
+    def _store_path(self, sender: str, path: Path, user_data: Any) -> None:
+        self._path = path
 
     def _build(self, title: str):
         with dpg.window(
@@ -74,7 +77,8 @@ class new_soundbank_dialog(DpgItem):
             )
             add_generic_widget(
                 Path,
-                None,
+                µ("Path"),
+                self._store_path,
                 hint=µ("Soundbank path"),
                 file_mode="folder",
                 tag=self._t("path"),
