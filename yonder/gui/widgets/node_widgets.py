@@ -162,13 +162,13 @@ def create_node_widgets(
                 with dpg.group(horizontal=True):
                     dpg.add_text("Parent: ", tag=f"{tag}/parent_is", bullet=True)
                     parent_node = bnk.get(node.parent, node.parent)
-                    add_node_link(str(parent_node), parent_node, on_node_selected)
+                    add_node_link(bnk, parent_node, on_node_selected)
 
             if hasattr(node, "children"):
                 with dpg.tree_node(label=µ("Children")):
                     for child_id in node.children:
                         child = bnk.get(child_id, child_id)
-                        add_node_link(str(child), child, on_node_selected)
+                        add_node_link(bnk, child, on_node_selected)
 
             if isinstance(node, Action):
                 with dpg.group(horizontal=True):
@@ -176,7 +176,7 @@ def create_node_widgets(
                     ext = bnk.get(node.external_id)
                     if ext:
                         add_node_link(
-                            str(ext),
+                            bnk,
                             ext.id,
                             on_node_selected,
                             user_data=user_data,
@@ -288,7 +288,7 @@ def add_node_rtpc(
 
 
 def add_node_link(
-    label: str,
+    bnk: Soundbank,
     target: int | HIRCNode,
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
@@ -300,6 +300,15 @@ def add_node_link(
 
     if isinstance(target, HIRCNode):
         target = target.id
+
+    if target in (0, None):
+        label = "#0"
+    else:
+        node = bnk.get(target)
+        if node:
+            label = str(node)
+        else:
+            label = f"#{target} (ext)"
 
     dpg.add_button(
         label=label,
@@ -923,7 +932,7 @@ def _create_attributes_event(
                 target = bnk.get(action.external_id)
                 if target:
                     add_node_link(
-                        str(target), target.id, on_node_selected, user_data=user_data
+                        bnk, target.id, on_node_selected, user_data=user_data
                     )
                 else:
                     dpg.add_text(
@@ -945,6 +954,7 @@ def _create_attributes_event(
     )
 
 
+# TODO only becomes useful once we support per-layer RTPC (or playback)
 def _create_attributes_layercontainer(
     bnk: Soundbank,
     node: LayerContainer,
@@ -958,7 +968,7 @@ def _create_attributes_layercontainer(
     def layer_to_row(layer: Layer, idx: int) -> None:
         # TODO add widgets
         # TODO need to update node children when the layer is edited
-        pass
+        add_node_link(bnk, layer.associated_children[0], on_node_selected)
 
     def add_layer(done: Callable[[Layer], None]) -> None:
         done(Layer(bnk.new_id()))
@@ -994,9 +1004,9 @@ def _create_attributes_layercontainer(
     add_widget_table(
         node.layers,
         layer_to_row,
-        new_item=add_layer,
-        on_add=on_add,
-        on_remove=on_remove,
+        #new_item=add_layer,  # TODO
+        #on_add=on_add,
+        #on_remove=on_remove,
         label=µ("Layers"),
         add_item_label=µ("+ Layer"),
     )
@@ -1153,7 +1163,7 @@ def _create_attributes_musicswitchcontainer(
             with dpg.tree_node(span_full_width=True) as dpg_item:
                 if leaf_node:
                     add_node_link(
-                        str(leaf_node),
+                        bnk,
                         leaf_node,
                         on_node_selected,
                         user_data=user_data,
@@ -1476,7 +1486,7 @@ def _create_attributes_randomsequencecontainer(
     def create_playlist_row(item: tuple[int, int], idx: int) -> None:
         target = bnk.get(item[0])
         if target:
-            add_node_link(str(target), target, on_node_selected, user_data=user_data)
+            add_node_link(bnk, target, on_node_selected, user_data=user_data)
         else:
             dpg.add_text(µ("#{node} (not found)").format(node=item[0]))
 
@@ -1626,7 +1636,7 @@ def _create_attributes_switchcontainer(
                         switch_node = bnk.get(nid)
                         if switch_node:
                             add_node_link(
-                                str(switch_node),
+                                bnk,
                                 switch_node,
                                 on_node_selected,
                                 user_data=user_data,
