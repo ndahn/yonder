@@ -48,7 +48,7 @@ class new_soundbank_dialog(DpgItem):
         logger.info(µ("Creating new soundbank {name}").format(name=name))
 
         with loading_indicator(µ("Working")):
-            bnk = Soundbank.create_empty_soundbank(self._path, name)
+            bnk = Soundbank.create_empty_soundbank(bnk_dir, name)
         
         if self._on_soundbank_created:
             self._on_soundbank_created(bnk)

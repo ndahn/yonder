@@ -32,7 +32,7 @@ class LookupTable:
 
     def prune(self, corpus: str) -> None:
         # Reduce to the hashes that are actually found in the corpus
-        all_ints = set(re.findall(r"\d+", corpus))
+        all_ints = set(int(x) for x in re.findall(r"\d+", corpus))
         self._table = {k: v for k, v in self._table.items() if k in all_ints}
 
     def save(self, path: Path = None) -> None:
@@ -90,8 +90,17 @@ def get_default_lookup_table_path() -> Path:
     return resource_dir() / "wwise_ids.txt"
 
 
-def get_bank_lookup_table_path(bnk: "Soundbank") -> Path:
-    return bnk.bnk_dir.parent / f"{bnk.name}_strings.txt"
+def get_bank_lookup_table_path(bnk: "str | Soundbank") -> Path:
+    from yonder import Soundbank
+
+    if isinstance(bnk, Soundbank):
+        name = bnk.get_name()
+        if not name:
+            name = bnk.bnk_dir.name
+    else:
+        name = str(bnk)
+
+    return bnk.bnk_dir.parent / f"{name}_strings.txt"
 
 
 def get_active_lookup_table() -> LookupTable:

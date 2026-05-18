@@ -1719,6 +1719,13 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_soundbank_created(bnk: Soundbank) -> None:
+            # If the soundbank name's hash is unknown add an entry to its (new) lookup table
+            if not bnk.name:
+                name = bnk.bnk_dir.name
+                table_path = get_bank_lookup_table_path(bnk)
+                with table_path.open("a", encoding="utf-8") as f:
+                    f.writelines("\n" + name)
+
             self._load_soundbank_confirm(bnk.json_path)
 
         new_soundbank_dialog(on_soundbank_created, tag=tag)
