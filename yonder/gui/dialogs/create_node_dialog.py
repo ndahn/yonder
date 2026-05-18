@@ -2,6 +2,7 @@ from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
+from yonder.types import Sound, MusicTrack
 from yonder.gui.localization import µ
 from yonder.util import get_function_spec, logger
 from yonder.gui import style
@@ -133,13 +134,20 @@ class create_node_dialog(DpgItem):
             )
 
     def _on_okay(self) -> None:
-        self._node_args["nid"] = self._nid
-        # TODO move/copy wems if necessary according to sound type
+        args = self._node_args
+        args["nid"] = self._nid
         node_cls = self._node_types[self._selected_type]
-        node = node_cls.new(**self._node_args)
-        
+
+        # Copy wems as necessary according to sound type
+        if node_cls in (Sound, MusicTrack):
+            wem = args.get("wem")
+            if wem:
+                args["wem"] = self._bnk.add_wem(wem, args["source_type"])
+
+        node = node_cls.new(**args)
         self._bnk.add_nodes(node)
         self._callback(node)
+
         dpg.delete_item(self._window)
 
     # === Public ========================================================
