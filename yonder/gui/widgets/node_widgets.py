@@ -973,16 +973,23 @@ def _create_attributes_layercontainer(
     def on_remove(
         sender: str, info: tuple[int, Layer, list[Layer]], cb_user_data: Any
     ) -> None:
-        layer = info[1]
-        if layer.layer_id > 0:
+        removed = info[1]
+        if removed.layer_id > 0:
             for nl in node.layers:
-                if nl.layer_id == layer.layer_id:
+                if nl.layer_id == removed.layer_id:
                     node.layers.remove(nl)
-                    for layer_child in nl.associated_children:
-                        node.children.remove(layer_child.associated_child_id)
-
-                    on_node_changed(base_tag, node, user_data)
                     break
+            else:
+                return
+
+            # Rebuild children, some may be used in multiple layers
+            node.children.clear()
+            for nl in node.layers:
+                for layer_child in nl.associated_children:
+                    if layer_child.associated_child_id > 0:
+                        node.children.add(layer_child.associated_child_id)
+
+            on_node_changed(base_tag, node, user_data)
 
     add_widget_table(
         node.layers,
