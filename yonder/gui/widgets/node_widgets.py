@@ -968,7 +968,7 @@ def _create_attributes_layercontainer(
     def layer_to_row(layer: Layer, idx: int) -> None:
         # TODO add widgets
         # TODO need to update node children when the layer is edited
-        add_node_link(bnk, layer.associated_children[0], on_node_selected)
+        add_node_link(bnk, layer.associated_children[0].associated_child_id, on_node_selected)
 
     def add_layer(done: Callable[[Layer], None]) -> None:
         done(Layer(bnk.new_id()))

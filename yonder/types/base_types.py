@@ -36,7 +36,6 @@ class _ItemContainer(Generic[_T]):
 
         if item not in self.items:
             self.items.append(item)
-            self.items.sort()
 
     def pop(self, idx: int) -> _T:
         return self.items.pop(idx)
@@ -600,6 +599,11 @@ class PropBundleByte:
 class Children(_ItemContainer[int]):
     count: int = 0
     items: list[int] = field(default_factory=list)
+
+    def add(self, item: int) -> None:
+        # Must be explicit due to slots above
+        super(Children, self).add(item)
+        self.items.sort()
 
     def validate(self) -> None:
         self.items = sorted(set(self.items))

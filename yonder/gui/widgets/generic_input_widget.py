@@ -73,16 +73,25 @@ def add_generic_widget(
 
     # Support enums by extracting their choices
     if isinstance(value_type, type) and issubclass(value_type, Enum):
+        orig_enum_callback = callback
+        orig_enum_type = value_type
+
+        def enum_callback(sender: str, data: str, cb_user_data: Any) -> None:
+            value = orig_enum_type[data]
+            if orig_enum_callback:
+                orig_enum_callback(sender, value, user_data)
+
+        callback = enum_callback
         choices = [(v.name, v.value) for v in value_type]
         if default is not None and not isinstance(default, str):
             default = value_type(default).name
 
     # If choices is provided we treat this as a Literal
     if choices:
-        orig_callback = callback
+        orig_choice_callback = callback
         items = [x[0] if isinstance(x, tuple) else x for x in choices]
 
-        def new_callback(sender: str, data: str, cb_user_data: Any):
+        def choice_callback(sender: str, data: str, cb_user_data: Any) -> None:
             # Find the selected item in the original choices list
             index = items.index(data)
             selected = choices[index]
@@ -92,22 +101,22 @@ def add_generic_widget(
             if isinstance(selected, tuple):
                 selected = selected[1]
 
-            if orig_callback:
-                orig_callback(sender, selected, user_data)
+            if orig_choice_callback:
+                orig_choice_callback(sender, selected, user_data)
 
         value_type = Literal[tuple(items)]
-        callback = new_callback
+        callback = choice_callback
 
     # dpg.add_input_int only supports numbers up to int32
     if value_type is int and isinstance(default, int) and default.bit_length() >= 32:
-        orig_callback = callback
+        choice_callback = callback
 
-        def new_callback(sender: str, app_data: str, cb_user_data: Any) -> None:
-            if orig_callback:
-                orig_callback(sender, int(app_data, user_data))
+        def choice_callback(sender: str, app_data: str, cb_user_data: Any) -> None:
+            if choice_callback:
+                choice_callback(sender, int(app_data, user_data))
 
         value_type = str
-        callback = new_callback
+        callback = choice_callback
         kwargs["decimal"] = True
 
     # The simple types
