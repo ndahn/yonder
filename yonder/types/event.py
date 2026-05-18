@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 @dataclass(repr=False, eq=False)
 class Event(HIRCNode):
+    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
+    
     body_type: ClassVar[int] = 4
     action_count: int = 0
     actions: list[int] = field(default_factory=list)

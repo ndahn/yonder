@@ -134,6 +134,7 @@ class create_node_dialog(DpgItem):
 
     def _on_okay(self) -> None:
         self._node_args["nid"] = self._nid
+        # TODO move/copy wems if necessary according to sound type
         node_cls = self._node_types[self._selected_type]
         node = node_cls.new(**self._node_args)
         

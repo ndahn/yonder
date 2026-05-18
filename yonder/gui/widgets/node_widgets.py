@@ -1,6 +1,7 @@
 from typing import Any, Callable
 from pathlib import Path
 from docstring_parser import parse as doc_parse
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, Hash
@@ -39,6 +40,7 @@ from yonder.types.base_types import (
     DecisionTreeNode,
     MusicMarkerWwise,
     RTPC,
+    Layer,
 )
 from yonder.enums import (
     SourceType,
@@ -110,15 +112,28 @@ def create_node_widgets(
     with loading_indicator(µ("loading...", "loading")):
         with dpg.group(tag=tag, parent=parent):
             # Heading
-            color = type_colors.get(type(node), style.white)
-            dpg.add_text(node.type_name, color=color)
-            doc = doc_parse(type(node).__doc__)
-            if doc.short_description or doc.long_description:
-                with dpg.tooltip(dpg.last_item()):
-                    if doc.short_description:
-                        add_paragraphs(doc.short_description)
-                    if doc.long_description:
-                        add_paragraphs(doc.long_description)
+            with dpg.group(horizontal=True, horizontal_spacing=4):
+                doc = doc_parse(type(node).__doc__)
+                color = type_colors.get(type(node), style.white)
+
+                dpg.add_text(node.type_name, color=color)
+                if doc.short_description or doc.long_description:
+                    with dpg.tooltip(dpg.last_item()):
+                        if doc.short_description:
+                            add_paragraphs(doc.short_description)
+                        if doc.long_description:
+                            add_paragraphs(doc.long_description)
+
+                if hasattr(type(node), "wwise_link"):
+                    dpg.add_button(
+                        label="?",
+                        small=True,
+                        callback=lambda s, a, u: webbrowser.open(u),
+                        user_data=node.wwise_link,
+                    )
+                    #dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text("Open type documentation")
 
             with dpg.group(horizontal=True):
                 dpg.add_text("#")
@@ -522,8 +537,15 @@ def _create_type_specific_attributes(
         )
         return True
     elif isinstance(node, LayerContainer):
-        # TODO manage layers, playback layer sounds in parallel
-        add_letmeknow()
+        _create_attributes_layercontainer(
+            bnk,
+            node,
+            on_node_changed,
+            on_node_selected,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
+        return True
     elif isinstance(node, MusicRandomSequenceContainer):
         _create_attributes_musicrandomsequencecontainer(
             bnk,
@@ -923,6 +945,56 @@ def _create_attributes_event(
     )
 
 
+def _create_attributes_layercontainer(
+    bnk: Soundbank,
+    node: LayerContainer,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    # TODO playback layer sounds in parallel
+    def layer_to_row(layer: Layer, idx: int) -> None:
+        # TODO add widgets
+        # TODO need to update node children when the layer is edited
+        pass
+
+    def add_layer(done: Callable[[Layer], None]) -> None:
+        done(Layer(bnk.new_id()))
+
+    def on_add(
+        sender: str, info: tuple[int, Layer, list[Layer]], cb_user_data: Any
+    ) -> None:
+        layer = info[1]
+        node.layers.append(layer)
+        on_node_changed(base_tag, node, user_data)
+
+    def on_remove(
+        sender: str, info: tuple[int, Layer, list[Layer]], cb_user_data: Any
+    ) -> None:
+        layer = info[1]
+        if layer.layer_id > 0:
+            for nl in node.layers:
+                if nl.layer_id == layer.layer_id:
+                    node.layers.remove(nl)
+                    for layer_child in nl.associated_children:
+                        node.children.remove(layer_child.associated_child_id)
+
+                    on_node_changed(base_tag, node, user_data)
+                    break
+
+    add_widget_table(
+        node.layers,
+        layer_to_row,
+        new_item=add_layer,
+        on_add=on_add,
+        on_remove=on_remove,
+        label=µ("Layers"),
+        add_item_label=µ("+ Layer"),
+    )
+
+
 def _create_attributes_musicrandomsequencecontainer(
     bnk: Soundbank,
     node: MusicRandomSequenceContainer,
@@ -1134,20 +1206,8 @@ def _create_attributes_musicsegment(
 ) -> None:
     from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
 
-    def on_marker_renamed(
-        sender: str, new_name: tuple[int, str], info: tuple[int, int]
-    ) -> None:
-        idx, _ = info
-        mid, name = new_name
-        pos = node.markers[idx].position
-        node.markers.pop(idx)
-        node.set_marker(name or mid, pos)
-        on_node_changed(base_tag, node, user_data)
-
-    def on_marker_moved(sender: str, new_pos: float, info: tuple[int, int]) -> None:
-        _, mid = info
-        node.set_marker(mid, new_pos)
-        on_node_changed(base_tag, node, user_data)
+    def new_marker(done: Callable[[MusicMarkerWwise], None]) -> None:
+        done(node.set_marker(f"m{len(node.markers)}", 0.0))
 
     def on_marker_added(
         sender: str,
@@ -1167,8 +1227,20 @@ def _create_attributes_musicsegment(
         node.remove_marker(marker.id)
         on_node_changed(base_tag, node, user_data)
 
-    def new_marker(done: Callable[[MusicMarkerWwise], None]) -> None:
-        done(node.set_marker(f"m{len(node.markers)}", 0.0))
+    def on_marker_renamed(
+        sender: str, new_name: tuple[int, str], info: tuple[int, int]
+    ) -> None:
+        idx, _ = info
+        mid, name = new_name
+        pos = node.markers[idx].position
+        node.markers.pop(idx)
+        node.set_marker(name or mid, pos)
+        on_node_changed(base_tag, node, user_data)
+
+    def on_marker_moved(sender: str, new_pos: float, info: tuple[int, int]) -> None:
+        _, mid = info
+        node.set_marker(mid, new_pos)
+        on_node_changed(base_tag, node, user_data)
 
     def create_row(marker: MusicMarkerWwise, idx: int) -> None:
         with dpg.group(horizontal=True):

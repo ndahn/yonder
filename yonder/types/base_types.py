@@ -646,6 +646,14 @@ class BankSourceData:
     params_size: int = 0
     params: str = ""
 
+    @property
+    def source_id(self) -> int:
+        return self.media_information.source_id
+
+    @source_id.setter
+    def source_id(self, val: int) -> None:
+        self.media_information.source_id = int(val)
+
 
 @dataclass(slots=True)
 class DuckInfo:

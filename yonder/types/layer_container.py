@@ -19,6 +19,8 @@ from .mixins import PropertyMixin
 
 @dataclass(repr=False, eq=False)
 class LayerContainer(PropertyMixin, HIRCNode):
+    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
+    
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
