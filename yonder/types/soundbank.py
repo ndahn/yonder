@@ -227,10 +227,13 @@ class Soundbank:
             return wem
 
         # Find the largest external wem (if any)
-        if source_type != SourceType.Embedded:
-            ext = self.bnk_dir.parent / "wem" / str(source_id)[:2] / f"{source_id}.wem"
-            if ext.is_file():
-                return ext
+        wem = self.bnk_dir.parent / "wem" / str(source_id)[:2] / f"{source_id}.wem"
+        if wem.is_file():
+            return wem
+
+        wem = self.bnk_dir / f"{source_id}.wem"
+        if wem.is_file():
+            return wem
 
         return None
 
