@@ -14,6 +14,7 @@ def collect_sources(bnk: Soundbank, event_names: list[str]) -> dict[str, list[Ba
     for evt_name in event_names:
         evt: Event = bnk.get(evt_name)
         if not evt:
+            logger.warning(f"Event {evt_name} not found")
             continue
 
         for aid in evt.actions:
@@ -41,12 +42,14 @@ def export_wems(
     destination: Path,
     *,
     prefix: str = None,
-) -> None:
+) -> tuple[list[Path], list[Path]]:
     if prefix is None:
         prefix = ""
 
     sources = collect_sources(bnk, event_names)
     destination.mkdir(parents=True, exist_ok=True)
+    copied: list[Path] = []
+    missing: list[Path] = []
 
     for evt_name, evt_sources in sources.items():
         for src in evt_sources:
@@ -54,8 +57,12 @@ def export_wems(
             if wem:
                 wwise_id = evt_name.split("_", maxsplit=1)[-1]
                 new_name = f"{prefix}{wwise_id}_{wem.stem}.wem"
-                shutil.copy(wem, destination / new_name)
+                ret = shutil.copy(wem, destination / new_name)
+                copied.append(ret)
             else:
                 logger.warning(
-                    f"Wem {src.source_id} ({src.source_type}) for event {evt_name} is missing"
+                    f"Wem {src.source_id} ({src.source_type.name}) for event {evt_name} is missing"
                 )
+                missing.append(wem)
+
+    return (copied, missing)
