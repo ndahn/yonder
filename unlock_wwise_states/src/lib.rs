@@ -2,8 +2,9 @@
 //! these with whatever state the caller wants to set, effectively disabling
 //! verification and allowing for arbitrary strings.
 //!
-//! - SetBossBgm    -> CSSoundBgmController+0x238 (WwiseValueToStrParam_BgmBossChrIdConv)
-//! - FUN_140dae090 -> CSSoundBgmController+0xf58 (WwiseValueToStrParam_EnvPlaceType)
+//! - SetBossBgm    -> CSSoundBgmController+0x238 (BgmEnemyType validation)
+//! - FUN_140dae090 -> CSSoundBgmController+0xf58 (BgmPlaceType validation)
+//! - ??? -> (Set_State_EnvPlaceType validation)
 
 #![allow(non_snake_case)]
 
@@ -23,12 +24,14 @@ const GLOBAL_FIELD_AREA_RVA: u32 = 0x3d691d8;
 const GLOBAL_WORLDSOUNDMAN_RVA: u32 = 0x3d6f708;
 const SETBOSSBGM_RVA: u32 = 0xdb2f70;
 const AREA_BGM_UPDATE_RVA: u32 = 0xdae090;
+const UPDATE_BGM_STATE_RVA: u32 = 0xdb55e0;
 const BOSS_BGM_STATE_IDX: u8 = 1; // 0 is "None" and not checked
 const AREA_BGM_STATE_IDX: u8 = 1;
 
 static_detour! {
     static SetBossBgmHook: unsafe extern "C" fn(usize, u32, i32) -> ();
     static AreaBgmUpdateHook: unsafe extern "C" fn(usize, f32) -> ();
+    static UpdateBgmStateHook: unsafe extern "C" fn(usize, usize, f32) -> ();
 }
 
 /// Write up to 31 bytes of `param_str` into a 32-byte slot, null-terminated.
@@ -112,7 +115,7 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
     let program = Program::current();
     let area_param_id = resolve_area_param_id(cssound, &program);
     let current = *((cssound + 0x2f0) as *const i16);
-    
+
     if current != 0 {
         let controller_ptr = *((cssound + 0x328) as *const usize);
         if controller_ptr == 0 {
@@ -140,19 +143,32 @@ unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
 
         if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
             // TODO this is NOT the correct array, 0xf58 is for BgmPlaceType!
-            //let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
+            let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
             //write_param_str(slot, param_str);
+            write_param_str(slot, "Bgm_600_TombstoneCrater");
 
             // NOTE This happens quite frequently, so, keep it quiet
             //println!("[unlock_wwise_states] unlocking area bgm {param_str}");
             //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-        }
-        else {
+        } else {
             eprintln!("[unlock_wwise_states] area param {area_param_id} not found");
         }
     }
 
     AreaBgmUpdateHook.call(cssound, delta)
+}
+
+// TODO hook into _UpdateBgmState and fix BgmPlaceType, maybe Set_State_EnvPlaceType is tied to it?
+// TODO test with cheat engine
+// TODO check where the BgmAreaContext fields are accessed
+unsafe fn updatebgmstate_detour(bgmctrl: usize, bgmctx: usize, delta: f32) {
+    UpdateBgmStateHook.call(bgmctrl, bgmctx, delta);
+
+    // Somehow this resulted in FieldBattleState Invalid when inside a SoundRegion
+    //let slot = (bgmctrl + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
+    //write_param_str(slot, "Bgm_600_TombstoneCrater");
+    //unsafe { *(bgmctx as *mut i8).add(0x18).cast::<i16>() = 120; }
+    //unsafe { *(bgmctx as *mut i8).add(0x1a).cast::<i16>() = 120 >> 10; }
 }
 
 #[no_mangle]
@@ -190,11 +206,18 @@ pub unsafe extern "system" fn DllMain(
             let Some(area_va) = resolve(AREA_BGM_UPDATE_RVA, "AreaBgmUpdate") else {
                 return;
             };
+            let Some(bgm_state_va) = resolve(UPDATE_BGM_STATE_RVA, "UpdateBgmState") else {
+                return;
+            };
 
             let boss_fn =
                 std::mem::transmute::<u64, unsafe extern "C" fn(usize, u32, i32) -> ()>(boss_va);
             let area_fn =
                 std::mem::transmute::<u64, unsafe extern "C" fn(usize, f32) -> ()>(area_va);
+            let bgm_state_fn = std::mem::transmute::<
+                u64,
+                unsafe extern "C" fn(usize, usize, f32) -> (),
+            >(bgm_state_va);
 
             if let Err(e) = SetBossBgmHook.initialize(boss_fn, |bgmctrl, param, state| {
                 setbossbgm_detour(bgmctrl, param, state)
@@ -215,6 +238,15 @@ pub unsafe extern "system" fn DllMain(
             }
             if let Err(e) = AreaBgmUpdateHook.enable() {
                 eprintln!("[unlock_wwise_states] failed to enable AreaBgmUpdate detour: {e}");
+            }
+
+            if let Err(e) = UpdateBgmStateHook.initialize(bgm_state_fn, |bgmctrl, bgmctx, delta| {
+                updatebgmstate_detour(bgmctrl, bgmctx, delta)
+            }) {
+                eprintln!("[unlock_wwise_states] failed to initialize UpdateBgmState detour: {e}");
+            }
+            if let Err(e) = UpdateBgmStateHook.enable() {
+                eprintln!("[unlock_wwise_states] failed to enable UpdateBgmState detour: {e}");
             }
         }
 
