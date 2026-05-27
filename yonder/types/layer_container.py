@@ -74,7 +74,7 @@ class LayerContainer(PropertyMixin, HIRCNode):
         for nid in nodes:
             self.children.add(nid)
 
-    def attach(self, other: int | HIRCNode) -> None:
+    def attach(self, other: int | HIRCNode, custom: bool = False) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -83,7 +83,10 @@ class LayerContainer(PropertyMixin, HIRCNode):
             other.parent = self.id
             other = other.id
 
-        self.add_layer([int(other)])
+        if custom:
+            self.add_layer([int(other)])
+        else:
+            self.children.add(int(other))
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):

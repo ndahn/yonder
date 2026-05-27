@@ -191,7 +191,6 @@ class add_rtpc_table(DpgItem):
             RTPC(
                 id=self._bnk.new_id(),
                 curve_id=self._bnk.new_id(),
-                graph_points=[RTPCGraphPoint()],
             )
         )
         self.refresh()

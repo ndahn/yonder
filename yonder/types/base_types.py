@@ -232,15 +232,15 @@ class RTPCGraphPoint:
 class ConversionTable:
     curve_scaling: CurveScaling = CurveScaling.None_
     point_count: int = 0
-    points: list[RTPCGraphPoint] = field(default_factory=list)
+    points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
 
 @dataclass(slots=True)
 class ObsOccCurve:
     curve_enabled: int = 0
     curve_scaling: int = 0
-    point_count: int = 0
-    points: list[RTPCGraphPoint] = field(default_factory=list)
+    point_count: int = 1
+    points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
 
 @dataclass(slots=True)
@@ -275,8 +275,8 @@ class TrackSrcInfo:
 class ClipAutomation:
     clip_index: int = 0
     auto_type: ClipAutomationType = ClipAutomationType.Volume
-    graph_point_count: int = 0
-    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+    graph_point_count: int = 1
+    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
 
 @dataclass(slots=True)
@@ -503,8 +503,8 @@ class RTPC:
     param_id: int = 0
     curve_id: int = 0
     curve_scaling: CurveScaling = CurveScaling.None_
-    graph_point_count: int = 0
-    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+    graph_point_count: int = 1
+    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
     def get_name(self, default: Any = None) -> str:
         return lookup_name(self.id, default)
@@ -831,8 +831,8 @@ class DecisionTreeNode:
 @dataclass(slots=True)
 class AssociatedChildData:
     associated_child_id: int = 0
-    graph_point_count: int = 0
-    graph_points: list[RTPCGraphPoint] = field(default_factory=list)
+    graph_point_count: int = 1
+    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("associated_child_id", self.associated_child_id)]
