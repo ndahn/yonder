@@ -147,16 +147,18 @@ class Soundbank:
     def bnk_dir(self) -> Path:
         return self.json_path.parent
 
-    def source_ids(self) -> list[int]:
+    def sound_sources(self) -> list[tuple[int, SourceType]]:
         source_ids = []
         sound: Sound
         track: MusicTrack
 
         for sound in self.query("type=Sound"):
-            source_ids.append(sound.source_id)
+            source_ids.append((sound.source_id, sound.bank_source_data.source_type))
 
         for track in self.query("type=MusicTrack"):
-            source_ids.extend(track.source_ids)
+            source_ids.extend(
+                [(src.source_ids, src.source_type) for src in track.sources]
+            )
 
         return source_ids
 
@@ -238,7 +240,7 @@ class Soundbank:
         return None
 
     def delete_unused_wems(self) -> None:
-        used = set(self.source_ids())
+        used = set(self.sound_sources())
         removed = []
         for f in self.wems():
             wem = int(f.stem)
@@ -656,7 +658,7 @@ class Soundbank:
             for path, ref in node.get_references():
                 if ref in self:
                     if ref not in discovered_ids:
-                        # For some 
+                        # For some
                         if (
                             path.endswith("fx_id")
                             or path.endswith("bus_id")

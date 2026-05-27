@@ -4,6 +4,7 @@ import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
+from yonder.enums import SourceType
 from yonder.wem import wem2wav
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -56,19 +57,25 @@ class export_sounds_dialog(DpgItem):
             return
 
         self.show_message()
-        export_full = dpg.get_value(self._t("export_sounds/export_full"))
-        convert_to_wav = dpg.get_value(self._t("export_sounds/convert_to_wav"))
+        export_full = dpg.get_value(self._t("export_full"))
+        convert_to_wav = dpg.get_value(self._t("convert_to_wav"))
 
         with loading_indicator(µ("Converting...", "loading")):
             config = get_config()
             if export_full:
                 wems = []
-                for w in self._bnk.source_ids():
-                    path = next(config.find_external_sounds(w), None)
-                    if path:
+                for wid, st in self._bnk.sound_sources():
+                    if st == SourceType.Embedded:
+                        path = self._bnk.bnk_dir / f"{wid}.wem"
+                    else:
+                        path = next(config.find_external_sounds(wid, self._bnk), None)
+
+                    if path and path.is_file():
                         wems.append(path)
             else:
-                wems = [self._bnk.bnk_dir / f"{w}.wem" for w in self._bnk.source_ids()]
+                wems = [
+                    self._bnk.bnk_dir / f"{w}.wem" for w, _ in self._bnk.sound_sources()
+                ]
 
             if convert_to_wav:
                 try:
@@ -83,9 +90,9 @@ class export_sounds_dialog(DpgItem):
                     shutil.copy(w, self._output_dir)
 
             self.show_message(µ("Success!", "msg"), color=style.blue)
-            dpg.set_item_label(self._t("export_sounds/button_okay"), µ("Yay!"))
+            dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
             dpg.set_item_callback(
-                self._t("export_sounds/button_okay"),
+                self._t("button_okay"),
                 lambda s, a, u: dpg.delete_item(self.tag),
             )
 
@@ -115,7 +122,7 @@ class export_sounds_dialog(DpgItem):
                 µ("Output folder"),
                 self._on_outputdir_selected,
                 file_mode="folder",
-                tag=self._t("export_sounds/output_dir"),
+                tag=self._t("output_dir"),
             )
 
             dpg.add_spacer(height=5)
@@ -123,12 +130,12 @@ class export_sounds_dialog(DpgItem):
             dpg.add_checkbox(
                 label=µ("Export full sounds for streamed"),
                 default_value=True,
-                tag=self._t("export_sounds/export_full"),
+                tag=self._t("export_full"),
             )
             dpg.add_checkbox(
                 label=µ("Convert to wav"),
                 default_value=True,
-                tag=self._t("export_sounds/convert_to_wav"),
+                tag=self._t("convert_to_wav"),
             )
 
             dpg.add_separator()
@@ -139,5 +146,5 @@ class export_sounds_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Yoink!", "button"),
                     callback=self._on_okay,
-                    tag=self._t("export_sounds/button_okay"),
+                    tag=self._t("button_okay"),
                 )
