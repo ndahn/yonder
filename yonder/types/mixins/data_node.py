@@ -31,34 +31,39 @@ class DataNode:
         if path.endswith((":", "/")):
             raise ValueError(f"Invalid path {path}")
 
-        path = path.lstrip("/")
-        
-        if "/" in path:
-            trail, key = path.rsplit("/", maxsplit=1)
-            obj = self.get_value(trail)
+        if "*" in path:
+            targets = self.glob(path)
+            for t, _ in targets:
+                self.set_value(t, new_val, strict=strict)
         else:
-            key = path
-            obj = self
+            path = path.lstrip("/")
+            
+            if "/" in path:
+                trail, key = path.rsplit("/", maxsplit=1)
+                obj = self.get_value(trail)
+            else:
+                key = path
+                obj = self
 
-        if ":" in key:
-            key, idx = key.split(":")
-            idx = int(idx)
-            obj = getattr(obj, key)
-            old_val = obj[idx]
-        else:
-            idx = None
-            old_val = getattr(obj, key)
+            if ":" in key:
+                key, idx = key.split(":")
+                idx = int(idx)
+                obj = getattr(obj, key)
+                old_val = obj[idx]
+            else:
+                idx = None
+                old_val = getattr(obj, key)
 
-        if strict:
-            if old_val is not None and type(old_val) is not type(new_val):
-                raise ValueError(
-                    f"Cannot set {path}: incompatible types ({old_val}, {new_val})"
-                )
+            if strict:
+                if old_val is not None and type(old_val) is not type(new_val):
+                    raise ValueError(
+                        f"Cannot set {path}: incompatible types ({old_val}, {new_val})"
+                    )
 
-        if idx is None:
-            setattr(obj, key, new_val)
-        else:
-            obj[idx] = new_val
+            if idx is None:
+                setattr(obj, key, new_val)
+            else:
+                obj[idx] = new_val
 
     def json(self) -> str:
         return json.dumps(serialize(self), indent=2)

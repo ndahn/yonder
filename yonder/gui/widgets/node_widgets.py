@@ -249,9 +249,13 @@ def add_node_properties(
         for prop in list(node.properties):
             if prop.prop_id not in new_props:
                 node.remove_property(prop.prop_id)
+                if prop.prop_id == PropID.AttenuationID:
+                    node.set_value("**/enable_attenuation", False)
 
         for key, val in new_props.items():
             node.set_property(key, val)
+            if key == PropID.AttenuationID:
+                node.set_value("**/enable_attenuation", True)
 
         on_node_changed(base_tag, node, user_data)
 
