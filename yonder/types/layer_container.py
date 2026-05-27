@@ -74,7 +74,21 @@ class LayerContainer(PropertyMixin, HIRCNode):
         for nid in nodes:
             self.children.add(nid)
 
-    def attach(self, other: int | HIRCNode, custom: bool = False) -> None:
+    def get_layer(self, child: HIRCNode | int) -> bool:
+        if isinstance(child, HIRCNode):
+            child = child.id
+
+        if child not in self.children:
+            raise ValueError(f"{child} is not associated with this container")
+
+        for layer in self.layers:
+            for associated in layer.associated_children:
+                if associated.associated_child_id == child:
+                    return layer
+
+        return None
+
+    def attach(self, other: int | HIRCNode, custom: bool = True) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(

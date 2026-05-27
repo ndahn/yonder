@@ -131,7 +131,7 @@ def create_node_widgets(
                         callback=lambda s, a, u: webbrowser.open(u),
                         user_data=node.wwise_link,
                     )
-                    #dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
+                    # dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
                     with dpg.tooltip(dpg.last_item()):
                         dpg.add_text("Open type documentation")
 
@@ -935,9 +935,7 @@ def _create_attributes_event(
                 dpg.add_text("=")
                 target = bnk.get(action.external_id)
                 if target:
-                    add_node_link(
-                        bnk, target.id, on_node_selected, user_data=user_data
-                    )
+                    add_node_link(bnk, target.id, on_node_selected, user_data=user_data)
                 else:
                     dpg.add_text(
                         µ("#{node} (not found)").format(node=action.external_id)
@@ -970,9 +968,16 @@ def _create_attributes_layercontainer(
 ) -> None:
     # TODO playback layer sounds in parallel
     def layer_to_row(layer: Layer, idx: int) -> None:
-        # TODO add widgets
-        # TODO need to update node children when the layer is edited
-        add_node_link(bnk, layer.associated_children[0].associated_child_id, on_node_selected)
+        label = lookup_name(layer.layer_id, f"#{layer.layer_id}")
+        rtpc = lookup_name(layer.rtpc_id, f"#{layer.rtpc_id}")
+
+        dpg.add_text(label)
+        dpg.add_text(rtpc)
+        dpg.add_text(str(len(layer.associated_children)))
+        dpg.add_button(
+            label=µ("Edit"),
+            callback=lambda s,a,u: print("TODO sorry :)"),  # TODO edit layer dialog
+        )
 
     def add_layer(done: Callable[[Layer], None]) -> None:
         done(Layer(bnk.new_id()))
@@ -996,21 +1001,16 @@ def _create_attributes_layercontainer(
             else:
                 return
 
-            # Rebuild children, some may be used in multiple layers
-            node.children.clear()
-            for nl in node.layers:
-                for layer_child in nl.associated_children:
-                    if layer_child.associated_child_id > 0:
-                        node.children.add(layer_child.associated_child_id)
-
             on_node_changed(base_tag, node, user_data)
 
     add_widget_table(
         node.layers,
         layer_to_row,
-        #new_item=add_layer,  # TODO
-        #on_add=on_add,
-        #on_remove=on_remove,
+        columns=[µ("Layer"), µ("RTPC"), µ("Children"), ""],
+        header_row=True,
+        new_item=add_layer,
+        on_add=on_add,
+        on_remove=on_remove,
         label=µ("Layers"),
         add_item_label=µ("+ Layer"),
     )
