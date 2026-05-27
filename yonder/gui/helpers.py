@@ -1,9 +1,12 @@
 from __future__ import annotations
+import sys
+import os
 from typing import Any, Iterable
 from pathlib import Path
 import tempfile
 import atexit
 from copy import deepcopy
+import subprocess
 from dearpygui import dearpygui as dpg
 
 from yonder.util import logger
@@ -82,6 +85,14 @@ def dpg_section(
 
     dpg.add_text(label, color=color, parent=parent, tag=tag)
     dpg.add_separator()
+
+
+def open_file_native(filename: str | Path):
+    if sys.platform == "win32":
+        os.startfile(str(filename))
+    else:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, str(filename)])
 
 
 class GraphCurve:

@@ -4,9 +4,11 @@ import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
+from yonder.util import logger
 from yonder.enums import SourceType
 from yonder.wem import wem2wav
 from yonder.gui import style
+from yonder.gui.helpers import open_file_native
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator
@@ -84,19 +86,35 @@ class export_sounds_dialog(DpgItem):
                     self.show_message(str(e))
                     return
 
-                wem2wav(vgmstream, wems, self._output_dir)
+                done = wem2wav(vgmstream, wems, self._output_dir)
             else:
+                done = []
                 for w in wems:
-                    shutil.copy(w, self._output_dir)
+                    try:
+                        ret = shutil.copy(w, self._output_dir)
+                        done.append(ret)
+                    except Exception as e:
+                        logger.error(f"Failed to copy {w}: {e}")
 
-            self.show_message(µ("Success!", "msg"), color=style.blue)
+            okay = len([p for p in done if p and p.is_file()])
+            missing = len(wems) - okay
+
+            self.show_message(
+                µ("Exported {okay}, {missing} failed", "msg").format(
+                    okay=okay, missing=missing
+                ),
+                color=style.blue,
+            )
+
             dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
             dpg.set_item_callback(
                 self._t("button_okay"),
                 lambda s, a, u: dpg.delete_item(self.tag),
             )
 
-    def _build(self, title: str):
+            open_file_native(self._output_dir)
+
+    def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
             width=400,
