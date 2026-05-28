@@ -1,175 +1,130 @@
-//! Elden Ring has two arrays defining allowed BGM state strings. This dll will patch
-//! these with whatever state the caller wants to set, effectively disabling
-//! verification and allowing for arbitrary strings.
-//!
-//! - SetBossBgm    -> CSSoundBgmController+0x238 (BgmEnemyType validation)
-//! - FUN_140dae090 -> CSSoundBgmController+0xf58 (BgmPlaceType validation)
-//! - ??? -> (Set_State_EnvPlaceType validation)
+//! Elden Ring BGM state unlocker.
+//! Hooks SetBossBgm and AreaBgmUpdate, resolves param strings from the param
+//! repository, and calls AK::SoundEngine::SetState directly — bypassing the
+//! internal string-array validation entirely.
 
 #![allow(non_snake_case)]
 
 use pelite::pe64::Pe;
 use retour::static_detour;
 use std::ffi::c_void;
+use std::mem;
+use std::num::Wrapping;
+use std::sync::LazyLock;
 use std::time::Duration;
+use windows::core::{s, PCWSTR};
+use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 
 use eldenring::cs::*;
 use eldenring::util::system::wait_for_system_init;
 use shared::program::Program;
 use shared::{arxan, FromStatic};
 
-// TODO use AOBs instead
-// https://github.com/vswarte/fromsoftware-rs/tree/main/tools/binary-mapper
-const GLOBAL_FIELD_AREA_RVA: u32 = 0x3d691d8;
-const GLOBAL_WORLDSOUNDMAN_RVA: u32 = 0x3d6f708;
 const SETBOSSBGM_RVA: u32 = 0xdb2f70;
-const AREA_BGM_UPDATE_RVA: u32 = 0xdae090;
-const UPDATE_BGM_STATE_RVA: u32 = 0xdb55e0;
-const BOSS_BGM_STATE_IDX: u8 = 1; // 0 is "None" and not checked
-const AREA_BGM_STATE_IDX: u8 = 1;
+const UPDATEBGMSTATE_RVA: u32 = 0xdb55e0;
 
 static_detour! {
     static SetBossBgmHook: unsafe extern "C" fn(usize, u32, i32) -> ();
-    static AreaBgmUpdateHook: unsafe extern "C" fn(usize, f32) -> ();
+}
+
+static_detour! {
     static UpdateBgmStateHook: unsafe extern "C" fn(usize, usize, f32) -> ();
 }
 
-/// Write up to 31 bytes of `param_str` into a 32-byte slot, null-terminated.
-unsafe fn write_param_str(slot: *mut u8, param_str: &str) {
-    std::ptr::write_bytes(slot, 0, 32);
-    std::ptr::copy_nonoverlapping(param_str.as_ptr(), slot, param_str.len().min(31));
+// --- Wwise AK::SoundEngine::SetState ---
+
+static SET_STATE: LazyLock<Option<extern "system" fn(u32, u32) -> u32>> =
+    LazyLock::new(|| unsafe {
+        let module = GetModuleHandleW(PCWSTR::null()).ok()?;
+        let export = GetProcAddress(module, s!("?SetState@SoundEngine@AK@@YA?AW4AKRESULT@@KK@Z"))?;
+        Some(mem::transmute(export))
+    });
+
+fn set_state(state_group: u32, state: u32) {
+    if let Some(f) = *SET_STATE {
+        f(state_group, state);
+    }
 }
 
-/// Reimplement the area_param_id (sVar6) resolution from FUN_140dae090.
-/// Returns None if FieldArea is null (original uses 0 in that case).
-unsafe fn resolve_area_param_id(cssound: usize, program: &Program) -> i16 {
-    // --- FieldArea branch ---
-    let field_area_ptr =
-        *(program.rva_to_va(GLOBAL_FIELD_AREA_RVA).unwrap() as *const *const FieldArea);
-    let mut area_param_id: i16 = if field_area_ptr.is_null() {
-        0
-    } else {
-        let mut s = *((field_area_ptr as usize + 0xb6) as *const i16);
-
-        let area_id = *((field_area_ptr as usize + 0x2c) as *const u32);
-        if area_id == 61 {
-            if s == 999 {
-                s = 50;
-            }
-            let f8 = *((field_area_ptr as usize + 0xf8) as *const i16);
-            if f8 != 999 {
-                s = f8;
-            }
-        }
-        s
-    };
-
-    // --- WorldSoundMan branch ---
-    let wsm_ptr = *(program.rva_to_va(GLOBAL_WORLDSOUNDMAN_RVA).unwrap() as *const usize);
-    if wsm_ptr != 0 {
-        let inner = *((wsm_ptr + 0x5c28) as *const usize);
-        if inner != 0 {
-            let s1 = *((inner + 0x364) as *const i16);
-            if s1 >= 0 {
-                area_param_id = s1;
-            }
-        }
+/// FNV-1 hash (lowercase) matching the Wwise string-ID convention.
+fn wwise_hash(s: &str) -> u32 {
+    const BASE: Wrapping<u32> = Wrapping(2166136261);
+    const PRIME: Wrapping<u32> = Wrapping(16777619);
+    let mut h = BASE;
+    for b in s.to_ascii_lowercase().bytes() {
+        h *= PRIME;
+        h ^= b as u32;
     }
-
-    // --- cssound override ---
-    if *((cssound + 0x435) as *const u8) != 0 {
-        area_param_id = *((cssound + 0x436) as *const i16);
-    }
-
-    area_param_id
+    h.0
 }
+
+#[repr(C)]
+pub struct CSSoundBgmController {
+    unk0: [u8; 0x1ce],
+    // @0x1ce set from SoundRegion; 999 if not set, but not changed if string is rejected
+    pub active_env_place_type: u16,
+    unk1: [u8; 0x30],
+    // @0x200 set if a valid ambience bgm is active
+    pub ambience_valid: u16,
+    unk2: [u8; 0x36],
+    // @0x238 allowlist for BgmEnemyType
+    pub allowed_boss_bgm: [[u8; 0x20]; 105],
+    // @0xf58 allowlist for BgmPlaceType
+    pub allowed_env_bgm: [[u8; 0x20]; 53],
+}
+
+// --- Detours ---
 
 unsafe fn setbossbgm_detour(bgmctrl: usize, bgm_boss_conv_param_id: u32, boss_bgm_state: i32) {
+    SetBossBgmHook.call(bgmctrl, bgm_boss_conv_param_id, boss_bgm_state);
+
     let repo = match SoloParamRepository::instance() {
         Ok(r) => r,
-        Err(_) => {
-            SetBossBgmHook.call(bgmctrl, bgm_boss_conv_param_id, boss_bgm_state);
-            return;
-        }
+        Err(_) => return,
     };
 
     let row = match repo.get::<WwiseValueToStrParam_BgmBossChrIdConv>(bgm_boss_conv_param_id) {
         Some(r) => r,
-        None => {
-            SetBossBgmHook.call(bgmctrl, bgm_boss_conv_param_id, boss_bgm_state);
-            return;
-        }
+        None => return,
     };
 
     if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
-        let slot = (bgmctrl + 0x238 + BOSS_BGM_STATE_IDX as usize * 32) as *mut u8;
-        //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-        println!("[unlock_wwise_states] unlocking boss bgm {param_str}");
-        write_param_str(slot, param_str);
+        let group = wwise_hash("BgmEnemyType");
+        let state = wwise_hash(param_str);
+        println!("[unlock_wwise_states] BgmEnemyType {param_str}");
+        set_state(group, state);
     }
-
-    SetBossBgmHook.call(bgmctrl, bgm_boss_conv_param_id, boss_bgm_state)
 }
 
-unsafe fn area_bgm_update_detour(cssound: usize, delta: f32) {
-    let program = Program::current();
-    let area_param_id = resolve_area_param_id(cssound, &program);
-    let current = *((cssound + 0x2f0) as *const i16);
+unsafe fn updatebgmstate_detour(soundbgmctrl: usize, bgmctrlctx: usize, delta: f32) {
+    UpdateBgmStateHook.call(soundbgmctrl, bgmctrlctx, delta);
 
-    if current != 0 {
-        let controller_ptr = *((cssound + 0x328) as *const usize);
-        if controller_ptr == 0 {
-            AreaBgmUpdateHook.call(cssound, delta);
-            return;
-        }
+    let controller = unsafe { &mut *(soundbgmctrl as *mut CSSoundBgmController) };
+    let env_place_type = controller.active_env_place_type as u32;
 
+    if env_place_type != 999 {
         let repo = match SoloParamRepository::instance() {
             Ok(r) => r,
-            Err(_) => {
-                eprintln!("[unlock_wwise_states] failed to acquire param repository instance");
-                AreaBgmUpdateHook.call(cssound, delta);
-                return;
-            }
+            Err(_) => return,
         };
 
-        let row = match repo.get::<WwiseValueToStrParam_EnvPlaceType>(area_param_id as u32) {
+        let row = match repo.get::<WwiseValueToStrParam_EnvPlaceType>(env_place_type) {
             Some(r) => r,
-            None => {
-                eprintln!("[unlock_wwise_states] failed to lookup area param {area_param_id}");
-                AreaBgmUpdateHook.call(cssound, delta);
-                return;
-            }
+            None => return,
         };
 
         if let Ok(param_str) = std::str::from_utf8(row.param_str()) {
-            // TODO this is NOT the correct array, 0xf58 is for BgmPlaceType!
-            let slot = (controller_ptr + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
-            //write_param_str(slot, param_str);
-            write_param_str(slot, "Bgm_600_TombstoneCrater");
-
-            // NOTE This happens quite frequently, so, keep it quiet
-            //println!("[unlock_wwise_states] unlocking area bgm {param_str}");
-            //let old_str = unsafe { CStr::from_ptr(slot as *const i8).to_str().unwrap() };
-        } else {
-            eprintln!("[unlock_wwise_states] area param {area_param_id} not found");
+            let group = wwise_hash("Set_State_EnvPlaceType");
+            let state = wwise_hash(param_str);
+            // Called every frame, keep it quiet
+            //println!("[unlock_wwise_states] Set_State_EnvPlaceType {param_str}");
+            set_state(group, state);
+            controller.ambience_valid = 1;
         }
     }
-
-    AreaBgmUpdateHook.call(cssound, delta)
 }
 
-// TODO hook into _UpdateBgmState and fix BgmPlaceType, maybe Set_State_EnvPlaceType is tied to it?
-// TODO test with cheat engine
-// TODO check where the BgmAreaContext fields are accessed
-unsafe fn updatebgmstate_detour(bgmctrl: usize, bgmctx: usize, delta: f32) {
-    UpdateBgmStateHook.call(bgmctrl, bgmctx, delta);
-
-    // Somehow this resulted in FieldBattleState Invalid when inside a SoundRegion
-    //let slot = (bgmctrl + 0xf58 + AREA_BGM_STATE_IDX as usize * 32) as *mut u8;
-    //write_param_str(slot, "Bgm_600_TombstoneCrater");
-    //unsafe { *(bgmctx as *mut i8).add(0x18).cast::<i16>() = 120; }
-    //unsafe { *(bgmctx as *mut i8).add(0x1a).cast::<i16>() = 120 >> 10; }
-}
+// --- DllMain ---
 
 #[no_mangle]
 pub unsafe extern "system" fn DllMain(
@@ -190,7 +145,7 @@ pub unsafe extern "system" fn DllMain(
         unsafe {
             let program = Program::current();
             arxan::disable_code_restoration(&program)
-                .expect("Could not disable arxan code restoration");
+                .expect("could not disable arxan code restoration");
 
             let resolve = |rva, label| -> Option<u64> {
                 let va = program.rva_to_va(rva).ok();
@@ -200,24 +155,12 @@ pub unsafe extern "system" fn DllMain(
                 va
             };
 
+            // Boss BGM
             let Some(boss_va) = resolve(SETBOSSBGM_RVA, "SetBossBgm") else {
                 return;
             };
-            let Some(area_va) = resolve(AREA_BGM_UPDATE_RVA, "AreaBgmUpdate") else {
-                return;
-            };
-            let Some(bgm_state_va) = resolve(UPDATE_BGM_STATE_RVA, "UpdateBgmState") else {
-                return;
-            };
 
-            let boss_fn =
-                std::mem::transmute::<u64, unsafe extern "C" fn(usize, u32, i32) -> ()>(boss_va);
-            let area_fn =
-                std::mem::transmute::<u64, unsafe extern "C" fn(usize, f32) -> ()>(area_va);
-            let bgm_state_fn = std::mem::transmute::<
-                u64,
-                unsafe extern "C" fn(usize, usize, f32) -> (),
-            >(bgm_state_va);
+            let boss_fn = mem::transmute::<u64, unsafe extern "C" fn(usize, u32, i32)>(boss_va);
 
             if let Err(e) = SetBossBgmHook.initialize(boss_fn, |bgmctrl, param, state| {
                 setbossbgm_detour(bgmctrl, param, state)
@@ -230,23 +173,22 @@ pub unsafe extern "system" fn DllMain(
                 return;
             }
 
-            if let Err(e) = AreaBgmUpdateHook.initialize(area_fn, |cssound, delta| {
-                area_bgm_update_detour(cssound, delta)
-            }) {
-                eprintln!("[unlock_wwise_states] failed to initialize AreaBgmUpdate detour: {e}");
+            // Sound regions
+            let Some(updatebgm_va) = resolve(UPDATEBGMSTATE_RVA, "UpdateBgmState") else {
                 return;
-            }
-            if let Err(e) = AreaBgmUpdateHook.enable() {
-                eprintln!("[unlock_wwise_states] failed to enable AreaBgmUpdate detour: {e}");
-            }
+            };
 
-            if let Err(e) = UpdateBgmStateHook.initialize(bgm_state_fn, |bgmctrl, bgmctx, delta| {
-                updatebgmstate_detour(bgmctrl, bgmctx, delta)
+            let updatebgm_fn = mem::transmute::<u64, unsafe extern "C" fn(usize, usize, f32)>(updatebgm_va);
+
+            if let Err(e) = UpdateBgmStateHook.initialize(updatebgm_fn, |soundbgmctrl, bgmctrlctx, delta| {
+                updatebgmstate_detour(soundbgmctrl, bgmctrlctx, delta)
             }) {
                 eprintln!("[unlock_wwise_states] failed to initialize UpdateBgmState detour: {e}");
+                return;
             }
             if let Err(e) = UpdateBgmStateHook.enable() {
                 eprintln!("[unlock_wwise_states] failed to enable UpdateBgmState detour: {e}");
+                return;
             }
         }
 
