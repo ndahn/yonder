@@ -1,0 +1,1 @@
+& ".\update_rvas.ps1" -Profile ".\aobs_nr.toml" -Exe "E:\SteamLibrary\steamapps\common\ELDEN RING NIGHTREIGN\Game\nightreign.exe" -Output "rvas_nr.yaml"

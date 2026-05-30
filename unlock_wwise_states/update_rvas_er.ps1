@@ -1,0 +1,1 @@
+& ".\update_rvas.ps1" -Profile ".\aobs_er.toml" -Exe "E:\SteamLibrary\steamapps\common\ELDEN RING\Game\eldenring.exe" -Output "rvas_er.yaml"
