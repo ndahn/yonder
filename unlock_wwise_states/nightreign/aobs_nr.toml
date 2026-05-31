@@ -1,0 +1,4 @@
+[[patterns]]
+# 1.3.2: efd0e0, could also be 604e10?
+pattern = "81faff [51] 458be0 448bfa 488bf9 4533f6"
+captures = ["SETBOSSBGM_RVA"]

@@ -1,3 +1,0 @@
-[[patterns]]
-pattern = "81 fa 3f [43] 48 33 C4 48 89 44 24 70 41 8B E8 48 8B F9 83 CB FF 81 FA"
-captures = ["SETBOSSBGM_RVA"]

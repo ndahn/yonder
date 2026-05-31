@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.28.1)
+
+set(CMAKE_GENERATOR_PLATFORM x64)
+
+project(unlock_wwise_states
+  VERSION   "1.0.0"
+  LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# Required for ELDEN RING STL ABI compatibility (must match elden-x).
+add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+
+include(FetchContent)
+
+# Target ELDEN RING NIGHTREIGN: picks nightreign.exe and the Nightreign
+# singleton indices inside elden-x. Must be set before elden-x is configured.
+set(ER_NIGHTREIGN ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(elden-x
+  GIT_REPOSITORY        https://github.com/ThomasJClark/elden-x.git
+  GIT_TAG               main)
+
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(yaml-cpp
+  GIT_REPOSITORY        https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG               0.8.0)
+
+FetchContent_MakeAvailable(elden-x yaml-cpp)
+
+add_library(unlock_wwise_states SHARED
+  src/dllmain.cpp
+  src/config.hpp
+  src/config.cpp)
+
+target_include_directories(unlock_wwise_states PRIVATE src)
+
+# elden-x propagates MinHook and enables ER_WITH_HOOKS by default.
+target_link_libraries(unlock_wwise_states elden-x yaml-cpp::yaml-cpp)

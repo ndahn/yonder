@@ -1,5 +1,5 @@
 [package]
-name = "unlock_wwise_states"
+name = "unlock_wwise_states_er"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Pull in the Elden Ring bindings and utilities from the upstream repository.
 # Pull in the Elden Ring bindings and utilities from the upstream repository.
 eldenring = { git = "https://github.com/vswarte/fromsoftware-rs", package = "eldenring", default-features = false }
 shared = { git = "https://github.com/vswarte/fromsoftware-rs", package = "fromsoftware-shared", default-features = false }
@@ -22,7 +21,7 @@ serde_yaml = "0.9"
 pelite = "0.10"
 
 # Windows API bindings. Only the selected features are required for this mod.
-windows = { version = "0.54", features = [
+windows = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
     "Win32_System_SystemServices",

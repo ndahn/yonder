@@ -7,7 +7,7 @@ param(
     [Parameter(Mandatory)] [string] $Output
 )
 
-$raw = & "..\external\binary-mapper.exe" map --profile $Profile --exe $Exe --output rust 2>&1
+$raw = & ".\binary-mapper.exe" map --profile $Profile --exe $Exe --output rust 2>&1
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "binary-mapper failed (exit $LASTEXITCODE):`n$raw"
