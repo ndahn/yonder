@@ -640,6 +640,11 @@ class BanksOfYonder(DpgItem):
                     tag=self._t("context/paste_node"),
                 )
                 dpg.add_menu_item(
+                    label=µ("Move", "menu"),
+                    callback=self.node_move,
+                    tag=self._t("context/move_node"),
+                )
+                dpg.add_menu_item(
                     label=µ("New object", "menu"),
                     callback=self.node_new_object,
                     tag=self._t("context/paste_new"),
@@ -943,7 +948,7 @@ class BanksOfYonder(DpgItem):
             except subprocess.CalledProcessError as e:
                 error_msg = f"(E{e.returncode})\n{e.output}"
                 logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
-        
+
     def _open_soundbank_file(self) -> None:
         path = open_file_dialog(
             title=µ("Open"),
@@ -958,7 +963,7 @@ class BanksOfYonder(DpgItem):
             self._load_soundbank_check_unpacked(Path(path))
 
     def _load_soundbank_confirm(self, path: Path) -> None:
-        
+
         def on_choice(sender: str, choice: int, path: Path) -> None:
             if choice == 0:
                 self._save_soundbank()
@@ -1345,11 +1350,11 @@ class BanksOfYonder(DpgItem):
         if node:
             node_id = node.id if isinstance(node, HIRCNode) else node
             row = self._t(f"node_{node_id}")
-            
+
             if not dpg.does_item_exist(row):
                 # Try to catch any pending structural updates
                 self.regenerate()
-            
+
             desc = get_foldable_row_descriptor(row)
             if not desc:
                 logger.error(f"Could not locate widget for node {node_id}")
@@ -1602,6 +1607,41 @@ class BanksOfYonder(DpgItem):
             )
         )
         self.regenerate()
+
+    def node_move(self) -> None:
+        if not self._selected_node:
+            return
+
+        try:
+            data = json.loads(pyperclip.paste())
+        except json.JSONDecodeError:
+            raise ValueError("Clipboard does not contain a valid hierarchy")
+
+        if not isinstance(data, dict) or "yonder_nodes" not in data:
+            raise ValueError("Clipboard does not contain a valid hierarchy")
+
+        root_id: HIRCNode = HIRCNode.from_dict(data["yonder_nodes"][0]).id
+        node = self.bnk.get(root_id)
+        if not node:
+            raise ValueError("Copied node does not exist in soundbank")
+
+        if hasattr(self._selected_node, "attach"):
+            self._selected_node.attach(node)
+        elif hasattr(self._selected_node, "children"):
+            self._selected_node.children.add(node.id)
+        else:
+            raise ValueError(f"{self._selected_node} is not a valid target")
+
+        parent = self.bnk.get_parent(node)
+        if parent:
+            if hasattr(parent, "detach"):
+                parent.detach(node)
+            elif hasattr(parent, "children"):
+                parent.children.remove(node.id)
+            else:
+                raise ValueError(
+                    f"Don't know how to remove child from node {parent}, please tell Mana and do it manually for now"
+                )
 
     def node_delete(self) -> None:
         if not self._selected_node:
