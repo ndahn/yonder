@@ -148,28 +148,35 @@ class WavPlayer:
 
     @property
     def position(self) -> float:
+        """Position from start in seconds."""
         return self._cursor / self._params.framerate
 
     @property
     def duration(self) -> float:
+        """Duration in seconds."""
         return len(self._audio) / self._params.framerate
 
     @property
     def playing(self) -> bool:
+        """Whether playback is ongoing right now."""
         return self._playing
 
     @property
     def num_channels(self) -> int:
+        """Number of audio channels."""
         return self._params.nchannels
 
     @property
     def frames(self) -> np.ndarray:
+        """The audio data."""
         return self._audio
 
     @property
     def num_frames(self) -> int:
+        """Total number of frames-"""
         return self._params.nframes
 
     @property
     def framerate(self) -> int:
+        """Number of frames per second."""
         return self._params.framerate

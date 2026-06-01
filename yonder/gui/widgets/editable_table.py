@@ -575,9 +575,9 @@ class add_player_table(DpgItem):
 
     def _collect_state(self) -> tuple:
         paths = self._table.items
-        loop_info = [p.get_loop_state() for p in self.players]
-        trims = [p.get_trims() for p in self.players]
-        markers = [p.get_user_markers() for p in self.players]
+        loop_info = [p.get_loop_state(True) for p in self.players]
+        trims = [p.get_trims(True) for p in self.players]
+        markers = [p.get_user_markers(True) for p in self.players]
         return (paths, loop_info, trims, markers)
 
     # === DPG callbacks =================================================

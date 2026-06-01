@@ -153,12 +153,6 @@ class add_wav_player(DpgItem):
             loop_end /= 1000
             begin_trim /= 1000
             end_trim /= 1000
-            self._user_markers = {k: v / 1000 for k, v in self._user_markers.items()}
-
-        self._loop_start = loop_start
-        self._loop_end = loop_end
-        self._begin_trim = begin_trim
-        self._end_trim = end_trim
 
         # SFX curves — set via set_volume / set_lowpass / etc.
         self.volume: list[RTPCGraphPoint] = None
@@ -167,7 +161,10 @@ class add_wav_player(DpgItem):
         self.fadein: list[RTPCGraphPoint] = None
         self.fadeout: list[RTPCGraphPoint] = None
 
-        self._setup_content(width, height)
+        self._setup_content(width, height, loop_start,
+loop_end,
+begin_trim,
+end_trim)
 
         if initial_file:
             self.regenerate()
@@ -217,7 +214,7 @@ class add_wav_player(DpgItem):
         else:
             if self._player.position >= self._player.duration:
                 if self._trim_enabled:
-                    pos = self._get_valid_pos(self.get_trims()[0])
+                    pos = self._get_valid_pos(self.get_trims(False)[0])
                 else:
                     pos = 0.0
                 dpg.set_value(self._t("progress"), pos)
@@ -265,12 +262,26 @@ class add_wav_player(DpgItem):
         return None
 
     def _get_valid_pos(self, pos: float, use_trims: bool = True) -> float:
+        """Get a valid pos within the audio track range, trims included if desired.
+
+        Parameters
+        ----------
+        pos : float
+            The position to constrain in seconds.
+        use_trims : bool, optional
+            Whether to take current trims into account.
+
+        Returns
+        -------
+        float
+            A valid position on the audio track.
+        """
         if self._player:
             if pos < 0:
                 pos = self._player.duration + pos
 
             if self._trim_enabled and use_trims:
-                trims = self.get_trims()
+                trims = self.get_trims(False)
                 begin = self._get_valid_pos(trims[0], False)
                 end = (
                     self._player.duration
@@ -298,7 +309,7 @@ class add_wav_player(DpgItem):
         self._player = WavPlayer(str(wav))
         self._player.seek(self._player.duration)  # set on first play_pause call
 
-        initial_pos = self.get_trims()[0]
+        initial_pos = self.get_trims(False)[0]
         dpg.set_value(self._t("progress"), initial_pos)
         dpg.set_value(self._t("progress_axis"), initial_pos)
 
@@ -311,7 +322,7 @@ class add_wav_player(DpgItem):
             return
 
         pos = self._player.position
-        loop_start, loop_end, loop_active = self.get_loop_state()
+        loop_start, loop_end, loop_active = self.get_loop_state(False)
 
         if loop_active:
             loop_start = self._get_valid_pos(loop_start)
@@ -331,7 +342,7 @@ class add_wav_player(DpgItem):
 
         # Apply trims only when not in loop-test mode
         elif self._trim_enabled:
-            trims = self.get_trims()
+            trims = self.get_trims(False)
             if pos < trims[0] or pos >= self._player.duration + trims[1]:
                 pos = trims[0]
                 self._player.seek(pos)
@@ -435,7 +446,7 @@ class add_wav_player(DpgItem):
 
     # === Loop markers ==================================================
 
-    def get_loop_state(self) -> tuple[float, float, bool]:
+    def get_loop_state(self, millis: bool) -> tuple[float, float, bool]:
         """Return ``(loop_start, loop_end, enabled)`` in seconds."""
         if not self._loop_markers_enabled:
             return (0.0, 0.0, False)
@@ -447,6 +458,10 @@ class add_wav_player(DpgItem):
             if dpg.does_item_exist(self._t("loop_enabled"))
             else True
         )
+
+        if millis:
+            return (start * 1000, end * 1000, active)
+
         return (start, end, active)
 
     def set_loop_state(self, loop_start: float, loop_end: float, enabled: bool) -> None:
@@ -469,16 +484,13 @@ class add_wav_player(DpgItem):
         dpg.set_value(self._t(f"{loop_marker}_axis"), pos)
 
         if self._on_loop_changed:
-            loop_start, loop_end, enabled = self.get_loop_state()
-            if self._markers_in_ms:
-                loop_start *= 1000
-                loop_end *= 1000
+            loop_start, loop_end, enabled = self.get_loop_state(True)
             self._on_loop_changed(
                 self._tag, (loop_start, loop_end, enabled), self._user_data
             )
 
     def _update_loop_widgets(self) -> None:
-        loop_start, loop_end, _ = self.get_loop_state()
+        loop_start, loop_end, _ = self.get_loop_state(False)
 
         loop_start = self._get_valid_pos(loop_start, False)
         loop_end = self._get_valid_pos(loop_end, False)
@@ -498,23 +510,24 @@ class add_wav_player(DpgItem):
         self._update_loop_widgets()
 
         if self._on_loop_changed:
-            loop_start, loop_end, enabled = self.get_loop_state()
-            if self._markers_in_ms:
-                loop_start *= 1000
-                loop_end *= 1000
+            loop_start, loop_end, enabled = self.get_loop_state(True)
             self._on_loop_changed(
                 self._tag, (loop_start, loop_end, enabled), self._user_data
             )
 
     # === Trim markers ==================================================
 
-    def get_trims(self) -> tuple[float, float]:
+    def get_trims(self, millis: bool) -> tuple[float, float]:
         """Return ``(begin_trim, end_trim)`` in seconds."""
         if not self._trim_enabled:
             return (0.0, 0.0)
 
         begin = dpg.get_value(self._t("begin_trim_value"))
         end = dpg.get_value(self._t("end_trim_value"))
+
+        if millis:
+            return (begin * 1000, end * 1000)
+
         return (begin, end)
 
     def set_trims(self, begin_trim: float, end_trim: float) -> None:
@@ -540,16 +553,13 @@ class add_wav_player(DpgItem):
             dpg.set_value(self._t("end_trim_axis"), pos)
 
         if self._on_trim_marker_changed:
-            begin_trim, end_trim = self.get_trims()
-            if self._markers_in_ms:
-                begin_trim *= 1000
-                end_trim *= 1000
+            begin_trim, end_trim = self.get_trims(True)
             self._on_trim_marker_changed(
                 self._tag, (begin_trim, end_trim), self._user_data
             )
 
     def _update_trim_widgets(self) -> None:
-        begin_trim, end_trim = self.get_trims()
+        begin_trim, end_trim = self.get_trims(False)
 
         begin_trim = self._get_valid_pos(begin_trim, False)
         end_trim = self._get_valid_pos(end_trim, False)
@@ -575,30 +585,33 @@ class add_wav_player(DpgItem):
         self._update_trim_widgets()
 
         if self._on_trim_marker_changed:
-            begin_trim, end_trim = self.get_trims()
-            if self._markers_in_ms:
-                begin_trim *= 1000
-                end_trim *= 1000
+            begin_trim, end_trim = self.get_trims(True)
             self._on_trim_marker_changed(
                 self._tag, (begin_trim, end_trim), self._user_data
             )
 
     # === User markers ==================================================
 
-    def get_user_markers(self) -> dict[int, float]:
+    def get_user_markers(self, millis: bool) -> dict[int, float]:
         """Return all user marker positions ``{id: pos}`` in seconds."""
+        if millis:
+            return {k: v * 1000 for k, v in self._user_markers.items()}
+
         return dict(self._user_markers)
 
     def get_user_marker_pos(self, mid: Hash, default: float = 0.0) -> float:
         """Return a single marker position by ID or name."""
         if isinstance(mid, str):
             mid = calc_hash(mid)
+
         return self._user_markers.get(mid, default)
 
     def _set_user_marker_pos(self, sender: str, pos: float, mid: int) -> None:
         dpg.set_value(self._t(f"marker_{mid}"), pos)
         self._user_markers[mid] = pos
-        self._fire_user_markers_changed()
+
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(self._tag, self.get_user_markers(True), self._user_data)
 
     def _update_user_marker_widget(self, mid: int) -> None:
         pos = dpg.get_value(self._t(f"marker_{mid}"))
@@ -612,17 +625,10 @@ class add_wav_player(DpgItem):
     def _on_user_markers_moved(self) -> None:
         for mid in self._user_markers:
             self._update_user_marker_widget(mid)
-        self._fire_user_markers_changed()
+        
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(self._tag, self.get_user_markers(True), self._user_data)
 
-    def _fire_user_markers_changed(self) -> None:
-        if not self._on_user_markers_changed:
-            return
-        markers = (
-            {k: v * 1000 for k, v in self._user_markers.items()}
-            if self._markers_in_ms
-            else dict(self._user_markers)
-        )
-        self._on_user_markers_changed(self._tag, markers, self._user_data)
 
     # === Edit dialog ===================================================
 
@@ -630,16 +636,16 @@ class add_wav_player(DpgItem):
         self, sender: str, new_loop_info: tuple[float, float, bool], ud: Any
     ) -> None:
         loop_start, loop_end, _ = new_loop_info
-        dpg.set_value(self._t("loop_start"), loop_start)
-        dpg.set_value(self._t("loop_end"), loop_end)
+        dpg.set_value(self._t("loop_start"), loop_start / 1000)
+        dpg.set_value(self._t("loop_end"), loop_end / 1000)
         self._on_loop_marker_moved()
 
     def _on_trim_marker_edit(
         self, sender: str, trims: tuple[float, float], ud: Any
     ) -> None:
-        dpg.set_value(self._t("begin_trim"), (-1000, -1, trims[0], 1))
+        dpg.set_value(self._t("begin_trim"), (-1000, -1, trims[0] / 1000, 1))
         dpg.set_value(
-            self._t("end_trim"), (self._player.duration + trims[1], -1, 1000, 1)
+            self._t("end_trim"), (self._player.duration + trims[1] / 1000, -1, 1000, 1)
         )
         self._on_trim_marker_moved()
 
@@ -647,14 +653,16 @@ class add_wav_player(DpgItem):
         self, sender: str, markers: dict[Hash, float], ud: Any
     ) -> None:
         for mid, pos in markers.items():
-            dpg.set_value(self._t(f"marker_{mid}"), pos)
+            dpg.set_value(self._t(f"marker_{mid}"), pos / 1000)
         self._on_user_markers_moved()
 
     def _open_edit_markers_dialog(self) -> None:
         from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
 
         dpg.hide_item(self._t("markers_popup"))
-        loop_start, loop_end, _ = self.get_loop_state()
+        loop_start, loop_end, _ = self.get_loop_state(True)
+        begin_trim, end_trim = self.get_trims(True)
+        user_markers = self.get_user_markers(True)
 
         edit_markers_dialog(
             self._audio,
@@ -663,13 +671,13 @@ class add_wav_player(DpgItem):
             loop_end=loop_end,
             on_loop_changed=self._on_loop_marker_edit,
             trim_enabled=self._trim_enabled,
-            begin_trim=self._begin_trim,
-            end_trim=self._end_trim,
+            begin_trim=begin_trim,
+            end_trim=end_trim,
             on_trim_marker_changed=self._on_trim_marker_edit,
             user_markers_enabled=self._user_markers_enabled,
-            user_markers=self._user_markers,
+            user_markers=user_markers,
             on_user_marker_changed=self._on_user_marker_edit,
-            markers_in_ms=False,  # already in seconds internally
+            markers_in_ms=True,
         )
 
     # === Rendering =====================================================
@@ -766,7 +774,7 @@ class add_wav_player(DpgItem):
             self._update_loop_widgets()
 
         if self._user_markers_enabled:
-            for mid in self._user_markers:
+            for mid in self._user_markers.keys():
                 self._update_user_marker_widget(mid)
 
         if self._trim_enabled:
@@ -790,7 +798,10 @@ class add_wav_player(DpgItem):
 
     # === Build =========================================================
 
-    def _setup_content(self, width: int, height: int) -> None:
+    def _setup_content(self, width: int, height: int, initial_loop_start: float,
+initial_loop_end: float,
+initial_begin_trim: float,
+initial_end_trim: float) -> None:
         with dpg.group(tag=self._tag, parent=self._parent):
             dpg.add_text(
                 "Audio not found",
@@ -865,7 +876,7 @@ class add_wav_player(DpgItem):
                         # Playback cursor on marker strip
                         dpg.add_axis_tag(
                             label=" ",
-                            default_value=self._loop_start,
+                            default_value=initial_loop_start,
                             color=style.light_blue,
                             parent=self._t("marker_axis"),
                             tag=self._t("progress_axis"),
@@ -874,14 +885,14 @@ class add_wav_player(DpgItem):
                         if self._loop_markers_enabled:
                             dpg.add_axis_tag(
                                 label=µ("L0", "marker"),
-                                default_value=self._loop_start,
+                                default_value=initial_loop_start,
                                 color=style.green,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("loop_start_axis"),
                             )
                             dpg.add_axis_tag(
                                 label=µ("L1", "marker"),
-                                default_value=self._loop_end,
+                                default_value=initial_loop_end,
                                 color=style.green,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("loop_end_axis"),
@@ -903,7 +914,7 @@ class add_wav_player(DpgItem):
 
                         if self._user_markers_enabled:
                             colorgen = style.HighContrastColorGenerator()
-                            for i, (mid, pos) in enumerate(self._user_markers.items()):
+                            for i, (mid, pos) in enumerate(self.get_user_markers(False).items()):
                                 color = colorgen()
                                 marker_label = self._user_marker_labels.get(
                                     mid, f"#{mid}"
@@ -952,7 +963,7 @@ class add_wav_player(DpgItem):
                             dpg.add_drag_line(
                                 label=µ("loop_start", "marker"),
                                 color=style.green,
-                                default_value=self._loop_start,
+                                default_value=initial_loop_start,
                                 callback=self._on_loop_marker_moved,
                                 no_inputs=not self._edit_markers_inplace,
                                 tag=self._t("loop_start"),
@@ -960,7 +971,7 @@ class add_wav_player(DpgItem):
                             dpg.add_drag_line(
                                 label=µ("loop_end", "marker"),
                                 color=style.green,
-                                default_value=self._loop_end,
+                                default_value=initial_loop_end,
                                 callback=self._on_loop_marker_moved,
                                 no_inputs=not self._edit_markers_inplace,
                                 tag=self._t("loop_end"),
@@ -986,7 +997,7 @@ class add_wav_player(DpgItem):
 
                         if self._user_markers_enabled:
                             colorgen = style.HighContrastColorGenerator()
-                            for i, (mid, pos) in enumerate(self._user_markers.items()):
+                            for i, (mid, pos) in enumerate(self.get_user_markers(False).items()):
                                 color = colorgen()
                                 marker_label = self._user_marker_labels.get(
                                     mid, f"#{mid}"
@@ -1099,7 +1110,7 @@ class add_wav_player(DpgItem):
             if self._loop_markers_enabled:
                 dpg.add_input_float(
                     label=µ("loop_start", "marker"),
-                    default_value=self._loop_start,
+                    default_value=initial_loop_start,
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_start",
@@ -1107,7 +1118,7 @@ class add_wav_player(DpgItem):
                 )
                 dpg.add_input_float(
                     label=µ("loop_end", "marker"),
-                    default_value=self._loop_end,
+                    default_value=initial_loop_end,
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_end",
@@ -1119,7 +1130,7 @@ class add_wav_player(DpgItem):
                     dpg.add_separator()
                 dpg.add_input_float(
                     label=µ("begin_trim", "marker"),
-                    default_value=self._begin_trim,
+                    default_value=initial_begin_trim,
                     min_value=0.0,
                     min_clamped=True,
                     width=130,
@@ -1129,7 +1140,7 @@ class add_wav_player(DpgItem):
                 )
                 dpg.add_input_float(
                     label=µ("end_trim", "marker"),
-                    default_value=-abs(self._end_trim),
+                    default_value=-abs(initial_end_trim),
                     max_value=0.0,
                     max_clamped=True,
                     width=130,
@@ -1142,7 +1153,7 @@ class add_wav_player(DpgItem):
                 if self._loop_markers_enabled or self._trim_enabled:
                     dpg.add_separator()
                 # TODO Make this a widget table instead
-                for mid, pos in self._user_markers.items():
+                for mid, pos in self.get_user_markers(False).items():
                     marker_label = self._user_marker_labels.get(mid, f"#{mid}")
                     dpg.add_input_float(
                         label=marker_label,
