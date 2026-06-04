@@ -28,21 +28,16 @@ class create_wwise_event_dialog(DpgItem):
         self._build(title)
 
     def _on_okay(self) -> None:
-        name = dpg.get_value(self._t("name"))
-        if not name:
+        sound_id = dpg.get_value(self._t("sound_id"))
+        if not sound_id:
             self.show_message(µ("Name not specified", "msg"))
             return
 
         allow_arbitrary_name = dpg.get_value(self._t("allow_arbitrary_name"))
         if not allow_arbitrary_name:
-            if not re.match(rf"[{SoundType.values()}]\d{{4,10}}", name):
-                self.show_message(
-                    µ(
-                        "Name not matching pattern (x123456789)",
-                        "msg",
-                    )
-                )
-                return
+            sound_type_label = dpg.get_value(self._t("sound_type"))
+            sound_type = SoundType[sound_type_label.split(" ")[0]]
+            sound_id = f"{sound_type.value}{sound_id}"
 
         external_id = int(dpg.get_value(self._t("external_id")))
         if not external_id:
@@ -54,7 +49,7 @@ class create_wwise_event_dialog(DpgItem):
         create_play_event = dpg.get_value(self._t("create_play_event"))
 
         if create_play_event:
-            play_evt = Event.new(f"Play_{name}")
+            play_evt = Event.new(f"Play_{sound_id}")
             play_action = Action.new_play_action(
                 self._bnk.new_id(), external_id, bank_id=self._bnk.bank_id
             )
@@ -63,7 +58,7 @@ class create_wwise_event_dialog(DpgItem):
 
         create_stop_event = dpg.get_value(self._t("create_stop_event"))
         if create_stop_event:
-            stop_evt = Event.new(f"Stop_{name}")
+            stop_evt = Event.new(f"Stop_{sound_id}")
             stop_action = Action.new_stop_action(self._bnk.new_id(), external_id)
             stop_evt.attach(stop_action)
             new_nodes.extend([stop_evt, stop_action])
@@ -84,6 +79,19 @@ class create_wwise_event_dialog(DpgItem):
             lambda s, a, u: dpg.delete_item(self.tag),
         )
 
+    def _arbitrary_names_callback(self, sender: str, enabled: bool) -> None:
+        if enabled:
+            dpg.configure_item(self._t("sound_id"), decimal=False, width=0)
+            dpg.configure_item(self._t("sound_type"), show=False)
+
+        else:
+            dpg.configure_item(self._t("sound_id"), decimal=True, width=180)
+            dpg.configure_item(self._t("sound_type"), show=True)
+
+            sound_id: str = dpg.get_value(self._t("sound_id"))
+            if not sound_id.isdecimal():
+                dpg.set_value(self._t("sound_id"), "")
+
     def _build(self, title: str):
         with dpg.window(
             label=title,
@@ -94,15 +102,26 @@ class create_wwise_event_dialog(DpgItem):
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
-            dpg.add_input_text(
-                label=µ("Name"),
-                hint="x123456789",
-                tag=self._t("name"),
-            )
+            with dpg.group(horizontal=True):
+                dpg.add_combo(
+                    items=[f"{t.name} ({t.value})" for t in SoundType],
+                    default_value=f"{SoundType.Sfx.name} ({SoundType.Sfx.value})",
+                    width=100,
+                    tag=self._t("sound_type"),
+                )
+                dpg.add_input_text(
+                    label=µ("Sound ID"),
+                    decimal=True,
+                    hint="123456789",
+                    width=180,
+                    tag=self._t("sound_id"),
+                )
+            
             dpg.add_checkbox(
                 label=µ("Allow arbitrary names"),
                 default_value=False,
                 tag=self._t("allow_arbitrary_names"),
+                callback=self._arbitrary_names_callback,
             )
 
             add_select_node(

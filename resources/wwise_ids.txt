@@ -75571,3 +75571,8 @@ ruru
 地下迷宮開所
 自動
 未設定
+AuxSendBusId_EnemyOutdoor
+AuxSendBusId_EnemyIndoor
+DamageSeId
+d990000000
+a000000000

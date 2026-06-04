@@ -197,6 +197,7 @@ def create_node_widgets(
                     node,
                     on_node_changed,
                     on_node_selected,
+                    on_structure_changed,
                     base_tag=tag,
                     user_data=user_data,
                 )
@@ -510,6 +511,7 @@ def _create_type_specific_attributes(
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -520,6 +522,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -532,6 +535,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -545,6 +549,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -555,6 +560,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -565,6 +571,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -575,6 +582,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -585,6 +593,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -595,6 +604,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -605,6 +615,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -615,6 +626,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -625,6 +637,7 @@ def _create_type_specific_attributes(
             node,
             on_node_changed,
             on_node_selected,
+            on_structure_changed,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -640,6 +653,7 @@ def _create_attributes_action(
     node: Action,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -677,20 +691,25 @@ def _create_attributes_action(
         d: dict[str, tuple[type, Any]], path: str = ""
     ) -> None:
         for key, (tp, val) in d.items():
+            val_path = f"{path}/{key}" if path else key
+
             if isinstance(val, dict):
-                val_path = f"{path}/{key}" if path else key
                 create_generic_widgets_recursive(val, val_path)
 
             elif isinstance(val, list):
                 if is_simple_type(tp):
-                    # TODO need to match path with list index
                     tp = type_overrides.get(key, tp)
-                    add_generic_widget(
-                        tp, key, lambda s, a, u: set_value(path, a), default=val
-                    )
+                    for idx, sub in enumerate(val):
+                        item_path = f"{val_path}:{idx}"
+                        add_generic_widget(
+                            tp,
+                            key,
+                            lambda s, a, u: set_value(item_path, a),
+                            default=sub,
+                        )
                 else:
                     for idx, item in enumerate(val):
-                        item_path = f"{path}/{key}:{idx}" if path else f"{key}:{idx}"
+                        item_path = f"{val_path}:{idx}"
                         create_generic_widgets_recursive(item, item_path)
 
             else:
@@ -698,7 +717,7 @@ def _create_attributes_action(
                 add_generic_widget(
                     tp,
                     µ(key, tp),
-                    lambda s, a, u: set_value(path, a),
+                    lambda s, a, u: set_value(val_path, a),
                     default=val,
                     not_supported_ok=True,
                 )
@@ -731,6 +750,7 @@ def _create_attributes_attenuation(
     node: Attenuation,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -883,6 +903,7 @@ def _create_attributes_event(
     node: Event,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -891,8 +912,8 @@ def _create_attributes_event(
         sender: str, info: tuple[int, list, list], cb_user_data: Any
     ) -> None:
         node.actions[:] = info[2]
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        if on_structure_changed:
+            on_structure_changed()
 
     def on_action_type_changed(
         sender: str, action_type_name: str, action_id: int
@@ -905,10 +926,10 @@ def _create_attributes_event(
             dpg.set_value(sender, action.action_type_enum.name)
             raise
 
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        if on_structure_changed:
+            on_structure_changed()
 
-    def add_action(done: Callable[[int], None]) -> None:
+    def create_action(done: Callable[[int], None]) -> None:
         # TODO new action dialog
         action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
         bnk.add_nodes(action)
@@ -947,7 +968,7 @@ def _create_attributes_event(
     add_widget_table(
         node.actions,
         get_row_for_action,
-        new_item=add_action,
+        new_item=create_action,
         on_add=on_actions_changed,
         on_remove=on_actions_changed,
         label=µ("Actions"),
@@ -962,6 +983,7 @@ def _create_attributes_layercontainer(
     node: LayerContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -976,10 +998,10 @@ def _create_attributes_layercontainer(
         dpg.add_text(str(len(layer.associated_children)))
         dpg.add_button(
             label=µ("Edit"),
-            callback=lambda s,a,u: print("TODO sorry :)"),  # TODO edit layer dialog
+            callback=lambda s, a, u: print("TODO sorry :)"),  # TODO edit layer dialog
         )
 
-    def add_layer(done: Callable[[Layer], None]) -> None:
+    def create_layer(done: Callable[[Layer], None]) -> None:
         done(Layer(bnk.new_id()))
 
     def on_add(
@@ -1008,7 +1030,7 @@ def _create_attributes_layercontainer(
         layer_to_row,
         columns=[µ("Layer"), µ("RTPC"), µ("Children"), ""],
         header_row=True,
-        new_item=add_layer,
+        new_item=create_layer,
         on_add=on_add,
         on_remove=on_remove,
         label=µ("Layers"),
@@ -1021,6 +1043,7 @@ def _create_attributes_musicrandomsequencecontainer(
     node: MusicRandomSequenceContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1044,6 +1067,7 @@ def _create_attributes_musicswitchcontainer(
     node: MusicSwitchContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1221,6 +1245,7 @@ def _create_attributes_musicsegment(
     node: MusicSegment,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1358,6 +1383,7 @@ def _create_attributes_musictrack(
     node: MusicTrack,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     user_data: Any = None,
     base_tag: str = 0,
@@ -1483,6 +1509,7 @@ def _create_attributes_randomsequencecontainer(
     node: RandomSequenceContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1577,6 +1604,7 @@ def _create_attributes_sound(
     node: Sound,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1604,6 +1632,7 @@ def _create_attributes_switchcontainer(
     node: SwitchContainer,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
