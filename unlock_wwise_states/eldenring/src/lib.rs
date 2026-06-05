@@ -141,14 +141,15 @@ unsafe fn updatebgmstate_detour(controller: usize, context: usize, delta: f32) {
         return;
     };
 
+    write_slot(controller, PLACE_TYPE_OFFSET, SCRATCH_SLOT, name);
+    println!("[unlock_wwise_states] PLACE TYPE {name}");
+
     UpdateBgmStateHook.call(controller, context, delta);
 
     // TODO always reports for some reason
     // if name.chars().count() > 31 {
     //     println!("[unlock_wwise_states] {name} is longer than 31 characters and will be truncated");
     // }
-
-    write_slot(controller, PLACE_TYPE_OFFSET, SCRATCH_SLOT, name);
 }
 
 // -- setup -------------------------------------------------------------------

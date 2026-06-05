@@ -1,0 +1,28 @@
+- a SoundRegion references an EnvPlaceType row, but modifies BgmPlaceType
+- the string for BgmPlaceType is taken from WwiseValueToStrParam_BgmBossChrIdConv
+- updating the string in-game does not change it even if it has not been used yet
+- the strings are all read only once at game startup
+
+- there is no obvious link between the two params (neither index, string similarity or order)
+-> hardcoded mapping?
+-> check if NR pointer chain below is used in ER as well
+
+
+
+# NR
+====
+- valid hashes appear in a couple of locations (more once inside the game world)
+- one of them is read by nightreign.AK::SoundEngine::RegisterPluginDLL+866
+- stepping out => @0x255dc8a
+- RDI +0x80
+- allowlist at +0x574 - 0xa24 (incl)
+	- now 0x554 - 0xa04
+- each element 12 bytes
+- first value is 0
+- (BgmPlaceType at 0xa30 - 0xb14 (incl), first TWO elements are 0)
+
+- stepping out => @255fa90
+- manager object passed in via RCX
+- hash passed in via RDX
+- verification struct at +0x10
+	- full chain: arg1 +0x10 +0x80 +0x554
