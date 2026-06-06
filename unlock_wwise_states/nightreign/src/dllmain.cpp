@@ -21,17 +21,23 @@ namespace unlock_wwise_states
 static std::filesystem::path dll_folder;
 
 static constexpr uintptr_t verify_state_rva = 0x255fa90;
+static constexpr size_t h_bgmenemytype = 0x8934ec8f;  // fnv1 hash of "BgmEnemyType"
 static constexpr size_t pointer_chain[2] = {0x10, 0x80};
 static constexpr size_t bossbgm_offset = 0x574;
 static constexpr size_t item_stride = 12;  // [value 4b, ??? 4b, constant 4b]
-static constexpr size_t num_bossbgm = 107;  // TODO confirm
-static constexpr size_t num_bgmplace = 57;  // TODO confirm
+static constexpr size_t num_bossbgm = 106;  // can also be read from +0x14
+static constexpr size_t num_bgmplace = 48;
 
 using verify_state_fn = void(uintptr_t, uint32_t);
 static verify_state_fn *verify_state_original = nullptr;
 
 static void verify_state_detour(uintptr_t manager_obj, uint32_t hash)
 {
+    // TODO state_group lives in RBP at this point
+    // if (state_group != h_bgmenemytype) {
+    //     return verify_state_original(manager_obj, hash, state_group);
+    // }
+
     auto ptr = manager_obj;
     for (const size_t &offset : pointer_chain) {
         ptr = *reinterpret_cast<uintptr_t*>(ptr + offset);
@@ -53,7 +59,7 @@ static void verify_state_detour(uintptr_t manager_obj, uint32_t hash)
         }
     }
 
-    verify_state_original(manager_obj, hash);
+    return verify_state_original(manager_obj, hash);
 }
 
 static std::optional<uintptr_t> rva_to_va(uint32_t rva)

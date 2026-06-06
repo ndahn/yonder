@@ -16,7 +16,6 @@
 - stepping out => @0x255dc8a
 - RDI +0x80
 - allowlist at +0x574 - 0xa24 (incl)
-	- now 0x554 - 0xa04
 - each element 12 bytes
 - first value is 0
 - (BgmPlaceType at 0xa30 - 0xb14 (incl), first TWO elements are 0)
@@ -25,4 +24,4 @@
 - manager object passed in via RCX
 - hash passed in via RDX
 - verification struct at +0x10
-	- full chain: arg1 +0x10 +0x80 +0x554
+	- full chain: arg1 -> 0x10 -> 0x80 +0x574
