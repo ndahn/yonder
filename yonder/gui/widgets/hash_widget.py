@@ -54,6 +54,7 @@ class add_hash_widget(DpgItem):
         allow_edit_name: bool = True,
         string_label: str = "String",
         hash_label: str = "Hash",
+        hex: bool = False,
         width: int = 280,
         parent: str = 0,
         tag: str = 0,
@@ -78,6 +79,7 @@ class add_hash_widget(DpgItem):
             width,
             parent,
         )
+        self.set_hex(hex)
 
         if initial_string is None:
             self._on_hash_update(None, default_value, None)
@@ -153,26 +155,41 @@ class add_hash_widget(DpgItem):
     def _on_hash_update(self, sender: str, new_value: str, cb_user_data: Any) -> None:
         if not new_value:
             return
-        label = lookup_name(int(new_value), None)
+        
+        hash_val = int(new_value, 16) if self.is_hex() else int(new_value)
+        label = lookup_name(hash_val, None)
         dpg.set_value(self._t("string"), label or "<?>")
+
         if self._on_hash_changed:
-            self._on_hash_changed(self._tag, (int(new_value), label), self._user_data)
+            self._on_hash_changed(self._tag, (hash_val, label), self._user_data)
 
     def _on_string_update(self, sender: str, label: str, cb_user_data: Any) -> None:
         h = calc_hash(label)
-        dpg.set_value(self._t("hash"), h)
+        hash_val = hex(h) if self.is_hex() else str(h)
+        dpg.set_value(self._t("hash"), hash_val)
+
         if self._on_hash_changed:
             self._on_hash_changed(self._tag, (h, label), self._user_data)
 
     # === Public accessors =================
 
+    def set_hex(self, enabled: bool) -> None:
+        hash_val = hex(self.hash_value) if enabled else str(self.hash_value)
+        dpg.configure_item(self._t("hash"), decimal=not enabled, hexadecimal=enabled)
+        dpg.set_value(self._t("hash"), hash_val)
+    
+    def is_hex(self) -> bool:
+        return dpg.get_item_configuration(self._t("hash"))["hexadecimal"]
+
     @property
     def hash_value(self) -> Hash:
-        return int(dpg.get_value(self._t("hash")))
+        val = dpg.get_value(self._t("hash"))
+        return int(val, 16) if self.is_hex() else int(val)
 
     @hash_value.setter
     def hash_value(self, value: Hash) -> None:
-        dpg.set_value(self._t("hash"), str(value))
+        val = hex(value) if self.is_hex() else str(value)
+        dpg.set_value(val)
         self._on_hash_update(None, str(value), None)
 
     @property

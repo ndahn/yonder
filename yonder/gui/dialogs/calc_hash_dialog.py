@@ -19,12 +19,19 @@ class calc_hash_dialog(DpgItem):
         with dpg.window(
             label=title,
             width=340,
-            height=130,
+            height=155,
             no_saved_settings=True,
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
         ) as window:
-            add_hash_widget(default_value, None, horizontal=False)
+            hash_widget = add_hash_widget(default_value, None, horizontal=False)
+            dpg.add_radio_button(
+                [µ("decimal"), µ("hex")],
+                default_value=µ("decimal"),
+                horizontal=True,
+                callback=lambda s, a, u: hash_widget.set_hex(a == µ("hex")),
+            )
+
             dpg.add_separator()
             dpg.add_text(
                 µ("Calculates an FNV-1a 32bit hash"),
