@@ -412,7 +412,7 @@ def add_change_source_type(
 
         if ret:
             ret = Path(ret)
-            if ret.suffix == "wav":
+            if ret.suffix == ".wav":
                 ret = wav2wem(get_config().locate_wwise(), ret)[0]
 
             if current_wem and current_wem.is_file():

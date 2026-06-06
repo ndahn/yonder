@@ -106,6 +106,7 @@ class add_hash_widget(DpgItem):
                 dpg.add_input_text(
                     default_value=str(default_value),
                     decimal=True,
+                    no_spaces=True,
                     readonly=not allow_edit_hash,
                     enabled=allow_edit_hash,
                     width=half,
@@ -156,7 +157,11 @@ class add_hash_widget(DpgItem):
         if not new_value:
             return
         
-        hash_val = int(new_value, 16) if self.is_hex() else int(new_value)
+        try:
+            hash_val = int(new_value, 16) if self.is_hex() else int(new_value)
+        except ValueError:
+            return
+            
         label = lookup_name(hash_val, None)
         dpg.set_value(self._t("string"), label or "<?>")
 
@@ -165,7 +170,7 @@ class add_hash_widget(DpgItem):
 
     def _on_string_update(self, sender: str, label: str, cb_user_data: Any) -> None:
         h = calc_hash(label)
-        hash_val = hex(h) if self.is_hex() else str(h)
+        hash_val = hex(h)[2:] if self.is_hex() else str(h)
         dpg.set_value(self._t("hash"), hash_val)
 
         if self._on_hash_changed:
@@ -174,7 +179,7 @@ class add_hash_widget(DpgItem):
     # === Public accessors =================
 
     def set_hex(self, enabled: bool) -> None:
-        hash_val = hex(self.hash_value) if enabled else str(self.hash_value)
+        hash_val = hex(self.hash_value)[2:] if enabled else str(self.hash_value)
         dpg.configure_item(self._t("hash"), decimal=not enabled, hexadecimal=enabled)
         dpg.set_value(self._t("hash"), hash_val)
     
@@ -188,8 +193,8 @@ class add_hash_widget(DpgItem):
 
     @hash_value.setter
     def hash_value(self, value: Hash) -> None:
-        val = hex(value) if self.is_hex() else str(value)
-        dpg.set_value(val)
+        val = hex(value)[2:] if self.is_hex() else str(value)
+        dpg.set_value(self._t("hash"), val)
         self._on_hash_update(None, str(value), None)
 
     @property
