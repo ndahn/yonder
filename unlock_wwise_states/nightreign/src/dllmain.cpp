@@ -1,13 +1,3 @@
-// Elden Ring BGM state unlocker.
-//
-// CSSoundBgmController owns a fixed-size string allowlist for boss BGM
-// (BgmEnemyType, +0x238, 105 slots of 32 bytes). When the BGM system resolves a
-// Wwise state name from a param row it rejects anything missing from the list,
-// blocking custom states. We hook SetBossBgm and copy the resolved name into a
-// scratch slot so it passes validation.
-//
-// The function RVA is loaded at runtime from `rvas.yaml` next to the DLL.
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -18,84 +8,73 @@
 #include <thread>
 
 #include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <elden-x/params.hpp>
 #include <elden-x/singletons.hpp>
 #include <elden-x/utils/modutils.hpp>
 
-#include "config.hpp"
-
 namespace unlock_wwise_states
 {
 
-// Allowlist layout inside CSSoundBgmController.
-static constexpr uintptr_t boss_bgm_offset = 0x1b0; // BgmEnemyType list
-static constexpr size_t slot_size = 32;
-static constexpr size_t scratch_slot = 1; // slot 0 is "None"; slot 1 is ours
-
-// SetBossBgm(controller, param_id, state).
-using setbossbgm_fn = void(uintptr_t, uint32_t, int32_t);
-static setbossbgm_fn *setbossbgm_original = nullptr;
-
 static std::filesystem::path dll_folder;
 
-// True once the game has written content into slot 0 of the allowlist. Early
-// ticks during sound-system init can fire before that happens.
-static bool allowlist_ready(uintptr_t controller, uintptr_t base)
-{
-    return controller != 0 && *reinterpret_cast<const uint8_t *>(controller + base) != 0;
-}
+static constexpr uintptr_t verify_state_rva = 0x255fa90;
+static constexpr size_t pointer_chain[2] = {0x10, 0x80};
+static constexpr size_t bossbgm_offset = 0x574;
+static constexpr size_t item_stride = 12;  // [value 4b, ??? 4b, constant 4b]
+static constexpr size_t num_bossbgm = 107;  // TODO confirm
+static constexpr size_t num_bgmplace = 57;  // TODO confirm
 
-// Overwrite a 32-byte allowlist slot with a null-terminated string (truncated).
-static void write_slot(uintptr_t controller, uintptr_t base, size_t idx, const char *s)
-{
-    auto slot = reinterpret_cast<char *>(controller + base + idx * slot_size);
-    std::memset(slot, 0, slot_size);
-    std::strncpy(slot, s, slot_size - 1); // slot[31] stays null
-}
+using verify_state_fn = void(uintptr_t, uint32_t);
+static verify_state_fn *verify_state_original = nullptr;
 
-static void setbossbgm_detour(uintptr_t controller, uint32_t param_id, int32_t state)
+static void verify_state_detour(uintptr_t manager_obj, uint32_t hash)
 {
-    if (allowlist_ready(controller, boss_bgm_offset))
-    {
-        auto [row, row_exists] = er::param::WwiseValueToStrParam_BgmBossChrIdConv[param_id];
-        if (row_exists)
-        {
-            spdlog::info("[unlock_wwise_states] BgmEnemyType -> {}", row.ParamStr);
-            write_slot(controller, boss_bgm_offset, scratch_slot, row.ParamStr);
-        }
-
-        setbossbgm_original(controller, param_id, state);
+    auto ptr = manager_obj;
+    for (const size_t &offset : pointer_chain) {
+        ptr = *reinterpret_cast<uintptr_t*>(ptr + offset);
     }
+
+    // Beginning of the allowlist
+    ptr += bossbgm_offset;
+
+    // The list is ordered, place the hash in the correct location
+    // Skip the first element, it's always 0
+    for (size_t i = 1; i < num_bossbgm; i++) {
+        uintptr_t slot = ptr + i * item_stride;
+        uint32_t &val = *reinterpret_cast<uint32_t*>(slot);
+
+        if (val >= hash || i == num_bossbgm - 1) {
+            val = hash;
+            spdlog::info("[unlock_wwise_states] placed BgmEnemyType hash {} at index {}", hash, i);
+            break;
+        }
+    }
+
+    verify_state_original(manager_obj, hash);
 }
 
-// Resolve an eldenring.exe RVA to a runtime address (the module base is its VA).
 static std::optional<uintptr_t> rva_to_va(uint32_t rva)
 {
-    auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(L"eldenring.exe"));
+    auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(L"nightreign.exe"));
     if (base == 0)
         return std::nullopt;
     return base + rva;
 }
 
-static void install_hooks(const config::rvas &cfg)
+static void install_hooks()
 {
-    if (!cfg.setbossbgm)
-    {
-        spdlog::warn("[unlock_wwise_states] SETBOSSBGM_RVA not found in config, skipping hook");
-        return;
-    }
-
-    auto va = rva_to_va(*cfg.setbossbgm);
+    auto va = rva_to_va(verify_state_rva);
     if (!va)
     {
         spdlog::warn("[unlock_wwise_states] could not resolve SETBOSSBGM_RVA, skipping hook");
         return;
     }
 
-    modutils::hook<setbossbgm_fn>({.address = reinterpret_cast<void *>(*va)}, setbossbgm_detour,
-                                  setbossbgm_original);
+    modutils::hook<verify_state_fn>({.address = reinterpret_cast<void *>(*va)}, verify_state_detour,
+                                  verify_state_original);
 }
 
 static void setup_logger()
@@ -105,6 +84,7 @@ static void setup_logger()
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l]%$ %v");
     logger->sinks().push_back(std::make_shared<spdlog::sinks::daily_file_sink_st>(
         (dll_folder / "logs" / "unlock_wwise_states.log").string(), 0, 0, false, 5));
+    logger->sinks().push_back(std::make_shared<spdlog::sinks::stdout_color_sink_st>());
     logger->flush_on(spdlog::level::info);
     spdlog::set_default_logger(logger);
 }
@@ -113,20 +93,8 @@ static void setup()
 {
     modutils::initialize();
     er::FD4::find_singletons();
-    er::CS::SoloParamRepository::wait_for_params(); // block until params are loaded
 
-    config::rvas cfg;
-    try
-    {
-        cfg = config::load(dll_folder / "rvas.yaml");
-    }
-    catch (const std::exception &e)
-    {
-        spdlog::error("[unlock_wwise_states] config: {}", e.what());
-        return;
-    }
-
-    install_hooks(cfg);
+    install_hooks();
     modutils::enable_hooks();
     spdlog::info("[unlock_wwise_states] is now active!");
 }

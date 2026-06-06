@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.28.1)
+cmake_minimum_required(VERSION 3.5.0)
 
 set(CMAKE_GENERATOR_PLATFORM x64)
 
-project(unlock_wwise_states
+project(unlock_wwise_states_nr
   VERSION   "1.0.0"
   LANGUAGES CXX)
 
@@ -23,20 +23,12 @@ FetchContent_Declare(elden-x
   GIT_REPOSITORY        https://github.com/ThomasJClark/elden-x.git
   GIT_TAG               main)
 
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(yaml-cpp
-  GIT_REPOSITORY        https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG               0.8.0)
+FetchContent_MakeAvailable(elden-x)
 
-FetchContent_MakeAvailable(elden-x yaml-cpp)
+add_library(unlock_wwise_states_nr SHARED
+  src/dllmain.cpp)
 
-add_library(unlock_wwise_states SHARED
-  src/dllmain.cpp
-  src/config.hpp
-  src/config.cpp)
-
-target_include_directories(unlock_wwise_states PRIVATE src)
+target_include_directories(unlock_wwise_states_nr PRIVATE src)
 
 # elden-x propagates MinHook and enables ER_WITH_HOOKS by default.
-target_link_libraries(unlock_wwise_states elden-x yaml-cpp::yaml-cpp)
+target_link_libraries(unlock_wwise_states_nr elden-x)
