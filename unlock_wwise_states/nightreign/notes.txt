@@ -25,3 +25,13 @@
 - hash passed in via RDX
 - verification struct at +0x10
 	- full chain: arg1 -> 0x10 -> 0x80 +0x574
+
+=> This is the actual representation of the MusicSwitchContainer and thus useless - but why does it not contain the bgm enemy type...?
+
+=> static pointer chain?: 46f70c0 -> 28 -> ce0 -> 90 -> ~580
+- pointer at +28 is set from two locations:
+  - 1402c78c9 (grows wwise hashmap?)
+  - SetRTPCInternal+5f96
+- 2c78c9 is called by AkRuntimeEnvironmentMgr
+- top?: 1409d08a8
+=> check 7FF76B04FCBF (call from nightreign.g_pAKPluginList+2bb0)

@@ -1,3 +1,11 @@
 [[patterns]]
 pattern = "81 fa 3f [43] 48 33 C4 48 89 44 24 70 41 8B E8 48 8B F9 83 CB FF 81 FA"
 captures = ["SETBOSSBGM_RVA"]
+
+[[patterns]]
+pattern = "48 8b c4 55 56 57 48 81 ec 90 00 00 00 48 c7 40 98 fe ff ff ff 48 89 58 18 0f 29 70 d8"
+captures = ["SETENVPLACETYPEID_RVA"]
+
+[[patterns]]
+pattern = "48 89 54 24 10 55 53 56 41 55 41 56 41 57 48 8d 6c 24 d1"
+captures = ["UPDATEBGMSTATE_RVA"]
