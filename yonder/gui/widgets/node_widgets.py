@@ -1201,7 +1201,8 @@ def _create_attributes_musicswitchcontainer(
         else:
             # Branch
             with dpg.tree_node(span_full_width=True) as dpg_item:
-                for child in tree_node.children:
+                children = sorted(tree_node.children, key=lambda c: c.name)
+                for child in children:
                     delve(child, level + 1, path)
 
         bind_context_menu(dpg_item, tree_node, level, path)
