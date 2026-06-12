@@ -289,7 +289,10 @@ class RtpcType(IntEnum):
 
 class GroupType(IntEnum):
     Switch = 0x0
+    """Specific to individual objects"""
+
     State = 0x1
+    """Global, seen by all objects"""
 
 
 class DecisionTreeMode(IntEnum):

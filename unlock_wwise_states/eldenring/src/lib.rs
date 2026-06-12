@@ -32,8 +32,9 @@ const UPDATEBGMSTATE_RVA: u32 = 0xdb5530;
 // Allowlist offsets inside CSSoundBgmController.
 const BOSS_BGM_OFFSET: usize = 0x238;
 const PLACE_TYPE_OFFSET: usize = 0xf58;
-// Slot 0 is "None" (not validated); slot 1 is our scratch slot.
-const SCRATCH_SLOT: usize = 1;
+// 0: None, not used, 1: _BgmSilent, important for ending bgm music, 52: Reserved15
+// See WwiseValueToStrParam_BgmBossChrIdConv, rows 1000000+
+const SCRATCH_SLOT: usize = 52;
 
 static_detour! {
     static SetBossBgmHook: unsafe extern "C" fn(usize, u32, i32) -> ();

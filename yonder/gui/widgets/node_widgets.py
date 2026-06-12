@@ -1213,13 +1213,13 @@ def _create_attributes_musicswitchcontainer(
             [m.name for m in DecisionTreeMode],
             default_value=node.tree_mode.name,
             callback=on_tree_mode_changed,
-            tag=f"{base_tag}/musicswitchconainer/tree_mode",
+            tag=f"{base_tag}/musicswitchcontainer/tree_mode",
         )
 
         with dpg.tree_node(
             label=µ("Decision Tree"),
             default_open=True,
-            tag=f"{base_tag}/musicswitchconainer/decision_tree",
+            tag=f"{base_tag}/musicswitchcontainer/decision_tree",
         ):
             for child in node.tree.children:
                 delve(child, 0, [])
@@ -1230,7 +1230,7 @@ def _create_attributes_musicswitchcontainer(
             callback=lambda: edit_state_path_dialog(
                 bnk, node.arguments, on_state_path_created, raw=True
             ),
-            tag=f"{base_tag}/musicswitchconainer/button_add_state_path",
+            tag=f"{base_tag}/musicswitchcontainer/button_add_state_path",
         )
 
         dpg.add_spacer(height=3)
