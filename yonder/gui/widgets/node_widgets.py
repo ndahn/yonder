@@ -1129,8 +1129,8 @@ def _create_attributes_musicswitchcontainer(
                 nodes.add(fork.node_id)
             todo.extend(fork.children)
 
-        for node in list(nodes):
-            nodes.update(bnk.get_subtree(node).nodes)
+        for n in list(nodes):
+            nodes.update(bnk.get_subtree(n).nodes)
 
         bnk.delete_nodes(*nodes)
         logger.info(f"Deleted {len(nodes)} nodes related to branch {branch.name}")
@@ -1392,6 +1392,8 @@ def _create_attributes_musictrack(
     def on_source_changed(
         sender: str, info: tuple[SourceType, Path], source_index: int
     ) -> None:
+        # Veeery important.... >.<
+        node.set_source(source_index, info[1])
         players[source_index].set_file(info[1])
         on_node_changed(base_tag, node, user_data)
 

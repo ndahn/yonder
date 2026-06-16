@@ -298,6 +298,7 @@ def wem2wav(
                 continue
 
             target = out_dir / (wem.stem + ".wav")
+            # TODO sometimes fails when run from python, but fine from terminal?
             subprocess.check_call(
                 [
                     str(vgmstream_exe),

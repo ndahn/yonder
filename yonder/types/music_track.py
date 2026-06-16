@@ -81,6 +81,24 @@ class MusicTrack(PropertyMixin, HIRCNode):
     def source_ids(self) -> list[int]:
         return [s.media_information.source_id for s in self.sources]
 
+    def set_source(self, idx: int, wem: Path) -> None:
+        try:
+            wem_id = int(wem.stem)
+        except ValueError:
+            raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
+        
+        meta = get_wem_metadata(wem)
+        size = meta["in_memory_size"]
+        duration = meta["duration"] * 1000
+
+        media = self.sources[idx]
+        media.source_id = wem_id
+        media.media_information.in_memory_media_size = size
+        
+        item = self.playlist[idx]
+        item.source_id = wem_id
+        item.source_duration = duration
+
     def add_source_from_wem(
         self,
         wem: Path,
