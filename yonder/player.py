@@ -24,7 +24,8 @@ class WavPlayer:
         self._lock = threading.Lock()
         self._stream: sd.OutputStream | None = None
         self._playing = False
-        self._fx_volume_rel = 0.0
+        self._finished = False
+        self._fx_volume_rel = 1.0
         self._fx_lowpass = 0.0
         self._fx_highpass = 0.0
 
@@ -34,6 +35,7 @@ class WavPlayer:
             if remaining <= 0:
                 outdata[:] = 0
                 self._playing = False
+                self._finished = True
                 raise sd.CallbackStop
 
             chunk_idx = min(frames, remaining)
@@ -74,8 +76,15 @@ class WavPlayer:
             return
 
         self._playing = True
+
+        if self._stream and self._finished:
+            self._stream.close()
+            self._stream = None
+            self._finished = False
+            if self._cursor >= len(self._audio):
+                self._cursor = 0
+
         if not self._stream:
-            self._cursor = 0
             self._stream = sd.OutputStream(
                 samplerate=self._params.framerate,
                 channels=self._params.nchannels,
@@ -108,13 +117,14 @@ class WavPlayer:
             self._stream = None
 
         self._playing = False
+        self._finished = False
         self._cursor = 0
 
     def _on_finished(self):
         self._playing = False
 
     def fx_set_volume_abs(self, volume_db: float) -> None:
-        """Live adjust playback gain. Negative values *increase* volume, positive values decrease it.
+        """Live adjust playback gain. Negative values decrease volume, positive values increase it.
 
         Parameters
         ----------

@@ -133,6 +133,7 @@ class add_wav_player(DpgItem):
         # Runtime state
         self._audio: Path = initial_file
         self._player: WavPlayer = None
+        self._want_playing = False
 
         # Parse user markers — resolves str keys to int hashes
         self._user_markers: dict[int, float] = {}
@@ -209,20 +210,23 @@ end_trim)
             self._create_player()
             self.regenerate()
 
-        if self._player.playing:
-            self._player.pause()
-        else:
-            if self._player.position >= self._player.duration:
-                if self._trim_enabled:
-                    pos = self._get_valid_pos(self.get_trims(False)[0])
-                else:
-                    pos = 0.0
-                dpg.set_value(self._t("progress"), pos)
-                dpg.set_value(self._t("progress_axis"), pos)
-                self._player.seek(pos)
+        self._want_playing = not self._want_playing
 
-            self._player.play()
-            self._progress_update()
+        if not self._want_playing:
+            self._player.pause()
+            return
+
+        if self._player.position >= self._player.duration:
+            if self._trim_enabled:
+                pos = self._get_valid_pos(self.get_trims(False)[0])
+            else:
+                pos = 0.0
+            dpg.set_value(self._t("progress"), pos)
+            dpg.set_value(self._t("progress_axis"), pos)
+            self._player.seek(pos)
+
+        self._player.play()
+        self._progress_update()
 
     def _get_wav_path(self) -> Path:
         if self._audio is None:
@@ -313,39 +317,80 @@ end_trim)
         dpg.set_value(self._t("progress"), initial_pos)
         dpg.set_value(self._t("progress_axis"), initial_pos)
 
+    def _region_start(self) -> float:
+        """Start of the playable region (trim begin or 0)."""
+        if self._trim_enabled:
+            return self._get_valid_pos(self.get_trims(False)[0])
+        return 0.0
+
+    def _region_end(self) -> float:
+        """End of the playable region (trim end or track duration)."""
+        if self._trim_enabled:
+            return self._player.duration + self.get_trims(False)[1]  # end_trim <= 0
+        return self._player.duration
+
+    def _stop_playback(self, pos: float) -> None:
+        """Halt playback and park the cursor and marker at pos."""
+        self._want_playing = False
+        self._player.pause()
+        self._player.seek(pos)
+        dpg.set_value(self._t("progress"), pos)
+        dpg.set_value(self._t("progress_axis"), pos)
+        dpg.set_value(
+            self._t("progress_value"), f"{pos:.03f} / {self._player.duration:.3f}"
+        )
+
     def _progress_update(self) -> None:
-        if not self._player or not self._player.playing:
+        if not self._player or not self._want_playing:
             return
 
         if not dpg.does_item_exist(self._t("progress")):
             self._player.stop()
             return
 
+        # track ended on its own
+        if not self._player.playing:
+            self._stop_playback(self._region_start())
+            return
+
         pos = self._player.position
         loop_start, loop_end, loop_active = self.get_loop_state(False)
+        loop_start = self._get_valid_pos(loop_start)
+        loop_end = self._get_valid_pos(loop_end)
 
         if loop_active:
-            loop_start = self._get_valid_pos(loop_start)
-            loop_end = self._get_valid_pos(loop_end)
-            if pos >= loop_end:
-                pos = loop_start
-                self._player.seek(pos)
+            if loop_start >= loop_end:
+                loop_start = 0
+                loop_end = self._player.duration
+            else:
+                if loop_start < 0:
+                    loop_start = 0
+                if loop_end > self._player.duration:
+                    loop_end = self._player.duration
 
-        # Only repeat the region around the loop point for testing
-        if dpg.get_value(self._t("loop_test")):
+        loop_test = (
+            dpg.get_value(self._t("loop_test"))
+            if dpg.does_item_exist(self._t("loop_test"))
+            else False
+        )
+
+        if loop_test:
+            # audition only the audio around the loop seam
             if pos < loop_start:
                 pos = loop_start
                 self._player.seek(pos)
             elif loop_start + 3 <= pos < loop_end - 3:
                 pos = loop_end - 3.0
                 self._player.seek(pos)
-
-        # Apply trims only when not in loop-test mode
-        elif self._trim_enabled:
-            trims = self.get_trims(False)
-            if pos < trims[0] or pos >= self._player.duration + trims[1]:
-                pos = trims[0]
-                self._player.seek(pos)
+        elif loop_active and pos >= loop_end:
+            pos = loop_start
+            self._player.seek(pos)  # explicit loop region only
+        elif pos >= self._region_end():
+            self._stop_playback(self._region_start())  # reached the end — stop
+            return
+        elif self._trim_enabled and pos < self._region_start():
+            pos = self._region_start()
+            self._player.seek(pos)
 
         self._player.fx_set_volume_rel(self.get_volume_at(pos))
         self._player.fx_set_lowpass(self.get_lowpass_at(pos))
@@ -356,7 +401,6 @@ end_trim)
         dpg.set_value(
             self._t("progress_value"), f"{pos:.03f} / {self._player.duration:.3f}"
         )
-        # TODO update every frame if sfx updates don't seem smooth
         dpg.set_frame_callback(dpg.get_frame_count() + 2, self._progress_update)
 
     # === SFX ===========================================================
@@ -386,31 +430,50 @@ end_trim)
         t = (pos - p0.from_) / (p1.from_ - p0.from_)
         return interpolate(p0.interpolation, t, p0.to, p1.to)
 
-    def get_volume_at(self, pos: float) -> float:
-        vol_db = dpg.get_value(self._t("volume_slider"))
-        if vol_db == 0:
-            vol_db = self._interpolate_curve(self.volume, pos, default=0.0)
+    def _manual_fx(self) -> bool:
+        return dpg.get_value(self._t("manual_fx"))
 
-        vol_lin = 10 ** (vol_db / 20)
-        fadein = self._interpolate_curve(self.fadein, pos, default=1.0)
-        fadeout = 1.0 - self._interpolate_curve(self.fadeout, pos, default=0.0)
+    def _on_manual_fx_toggled(self, sender: str, value: bool) -> None:
+        for slider in ("volume_slider", "lowpass_slider", "highpass_slider"):
+            dpg.configure_item(self._t(slider), enabled=value)
+
+        if value:
+            dpg.configure_item(self._t("volume_slider"), min_value=-10, max_value=10)
+        else:
+            dpg.configure_item(self._t("volume_slider"), min_value=-2, max_value=2)
+
+    def get_volume_at(self, pos: float) -> float:
         global_f = self._config.playback_volume
 
-        return vol_lin * fadein * fadeout * global_f
+        if self._manual_fx():
+            vol_db = dpg.get_value(self._t("volume_slider"))
+            return 10 ** (vol_db / 20) * global_f
+
+        # Note that both fadein and fadeout work the same
+        vol_db = self._interpolate_curve(self.volume, pos, default=0.0)
+        vol_lin = 10 ** (vol_db / 20)
+        fadein = self._interpolate_curve(self.fadein, pos, default=1.0)
+        fadeout = self._interpolate_curve(self.fadeout, pos, default=1.0)
+
+        vol_f = vol_lin * fadein * fadeout * global_f
+        dpg.set_value(self._t("volume_slider"), vol_f)
+        return vol_f
 
     def get_lowpass_at(self, pos: float) -> float:
-        user_lpf = dpg.get_value(self._t("lowpass_slider"))
-        if user_lpf > 0:
-            return user_lpf
+        if self._manual_fx():
+            return dpg.get_value(self._t("lowpass_slider"))
 
-        return self._interpolate_curve(self.lowpass, pos)
+        lpf = self._interpolate_curve(self.lowpass, pos)
+        dpg.set_value(self._t("lowpass_slider"), lpf)
+        return lpf
 
     def get_highpass_at(self, pos: float) -> float:
-        user_hpf = dpg.get_value(self._t("highpass_slider"))
-        if user_hpf > 0:
-            return user_hpf
+        if self._manual_fx():
+            return dpg.get_value(self._t("highpass_slider"))
 
-        return self._interpolate_curve(self.highpass, pos)
+        hpf = self._interpolate_curve(self.highpass, pos)
+        dpg.set_value(self._t("highpass_slider"), hpf)
+        return hpf
 
     def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
         if isinstance(volume, (float, int)):
@@ -1022,11 +1085,19 @@ initial_end_trim: float) -> None:
                 # Slider popup
                 dpg.add_button(label="F")
                 with dpg.popup(dpg.last_item(), dpg.mvMouseButton_Left):
-                    dpg.add_slider_int(
+                    dpg.add_checkbox(
+                        label=µ("Manual playback adjustments"),
+                        default_value=False,
+                        callback=self._on_manual_fx_toggled,
+                        tag=self._t("manual_fx"),
+                    )
+
+                    dpg.add_slider_float(
                         label=µ("Volume (dB)"),
+                        enabled=False,
                         default_value=0,
-                        min_value=-10,
-                        max_value=10,
+                        min_value=-2,
+                        max_value=2,
                         clamped=True,
                         tag=self._t("volume_slider"),
                     )
@@ -1035,8 +1106,9 @@ initial_end_trim: float) -> None:
                         self._make_slider_theme(style.purple.but(a=162)),
                     )
 
-                    dpg.add_slider_int(
+                    dpg.add_slider_float(
                         label=µ("Lowpass (Hz)"),
+                        enabled=False,
                         default_value=0,
                         min_value=0,
                         max_value=24000,
@@ -1047,8 +1119,9 @@ initial_end_trim: float) -> None:
                         dpg.last_item(), self._make_slider_theme(style.blue.but(a=162))
                     )
 
-                    dpg.add_slider_int(
+                    dpg.add_slider_float(
                         label=µ("Highpass (Hz)"),
+                        enabled=False,
                         default_value=0,
                         min_value=0,
                         max_value=24000,
