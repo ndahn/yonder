@@ -23,7 +23,13 @@ FetchContent_Declare(elden-x
   GIT_REPOSITORY        https://github.com/ThomasJClark/elden-x.git
   GIT_TAG               main)
 
-FetchContent_MakeAvailable(elden-x)
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(yaml-cpp
+  GIT_REPOSITORY        https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG               0.8.0)
+
+FetchContent_MakeAvailable(elden-x yaml-cpp)
 
 add_library(unlock_wwise_states_nr SHARED
   src/dllmain.cpp)
@@ -31,4 +37,4 @@ add_library(unlock_wwise_states_nr SHARED
 target_include_directories(unlock_wwise_states_nr PRIVATE src)
 
 # elden-x propagates MinHook and enables ER_WITH_HOOKS by default.
-target_link_libraries(unlock_wwise_states_nr elden-x)
+target_link_libraries(unlock_wwise_states_nr elden-x yaml-cpp)
