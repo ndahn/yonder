@@ -228,8 +228,9 @@ class add_interpolation_curve(DpgItem):
         if not (
             self._dirty
             or self._first_draw
-            or dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
-            or dpg.is_item_hovered(dpg.get_item_parent(self._t("canvas")))
+            #or dpg.is_mouse_button_down(dpg.mvMouseButton_Left)
+            #or dpg.is_item_hovered(dpg.get_item_parent(self._t("canvas")))
+            or dpg.is_item_visible(self._t("canvas"))
         ):
             return
 
