@@ -388,7 +388,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                 with dpg.child_window(
                     width=260, height=510, auto_resize_x=False, auto_resize_y=True
                 ):
-                    dpg_section(µ("Groups"), color=style.muted_orange, spacer=0)
+                    dpg_section(µ("Groups"), color=style.muted_blue, spacer=0)
                     self._w_groups = add_widget_table(
                         self._groups,
                         self._group_to_row,
@@ -396,7 +396,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                         on_add=lambda s, a, u: self._groups.append(a[1]),
                         on_remove=lambda s, a, u: self._groups.pop(a[0]),
                         on_select=lambda s, a, u: self.select_group(a[0]),
-                        selected_row_color=style.muted_orange,
+                        selected_row_color=style.muted_blue,
                         height=300,
                         add_item_label=µ("Add Group"),
                         columns=[µ("Name"), µ("Files")],
@@ -449,7 +449,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                 ):
                     dpg_section(
                         "",
-                        color=style.muted_blue,
+                        color=style.muted_purple,
                         spacer=0,
                         tag=self._t("group_label"),
                     )
@@ -517,7 +517,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                         self._on_soundfiles_changed,
                         label=µ("Sound Files"),
                         add_item_label=µ("+ Add Sounds"),
-                        selected_row_color=style.muted_blue,
+                        selected_row_color=style.muted_purple,
                         show_clear=True,
                     )
 

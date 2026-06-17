@@ -70,7 +70,7 @@ class compare_nodes_dialog(DpgItem):
                     tag=self._t("left"),
                 ):
                     dpg_section(
-                        "", style.muted_blue, spacer=0, tag=self._t("node_a_title")
+                        "", style.muted_purple, spacer=0, tag=self._t("node_a_title")
                     )
                     dpg.add_group(tag=self._t("node_a_lines"))
 
@@ -230,7 +230,7 @@ class compare_nodes_dialog(DpgItem):
                     idx += 1
 
                 dpg.add_text(line or "", color=color)
-            
+
             return idx
 
         if not self._node_a or not self._node_b:
@@ -262,7 +262,7 @@ class compare_nodes_dialog(DpgItem):
             color = self._get_change_color(change_type)
             idx_a = put_line(idx_a, line_a, color, lines_a)
             idx_b = put_line(idx_b, line_b, color, lines_b)
-            
+
     def swap(self) -> None:
         self._node_a, self._node_b = self._node_b, self._node_a
         self.update()

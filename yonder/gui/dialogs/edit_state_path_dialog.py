@@ -123,13 +123,20 @@ class edit_state_path_dialog(DpgItem):
 
             dpg.add_spacer(height=3)
             if not hide_node_id:
-                add_select_node(
-                    self._get_nodes,
-                    "Node",
-                    self._on_node_selected,
-                    get_node_details=get_details_generic,
-                    default=node_id or 0,
-                )
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        default_value=True,
+                        tag=self._t("node_enabled"),
+                    )
+                    add_select_node(
+                        self._get_nodes,
+                        "Node",
+                        self._on_node_selected,
+                        get_node_details=get_details_generic,
+                        default=node_id or 0,
+                        textbox_width=255,
+                        tag=self._t("node"),
+                    )
 
             dpg.add_separator()
             dpg.add_spacer(height=2)
@@ -155,7 +162,8 @@ class edit_state_path_dialog(DpgItem):
         self._leaf_node_id = leaf_node
 
     def _on_okay(self) -> None:
-        if not self._hide_node_id and self._leaf_node_id <= 0:
+        node_enabled = dpg.get_value(self._t("node_enabled"))
+        if not self._hide_node_id and node_enabled and self._leaf_node_id <= 0:
             self.show_message(µ("Leaf node ID not set", "msg"))
             return
 

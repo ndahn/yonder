@@ -113,7 +113,7 @@ class settings_dialog(DpgItem):
                 label=µ("Data Sources"),
                 tag=self._t("data_sources"),
             ):
-                dpg_section(µ("Soundbank folders"), style.muted_blue, spacer=0)
+                dpg_section(µ("Soundbank folders"), style.muted_purple, spacer=0)
                 dpg.add_text(µ("Used to locate external sounds"))
                 w = add_filepaths_table(
                     config.bankdirs,

@@ -102,6 +102,7 @@ class add_select_node(DpgItem):
         node_type: Type[HIRCNode] = None,
         node_filter: Callable[[HIRCNode], bool] = None,
         readonly: bool = True,
+        textbox_width: int = 0,
         parent: str = 0,
         tag: str = 0,
         user_data: Any = None,
@@ -125,17 +126,18 @@ class add_select_node(DpgItem):
 
         default = str(default)
 
-        self._build(label, default, readonly, parent)
+        self._build(label, default, readonly, textbox_width, parent)
 
     # === Build =================
 
-    def _build(self, label: str, default: HIRCNode, readonly: bool, parent: str):
+    def _build(self, label: str, default: HIRCNode, readonly: bool, textbox_width: int, parent: str):
         with dpg.group(horizontal=True, parent=parent):
             dpg.add_input_text(
                 default_value=default,
                 decimal=True,
                 readonly=readonly,
                 enabled=not readonly,
+                width=textbox_width,
                 callback=self._on_node_edit,
                 user_data=self._user_data,
                 tag=self.tag,

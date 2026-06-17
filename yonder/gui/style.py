@@ -113,11 +113,12 @@ light_green = RGBA(112, 255, 162, 255)
 light_red = RGBA(255, 112, 119)
 
 
-# Section colors
+# Muted colors
 muted_orange = RGBA(200, 120, 80, 255)
-muted_blue = RGBA(80, 120, 200, 255)
+muted_blue = RGBA(0, 110, 184, 255)
+muted_purple = RGBA(80, 120, 200, 255)
 muted_green = RGBA(80, 180, 120, 255)
-muted_purple = RGBA(140, 90, 180, 255)
+muted_violet = RGBA(140, 90, 180, 255)
 muted_yellow = RGBA(200, 180, 60, 255)
 muted_teal = RGBA(60, 180, 180, 255)
 muted_rose = RGBA(200, 80, 120, 255)
@@ -193,6 +194,9 @@ def init_themes():
         with dpg.theme_component(dpg.mvCheckbox, enabled_state=False):
             dpg.add_theme_color(dpg.mvThemeCol_Text, [168, 168, 168])
             dpg.add_theme_color(dpg.mvThemeCol_Button, [96, 96, 96])
+
+        with dpg.theme_component(dpg.mvSelectable):
+            dpg.add_theme_color(dpg.mvThemeCol_Header, [0, 110, 184])
 
     dpg.bind_theme(global_theme)
 
