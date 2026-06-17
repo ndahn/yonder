@@ -199,6 +199,7 @@ end_trim)
         """Open a file picker and load the chosen file."""
         ret = open_file_dialog(
             title=µ("Select Audio File"),
+            default_dir=str(self._audio) if self._audio else None,
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
