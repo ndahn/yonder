@@ -3,7 +3,7 @@ from typing import Any
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from yonder import Soundbank, HIRCNode, Hash
+from yonder import Soundbank, HIRCNode, Hash, calc_hash
 from yonder.types import (
     Event,
     Action,
@@ -263,7 +263,10 @@ def create_boss_bgm(
 
                 # Needs a root playlist item first
                 mrs_playlist_root = phase_mrsc.add_playlist_item(
-                    bnk.new_id(), 0, ers_type=0, avoid_repeat_count=1,
+                    bnk.new_id(),
+                    0,
+                    ers_type=0,
+                    avoid_repeat_count=1,
                 )
                 # Setup playlist item as loop intro
                 phase_mrsc.add_playlist_item(
@@ -497,3 +500,50 @@ def create_ambience(
 
     bnk.add_nodes(*new_nodes)
     return new_nodes
+
+
+def setup_custom_music(bnk: Soundbank, node: MusicSwitchContainer, new_args: str | list[str]) -> None:
+    if node.has_argument("CustomMusic"):
+        logger.info(f"Node {node} is already prepared")
+        return
+
+    if isinstance(new_args, str):
+        new_args = [new_args]
+
+    node.insert_argument(0, "CustomMusic", GroupType.State)
+    for arg in new_args:
+        node.insert_argument(-1, arg, GroupType.State)
+
+    state_group_id = calc_hash("CustomMusic")
+    on_state = calc_hash("On")
+    off_state = calc_hash("None")
+
+    enable_evt = Event.new("Play_m999888777")
+    enable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, on_state)
+    enable_evt.actions.append(enable_act)
+
+    disable_evt = Event.new("Stop_m999888777")
+    disable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, off_state)
+    disable_evt.actions.append(disable_act)
+
+    bnk.add_nodes(enable_evt, enable_act, disable_evt, disable_act)
+
+
+def create_custom_music_event(bnk: Soundbank, event_id: int, custom_selectors: dict[str, str]) -> None:
+    state_group_id = calc_hash("CustomMusic")
+    on_state = calc_hash("On")
+    off_state = calc_hash("None")
+
+    enable_evt = Event.new(f"Play_m{event_id}")
+    enable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, on_state)
+    enable_evt.actions.append(enable_act)
+
+    for key, val in custom_selectors.items():
+        state_act = Action.new_setstate_action(bnk.new_id(), calc_hash(key), calc_hash(val))
+        enable_evt.actions.append(state_act)
+
+    disable_evt = Event.new(f"Stop_m{event_id}")
+    disable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, off_state)
+    disable_evt.actions.append(disable_act)
+
+    bnk.add_nodes(enable_evt, *enable_evt.actions, disable_evt, disable_act)

@@ -5,7 +5,7 @@ from random import randint
 
 from yonder.hash import calc_hash, Hash
 from yonder.enums import GroupType, DecisionTreeMode, PropID
-from yonder.util import logger, parse_state_path
+from yonder.util import logger, get_key_hash, parse_state_path
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicTransNodeParams,
@@ -44,7 +44,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         obj = cls(nid)
 
         for arg, group_type in arguments:
-            obj.add_argument(arg, group_type)
+            obj.insert_argument(arg, group_type)
 
         if branches:
             for state_values, node_id in branches:
@@ -119,15 +119,61 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
             num_tree_nodes += len(item.children)
             todo.extend(item.children)
 
-    def add_argument(self, argument: Hash, group_type: GroupType) -> None:
-        if argument in self.arguments:
-            raise ValueError(f"Argument {argument} already exists")
+    def has_argument(self, argument: Hash) -> None:
+        return self.get_argument_pos(argument) >= 0
 
+    def insert_argument(
+        self, pos: int, argument: Hash, group_type: GroupType,
+    ) -> None:
         group_id = calc_hash(argument) if isinstance(argument, str) else argument
-        self.arguments.append(GameSync(group_id))
-        self.group_types.append(group_type)
+
+        if self.has_argument(group_id):
+            raise ValueError(f"Argument {argument} is already part of this tree")
+
+        if pos < 0:
+            pos = len(self.arguments) + pos
+
+        # Insert into the tree
+        def delve(node: DecisionTreeNode, level: int) -> None:
+            if level == pos:
+                new_node = DecisionTreeNode(
+                    0,
+                    children=node.children,
+                    child_count=len(node.children),
+                )
+                node.children = [new_node]
+                node.child_count = 1
+            elif level < pos:
+                for child in node.children:
+                    delve(child, level + 1)
+
+        delve(self.tree, 0)
+
+        self.arguments.insert(pos, GameSync(group_id))
+        self.group_types.insert(pos, group_type)
         self.tree_depth = len(self.arguments)
-        # TODO we should extend the tree if it's more than just the root
+
+    def remove_argument(self, argument: Hash, branch_to_keep: Hash = "*") -> None:
+        pos = self.get_argument_pos(argument)
+        if pos < 0:
+            raise ValueError(f"Argument {argument} is not part of this tree")
+
+        # Remove the decision level from the tree
+        keep = get_key_hash(branch_to_keep)
+
+        def delve(node: DecisionTreeNode, level: int) -> None:
+            if level == pos:
+                node.children = [c for c in node.children if c.key == keep]
+                node.child_count = len(node.children)
+            elif level < pos:
+                for child in node.children:
+                    delve(child, level + 1)
+
+        delve(self.tree, 0)
+
+        self.arguments.pop(pos)
+        self.group_types.pop(pos)
+        self.tree_depth = len(self.arguments)
 
     def add_branch(self, path: list[Hash], node_id: int) -> None:
         if len(path) != len(self.arguments):

@@ -77,6 +77,25 @@ class Action(PropertyMixin, HIRCNode):
             ),
         )
 
+    @classmethod
+    def new_setstate_action(
+        cls,
+        nid: int,
+        state_group: Hash,
+        value: Hash,
+    ) -> Action:
+        # NOTE: SetState actions from rewwise have the correct type ID but use ActionSetSwitch.
+        # See https://github.com/vswarte/rewwise/pull/5
+        return cls(
+            id=nid,
+            external_id=value,
+            params=ActionSetState(
+                ActionType.SetState,
+                state_group_id=state_group,
+                target_state_id=value,
+            ),
+        )
+
     @property
     def action_type_enum(self) -> ActionType:
         # NOTE "action_type" is already reserved for serialization

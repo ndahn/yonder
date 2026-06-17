@@ -407,6 +407,7 @@ def add_change_source_type(
         current_wem = get_sound_path(bnk, current_source_id, current_source_type)
         ret = open_file_dialog(
             title=µ("Select Audio File"),
+            default_dir=str(current_wem.parent) if current_wem else None,
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
 

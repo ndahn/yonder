@@ -248,6 +248,20 @@ def to_typed_dict(data: dataclass, resolve_strings: bool) -> dict[str, tuple[typ
     return delve(data)
 
 
+def get_key_hash(key: str | int) -> int:
+    if isinstance(key, int):
+        return key
+    elif key == "*":
+        return 0
+    elif key.startswith("#"):
+        try:
+            return int(key[1:])
+        except ValueError:
+            raise ValueError(f"{key}: value is not a valid hash")
+    else:
+        return calc_hash(key)
+
+
 def parse_state_path(state_path: list[str]) -> list[int]:
     """Convert a string state path to a list of integer hashes.
 
@@ -256,16 +270,6 @@ def parse_state_path(state_path: list[str]) -> list[int]:
     """
     keys = []
     for val in state_path:
-        if isinstance(val, int):
-            keys.append(val)
-        elif val == "*":
-            keys.append(0)
-        elif val.startswith("#"):
-            try:
-                keys.append(int(val[1:]))
-            except ValueError:
-                raise ValueError(f"{val}: value is not a valid hash")
-        else:
-            keys.append(calc_hash(val))
+        keys.append(get_key_hash(val))
 
     return keys
