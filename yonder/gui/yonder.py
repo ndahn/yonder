@@ -83,7 +83,7 @@ class BanksOfYonder(DpgItem):
     def __init__(self, tag: str = None):
         super().__init__(tag)
 
-        self.max_list_nodes = 500
+        self.nodes_per_page = 500
         self.bnk: Soundbank = None
         self.event_map: dict[int, str] = {}
         self.globals_map: dict[int, str] = {}
@@ -91,6 +91,8 @@ class BanksOfYonder(DpgItem):
         self._selected_node: HIRCNode = None
         self._selected_section: Section = None
         self._backup: DataNode = None
+        self._events_page = 0
+        self._globals_page = 0
 
         self.config: Config = get_config()
         set_active_language(self.config.language)
@@ -455,22 +457,41 @@ class BanksOfYonder(DpgItem):
                                         color=style.light_blue,
                                     )
 
-                            dpg.add_text(
-                                "Showing 0 events", tag=self._t("events_count")
-                            )
-                            with dpg.table(
-                                no_host_extendX=True,
-                                resizable=True,
-                                borders_innerV=True,
-                                policy=dpg.mvTable_SizingFixedFit,
-                                header_row=False,
-                                tag=self._t("events_table"),
-                            ):
-                                dpg.add_table_column(
-                                    label=µ("Node"),
-                                    width_stretch=True,
-                                    tag=self._t("events_col_nodes"),
+                            with dpg.group(horizontal=True, horizontal_spacing=0):
+                                dpg.add_button(
+                                    arrow=True,
+                                    direction=dpg.mvDir_Left,
+                                    callback=self._prev_events_page,
                                 )
+                                dpg.add_spacer(width=4)
+                                dpg.add_button(
+                                    arrow=True,
+                                    direction=dpg.mvDir_Right,
+                                    callback=self._next_events_page,
+                                )
+                                dpg.add_spacer(width=10)
+                                dpg.add_text(
+                                    "No soundbank loaded", tag=self._t("events_count")
+                                )
+
+                            dpg.add_spacer(height=3)
+
+                            with dpg.child_window(
+                                autosize_x=True, autosize_y=True, border=False
+                            ):
+                                with dpg.table(
+                                    no_host_extendX=True,
+                                    resizable=True,
+                                    borders_innerV=True,
+                                    policy=dpg.mvTable_SizingFixedFit,
+                                    header_row=False,
+                                    tag=self._t("events_table"),
+                                ):
+                                    dpg.add_table_column(
+                                        label=µ("Node"),
+                                        width_stretch=True,
+                                        tag=self._t("events_col_nodes"),
+                                    )
 
                         with dpg.tab(label=µ("Globals"), tag=self._t("tab_globals")):
                             dpg.add_input_text(
@@ -480,22 +501,43 @@ class BanksOfYonder(DpgItem):
                                 callback=self._regenerate_globals_list,
                                 tag=self._t("globals_filter"),
                             )
-                            dpg.add_text(
-                                "Showing 0 globals", tag=self._t("globals_count")
-                            )
-                            with dpg.table(
-                                no_host_extendX=True,
-                                resizable=True,
-                                borders_innerV=True,
-                                policy=dpg.mvTable_SizingFixedFit,
-                                header_row=False,
-                                tag=self._t("globals_table"),
-                            ):
-                                dpg.add_table_column(
-                                    label=µ("Node"),
-                                    width_stretch=True,
-                                    tag=self._t("globals_col_nodes"),
+                            
+                            
+                            with dpg.group(horizontal=True, horizontal_spacing=0):
+                                dpg.add_button(
+                                    arrow=True,
+                                    direction=dpg.mvDir_Left,
+                                    callback=self._prev_globals_page,
                                 )
+                                dpg.add_spacer(width=4)
+                                dpg.add_button(
+                                    arrow=True,
+                                    direction=dpg.mvDir_Right,
+                                    callback=self._next_globals_page,
+                                )
+                                dpg.add_spacer(width=10)
+                                dpg.add_text(
+                                    "No soundbank loaded", tag=self._t("globals_count")
+                                )
+
+                            dpg.add_spacer(height=3)
+
+                            with dpg.child_window(
+                                autosize_x=True, autosize_y=True, border=False
+                            ):
+                                with dpg.table(
+                                    no_host_extendX=True,
+                                    resizable=True,
+                                    borders_innerV=True,
+                                    policy=dpg.mvTable_SizingFixedFit,
+                                    header_row=False,
+                                    tag=self._t("globals_table"),
+                                ):
+                                    dpg.add_table_column(
+                                        label=µ("Node"),
+                                        width_stretch=True,
+                                        tag=self._t("globals_col_nodes"),
+                                    )
 
                         with dpg.tab(label=µ("Sections"), tag=self._t("tab_sections")):
                             with dpg.table(
@@ -1158,6 +1200,22 @@ class BanksOfYonder(DpgItem):
 
         return root_row.row
 
+    def _next_events_page(self) -> None:
+        self._events_page += 1
+        self._regenerate_events_list()
+
+    def _prev_events_page(self) -> None:
+        self._events_page -= 1
+        self._regenerate_events_list()
+
+    def _next_globals_page(self) -> None:
+        self._globals_page += 1
+        self._regenerate_globals_list()
+
+    def _prev_globals_page(self) -> None:
+        self._globals_page -= 1
+        self._regenerate_globals_list()
+
     def regenerate(self) -> None:
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
         dpg.set_value(self._t("json"), "")
@@ -1214,15 +1272,22 @@ class BanksOfYonder(DpgItem):
             return f"99_{name}"
 
         events.sort(key=evt_sort_key)
-        for node in events:
+        max_page = len(events) // self.nodes_per_page
+        self._events_page = max(0, min(self._events_page, max_page))
+        skip = self._events_page * self.nodes_per_page
+
+        for node in events[skip:]:
             node_tag = self._create_root_entry(node, self._t("events_table"))
             self.event_map[node.id] = node_tag
-            if len(self.event_map) >= self.max_list_nodes:
+            if len(self.event_map) >= self.nodes_per_page:
                 break
 
+        last = min(len(events), skip + self.nodes_per_page)
         dpg.set_value(
             self._t("events_count"),
-            f"Showing {len(self.event_map)}/{len(all_events)} events",
+            µ("Events {first}-{last} ({total} total)").format(
+                first=skip, last=last, total=len(events)
+            ),
         )
 
     def _regenerate_globals_list(self) -> None:
@@ -1250,9 +1315,18 @@ class BanksOfYonder(DpgItem):
 
         # Sort the keys
         type_map = {k: sorted(type_map[k]) for k in sorted(type_map.keys())}
+        num_nodes = sum(len(v) for v in type_map.values())
+        max_page = num_nodes // self.nodes_per_page
+        self._globals_page = max(0, min(self._globals_page, max_page))
+        skip = self._globals_page * self.nodes_per_page
+        i = 0
 
         for node_type, nodes in type_map.items():
             if not nodes:
+                continue
+
+            if i + len(nodes) < skip:
+                i += len(nodes)
                 continue
 
             with table_tree_node(
@@ -1263,16 +1337,21 @@ class BanksOfYonder(DpgItem):
                 on_click_callback=self._on_node_selected,
             ):
                 for node in nodes:
+                    if i < skip:
+                        i += 1
+                        continue
+
                     node_tag = self._create_root_entry(node, self._t("globals_table"))
                     self.globals_map[node.id] = node_tag
 
-                    if len(self.globals_map) >= self.max_list_nodes:
+                    if len(self.globals_map) >= self.nodes_per_page:
                         break
 
+        last = min(num_nodes, skip + self.nodes_per_page)
         dpg.set_value(
             self._t("globals_count"),
-            µ("Showing {num}/{total} globals").format(
-                num=len(self.globals_map), total=len(global_nodes)
+            µ("Globals {first}-{last} ({total} total)").format(
+                first=skip, last=last, total=num_nodes
             ),
         )
 
