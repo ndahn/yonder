@@ -265,6 +265,7 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_menu_item(
                     label=µ("Ambience Track", "menu"),
+                    enabled=False,  # TODO
                     callback=self._open_ambience_track_dialog,
                     tag=self._t("menu/create_ambience"),
                 )

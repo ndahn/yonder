@@ -599,6 +599,9 @@ end_trim)
         if not self._trim_enabled:
             raise RuntimeError("trim_enabled is False")
 
+        if end_trim > 0.0:
+            raise ValueError("end_trim must be <0")
+
         dpg.set_value(self._t("begin_trim_value"), begin_trim)
         dpg.set_value(self._t("end_trim_value"), end_trim)
         self._update_trim_widgets()
@@ -626,9 +629,7 @@ end_trim)
         begin_trim, end_trim = self.get_trims(False)
 
         begin_trim = self._get_valid_pos(begin_trim, False)
-        end_trim = self._get_valid_pos(end_trim, False)
-        end_trim_viz = self._player.duration if end_trim == 0.0 else end_trim
-
+        end_trim_viz = self._get_valid_pos(end_trim, False)
         begin_trim = min(begin_trim, end_trim_viz)
 
         dpg.set_value(self._t("begin_trim"), (-1000, -1, begin_trim, 1))
@@ -643,8 +644,9 @@ end_trim)
         # Store raw values in the float widgets
         begin_drag = dpg.get_value(self._t("begin_trim"))[2]
         end_drag = dpg.get_value(self._t("end_trim"))[0]
+        end_trim = -(self._player.duration - end_drag)
         dpg.set_value(self._t("begin_trim_value"), begin_drag)
-        dpg.set_value(self._t("end_trim_value"), -(self._player.duration - end_drag))
+        dpg.set_value(self._t("end_trim_value"), end_trim)
 
         self._update_trim_widgets()
 
@@ -707,10 +709,11 @@ end_trim)
     def _on_trim_marker_edit(
         self, sender: str, trims: tuple[float, float], ud: Any
     ) -> None:
-        dpg.set_value(self._t("begin_trim"), (-1000, -1, trims[0] / 1000, 1))
-        dpg.set_value(
-            self._t("end_trim"), (self._player.duration + trims[1] / 1000, -1, 1000, 1)
-        )
+        begin_trim = self._get_valid_pos(trims[0] / 1000, False)
+        end_trim = self._get_valid_pos(trims[1] / 1000, False)
+        dpg.set_value(self._t("begin_trim"), (-10, -1, begin_trim, 1))
+        dpg.set_value(self._t("end_trim"), (end_trim, -1, 1000, 1))
+        
         self._on_trim_marker_moved()
 
     def _on_user_marker_edit(
@@ -730,6 +733,7 @@ end_trim)
 
         edit_markers_dialog(
             self._audio,
+            accept_on_okay=True,
             loop_markers_enabled=self._loop_markers_enabled,
             loop_start=loop_start,
             loop_end=loop_end,

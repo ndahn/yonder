@@ -226,12 +226,14 @@ def create_boss_bgm(
     new_nodes: list[HIRCNode] = [boss_msc]
     phase_masters: list[MusicRandomSequenceContainer] = []
 
+    # Setup the phase music tracks
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
         bgm = bnk.add_wem(bgm, SourceType.Streaming)
 
         phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
         phase_masters.append(phase_mrsc)
 
+        # Phase intro
         has_intro = False
         if play_preloop_intro and play_preloop_intro[i]:
             if loop_markers and loop_markers[i] is not None:
