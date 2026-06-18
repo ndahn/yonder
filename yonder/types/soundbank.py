@@ -328,15 +328,16 @@ class Soundbank:
 
     def delete_nodes(self, *nodes: int | HIRCNode) -> None:
         abandoned = []
+        indices = set()
         for n in nodes:
             if not isinstance(n, HIRCNode):
                 n = self[n]
-            abandoned.append(n.id)
 
-        for nid in abandoned:
-            # Don't use `del self[nid]` as it will regenerate the index table on every delete
-            idx = self._id2index[nid]
-            del self.hirc.objects[idx]
+            abandoned.append(n.id)
+            indices.add(self._id2index[n.id])
+
+        # Don't use `del self[nid]` as it will regenerate the index table on every delete
+        self.hirc.objects = [n for i, n in enumerate(self.hirc.objects) if i not in indices]
 
         # Search for any nodes referencing the deleted nodes and clear those references
         for node in self.hirc.objects:
@@ -495,6 +496,7 @@ class Soundbank:
     def delete_orphans(self, cascade: bool = True) -> None:
         g = self.tree
         indices = set()
+        children = {}
 
         search_types = {
             c.__name__
@@ -521,6 +523,10 @@ class Soundbank:
                 break
 
             indices.update(self._id2index[n] for n in orphans)
+            
+            for oid in orphans:
+                children[oid] = self[oid].get_references()
+
             g.remove_nodes_from(orphans)
 
             # Check if new orphans appeared in the graph from the removal of the
@@ -533,6 +539,15 @@ class Soundbank:
         logger.info(
             f"The following {len(indices)} nodes have been orphaned (cascade={cascade}):\n{'  \n'.join(orphan_nodes)}"
         )
+
+        # Orphans may have children that are still referenced by e.g. actions, so we need to 
+        # clean up their parents
+        for oid, refs in children.items():
+            for _, cid in refs:
+                child = self.get(cid)
+                if child and getattr(child, "parent", None) == oid:
+                    child.parent = 0
+
         self.hirc.objects = [
             x for i, x in enumerate(self.hirc.objects) if i not in indices
         ]
@@ -580,6 +595,7 @@ class Soundbank:
             logger.warning("HIRC is not acyclic")
 
         # These will be appended at the very end
+        late_nodes: list[HIRCNode] = []
         events: list[Event] = []
         actions: list[Action] = []
 

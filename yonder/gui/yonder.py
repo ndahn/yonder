@@ -209,14 +209,14 @@ class BanksOfYonder(DpgItem):
             dpg.add_separator()
             with dpg.menu(label=µ("Bank", "menu"), tag=self._t("menu/bank")):
                 dpg.add_menu_item(
-                    label=µ("Pin Orphans", "menu"),
-                    callback=self.pin_lost_objects,
-                    tag=self._t("menu/pin_orphans"),
-                )
-                dpg.add_menu_item(
                     label=µ("Rename"),
                     callback=self._open_bank_rename_dialog,
                     tag=self._t("menu/rename_bank"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Pin Orphans", "menu"),
+                    callback=self.pin_lost_objects,
+                    tag=self._t("menu/pin_orphans"),
                 )
 
                 dpg.add_separator()
@@ -786,13 +786,23 @@ class BanksOfYonder(DpgItem):
                     show=False,
                 )
 
-    def get_pinned_objects(self) -> list[str]:
+    def get_pinned_objects(self) -> list[int]:
         ret = []
 
         for row in dpg.get_item_children(self._t("pinned_objects_table"), slot=1):
             ret.append(dpg.get_item_user_data(row))
 
         return ret
+
+    def regenerate_pinned_object(self) -> None:
+        deleted = []
+        for row in dpg.get_item_children(self._t("pinned_objects_table"), slot=1):
+            nid: int = dpg.get_item_user_data(row)
+            if nid not in self.bnk:
+                deleted.append(row)
+
+        for row in deleted:
+            dpg.delete_item(row)
 
     def add_pinned_object(self, node: int | HIRCNode) -> None:
         if node is None:
@@ -868,6 +878,15 @@ class BanksOfYonder(DpgItem):
             on_close=lambda: dpg.delete_item(popup),
         ) as popup:
             dpg.add_selectable(
+                label=µ("Jump To"),
+                callback=lambda s, a, u: self.jump_to_node(u),
+                user_data=node_id,
+                tag=self._t("pin/jump_to"),
+            )
+
+            dpg.add_separator()
+
+            dpg.add_selectable(
                 label=µ("Unpin"),
                 callback=lambda s, a, u: self.remove_pinned_object(u),
                 user_data=node_id,
@@ -878,13 +897,44 @@ class BanksOfYonder(DpgItem):
                 callback=self.remove_all_pinned_objects,
                 tag=self._t("pin/unpin_all"),
             )
+            
             dpg.add_separator()
-            dpg.add_selectable(
-                label=µ("Jump To"),
-                callback=lambda s, a, u: self.jump_to_node(u),
-                user_data=node_id,
-                tag=self._t("jump_to"),
-            )
+
+            with dpg.menu(label=µ("Compare", "compare")):
+                dpg.add_menu_item(
+                    label=µ("As left side"),
+                    callback=self.set_comparison_left,
+                    tag=self._t("pin/compare_left"),
+                )
+                dpg.add_menu_item(
+                    label=µ("As right side"),
+                    callback=self.set_comparison_right,
+                    tag=self._t("pin/compare_right"),
+                )
+
+            with dpg.menu(label=µ("Copy", "menu"), tag=self._t("pin/copy")):
+                dpg.add_menu_item(
+                    label=µ("Node", "menu"),
+                    callback=self.node_copy,
+                    tag=self._t("pin/copy_node"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Hierarchy", "menu"),
+                    callback=self.node_copy_hierarchy,
+                    tag=self._t("pin/copy_hierarchy"),
+                )
+
+            with dpg.menu(label=µ("Delete", "menu"), tag=self._t("pin/delete")):
+                dpg.add_menu_item(
+                    label=µ("Node", "menu"),
+                    callback=self.node_delete,
+                    tag=self._t("pin/delete_node"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Tree", "menu"),
+                    callback=self.node_delete_tree,
+                    tag=self._t("pin/delete_node_tree"),
+                )
 
         dpg.set_item_pos(popup, dpg.get_mouse_pos(local=False))
 
@@ -1226,6 +1276,7 @@ class BanksOfYonder(DpgItem):
         self._regenerate_events_list()
         self._regenerate_globals_list()
         self._regenerate_sections_list()
+        self.regenerate_pinned_object()
 
         dpg.split_frame()
 
@@ -1435,11 +1486,10 @@ class BanksOfYonder(DpgItem):
                 self.regenerate()
 
             desc = get_foldable_row_descriptor(row)
-            if not desc:
+            if desc:
+                sender = desc.selectable
+            else:
                 logger.error(f"Could not locate widget for node {node_id}")
-                return
-
-            sender = desc.selectable
 
         self._on_node_selected(sender, True, node)
 
@@ -1491,6 +1541,7 @@ class BanksOfYonder(DpgItem):
         else:
             node_id = node.id
 
+        table: str = None
         if node_id in self.globals_map:
             table = self._t("globals_table")
 
@@ -1527,29 +1578,30 @@ class BanksOfYonder(DpgItem):
                         self.bnk.find_event_subgraphs_for(node), (None, None)
                     )
 
-                if not selected_graph:
+                if selected_graph:
+                    path = nx.shortest_path(selected_graph, evt.id, node_id)
+
+                    # Unfold the structure
+                    for n in path:
+                        if n == node_id:
+                            break
+
+                        row = self._t(f"node_{n}")
+                        set_foldable_row_status(row, True)
+
+                    dpg.split_frame()
+                else:
                     logger.error(
                         µ(
                             "Could not find an event subgraph containing node {node}"
                         ).format(node=node),
-                        stack_info=True,
                     )
+                    self._on_node_selected(None, True, node)
                     return
 
-                path = nx.shortest_path(selected_graph, evt.id, node_id)
-
-                # Unfold the structure
-                for n in path:
-                    if n == node_id:
-                        break
-
-                    row = self._t(f"node_{n}")
-                    set_foldable_row_status(row, True)
-
-                dpg.split_frame()
-
         self.select_node(node)
-        self._scroll_to_item(table, node)
+        if table:
+            self._scroll_to_item(table, node)
 
     def _scroll_to_item(self, table: str, node: int | HIRCNode) -> None:
         node_id = node.id if isinstance(node, HIRCNode) else node
@@ -1584,12 +1636,14 @@ class BanksOfYonder(DpgItem):
             self.bnk.verify()
 
     def _bank_remove_unused_wems(self) -> None:
-        self.bnk.delete_unused_wems()
-        self.regenerate
+        with loading_indicator(µ("Working...")):
+            self.bnk.delete_unused_wems()
+            self.regenerate()
 
     def _bank_delete_orphans(self) -> None:
-        self.bnk.delete_orphans()
-        self.regenerate()
+        with loading_indicator(µ("Working...")):
+            self.bnk.delete_orphans()
+            self.regenerate()
 
     def node_copy(self) -> None:
         data = {"yonder_nodes": [self._selected_node]}
@@ -1737,9 +1791,10 @@ class BanksOfYonder(DpgItem):
         if not self._selected_node:
             return
 
-        g = self.bnk.get_subtree(self._selected_node, True, False)
-        parent = self.bnk.get_parent(self._selected_node)
-        self.bnk.delete_nodes(*g.nodes)
+        with loading_indicator(µ("Working...")):
+            g = self.bnk.get_subtree(self._selected_node, True, False)
+            parent = self.bnk.get_parent(self._selected_node)
+            self.bnk.delete_nodes(*g.nodes)
 
         logger.info(
             µ("Deleted {node} and {num} children").format(
