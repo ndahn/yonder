@@ -498,11 +498,11 @@ Ambience tree:
             add_paragraphs(
                 µ(
                     """\
-                        - Ambience tracks need to be added to cs_Smain (sssss!)
+                        - Ambience tracks need to be added to cs_main (no s!)
                         - Use the main ambience controller (631317376 in Elden Ring)
                         - Adjust state values to match your location (e.g. BgmPlaceType)
                         - Check the ambience controller for known state values
-                        - EnvPlaceType is a param and probably restricted
+                        - DOES NOT WORK YET
                     """,
                     "tips",
                 ),

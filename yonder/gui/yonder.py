@@ -265,7 +265,6 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_menu_item(
                     label=µ("Ambience Track", "menu"),
-                    enabled=False,  # TODO
                     callback=self._open_ambience_track_dialog,
                     tag=self._t("menu/create_ambience"),
                 )
@@ -1043,8 +1042,20 @@ class BanksOfYonder(DpgItem):
                 logger.error(µ("Repack failed: {error}", "log").format(error=error_msg))
 
     def _open_soundbank_file(self) -> None:
+        default = None
+
+        if self.bnk:
+            default = str(self.bnk.bnk_dir.parent)
+        elif self.config.recent_files:
+            recent = Path(self.config.recent_files[0])
+            if recent.is_file():
+                default = str(recent.parent.parent)
+            else:
+                default = str(recent.parent)
+
         path = open_file_dialog(
             title=µ("Open"),
+            default_dir=default,
             filetypes={
                 µ("Supported files", "filetypes"): ["*.bnk", "*.json"],
                 µ("JSON (.json)", "filetypes"): "*.json",
@@ -1136,13 +1147,9 @@ class BanksOfYonder(DpgItem):
 
         if path.name.endswith(".bnk"):
             logger.info(µ("Unpacking soundbank {name}", "log").format(name=path))
-            loading = loading_indicator(µ("Unpacking...", "loading"))
-            try:
+            with loading_indicator(µ("Unpacking...", "loading")):
                 bnk2json = self.config.locate_bnk2json()
                 unpack_soundbank(bnk2json, path)
-            finally:
-                dpg.delete_item(loading)
-                dpg.split_frame()  # to enable the next modal loading indicator
 
         logger.info(µ("Loading soundbank {name}", "log").format(name=path))
         with loading_indicator(µ("Loading soundbank...", "loading")):
@@ -1793,9 +1800,8 @@ class BanksOfYonder(DpgItem):
             return
 
         with loading_indicator(µ("Working...")):
-            g = self.bnk.get_subtree(self._selected_node, True, False)
             parent = self.bnk.get_parent(self._selected_node)
-            self.bnk.delete_nodes(*g.nodes)
+            self.bnk.delete_subtree(self._selected_node)
 
         logger.info(
             µ("Deleted {node} and {num} children").format(

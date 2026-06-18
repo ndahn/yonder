@@ -12,7 +12,7 @@ from yonder.util import logger, resource_data
 from yonder.query import query_nodes
 from yonder.enums import SourceType
 
-from .sections import Section, BKHDSection, HIRCSection
+from .sections import Section, BKHDSection, HIRCSection, STIDSection
 from .hirc_node import HIRCNode
 from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
 from .action import ActionType
@@ -99,11 +99,18 @@ class Soundbank:
 
     @property
     def bkhd(self) -> BKHDSection:
+        """Section of bank metadata."""
         return self.sections["BKHD"]
 
     @property
     def hirc(self) -> HIRCSection:
+        """Section of audio nodes."""
         return self.sections["HIRC"]
+
+    @property
+    def stid(self) -> STIDSection:
+        """Section of additional banks that will be automatically loaded."""
+        return self.sections.get("STID")
 
     @property
     def bank_id(self) -> int:
@@ -326,7 +333,11 @@ class Soundbank:
 
         self._regenerate_index_table()
 
-    def delete_nodes(self, *nodes: int | HIRCNode) -> None:
+    def delete_subtree(self, entrypoint: Hash | HIRCNode) -> None:
+        g = self.get_subtree(entrypoint, True, False)
+        self.delete_nodes(*g.nodes)
+
+    def delete_nodes(self, *nodes: Hash | HIRCNode) -> None:
         abandoned = []
         indices = set()
         for n in nodes:

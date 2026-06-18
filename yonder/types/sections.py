@@ -171,6 +171,24 @@ class STIDSection(Section):
     entry_count: int = 0
     entries: list[STIDSectionEntry] = field(default_factory=list)
 
+    def add_bank(self, bnk_name: str) -> None:
+        for entry in self.entries:
+            if entry.name == bnk_name:
+                return
+
+        self.entries.append(
+            STIDSectionEntry(calc_hash(bnk_name), len(bnk_name), bnk_name)
+        )
+
+    def remove_bnk(self, bnk: int | str) -> None:
+        if isinstance(bnk, str):
+            bnk = calc_hash(bnk)
+
+        for i, entry in enumerate(self.entries):
+            if entry.bnk_id == bnk:
+                del self.entries[i]
+                return
+
 
 @dataclass(slots=True)
 class STMGSectionStateGroup:
