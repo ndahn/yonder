@@ -241,6 +241,27 @@ def _create_widgets_stid(
             ),
         )
 
+    def add_bnk_entry(done: Callable[[STIDSectionEntry], None]) -> None:
+        done(STIDSectionEntry())
+
+    def on_add_bnk_entry(
+        sender: str,
+        info: tuple[int, STIDSectionEntry, list[STIDSectionEntry]],
+        user_data: Any,
+    ) -> None:
+        section.entries.append(info[1])
+        if on_section_changed:
+            on_section_changed(base_tag, section, user_data)
+
+    def on_remove_bnk_entry(
+        sender: str,
+        info: tuple[int, STIDSectionEntry, list[STIDSectionEntry]],
+        user_data: Any,
+    ) -> None:
+        section.entries.remove(info[1])
+        if on_section_changed:
+            on_section_changed(base_tag, section, user_data)
+
     _add_widgets(
         section,
         [("string_encoding", Hash)],
@@ -252,6 +273,10 @@ def _create_widgets_stid(
     add_widget_table(
         section.entries,
         stid_to_row,
+        new_item=add_bnk_entry,
+        on_add=on_add_bnk_entry,
+        on_remove=on_remove_bnk_entry,
+        add_item_label=µ("+ Add Bank"),
         label=µ("Entries"),
         header_row=True,
         columns=[µ("Bank ID", "table"), µ("Name", "table")],
