@@ -1103,7 +1103,6 @@ initial_end_trim: float) -> None:
                         default_value=0,
                         min_value=-2,
                         max_value=2,
-                        clamped=True,
                         tag=self._t("volume_slider"),
                     )
                     dpg.bind_item_theme(
@@ -1117,7 +1116,6 @@ initial_end_trim: float) -> None:
                         default_value=0,
                         min_value=0,
                         max_value=24000,
-                        clamped=True,
                         tag=self._t("lowpass_slider"),
                     )
                     dpg.bind_item_theme(
@@ -1130,7 +1128,6 @@ initial_end_trim: float) -> None:
                         default_value=0,
                         min_value=0,
                         max_value=24000,
-                        clamped=True,
                         tag=self._t("highpass_slider"),
                     )
                     dpg.bind_item_theme(

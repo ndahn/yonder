@@ -41,6 +41,7 @@ from yonder.types.base_types import (
     MusicMarkerWwise,
     RTPC,
     Layer,
+    StateChunk,
 )
 from yonder.enums import (
     SourceType,
@@ -217,6 +218,11 @@ def create_node_widgets(
                     bnk, node, on_node_changed, base_tag=tag, user_data=user_data
                 )
 
+            if hasattr(node, "states"):
+                add_node_states(
+                    bnk, node, on_node_changed, base_tag=tag, user_data=user_data
+                )
+
     return tag
 
 
@@ -290,6 +296,26 @@ def add_node_rtpc(
         label=µ("RTPC"), default_open=bool(node.rtpcs), tag=f"{base_tag}/rtpc"
     ):
         add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed, label=None)
+
+
+def add_node_states(
+    bnk: Soundbank,
+    node: HIRCNode,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    *,
+    base_tag: str = None,
+    user_data: Any = None,
+) -> None:
+    def on_states_changed(sender: str, states: StateChunk, cb_user_data: Any) -> None:
+        node.states.state_property_info = states.state_property_info
+        node.states.state_group_chunks = states.state_group_chunks
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    with dpg.tree_node(
+        label=µ("States"), default_open=bool(node.states), tag=f"{base_tag}/states"
+    ):
+        add_states_table(bnk, node.states, on_states_changed, label=None)
 
 
 def add_node_link(
@@ -999,7 +1025,7 @@ def _create_attributes_layercontainer(
         dpg.add_text(str(len(layer.associated_children)))
         dpg.add_button(
             label=µ("Edit"),
-            callback=lambda s, a, u: print("TODO sorry :)"),  # TODO edit layer dialog
+            callback=lambda s, a, u: logger.warning("TODO sorry :)"),  # TODO edit layer dialog
         )
 
     def create_layer(done: Callable[[Layer], None]) -> None:
