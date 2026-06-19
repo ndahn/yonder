@@ -473,6 +473,16 @@ class BanksOfYonder(DpgItem):
                                 dpg.add_text(
                                     "No soundbank loaded", tag=self._t("events_count")
                                 )
+                                dpg.add_spacer(width=10)
+                                with dpg.group():
+                                    dpg.add_spacer(height=1)
+                                    dpg.add_loading_indicator(
+                                        radius=0.8,
+                                        style=1,
+                                        color=style.light_blue,
+                                        show=False,
+                                        tag=self._t("events_filter_loading"),
+                                    )
 
                             dpg.add_spacer(height=3)
 
@@ -519,6 +529,16 @@ class BanksOfYonder(DpgItem):
                                 dpg.add_text(
                                     "No soundbank loaded", tag=self._t("globals_count")
                                 )
+                                dpg.add_spacer(width=10)
+                                with dpg.group():
+                                    dpg.add_spacer(height=1)
+                                    dpg.add_loading_indicator(
+                                        radius=0.8,
+                                        style=1,
+                                        color=style.light_blue,
+                                        show=False,
+                                        tag=self._t("gloabls_filter_loading"),
+                                    )
 
                             dpg.add_spacer(height=3)
 
@@ -1301,6 +1321,9 @@ class BanksOfYonder(DpgItem):
 
         filt: str = dpg.get_value(self._t("events_filter")).strip()
         if filt:
+            dpg.set_value(self._t("events_count"), "...")
+            dpg.show_item(self._t("events_filter_loading"))
+
             # Find the events associated with visible nodes
             g = self.bnk.tree
             selected = self.bnk.query(filt)
@@ -1348,6 +1371,7 @@ class BanksOfYonder(DpgItem):
                 first=skip, last=last, total=len(events)
             ),
         )
+        dpg.hide_item(self._t("events_filter_loading"))
 
     def _regenerate_globals_list(self) -> None:
         dpg.delete_item(self._t("globals_table"), children_only=True, slot=1)
@@ -1369,6 +1393,8 @@ class BanksOfYonder(DpgItem):
 
         filt: str = dpg.get_value(self._t("globals_filter"))
         if filt:
+            dpg.set_value(self._t("globals_count"), "...")
+            dpg.show_item(self._t("gloabls_filter_loading"))
             for node_type, nodes in type_map.items():
                 type_map[node_type] = list(query_nodes(nodes, filt))
 
@@ -1413,6 +1439,7 @@ class BanksOfYonder(DpgItem):
                 first=skip, last=last, total=num_nodes
             ),
         )
+        dpg.hide_item(self._t("gloabls_filter_loading"))
 
     def _regenerate_sections_list(self) -> None:
         dpg.delete_item(self._t("sections_table"), children_only=True, slot=1)
