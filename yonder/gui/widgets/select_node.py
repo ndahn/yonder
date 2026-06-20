@@ -160,7 +160,7 @@ class add_select_node(DpgItem):
                         dpg.add_menu_item(
                             label=µ("Jump To"),
                             callback=lambda s, a, u: self._jump_to(
-                                self.tag, dpg.get_value(self.tag), self._user_data
+                                self.tag, self.selected_node, self._user_data
                             ),
                         )
 

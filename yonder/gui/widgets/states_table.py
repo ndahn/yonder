@@ -22,16 +22,19 @@ from .select_node import add_select_node
 
 
 class add_states_table(DpgItem):
-    """TODO
+    """Widget to give access to and edit state chunks. States work as global variables
+    that can be set by the game to control how audio is played.
 
     Parameters
     ----------
     bnk : Soundbank
         Used to allocate new IDs for added RTPCs.
-    states : list of RTPC
-        Initial RTPC list; mutated directly by the widget.
+    states : StateChunk
+        Initial states; mutated directly by the widget.
     on_value_changed : callable
-        Fired as ``on_value_changed(tag, rtpcs_copy, user_data)`` on any edit.
+        Fired as ``on_value_changed(tag, states, user_data)`` on any edit.
+    jump_to : callable
+        Lets the user jump to referenced State objects if provided.
     label : str, optional
         Text label rendered above the table.
     tag : int or str
@@ -204,13 +207,15 @@ class add_states_table(DpgItem):
             if idx == 0:
                 # Update all affected states
                 self.update_states_on_property_removal(info[1].property, info[0], True)
+                self.refresh()
             elif idx == 1:
                 # Update affected non-shared states
                 self.update_states_on_property_removal(info[1].property, info[0], False)
+                self.refresh()
 
         simple_choice_dialog(
-            µ("States refer to properties by index. Update affected states?"),
-            [µ("All", "Non-shared", "No")],
+            µ("States refer to properties by index.\nUpdate affected states?"),
+            [µ("All"), µ("Non-shared"), µ("No")],
             choice_callback,
             title=µ("Property removed"),
         )
@@ -227,6 +232,8 @@ class add_states_table(DpgItem):
             dpg.add_combo(
                 [s.name for s in SyncType],
                 default_value=group.sync_type.name,
+                label=µ("Synchronization"),
+                width=200,
                 callback=self._make_setter(group, "sync_type", lambda s: SyncType[s]),
                 user_data=group,
             )

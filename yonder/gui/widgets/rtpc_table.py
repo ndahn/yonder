@@ -14,13 +14,7 @@ from .dpg_item import DpgItem
 
 
 class add_rtpc_table(DpgItem):
-    """An editable list of RTPC entries for Dear PyGui.
-
-    Each row expands into a tree node showing type, accumulation mode,
-    parameter ID, curve scaling, and an interpolation curve editor.
-    Right-clicking the tree node opens a hash widget to rename the RTPC.
-    The passed-in ``rtpcs`` list is mutated in place; callbacks receive a
-    shallow copy.
+    """An editable list of RTPC entries.
 
     Parameters
     ----------
@@ -29,7 +23,7 @@ class add_rtpc_table(DpgItem):
     rtpcs : list of RTPC
         Initial RTPC list; mutated directly by the widget.
     on_value_changed : callable
-        Fired as ``on_value_changed(tag, rtpcs_copy, user_data)`` on any edit.
+        Fired as ``on_value_changed(tag, rtpcs, user_data)`` on any edit.
     label : str, optional
         Text label rendered above the table.
     tag : int or str

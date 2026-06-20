@@ -1567,14 +1567,13 @@ class BanksOfYonder(DpgItem):
             )
 
     def jump_to_node(self, node: int | HIRCNode) -> None:
-        if node in (0, None):
+        if node in (0, "", None):
             return
 
-        if isinstance(node, int):
-            node_id = node
-            node = self.bnk[node_id]
-        else:
-            node_id = node.id
+        if not isinstance(node, HIRCNode):
+            node = self.bnk[node]
+        
+        node_id = node.id
 
         table: str = None
         if node_id in self.globals_map:
