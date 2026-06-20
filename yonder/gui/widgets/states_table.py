@@ -1,7 +1,7 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, Hash, lookup_name
+from yonder import Soundbank, HIRCNode, Hash, lookup_name
 from yonder.game import GameObjects
 from yonder.types.state import State
 from yonder.types.base_types import (
@@ -46,6 +46,7 @@ class add_states_table(DpgItem):
         states: StateChunk,
         on_value_changed: Callable[[str, StateChunk, Any], None],
         *,
+        jump_to: Callable[[str, HIRCNode, Any], None] = None,
         label: str = "States",
         tag: str | int = 0,
         user_data: Any = None,
@@ -56,6 +57,7 @@ class add_states_table(DpgItem):
         self._states = states
         self._on_value_changed = on_value_changed
         self._user_data = user_data
+        self._jump_to = jump_to
 
         if label:
             dpg.add_text(label)
@@ -68,7 +70,7 @@ class add_states_table(DpgItem):
 
     def _build(self) -> None:
         with dpg.child_window(auto_resize_y=True, border=False, tag=self._tag):
-            with dpg.tree_node(label=µ("Controlled Properties")):
+            with dpg.tree_node(label=µ("Controlled Properties"), span_full_width=True):
                 self._properties_table = add_widget_table(
                     self._states.state_property_info,
                     self._property_to_row,
@@ -76,13 +78,20 @@ class add_states_table(DpgItem):
                     on_add=self._on_property_added,
                     on_remove=self._on_property_removed,
                     header_row=True,
-                    columns=[µ("Property"), µ("Accumulation"), µ("in dB"), µ("States")],
+                    columns=[
+                        µ("Property"),
+                        µ("Accumulation"),
+                        µ("in dB"),
+                        µ("Affected by"),
+                    ],
                     column_policy=dpg.mvTable_SizingStretchProp,
                     add_item_label=µ("+ Property"),
                     tag=self._t("properties_table"),
                 )
 
-            with dpg.tree_node(label=µ("States"), default_open=True):
+            with dpg.tree_node(
+                label=µ("State Groups"), span_full_width=True, default_open=True
+            ):
                 self._states_table = add_widget_table(
                     self._states.state_group_chunks,
                     self._state_group_to_row,
@@ -112,7 +121,9 @@ class add_states_table(DpgItem):
 
         return cb
 
-    def _bind_hash_context_menu(self, item_tag: str, obj: Any, attr: str) -> None:
+    def _bind_hash_context_menu(
+        self, item_tag: str, obj: Any, attr: str, label: str
+    ) -> None:
         def update_label(
             sender: str,
             info: tuple[StateGroupChunk, str, tuple[Hash, str]],
@@ -129,7 +140,7 @@ class add_states_table(DpgItem):
                 getattr(obj, attr),
                 self._make_setter(obj, attr, lambda h: h[0], update_label),
                 horizontal=False,
-                string_label=µ("State Group"),
+                string_label=label,
                 width=120,
             )
 
@@ -231,7 +242,9 @@ class add_states_table(DpgItem):
             )
 
         # Connect edit dialog
-        self._bind_hash_context_menu(tree_node, group, "state_group_id")
+        self._bind_hash_context_menu(
+            tree_node, group, "state_group_id", µ("State Group")
+        )
 
     def _new_state_group(self, done: Callable[[StateGroupChunk], None]) -> None:
         done(StateGroupChunk())
@@ -262,39 +275,48 @@ class add_states_table(DpgItem):
 
     def _state_value_to_row(self, state_value: AkState, idx: int) -> None:
         name = lookup_name(state_value.state_id, f"#{state_value.state_id}")
+        
+        state: State = self._bnk.get(state_value.state_instance_id)
+        properties = self.get_controlled_properties()
+        longest_prop = max(len(p.name) for p in properties.values())
+
+        if state:
+            referees = len(list(self._bnk.tree.predecessors(state.id)))
+        else:
+            referees = "?"
 
         with dpg.tree_node(label=name, span_full_width=True) as tree_node:
             add_select_node(
                 self._bnk.query,
-                µ("State"),
+                µ("State ({num_references} refs)").format(num_references=referees),
                 self._make_setter(state_value, "state_instance_id", lambda n: n.nid),
+                jump_to=self._jump_to,
                 get_node_details=self._get_state_summary,
                 default=state_value.state_instance_id,
+                textbox_width=300,
                 node_type=State,
                 user_data=idx,
             )
             dpg.add_spacer(height=5)
-
-            state: State = self._bnk.get(state_value.state_instance_id)
-            properties = self.get_controlled_properties()
-            longest_prop = max(len(p.name) for p in properties.values())
 
             for i, prop in properties.items():
                 affected = state and (i in state.parameters)
                 param_idx = state.parameters.index(i) if affected else -1
 
                 with dpg.group(horizontal=True):
+                    dpg.add_text(prop.name.rjust(longest_prop))
                     dpg.add_checkbox(
-                        label=prop.name.ljust(longest_prop),
+                        #label=prop.name.ljust(longest_prop),
                         default_value=affected,
                         enabled=bool(state),
                         callback=self._set_state_property_connected,
                         user_data=(state, prop),
                     )
-                    dpg.add_input_double(
+                    dpg.add_input_float(
                         default_value=(
                             state.values[param_idx] if param_idx >= 0 else 0.0
                         ),
+                        width=220,
                         enabled=affected,
                         callback=self._set_state_property_value,
                         user_data=(state, prop),
@@ -303,7 +325,9 @@ class add_states_table(DpgItem):
                     )
 
         # Connect edit dialog
-        self._bind_hash_context_menu(tree_node, state_value, "state_id")
+        self._bind_hash_context_menu(
+            tree_node, state_value, "state_id", µ("State Value")
+        )
 
     def _set_state_property_connected(
         self, sender: str, connected: bool, info: tuple[State, PropID]

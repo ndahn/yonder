@@ -211,17 +211,17 @@ def create_node_widgets(
 
             if hasattr(node, "properties"):
                 add_node_properties(
-                    node, on_node_changed, base_tag=tag, user_data=user_data
+                    node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
                 )
 
             if hasattr(node, "rtpcs"):
                 add_node_rtpc(
-                    bnk, node, on_node_changed, base_tag=tag, user_data=user_data
+                    bnk, node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
                 )
 
             if hasattr(node, "states"):
                 add_node_states(
-                    bnk, node, on_node_changed, base_tag=tag, user_data=user_data
+                    bnk, node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
                 )
 
     return tag
@@ -247,6 +247,7 @@ def rename_node(
 def add_node_properties(
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = None,
     user_data: Any = None,
@@ -270,6 +271,7 @@ def add_node_properties(
     with dpg.tree_node(
         label=µ("Properties"),
         default_open=bool(node.properties),
+        span_full_width=True,
         tag=f"{base_tag}/properties",
     ):
         add_properties_table(
@@ -284,6 +286,7 @@ def add_node_rtpc(
     bnk: Soundbank,
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = None,
     user_data: Any = None,
@@ -294,7 +297,10 @@ def add_node_rtpc(
             on_node_changed(base_tag, node, user_data)
 
     with dpg.tree_node(
-        label=µ("RTPC"), default_open=bool(node.rtpcs), tag=f"{base_tag}/rtpc"
+        label=µ("RTPC"),
+        default_open=bool(node.rtpcs),
+        span_full_width=True,
+        tag=f"{base_tag}/rtpc",
     ):
         add_rtpc_table(bnk, node.rtpcs, on_rtpcs_changed, label=None)
 
@@ -303,6 +309,7 @@ def add_node_states(
     bnk: Soundbank,
     node: HIRCNode,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = None,
     user_data: Any = None,
@@ -319,9 +326,12 @@ def add_node_states(
     has_states = bool(node.states.state_property_info or node.states.state_group_chunks)
 
     with dpg.tree_node(
-        label=µ("States"), default_open=has_states, tag=f"{base_tag}/states"
+        label=µ("States"),
+        default_open=has_states,
+        span_full_width=True,
+        tag=f"{base_tag}/states",
     ):
-        add_states_table(bnk, node.states, on_states_changed, label=None)
+        add_states_table(bnk, node.states, on_states_changed, jump_to=on_node_selected, label=None)
 
 
 def add_node_link(
@@ -655,6 +665,17 @@ def _create_type_specific_attributes(
         return True
     elif isinstance(node, Sound):
         _create_attributes_sound(
+            bnk,
+            node,
+            on_node_changed,
+            on_node_selected,
+            on_structure_changed,
+            base_tag=base_tag,
+            user_data=user_data,
+        )
+        return True
+    elif isinstance(node, State):
+        _create_attributes_state(
             bnk,
             node,
             on_node_changed,
@@ -1031,7 +1052,9 @@ def _create_attributes_layercontainer(
         dpg.add_text(str(len(layer.associated_children)))
         dpg.add_button(
             label=µ("Edit"),
-            callback=lambda s, a, u: logger.warning("TODO sorry :)"),  # TODO edit layer dialog
+            callback=lambda s, a, u: logger.warning(
+                "TODO sorry :)"
+            ),  # TODO edit layer dialog
         )
 
     def create_layer(done: Callable[[Layer], None]) -> None:
@@ -1066,7 +1089,7 @@ def _create_attributes_layercontainer(
         new_item=create_layer,
         on_add=on_add,
         on_remove=on_remove,
-        label=µ("Layers"),
+        #label=µ("Layers"),
         add_item_label=µ("+ Layer"),
     )
 
@@ -1661,6 +1684,55 @@ def _create_attributes_sound(
         dpg.add_spacer(height=3)
         dpg.add_separator()
         dpg.add_spacer(height=3)
+
+
+def _create_attributes_state(
+    bnk: Soundbank,
+    node: State,
+    on_node_changed: Callable[[str, HIRCNode, Any], None],
+    on_node_selected: Callable[[str, HIRCNode, Any], None],
+    on_structure_changed: Callable[[], None],
+    *,
+    base_tag: str = 0,
+    user_data: Any = None,
+) -> None:
+    def ref_to_row(ref: int, idx: int) -> None:
+        ref_node = bnk[ref]
+        states: StateChunk = ref_node.states
+        properties = {i: p for i, p in enumerate(states.state_property_info)}
+        params = [properties[i].property.name for i in node.parameters]
+
+        add_node_link(bnk, ref_node, on_node_selected)
+        dpg.add_text(", ".join(params))
+
+    def param_to_row(param: tuple[int, float], idx: int) -> None:
+        with dpg.group(horizontal=True):
+            dpg.add_text(f"{param[0]}:")
+            dpg.add_input_float(
+                default_value=param[1],
+                callback=on_value_changed,
+                user_data=idx,
+            )
+
+    def on_value_changed(sender: str, new_val: float, idx: int) -> None:
+        node.values[idx] = new_val
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    referees = list(bnk.tree.predecessors(node.id))
+    add_widget_table(
+        referees,
+        ref_to_row,
+        header_row=True,
+        label=µ("References"),
+        columns=[µ("Referee"), µ("Properties")],
+    )
+
+    add_widget_table(
+        sorted(zip(node.parameters, node.values)),
+        param_to_row,
+        label=µ("Values"),
+    )
 
 
 def _create_attributes_switchcontainer(

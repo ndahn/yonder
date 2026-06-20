@@ -68,10 +68,11 @@ class RGBA(tuple):
         return RGBA(r, g, b, a)
 
     def mix(self, other: "tuple | RGBA", ratio: float = 0.5) -> RGBA:
+        alpha = other[3] if len(other) > 3 else 255
         r = ratio * self.r + (1 - ratio) * other[0]
         g = ratio * self.g + (1 - ratio) * other[1]
         b = ratio * self.b + (1 - ratio) * other[2]
-        a = ratio * self.a + (1 - ratio) * other[3]
+        a = ratio * self.a + (1 - ratio) * alpha
         return RGBA(r, g, b, a)
 
     def shift(self, amount: int) -> RGBA:
@@ -123,6 +124,7 @@ muted_violet = RGBA(140, 90, 180, 255)
 muted_yellow = RGBA(200, 180, 60, 255)
 muted_teal = RGBA(60, 180, 180, 255)
 muted_rose = RGBA(200, 80, 120, 255)
+muted_sky = RGBA(48, 70, 100, 255)
 
 
 class themes:
@@ -198,11 +200,12 @@ def init_themes():
 
         # General styling
         with dpg.theme_component(dpg.mvSelectable):
-            dpg.add_theme_color(dpg.mvThemeCol_Header, [0, 110, 184])
+            dpg.add_theme_color(dpg.mvThemeCol_Header, muted_sky)
 
         with dpg.theme_component(dpg.mvTable):
             # By default drag handles in resizable tables are always visible
             dpg.add_theme_color(dpg.mvThemeCol_TableBorderLight, [0, 0, 0, 0])
+            dpg.add_theme_color(dpg.mvThemeCol_TableHeaderBg, muted_sky)
 
     dpg.bind_theme(global_theme)
 

@@ -97,6 +97,7 @@ class add_select_node(DpgItem):
         callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
+        jump_to: Callable[[str, HIRCNode, Any], None] = None,
         multiple: bool = False,
         default: HIRCNode = None,
         node_type: Type[HIRCNode] = None,
@@ -117,6 +118,7 @@ class add_select_node(DpgItem):
         self._readonly = readonly
         self._node_type = node_type
         self._get_node_details = get_node_details
+        self._jump_to = jump_to
 
         if isinstance(default, HIRCNode):
             default = default.id
@@ -130,7 +132,14 @@ class add_select_node(DpgItem):
 
     # === Build =================
 
-    def _build(self, label: str, default: HIRCNode, readonly: bool, textbox_width: int, parent: str):
+    def _build(
+        self,
+        label: str,
+        default: HIRCNode,
+        readonly: bool,
+        textbox_width: int,
+        parent: str,
+    ):
         with dpg.group(horizontal=True, parent=parent):
             dpg.add_input_text(
                 default_value=default,
@@ -142,6 +151,16 @@ class add_select_node(DpgItem):
                 user_data=self._user_data,
                 tag=self.tag,
             )
+
+            if self._jump_to:
+                with dpg.popup(dpg.last_item(), min_size=(100, 20)):
+                    dpg.add_menu_item(
+                        label=µ("Jump To"),
+                        callback=lambda s, a, u: self._jump_to(
+                            self.tag, dpg.get_value(self.tag), self._user_data
+                        ),
+                    )
+
             dpg.add_button(
                 arrow=True,
                 direction=dpg.mvDir_Right,
