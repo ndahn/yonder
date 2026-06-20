@@ -13,6 +13,7 @@ from .base_types import (
     Playlist,
     PlaylistItem,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -83,6 +84,10 @@ class RandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     def add_playlist_item(self, child_id: int | HIRCNode) -> None:
         if isinstance(child_id, HIRCNode):

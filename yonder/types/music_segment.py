@@ -12,6 +12,7 @@ from .base_types import (
     Children,
     MusicMarkerWwise,
     RTPC,
+    StateChunk,
 )
 from .music_track import MusicTrack
 from .mixins import PropertyMixin
@@ -73,6 +74,10 @@ class MusicSegment(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_node_params.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.music_node_params.node_base_params.state_chunk
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):

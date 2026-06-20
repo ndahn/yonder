@@ -13,6 +13,7 @@ from .base_types import (
     PropBundle,
     MediaInformation,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -61,6 +62,10 @@ class Sound(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     @property
     def source_id(self) -> int:

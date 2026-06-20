@@ -13,6 +13,7 @@ from .base_types import (
     SwitchPackage,
     SwitchNodeParams,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -74,6 +75,10 @@ class SwitchContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):

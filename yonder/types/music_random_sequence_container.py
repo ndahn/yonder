@@ -15,6 +15,7 @@ from .base_types import (
     MusicTransSrcRule,
     MusicTransDstRule,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -76,6 +77,10 @@ class MusicRandomSequenceContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.music_trans_node_params.music_node_params.node_base_params.state_chunk
 
     def set_playlist(self, items: list, root_ers_type: int = 0) -> None:
         playlist = self.make_playlist(items, root_ers_type)

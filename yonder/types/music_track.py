@@ -17,6 +17,7 @@ from .base_types import (
     ClipAutomation,
     TrackSrcInfo,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -76,6 +77,10 @@ class MusicTrack(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     @property
     def source_ids(self) -> list[int]:

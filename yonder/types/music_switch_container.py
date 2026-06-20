@@ -14,6 +14,7 @@ from .base_types import (
     PropBundle,
     Children,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -78,6 +79,10 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.music_trans_node_params.music_node_params.node_base_params.state_chunk
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):

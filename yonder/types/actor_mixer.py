@@ -6,7 +6,7 @@ from yonder.hash import Hash
 from yonder.enums import PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle, RTPC
+from .base_types import NodeBaseParams, Children, PropBundle, RTPC, StateChunk
 from .mixins import PropertyMixin
 
 
@@ -55,6 +55,10 @@ class ActorMixer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):

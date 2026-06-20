@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from yonder.hash import Hash
 from .hirc_node import HIRCNode
-from .base_types import FxBaseInitialValues, RTPC
+from .base_types import FxBaseInitialValues, RTPC, StateChunk
 
 
 @dataclass(repr=False, eq=False)
@@ -21,3 +21,7 @@ class EffectCustom(HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.fx_base_initial_values.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.fx_base_initial_values.state_chunk

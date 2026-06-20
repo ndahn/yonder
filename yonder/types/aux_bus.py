@@ -5,7 +5,7 @@ from typing import ClassVar
 from yonder.hash import Hash
 from yonder.enums import PropID
 from .hirc_node import HIRCNode
-from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC
+from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC, StateChunk
 from .mixins import PropertyMixin
 
 
@@ -43,3 +43,7 @@ class AuxiliaryBus(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.initial_values.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.initial_values.state_chunk
