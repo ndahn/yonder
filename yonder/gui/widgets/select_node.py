@@ -98,6 +98,7 @@ class add_select_node(DpgItem):
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
         jump_to: Callable[[str, HIRCNode, Any], None] = None,
+        create_new: Callable[[], HIRCNode] = None,
         multiple: bool = False,
         default: HIRCNode = None,
         node_type: Type[HIRCNode] = None,
@@ -119,6 +120,7 @@ class add_select_node(DpgItem):
         self._node_type = node_type
         self._get_node_details = get_node_details
         self._jump_to = jump_to
+        self._create_new = create_new
 
         if isinstance(default, HIRCNode):
             default = default.id
@@ -152,14 +154,23 @@ class add_select_node(DpgItem):
                 tag=self.tag,
             )
 
-            if self._jump_to:
+            if self._jump_to or self._create_new:
                 with dpg.popup(dpg.last_item(), min_size=(100, 20)):
-                    dpg.add_menu_item(
-                        label=µ("Jump To"),
-                        callback=lambda s, a, u: self._jump_to(
-                            self.tag, dpg.get_value(self.tag), self._user_data
-                        ),
-                    )
+                    if self._jump_to:
+                        dpg.add_menu_item(
+                            label=µ("Jump To"),
+                            callback=lambda s, a, u: self._jump_to(
+                                self.tag, dpg.get_value(self.tag), self._user_data
+                            ),
+                        )
+
+                    if self._create_new:
+                        dpg.add_menu_item(
+                            label=µ("Create New"),
+                            callback=lambda s, a, u: self._on_node_selected(
+                                self.tag, self._create_new(), self._user_data
+                            ),
+                        )
 
             dpg.add_button(
                 arrow=True,
@@ -185,7 +196,7 @@ class add_select_node(DpgItem):
     def _on_node_selected(self, sender: str, node: HIRCNode, user_data: Any) -> None:
         dpg.set_value(self.tag, str(node.id))
         if self._callback:
-            self._callback(self.tag, node, user_data)
+            self._callback(self.tag, node, self._user_data)
 
     def _select_node(
         self,

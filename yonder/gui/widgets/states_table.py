@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, Hash, lookup_name
@@ -202,14 +202,14 @@ class add_states_table(DpgItem):
         # Let the user decide what to do with states that now would refer to a different property
         def choice_callback(sender: str, idx: int, cb_user_data: Any) -> None:
             if idx == 0:
-                # TODO update all affected states
-                pass
+                # Update all affected states
+                self.update_states_on_property_removal(info[1].property, info[0], True)
             elif idx == 1:
-                # TODO update affected non-shared states
-                pass
+                # Update affected non-shared states
+                self.update_states_on_property_removal(info[1].property, info[0], False)
 
         simple_choice_dialog(
-            µ("Update affected states?"),
+            µ("States refer to properties by index. Update affected states?"),
             [µ("All", "Non-shared", "No")],
             choice_callback,
             title=µ("Property removed"),
@@ -285,12 +285,18 @@ class add_states_table(DpgItem):
         else:
             referees = "?"
 
+        def new_state() -> State:
+            new = State(self._bnk.new_id())
+            self._bnk.add_nodes(new)
+            return new
+
         with dpg.tree_node(label=name, span_full_width=True) as tree_node:
             add_select_node(
                 self._bnk.query,
                 µ("State ({num_references} refs)").format(num_references=referees),
                 self._make_setter(state_value, "state_instance_id", lambda n: n.nid),
                 jump_to=self._jump_to,
+                create_new=new_state,
                 get_node_details=self._get_state_summary,
                 default=state_value.state_instance_id,
                 textbox_width=300,
@@ -302,6 +308,7 @@ class add_states_table(DpgItem):
             for i, prop in properties.items():
                 affected = state and (i in state.parameters)
                 param_idx = state.parameters.index(i) if affected else -1
+                value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
 
                 with dpg.group(horizontal=True):
                     dpg.add_text(prop.name.rjust(longest_prop))
@@ -320,14 +327,23 @@ class add_states_table(DpgItem):
                         enabled=affected,
                         callback=self._set_state_property_value,
                         user_data=(state, prop),
-                        # TODO will cause problems if the state is reused within the same chunk
-                        tag=self._t(f"{state.id}_{prop.name}"),
+                        tag=value_widget_id,
                     )
 
         # Connect edit dialog
         self._bind_hash_context_menu(
             tree_node, state_value, "state_id", µ("State Value")
         )
+
+    def _get_state_prop_value_widgets(self, state: State, prop: PropID) -> list[str]:
+        offset = 0
+        ret = [self._t(f"{state.id}_{prop.name}_#{offset}")]
+
+        while dpg.does_item_exist(ret[-1]):
+            offset += 1
+            ret.append(self._t(f"{state.id}_{prop.name}_#{offset}"))
+        
+        return ret
 
     def _set_state_property_connected(
         self, sender: str, connected: bool, info: tuple[State, PropID]
@@ -341,7 +357,8 @@ class add_states_table(DpgItem):
                 f"Requested to update connection for {prop}, but property is not controlled by state chunk"
             )
 
-        prop_value_widget = self._t(f"{state.id}_{prop.name}")
+        value_widgets = self._get_state_prop_value_widgets(state, prop)[:-1]
+        value = dpg.get_value(value_widgets[-1])
 
         if connected:
             if prop_idx in state.parameters:
@@ -350,8 +367,10 @@ class add_states_table(DpgItem):
                 )
 
             state.parameters.append(prop_idx)
-            state.values.append(dpg.get_value(prop_value_widget))
-            dpg.enable_item(prop_value_widget)
+            state.values.append(value)
+            
+            for widget in value_widgets:
+                dpg.configure_item(widget, enabled=True, default_value=value)
         else:
             if prop_idx not in state.parameters:
                 raise RuntimeError(
@@ -361,7 +380,9 @@ class add_states_table(DpgItem):
             param_idx = state.parameters.index(prop_idx)
             state.parameters.pop(param_idx)
             state.values.pop(param_idx)
-            dpg.disable_item(prop_value_widget)
+            
+            for widget in value_widgets:
+                dpg.disable_item(widget)
 
     def _set_state_property_value(
         self, sender: str, new_val: float, info: tuple[State, PropID]
@@ -446,3 +467,21 @@ class add_states_table(DpgItem):
                 ret[group.state_group_id] = affecting
 
         return ret
+
+    def update_states_on_property_removal(self, prop: PropID, prop_idx: int, include_shared: bool = False) -> None:
+        for group in self._states.state_group_chunks:
+            for aks in group.states:
+                if not include_shared and self._bnk.tree.in_degree(aks.state_instance_id) > 1:
+                    continue
+
+                state: State = self._bnk.get(aks.state_instance_id)
+                if not state:
+                    continue
+
+                param_idx = state.parameters.index(prop_idx)
+                state.parameters.pop(param_idx)
+                state.values.pop(param_idx)
+
+                # Subsequent params need to be shifted so they point at the correct property again
+                for idx in range(param_idx, len(state.parameters)):
+                    state.parameters[idx] -= 1
