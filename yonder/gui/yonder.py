@@ -1830,8 +1830,8 @@ class BanksOfYonder(DpgItem):
             self.bnk.delete_subtree(self._selected_node)
 
         logger.info(
-            µ("Deleted {node} and {num} children").format(
-                node=self._selected_node, num=len(g) - 1
+            µ("Deleted {node} and exclusive children").format(
+                node=self._selected_node
             )
         )
 

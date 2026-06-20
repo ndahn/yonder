@@ -33,7 +33,16 @@ class LookupTable:
     def prune(self, corpus: str) -> None:
         # Reduce to the hashes that are actually found in the corpus
         all_ints = set(int(x) for x in re.findall(r"\d+", corpus))
-        self._table = {k: v for k, v in self._table.items() if k in all_ints}
+
+        base_hashes = set()
+        if _lookup_tables and _lookup_tables[-1] != self:
+            base_hashes = set(_lookup_tables[-1]._table.keys())
+
+        self._table = {
+            k: v
+            for k, v in self._table.items()
+            if k in all_ints and k not in base_hashes
+        }
 
     def save(self, path: Path = None) -> None:
         if not path:
