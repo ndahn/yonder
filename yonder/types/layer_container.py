@@ -13,6 +13,7 @@ from .base_types import (
     AssociatedChildData,
     PropBundle,
     RTPC,
+    StateChunk,
 )
 from .mixins import PropertyMixin
 
@@ -66,6 +67,10 @@ class LayerContainer(PropertyMixin, HIRCNode):
     @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
+
+    @property
+    def states(self) -> StateChunk:
+        return self.node_base_params.state_chunk
 
     def add_layer(self, nodes: list[int]) -> Layer:
         self.layers.append(

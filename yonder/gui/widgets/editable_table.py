@@ -68,6 +68,7 @@ class add_widget_table(DpgItem):
         on_select: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
         header_row: bool = False,
         columns: list[str] = ("Value",),
+        column_policy: int = dpg.mvTable_SizingFixedFit,
         selected_row_color: style.RGBA = style.muted_purple,
         label: str = None,
         add_item_label: str = "+",
@@ -94,7 +95,7 @@ class add_widget_table(DpgItem):
         # Maps row index -> tag of its select-indicator button
         self._sel_buttons: dict[int, int] = {}
 
-        self._build(header_row, columns, label, parent, width, height)
+        self._build(header_row, columns, column_policy, label, parent, width, height)
         self.refresh()
 
     # === Build =========================================================
@@ -103,6 +104,7 @@ class add_widget_table(DpgItem):
         self,
         header_row: bool,
         columns: list[str],
+        column_policy: int,
         label: str,
         parent: str | int,
         width: int,
@@ -116,7 +118,8 @@ class add_widget_table(DpgItem):
         ):
             with dpg.table(
                 header_row=header_row,
-                policy=dpg.mvTable_SizingFixedFit,
+                policy=column_policy,
+                resizable=True,
                 borders_outerH=True,
                 borders_outerV=True,
                 width=width,
@@ -619,7 +622,7 @@ class add_player_table(DpgItem):
             self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
 
     def _create_row(self, path: Path, idx: int) -> None:
-        with dpg.tree_node(label=path.stem):
+        with dpg.tree_node(label=path.stem, span_full_width=True):
             player = self._wav_player_cls(
                 path,
                 label=f" <{self._get_row_label(idx)}>",
@@ -898,7 +901,7 @@ class add_curves_table(DpgItem):
     def _create_row(self, curve: GraphCurve, idx: int) -> None:
         from .interpolation_curve import add_interpolation_curve
 
-        with dpg.tree_node(label=f"Curve #{idx}"):
+        with dpg.tree_node(label=f"Curve #{idx}", span_full_width=True):
             with dpg.group(horizontal=True):
                 if self._curve_types:
                     dpg.add_combo(

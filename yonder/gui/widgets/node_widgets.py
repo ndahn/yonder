@@ -64,6 +64,7 @@ from .generic_input_widget import add_generic_widget, is_simple_type
 from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .rtpc_table import add_rtpc_table
+from .states_table import add_states_table
 from .wav_player import add_wav_player
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table, add_curves_table
@@ -308,12 +309,17 @@ def add_node_states(
 ) -> None:
     def on_states_changed(sender: str, states: StateChunk, cb_user_data: Any) -> None:
         node.states.state_property_info = states.state_property_info
+        node.states.state_property_count = len(states.state_property_info)
         node.states.state_group_chunks = states.state_group_chunks
+        node.states.state_group_count = len(states.state_group_chunks)
+
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
+    has_states = bool(node.states.state_property_info or node.states.state_group_chunks)
+
     with dpg.tree_node(
-        label=µ("States"), default_open=bool(node.states), tag=f"{base_tag}/states"
+        label=µ("States"), default_open=has_states, tag=f"{base_tag}/states"
     ):
         add_states_table(bnk, node.states, on_states_changed, label=None)
 

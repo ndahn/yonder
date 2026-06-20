@@ -102,6 +102,7 @@ pink = RGBA(255, 0, 110, 255)
 purple = RGBA(127, 50, 236, 255)
 blue = RGBA(58, 134, 255, 255)
 green = RGBA(138, 201, 38, 255)
+teal = RGBA(0, 48, 51, 255)
 
 white = RGBA(255, 255, 255, 255)
 light_grey = RGBA(151, 151, 151, 255)
@@ -195,8 +196,13 @@ def init_themes():
             dpg.add_theme_color(dpg.mvThemeCol_Text, [168, 168, 168])
             dpg.add_theme_color(dpg.mvThemeCol_Button, [96, 96, 96])
 
+        # General styling
         with dpg.theme_component(dpg.mvSelectable):
             dpg.add_theme_color(dpg.mvThemeCol_Header, [0, 110, 184])
+
+        with dpg.theme_component(dpg.mvTable):
+            # By default drag handles in resizable tables are always visible
+            dpg.add_theme_color(dpg.mvThemeCol_TableBorderLight, [0, 0, 0, 0])
 
     dpg.bind_theme(global_theme)
 
