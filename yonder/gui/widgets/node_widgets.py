@@ -1706,15 +1706,51 @@ def _create_attributes_state(
         dpg.add_text(", ".join(params))
 
     def param_to_row(param: tuple[int, float], idx: int) -> None:
-        with dpg.group(horizontal=True):
-            dpg.add_text(f"{param[0]}:")
-            dpg.add_input_float(
-                default_value=param[1],
-                callback=on_value_changed,
-                user_data=idx,
-            )
+        dpg.add_input_int(
+            default_value=param[0],
+            min_value=0,
+            min_clamped=True,
+            max_value=99,
+            max_clamped=True,
+            callback=on_prop_idx_changed,
+            user_data=idx,
+        )
+        dpg.add_input_float(
+            default_value=param[1],
+            callback=on_param_changed,
+            user_data=idx,
+        )
 
-    def on_value_changed(sender: str, new_val: float, idx: int) -> None:
+    def create_param(done: Callable[[tuple[int, float]], None]) -> None:
+        next_idx = next((i for i in range(100) if i not in node.parameters), 0)
+        done((next_idx, 0.0))
+
+    def on_param_added(sender: str, info: tuple[int, tuple[int, float], list[tuple[int, float]]], cb_user_data: Any) -> None:
+        prop_idx, value = info[1]
+        node.parameters.append(prop_idx)
+        node.values.append(value)
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_param_removed(sender: str, info: tuple[int, tuple[int, float], list[tuple[int, float]]], cb_user_data: Any) -> None:
+        param_idx = info[0]
+        node.parameters.pop(param_idx)
+        node.values.pop(param_idx)
+
+        if on_node_changed:
+            on_node_changed(base_tag, node, user_data)
+
+    def on_prop_idx_changed(sender: str, new_val: float, idx: int) -> None:
+        if new_val in node.parameters:
+            # Reject the change, indices must be unique
+            dpg.set_value(sender, node.parameters[idx])
+        else:
+            node.parameters[idx] = new_val
+            if on_node_changed:
+                on_node_changed(base_tag, node, user_data)
+
+    def on_param_changed(sender: str, new_val: float, idx: int) -> None:
         node.values[idx] = new_val
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
@@ -1731,7 +1767,13 @@ def _create_attributes_state(
     add_widget_table(
         sorted(zip(node.parameters, node.values)),
         param_to_row,
+        new_item=create_param,
+        on_add=on_param_added,
+        on_remove=on_param_removed,
+        add_item_label=µ("+ Value"),
         label=µ("Values"),
+        columns=[µ("Property Index"), µ("Value")],
+        header_row=True,
     )
 
 

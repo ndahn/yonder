@@ -6,4 +6,5 @@ from yonder.enums import PropID, RtpcAccum, SyncType
 # NOTE: mixed class must expose a "states" member
 # (node) -> StatePropertyInfo & StateChunk -> StateGroupChunk -> AkState -> State
 class StateMixin:
+    # TODO move helper functions from states_table here
     pass
