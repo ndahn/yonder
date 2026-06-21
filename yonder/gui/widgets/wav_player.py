@@ -266,7 +266,7 @@ end_trim)
         )
         return None
 
-    def _get_valid_pos(self, pos: float, use_trims: bool = True) -> float:
+    def _get_valid_pos(self, pos: float, use_trims: bool = True, force_from_end: bool = False) -> float:
         """Get a valid pos within the audio track range, trims included if desired.
 
         Parameters
@@ -275,6 +275,8 @@ end_trim)
             The position to constrain in seconds.
         use_trims : bool, optional
             Whether to take current trims into account.
+        force_from_end : bool, optional
+            If true, the input position is always measured from the end no matter its sign.
 
         Returns
         -------
@@ -282,7 +284,9 @@ end_trim)
             A valid position on the audio track.
         """
         if self._player:
-            if pos < 0:
+            if force_from_end:
+                pos = self._player.duration - abs(pos)
+            elif pos < 0:
                 pos = self._player.duration + pos
 
             if self._trim_enabled and use_trims:
@@ -615,7 +619,7 @@ end_trim)
         elif trim_marker == "end_trim":
             if pos == 0.0:
                 pos = -0.01
-            pos = self._get_valid_pos(pos, False)
+            pos = self._get_valid_pos(pos, False, True)
             dpg.set_value(self._t("end_trim"), (pos, -1, 1000, 1))
             dpg.set_value(self._t("end_trim_axis"), pos)
 
@@ -629,7 +633,7 @@ end_trim)
         begin_trim, end_trim = self.get_trims(False)
 
         begin_trim = self._get_valid_pos(begin_trim, False)
-        end_trim_viz = self._get_valid_pos(end_trim, False)
+        end_trim_viz = self._get_valid_pos(end_trim, False, True)
         begin_trim = min(begin_trim, end_trim_viz)
 
         dpg.set_value(self._t("begin_trim"), (-1000, -1, begin_trim, 1))
@@ -710,7 +714,7 @@ end_trim)
         self, sender: str, trims: tuple[float, float], ud: Any
     ) -> None:
         begin_trim = self._get_valid_pos(trims[0] / 1000, False)
-        end_trim = self._get_valid_pos(trims[1] / 1000, False)
+        end_trim = self._get_valid_pos(trims[1] / 1000, False, True)
         dpg.set_value(self._t("begin_trim"), (-10, -1, begin_trim, 1))
         dpg.set_value(self._t("end_trim"), (end_trim, -1, 1000, 1))
         
