@@ -509,6 +509,11 @@ class RTPC:
     def get_name(self, default: Any = None) -> str:
         return lookup_name(self.id, default)
 
+    def get_references(self) -> list[tuple[str, int]]:
+        if self.rtpc_type == RtpcType.Modulator:
+            return [("id", self.id)]
+        return []
+
     def __str__(self) -> str:
         from yonder.game import GameObjects
 
