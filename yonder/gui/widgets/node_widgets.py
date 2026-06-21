@@ -167,7 +167,7 @@ def create_node_widgets(
                     add_node_link(bnk, parent_node, on_node_selected)
 
             if hasattr(node, "children"):
-                with dpg.tree_node(label=µ("Children")):
+                with dpg.tree_node(label=µ("Children"), span_full_width=True):
                     for child_id in node.children:
                         child = bnk.get(child_id, child_id)
                         add_node_link(bnk, child, on_node_selected)
@@ -211,17 +211,31 @@ def create_node_widgets(
 
             if hasattr(node, "properties"):
                 add_node_properties(
-                    node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
+                    node,
+                    on_node_changed,
+                    on_node_selected,
+                    base_tag=tag,
+                    user_data=user_data,
                 )
 
             if hasattr(node, "rtpcs"):
                 add_node_rtpc(
-                    bnk, node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
+                    bnk,
+                    node,
+                    on_node_changed,
+                    on_node_selected,
+                    base_tag=tag,
+                    user_data=user_data,
                 )
 
             if hasattr(node, "states"):
                 add_node_states(
-                    bnk, node, on_node_changed, on_node_selected, base_tag=tag, user_data=user_data
+                    bnk,
+                    node,
+                    on_node_changed,
+                    on_node_selected,
+                    base_tag=tag,
+                    user_data=user_data,
                 )
 
     return tag
@@ -331,7 +345,9 @@ def add_node_states(
         span_full_width=True,
         tag=f"{base_tag}/states",
     ):
-        add_states_table(bnk, node.states, on_states_changed, jump_to=on_node_selected, label=None)
+        add_states_table(
+            bnk, node.states, on_states_changed, jump_to=on_node_selected, label=None
+        )
 
 
 def add_node_link(
@@ -712,29 +728,37 @@ def _create_attributes_action(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    def set_value(path: str, val: Any) -> None:
-        parts = path.split("/")
+    def set_action_value(
+        path: str, transformer: Callable[[Any], Any] = None
+    ) -> Callable[[str, Any, Any], None]:
+        def set_value(sender: str, val: Any, cb_user_data: Any) -> None:
+            parts = path.split("/")
 
-        sub = node.params
-        for p in parts[:-1]:
-            if ":" in p:
-                p, idx = p.split(":")
-                sub = getattr(sub, p)[idx]
-            else:
+            sub = node.params
+            for p in parts[:-1]:
+                if ":" in p:
+                    p, idx = p.split(":")
+                    sub = getattr(sub, p)[idx]
+                else:
+                    sub = getattr(sub, p)
+
+            if transformer:
+                val = transformer(val)
+
+            key = parts[-1]
+            if ":" in key:
+                # Set list item
+                p, idx = key.split(":")
                 sub = getattr(sub, p)
+                sub[idx] = val
+            else:
+                # Set regular member
+                setattr(sub, key, val)
 
-        key = parts[-1]
-        if ":" in key:
-            # Set list item
-            p, idx = key.split(":")
-            sub = getattr(sub, p)
-            sub[idx] = val
-        else:
-            # Set regular member
-            setattr(sub, key, val)
+            if on_node_changed:
+                on_node_changed(base_tag, node, user_data)
 
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        return set_value
 
     type_overrides: dict[str, type] = {
         "switch_group_id": Hash,
@@ -758,7 +782,7 @@ def _create_attributes_action(
                         add_generic_widget(
                             tp,
                             key,
-                            lambda s, a, u: set_value(item_path, a),
+                            set_action_value(item_path),
                             default=sub,
                         )
                 else:
@@ -771,7 +795,7 @@ def _create_attributes_action(
                 add_generic_widget(
                     tp,
                     µ(key, tp),
-                    lambda s, a, u: set_value(val_path, a),
+                    set_action_value(val_path),
                     default=val,
                     not_supported_ok=True,
                 )
@@ -779,14 +803,7 @@ def _create_attributes_action(
     dpg.add_checkbox(
         label="target is bus",
         default_value=bool(node.is_bus),
-        callback=make_setter(
-            node,
-            µ("is_bus"),
-            base_tag,
-            on_node_changed,
-            user_data,
-            int,
-        ),
+        callback=set_action_value("is_bus", int),
     )
     dpg.add_spacer(height=5)
 
@@ -851,6 +868,7 @@ def _create_attributes_attenuation(
         with dpg.tree_node(
             label=µ("Curves to use"),
             default_open=True,
+            span_full_width=True,
             tag=f"{base_tag}/attenuation/curves_to_use",
         ):
             for i, curve in enumerate(node.curves_to_use):
@@ -880,7 +898,7 @@ def _create_attributes_attenuation(
             )
 
         with dpg.tree_node(
-            label=µ("Cone params"), tag=f"{base_tag}/atttenuation/cone_params"
+            label=µ("Cone params"), span_full_width=True, tag=f"{base_tag}/atttenuation/cone_params"
         ):
             dpg.add_checkbox(
                 label=µ("Cone enabled"),
@@ -1089,7 +1107,7 @@ def _create_attributes_layercontainer(
         new_item=create_layer,
         on_add=on_add,
         on_remove=on_remove,
-        #label=µ("Layers"),
+        # label=µ("Layers"),
         add_item_label=µ("+ Layer"),
     )
 
@@ -1275,6 +1293,7 @@ def _create_attributes_musicswitchcontainer(
         with dpg.tree_node(
             label=µ("Decision Tree"),
             default_open=True,
+            span_full_width=True,
             tag=f"{base_tag}/musicswitchcontainer/decision_tree",
         ):
             for child in node.tree.children:
@@ -1700,7 +1719,10 @@ def _create_attributes_state(
         ref_node = bnk[ref]
         states: StateChunk = ref_node.states
         properties = {i: p for i, p in enumerate(states.state_property_info)}
-        params = [properties[i].property.name for i in node.parameters]
+        params = [
+            properties[i].property.name if i < len(properties) else "?"
+            for i in node.parameters
+        ]
 
         add_node_link(bnk, ref_node, on_node_selected)
         dpg.add_text(", ".join(params))
@@ -1725,7 +1747,11 @@ def _create_attributes_state(
         next_idx = next((i for i in range(100) if i not in node.parameters), 0)
         done((next_idx, 0.0))
 
-    def on_param_added(sender: str, info: tuple[int, tuple[int, float], list[tuple[int, float]]], cb_user_data: Any) -> None:
+    def on_param_added(
+        sender: str,
+        info: tuple[int, tuple[int, float], list[tuple[int, float]]],
+        cb_user_data: Any,
+    ) -> None:
         prop_idx, value = info[1]
         node.parameters.append(prop_idx)
         node.values.append(value)
@@ -1733,7 +1759,11 @@ def _create_attributes_state(
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
-    def on_param_removed(sender: str, info: tuple[int, tuple[int, float], list[tuple[int, float]]], cb_user_data: Any) -> None:
+    def on_param_removed(
+        sender: str,
+        info: tuple[int, tuple[int, float], list[tuple[int, float]]],
+        cb_user_data: Any,
+    ) -> None:
         param_idx = info[0]
         node.parameters.pop(param_idx)
         node.values.pop(param_idx)
@@ -1804,6 +1834,7 @@ def _create_attributes_switchcontainer(
 
         with dpg.tree_node(
             label=µ("Switches", "SwitchContainer"),
+            span_full_width=True,
             tag=f"{base_tag}/switchcontainer/switches",
         ):
             for switch in node.switch_groups:
@@ -1813,6 +1844,7 @@ def _create_attributes_switchcontainer(
                 with dpg.tree_node(
                     label=label,
                     show=bool(switch.nodes),
+                    span_full_width=True,
                     tag=f"{base_tag}/node_{node.id}/switch_{switch.switch_id}",
                 ):
                     for nid in switch.nodes:
