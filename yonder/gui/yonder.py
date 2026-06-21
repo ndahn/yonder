@@ -1497,6 +1497,10 @@ class BanksOfYonder(DpgItem):
     ) -> None:
         item, node = user_data
 
+        if sender and dpg.get_item_type(sender) == "mvSelectable":
+            # Keep sender selected
+            dpg.set_value(sender, True)
+
         if item != self._selected_root:
             # Don't regenerate when the node is already selected
             self._on_node_selected(item, app_data, node)
