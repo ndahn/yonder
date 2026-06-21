@@ -143,6 +143,31 @@ class PropID(IntEnum):
     ReflectionBusVolume = 0x48
 
 
+# TODO these should be used by the TimeModulator instead of PropID
+class ModulatorPropID(IntEnum):
+    Scope: 0x0
+    EnvelopeStopPlayback: 0x1
+    LFODepth: 0x2
+    LFOAttack: 0x3
+    LFOFrequency: 0x4
+    LFOWaveform: 0x5
+    LFOSmoothing: 0x6
+    LFOPWM: 0x7
+    LFOInitialPhase: 0x8
+    LFORetrigger: 0x9
+    EnvelopeAttackTime: 0xA
+    EnvelopeAttackCurve: 0xB
+    EnvelopeDecayTime: 0xC
+    EnvelopeSustainLevel: 0xD
+    EnvelopeSustainTime: 0xE
+    EnvelopeReleaseTime: 0xF
+    EnvelopeTriggerOn: 0x10
+    TimeDuration: 0x11
+    TimeLoops: 0x12
+    TimePlaybackRate: 0x13
+    TimeInitialDelay: 0x14
+
+
 class ParameterID(IntEnum):
     Volume = 0x0
     LFE = 0x1

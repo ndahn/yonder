@@ -282,7 +282,7 @@ class add_states_table(DpgItem):
 
     def _state_value_to_row(self, state_value: AkState, idx: int) -> None:
         name = lookup_name(state_value.state_id, f"#{state_value.state_id}")
-        
+
         state: State = self._bnk.get(state_value.state_instance_id)
         properties = self.get_controlled_properties()
         longest_prop = max(len(p.name) for p in properties.values())
@@ -320,7 +320,7 @@ class add_states_table(DpgItem):
                 with dpg.group(horizontal=True):
                     dpg.add_text(prop.name.rjust(longest_prop))
                     dpg.add_checkbox(
-                        #label=prop.name.ljust(longest_prop),
+                        # label=prop.name.ljust(longest_prop),
                         default_value=affected,
                         enabled=bool(state),
                         callback=self._set_state_property_connected,
@@ -349,7 +349,7 @@ class add_states_table(DpgItem):
         while dpg.does_item_exist(ret[-1]):
             offset += 1
             ret.append(self._t(f"{state.id}_{prop.name}_#{offset}"))
-        
+
         return ret
 
     def _set_state_property_connected(
@@ -375,7 +375,7 @@ class add_states_table(DpgItem):
 
             state.parameters.append(prop_idx)
             state.values.append(value)
-            
+
             for widget in value_widgets:
                 dpg.configure_item(widget, enabled=True, default_value=value)
         else:
@@ -387,7 +387,7 @@ class add_states_table(DpgItem):
             param_idx = state.parameters.index(prop_idx)
             state.parameters.pop(param_idx)
             state.values.pop(param_idx)
-            
+
             for widget in value_widgets:
                 dpg.disable_item(widget)
 
@@ -475,10 +475,15 @@ class add_states_table(DpgItem):
 
         return ret
 
-    def update_states_on_property_removal(self, prop: PropID, prop_idx: int, include_shared: bool = False) -> None:
+    def update_states_on_property_removal(
+        self, prop: PropID, prop_idx: int, include_shared: bool = False
+    ) -> None:
         for group in self._states.state_group_chunks:
             for aks in group.states:
-                if not include_shared and self._bnk.tree.in_degree(aks.state_instance_id) > 1:
+                if (
+                    not include_shared
+                    and self._bnk.tree.in_degree(aks.state_instance_id) > 1
+                ):
                     continue
 
                 state: State = self._bnk.get(aks.state_instance_id)

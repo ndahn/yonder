@@ -88,13 +88,13 @@ class add_properties_table(DpgItem):
         for idx, prop in enumerate(self._properties):
             dpg.configure_item(
                 self._combo_tag(idx),
-                items=[p.name for p in self._get_available_props(exclude=prop)],
+                items=sorted(p.name for p in self._get_available_props(exclude=prop)),
             )
 
     def _add_row(self, idx: int, prop: PropID, val: float) -> None:
         with dpg.table_row(parent=self._tag):
             dpg.add_combo(
-                items=[p.name for p in self._get_available_props(exclude=prop)],
+                items=sorted(p.name for p in self._get_available_props(exclude=prop)),
                 default_value=prop.name,
                 width=-1,
                 callback=self._on_prop_type_changed,

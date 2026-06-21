@@ -11,6 +11,7 @@ from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
 @dataclass(repr=False, eq=False)
 class TimeModulator(HIRCNode):
     body_type: ClassVar[int] = 22
+    # TODO use custom PropBundle with ModulatorPropID entries instead
     prop_bundle: list[PropBundle] = field(default_factory=list)
     ranged_modifiers: PropRangedModifiers = field(default_factory=PropRangedModifiers)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
@@ -28,6 +29,10 @@ class TimeModulator(HIRCNode):
                 obj.set_property(prop, val)
 
         return obj
+
+    @property
+    def properties(self) -> list[PropBundle]:
+        return self.prop_bundle
 
     @property
     def rtpcs(self) -> list[RTPC]:
