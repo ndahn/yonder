@@ -512,6 +512,7 @@ class RTPC:
     def get_references(self) -> list[tuple[str, int]]:
         if self.rtpc_type == RtpcType.Modulator:
             return [("id", self.id)]
+
         return []
 
     def __str__(self) -> str:

@@ -11,10 +11,12 @@ Hash = NewType("Hash", int)
 
 
 class LookupTable:
-    def __init__(self, data: dict[int, str] | Path = None, enable_write: bool = False):
+    def __init__(self, data: dict[int, str] | Path = None, enable_write: bool = False, fuzzy: bool = True):
         self._table = {}
+        self._fuzzy_table = {}
         self.file = None
         self.enable_write = enable_write
+        self.fuzzy = fuzzy
 
         if isinstance(data, dict):
             self._table.update(data)
@@ -29,6 +31,29 @@ class LookupTable:
 
                     h = calc_hash(x)
                     self._table[h] = x.strip(" \n")
+
+        if fuzzy:
+            self.fuzzify()
+
+    def fuzzify(self) -> None:
+        fuzz = set()
+
+        for val in self._table.values():
+            variations = [val]
+
+            if val.startswith("Play_"):
+                variations.append(f"Stop_{val[5:]}")
+            elif val.startswith("Stop_"):
+                variations.append(f"Play_{val[5:]}")
+
+            for variant in variations:
+                end = variant[-1]
+                if end.isdigit():
+                    end = int(end)
+                    fuzz.add(f"{variant[:-1]}{end - 1}")
+                    fuzz.add(f"{variant[:-1]}{end + 1}")
+        
+        self._fuzzy_table.update({calc_hash(v): v for v in fuzz})
 
     def prune(self, corpus: str) -> None:
         # Reduce to the hashes that are actually found in the corpus
@@ -57,7 +82,11 @@ class LookupTable:
         self.file = path
 
     def lookup_name(self, h: Hash, default: Any = None) -> str:
-        return self._table.get(h, default)
+        ret = self._table.get(h)
+        if ret is not None:
+            return ret
+
+        return self._fuzzy_table.get(h, default)
 
     def __len__(self) -> int:
         return len(self._table)
