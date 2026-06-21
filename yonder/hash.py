@@ -53,7 +53,8 @@ class LookupTable:
                     fuzz.add(f"{variant[:-1]}{end - 1}")
                     fuzz.add(f"{variant[:-1]}{end + 1}")
         
-        self._fuzzy_table.update({calc_hash(v): v for v in fuzz})
+        # NOTE: be careful not to use calc_hash here, as it would update the table and save
+        self._fuzzy_table.update({fnv_1a(v): v for v in fuzz})
 
     def prune(self, corpus: str) -> None:
         # Reduce to the hashes that are actually found in the corpus
