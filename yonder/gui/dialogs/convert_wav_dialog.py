@@ -62,7 +62,7 @@ class convert_wavs_dialog(DpgItem):
 
         self.show_message()
 
-        with loading_indicator(µ("Converting...")):
+        with loading_indicator(µ("Converting...")) as loading:
             out_files = list(self.wav_paths)
 
             if dpg.get_value(self._t("trim_silence")):
