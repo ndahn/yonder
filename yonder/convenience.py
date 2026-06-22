@@ -370,37 +370,28 @@ def _setup_bgm(
 def create_boss_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
-    state_path: Hash | list[Hash],
+    master_branch: Hash | list[Hash],
     tracks: list[Path] | Path,
     *,
     loop_markers: list[tuple[float, float]] = None,
-    play_preloop_intro: list[bool] = None,
+    play_intro: list[bool] = None,
     add_nobattle_state: bool = True,
-    default_transition: tuple[MusicFade, MusicFade] = None,
-    phase_transitions: list[tuple[MusicFade, MusicFade]] = None,
-    self_transitions: list[tuple[MusicFade, MusicFade]] = None,
-    repeat_transitions: list[tuple[MusicFade, MusicFade]] = None,
+    default_transition: MusicTransitionRule = None,
+    phase_transition: MusicTransitionRule = None,
+    intro_transition: MusicTransitionRule = None,
+    extra_transitions: list[MusicTransitionRule] = None,
     properties: dict[PropID, float] = None,
 ) -> tuple[list[HIRCNode]]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
+    new_nodes: list[HIRCNode] = []
 
     if isinstance(tracks, Path):
-        tracks = list(tracks)
+        tracks = [tracks]
 
     for f in tracks:
         if not f.name.endswith(".wem"):
             raise ValueError("All tracks must be .wem files")
-
-    # Prepare the new master state path
-    if isinstance(state_path, (str, int)):
-        bgm_enemy_type = state_path
-        state_path: list[str] = []
-        for arg in master.arguments:
-            if lookup_name(arg) == "BgmEnemyType":
-                state_path.append(bgm_enemy_type)
-            else:
-                state_path.append("*")
 
     # Setup the boss phase music manager
     if properties is None:
@@ -413,62 +404,12 @@ def create_boss_bgm(
         parent=master.id,
         props=properties | {PropID.Priority: 80.0},
     )
+    new_nodes.append(boss_msc)
 
-    base_transition = MusicTransitionRule().configure(
-        src_transition_time=1500,
-        src_fade_offset=1500,
-        src_fade_curve=CurveInterpolation.Sine,
-        dst_transition_time=500,
-        dst_fade_offset=-500,
-        dst_fade_curve=CurveInterpolation.Log1,
-        dst_play_pre_entry=True,
-    )
-
-    intro_transition = MusicTransitionRule().configure(
-        src_transition_time=100,
-        src_fade_offset=100,
-        src_fade_curve=CurveInterpolation.Sine,
-        dest_transition_time=100,
-        dest_fade_curve=CurveInterpolation.Exp3,
-        dest_play_pre_entry=True,
-    )
-
-    # Default and heatup tracks
-    boss_phases = ["*"]
-    if len(tracks) > 1:
-        boss_phases += [f"HU{i + 1}" for i in range(len(tracks) - 1)]
-
-    boss_state_keys = parse_state_path(boss_phases)
-    new_nodes: list[HIRCNode] = [boss_msc]
-    phase_masters: list[MusicRandomSequenceContainer] = []
-
-    # Setup the phase music tracks
-    for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
-        phase_nodes = _setup_bgm(
-            bnk,
-            bgm,
-            intro=play_preloop_intro and play_preloop_intro[i],
-            loop_start=loop_markers[i][0],
-            loop_end=loop_markers[i][1],
-            fadein=0.3,
-            base_transition=base_transition,
-            intro_transition=intro_transition,
-            extra_transitions=repeat_transitions,
-        )
-
-        boss_msc.add_branch([phase], phase_nodes[0].id)
-        new_nodes.extend(phase_nodes)
-
-    # To disable the boss music, presumably not used by bosses you can't run away from
-    if add_nobattle_state:
-        boss_msc.add_branch(["NoBattle"], 0)
-
-    # Setup phase transition rules
+    # Setup transition rules
     if default_transition:
-        rule = boss_msc.music_trans_node_params.transition_rules[0]
-        rule.apply_src_fade(default_transition[0])
-        rule.apply_dst_fade(default_transition[1])
-        rule.source_transition_rule.sync_type = SyncType.Immediate
+        default_transition.source_transition_rule.sync_type = SyncType.Immediate
+        boss_msc.music_trans_node_params.transition_rules[0] = default_transition
     else:
         rule = boss_msc.music_trans_node_params.transition_rules[0]
         rule.configure(
@@ -478,35 +419,67 @@ def create_boss_bgm(
             dst_transition_time=500,
         )
 
-    if phase_transitions:
-        # the "any" phase will use the default transition
-        for i in range(1, len(boss_phases) - 1):
-            if phase_transitions[i]:
-                # TODO implement
-                rule = boss_msc.add_transition_rule(
-                    phase_masters[i].id,
-                    phase_masters[i + 1].id,
-                )
-                rule.apply_src_fade(phase_transitions[i][0])
-                rule.apply_dst_fade(phase_transitions[i][1])
-                rule.source_transition_rule.sync_type = SyncType.Immediate
+    if not phase_transition:
+        phase_transition = MusicTransitionRule().configure(
+            src_transition_time=1500,
+            src_fade_offset=1500,
+            src_fade_curve=CurveInterpolation.Sine,
+            dst_transition_time=500,
+            dst_fade_offset=-500,
+            dst_fade_curve=CurveInterpolation.Log1,
+            dst_play_pre_entry=True,
+        )
 
-    if self_transitions:
-        # the "any" phase will use the default transition
-        for i in range(1, len(boss_phases)):
-            if self_transitions[i]:
-                rule = boss_msc.add_transition_rule(
-                    phase_masters[i].id,
-                    phase_masters[i].id,
-                )
-                rule.apply_src_fade(self_transitions[i][0])
-                rule.apply_dst_fade(self_transitions[i][1])
-                rule.source_transition_rule.sync_type = SyncType.Immediate
+    if not intro_transition:
+        intro_transition = MusicTransitionRule().configure(
+            src_transition_time=100,
+            src_fade_offset=100,
+            src_fade_curve=CurveInterpolation.Sine,
+            dest_transition_time=100,
+            dest_fade_curve=CurveInterpolation.Exp3,
+            dest_play_pre_entry=True,
+        )
 
-    # Add new bgm decision branch to master
-    master.add_branch(state_path, boss_msc.id)
+    # Prepare the new master state path
+    if isinstance(master_branch, (str, int)):
+        bgm_enemy_type = master_branch
+        master_branch: list[str] = []
+        for arg in master.arguments:
+            if lookup_name(arg) == "BgmEnemyType":
+                master_branch.append(bgm_enemy_type)
+            else:
+                master_branch.append("*")
 
-    # Add nodes to soundbank
+    # Default and heatup tracks
+    boss_phases = ["*"]
+    if len(tracks) > 1:
+        boss_phases += [f"HU{i + 1}" for i in range(len(tracks) - 1)]
+
+    boss_state_keys = parse_state_path(boss_phases)
+
+    # Setup the phase music tracks
+    for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
+        phase_nodes = _setup_bgm(
+            bnk,
+            bgm,
+            intro=play_intro and play_intro[i],
+            loop_start=loop_markers[i][0],
+            loop_end=loop_markers[i][1],
+            fadein=0.3,
+            base_transition=phase_transition,
+            intro_transition=intro_transition,
+            extra_transitions=extra_transitions,
+        )
+
+        boss_msc.add_branch([phase], phase_nodes[0].id)
+        new_nodes.extend(phase_nodes)
+
+    # To disable the boss music, presumably not used by bosses you can't run away from
+    if add_nobattle_state:
+        boss_msc.add_branch(["NoBattle"], 0)
+
+    # Add to master and soundbank
+    master.add_branch(master_branch, boss_msc.id)
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
@@ -514,9 +487,10 @@ def create_boss_bgm(
 def create_ambience_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
-    master_branch: list[Hash],
+    master_branch: Hash | list[Hash],
     location_tree: DecisionNode[AmbientBgm],
     *,
+    default_transition: MusicTransitionRule = None,
     base_transition: MusicTransitionRule = None,
     intro_transition: MusicTransitionRule = None,
     extra_transitions: list[MusicTransitionRule] = None,
@@ -535,16 +509,20 @@ def create_ambience_bgm(
     )
     new_nodes.append(ambience_msc)
 
-    # Setup default transition
-    master_rule = ambience_msc.music_trans_node_params.transition_rules[0]
-    master_rule.configure(
-        src_transition_time=1000,
-        src_fade_offset=1000,
-        src_fade_curve=CurveInterpolation.Linear,
-        src_sync_type=SyncType.Immediate,
-        dst_transition_time=1000,
-        dst_fade_curve=CurveInterpolation.Linear,
-    )
+    # Setup transition rules
+    if default_transition:
+        default_transition.source_transition_rule.sync_type = SyncType.Immediate
+        ambience_msc.music_trans_node_params.transition_rules[0] = default_transition
+    else:
+        rule = ambience_msc.music_trans_node_params.transition_rules[0]
+        rule.configure(
+            src_transition_time=1000,
+            src_fade_offset=1000,
+            src_fade_curve=CurveInterpolation.Linear,
+            src_sync_type=SyncType.Immediate,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.Linear,
+        )
 
     if not base_transition:
         base_transition = MusicTransitionRule().configure(
@@ -563,6 +541,16 @@ def create_ambience_bgm(
             dst_transition_time=1000,
             dst_fade_curve=CurveInterpolation.Exp3,
         )
+
+    # Prepare the new master state path
+    if isinstance(master_branch, (str, int)):
+        common_place_type = master_branch
+        master_branch: list[str] = []
+        for arg in master.arguments:
+            if lookup_name(arg) == "CommonPlaceType":
+                master_branch.append(common_place_type)
+            else:
+                master_branch.append("*")
 
     location_branches = location_tree.flatten()
     for branch, bgm in location_branches.items():
@@ -674,7 +662,7 @@ def create_ambience_soundscape(
 
 
 #######################################
-### EXPERIMENTAL 
+### EXPERIMENTAL
 #######################################
 
 
