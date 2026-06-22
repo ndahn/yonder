@@ -25,12 +25,12 @@ class LookupTable:
 
             if data.is_file():
                 for x in data.read_text("utf-8").splitlines():
-                    x = x.strip()
+                    x = x.strip(" \n")
                     if x.startswith("#"):
                         continue
 
-                    h = calc_hash(x)
-                    self._table[h] = x.strip(" \n")
+                    h = fnv_1a(x)
+                    self._table[h] = x
 
         if fuzzy:
             self.fuzzify()
@@ -54,7 +54,7 @@ class LookupTable:
                     fuzz.add(f"{variant[:-1]}{end + 1}")
         
         # NOTE: be careful not to use calc_hash here, as it would update the table and save
-        self._fuzzy_table.update({fnv_1a(v): v for v in fuzz})
+        self._fuzzy_table = {fnv_1a(v): v for v in fuzz}
 
     def prune(self, corpus: str) -> None:
         # Reduce to the hashes that are actually found in the corpus
