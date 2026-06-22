@@ -1135,6 +1135,8 @@ def _create_attributes_musicrandomsequencecontainer(
         dpg.add_separator()
         dpg.add_spacer(height=3)
 
+        # TODO playlist 
+
 
 def _create_attributes_musicswitchcontainer(
     bnk: Soundbank,
@@ -1675,6 +1677,8 @@ def _create_attributes_randomsequencecontainer(
             columns=(µ("Item", "table"), µ("Weight", "table")),
             tag=f"{base_tag}/randomsequencecontainer/playlist",
         )
+
+        # TODO playlist 
 
 
 def _create_attributes_sound(

@@ -295,11 +295,14 @@ class Soundbank:
             if id not in self._id2index:
                 return id
 
-    def add_nodes(self, *nodes: HIRCNode) -> None:
+    def add_nodes(self, *nodes: HIRCNode, exist_ok: bool = False) -> None:
         for n in nodes:
             if n.id <= 0:
                 raise ValueError(f"Node {n} has invalid ID {n.id}")
             if n.id in self._id2index:
+                if exist_ok:
+                    continue
+                
                 raise ValueError(f"Soundbank already contains a node with ID {n.id}")
 
             self.hirc.objects.append(n)
