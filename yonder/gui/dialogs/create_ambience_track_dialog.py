@@ -7,7 +7,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
-from yonder.convenience import create_ambience, DecisionNode
+from yonder.convenience import create_ambience_soundscape, DecisionNode
 from yonder.game import GameObjects
 from yonder.wem import wav2wem
 from yonder.gui import style
@@ -443,7 +443,7 @@ Ambience tree:
             # TODO transition rules?
             ambience_tree = build_tree(self._track_entries, self.ambience_args)
 
-            nodes = create_ambience(
+            nodes = create_ambience_soundscape(
                 self.bnk,
                 self.msc,
                 self.location_state_path,

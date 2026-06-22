@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Generic, TypeVar
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,16 +32,37 @@ from yonder.enums import (
     PlaybackMode,
     RandomMode,
     VirtualQueueBehavior,
+    SoundType,
 )
+from yonder.game import Game
 from yonder.util import logger, parse_state_path
 
 
+_T = TypeVar("_T")
+
+
 @dataclass
-class DecisionNode:
+class StateCtrl:
+    group: str
+    state: str
+    modifiers: dict[PropID, float]
+
+
+@dataclass
+class AmbientBgm:
+    audio: Path
+    battle_audio_layer: Path = None
+    loop_start: float = 0.0
+    loop_end: float = 0.0
+    has_intro: bool = False
+
+
+@dataclass
+class DecisionNode(Generic[_T]):
     arg: str = ""
     value: str = "*"
     children: list[DecisionNode] = field(default_factory=list)
-    leaf_value: Any = None
+    leaf_value: _T = None
 
     @property
     def is_leaf(self) -> bool:
@@ -56,7 +77,7 @@ class DecisionNode:
 
         return args
 
-    def flatten(self) -> dict[tuple[str, ...], Any]:
+    def flatten(self) -> dict[tuple[str, ...], _T]:
         def delve(node: DecisionNode, path: list[str]):
             if node.is_leaf:
                 yield (tuple(path), node.leaf_value)
@@ -170,6 +191,182 @@ def create_simple_sound(
     return ((play, stop), rsc, sounds)
 
 
+def _setup_bgm(
+    bnk: Soundbank,
+    tracks: Path | list[Path],
+    *,
+    intro: bool = False,
+    loop_start: float = 0.0,
+    loop_end: float = 0.0,
+    fadein: float = 0.3,
+    base_transition: MusicTransitionRule = None,
+    intro_transition: MusicTransitionRule = None,
+    extra_transitions: list[MusicTransitionRule] = None,
+    track_state_ctrl: dict[int, list[StateCtrl]] = None,
+) -> list[HIRCNode]:
+    new_nodes = []
+
+    if isinstance(tracks, Path):
+        tracks = [tracks]
+
+    if not track_state_ctrl:
+        track_state_ctrl = {}
+
+    root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id())
+    new_nodes.append(root_mrsc)
+
+    if intro and loop_start <= 0:
+        raise ValueError("Intro enabled, but LoopStart is 0")
+
+    if intro:
+        if loop_start <= 1.0:
+            logger.warning(f"Extremly short intro ({loop_start * 1000:0d}ms)")
+
+        intro_seg = MusicSegment.new(
+            bnk.new_id(), parent=root_mrsc, props={PropID.Priority: 80.0}
+        )
+        intro_seg.set_marker(MarkerId.LoopStart.value, 0.0)
+        intro_seg.set_marker(MarkerId.LoopEnd.value, loop_start * 1000)
+        new_nodes.append(intro_seg)
+
+        for track_idx, track in enumerate(tracks):
+            mt = MusicTrack.new(
+                bnk.new_id(), track, parent=intro_seg, props={PropID.Priority: 80.0}
+            )
+            mt.set_trims(0.0, loop_start * 1000)
+
+            if fadein:
+                mt.add_clip(
+                    ClipAutomationType.FadeIn,
+                    [
+                        RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
+                        RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+                    ],
+                )
+
+            for ctrl in track_state_ctrl.get(track_idx, []):
+                mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+
+            intro_seg.duration = mt.playlist[0].source_duration
+            intro_seg.attach(mt)
+            new_nodes.append(mt)
+
+        # Needs a root playlist item first
+        playlist_root = root_mrsc.add_playlist_item(
+            bnk.new_id(),
+            0,
+            ers_type=0,
+            avoid_repeat_count=1,
+        )
+        # Setup playlist item as loop intro
+        root_mrsc.add_playlist_item(
+            bnk.new_id(),
+            intro_seg.id,
+            loop_base=True,
+            parent=playlist_root,
+        )
+
+    # Setup the segment and music track
+    bgm_seg = MusicSegment.new(
+        bnk.new_id(), parent=root_mrsc, props={PropID.Priority: 80.0}
+    )
+    new_nodes.append(bgm_seg)
+
+    for track_idx, track in enumerate(tracks):
+        mt = MusicTrack.new(
+            bnk.new_id(), track, parent=bgm_seg, props={PropID.Priority: 80.0}
+        )
+
+        # Pronounced fade in for the track
+        if fadein > 0.0:
+            mt.add_clip(
+                ClipAutomationType.FadeIn,
+                [
+                    RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
+                    RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+                ],
+            )
+
+        for ctrl in track_state_ctrl.get(track_idx, []):
+            mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+
+        # Add to segment
+        track_duration_ms = mt.playlist[0].source_duration
+        bgm_seg.duration = track_duration_ms
+        bgm_seg.attach(mt)
+        new_nodes.append(mt)
+
+    # Adjust base transition rule
+    if base_transition:
+        base_transition.source_transition_rule.sync_type = SyncType.ExitMarker
+        root_mrsc.music_trans_node_params.transition_rules[0] = base_transition
+    else:
+        base_rule = root_mrsc.music_trans_node_params.transition_rules[0]
+        base_rule.configure(
+            src_sync_type=SyncType.ExitMarker,
+            src_transition_time=1500,
+            src_fade_offset=1500,
+            src_fade_curve=CurveInterpolation.Sine,
+            dst_transition_time=500,
+            dst_fade_offset=-500,
+            dst_fade_curve=CurveInterpolation.Log1,
+            dst_play_pre_entry=True,
+        )
+
+    # Intro transition rule
+    if intro:
+        base_rule = root_mrsc.music_trans_node_params.transition_rules[0]
+        base_rule.source_transition_rule.play_post_exit = 0
+
+        if intro_transition:
+            intro_transition.source_ids.append(intro_seg.id)
+            intro_transition.destination_ids.append(bgm_seg.id)
+            intro_transition.source_transition_rule.sync_type = SyncType.ExitMarker
+            root_mrsc.music_trans_node_params.transition_rules.append(intro_transition)
+        else:
+            root_mrsc.add_transition_rule(
+                intro_seg.id,
+                bgm_seg.id,
+                SyncType.ExitMarker,
+                source_transition_time=1000,
+                source_fade_offset=1000,
+                source_fade_curve=CurveInterpolation.Sine,
+                dest_transition_time=1000,
+                dest_fade_curve=CurveInterpolation.Exp3,
+                dest_play_pre_entry=True,
+            )
+
+    # Add markers for looping
+    if not loop_end:
+        loop_end = bgm_seg.duration
+    else:
+        loop_end *= 1000
+
+    if loop_end < 0:
+        loop_end = bgm_seg.duration - loop_end
+
+    bgm_seg.set_marker(MarkerId.LoopStart.value, loop_start)
+    # According to Shion this is probably just for testing
+    bgm_seg.set_marker("LoopCheck", loop_end - 3000)
+    bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
+
+    # NOTE: Either the begin_trim or the LoopStart marker must remain at 0!
+
+    # Add the segment to the music container's playlist
+    if not root_mrsc.playlist_items:
+        playlist_root = root_mrsc.add_playlist_item(bnk.new_id(), 0, ers_type=0)
+    else:
+        playlist_root = root_mrsc.playlist_items[0].playlist_item_id
+
+    root_mrsc.add_playlist_item(bnk.new_id(), bgm_seg.id, parent=playlist_root)
+
+    # Additional transition rules
+    if extra_transitions:
+        root_mrsc.music_trans_node_params.transition_rules.extend(extra_transitions)
+
+    return new_nodes
+
+
 def create_boss_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
@@ -217,6 +414,25 @@ def create_boss_bgm(
         props=properties | {PropID.Priority: 80.0},
     )
 
+    base_transition = MusicTransitionRule().configure(
+        src_transition_time=1500,
+        src_fade_offset=1500,
+        src_fade_curve=CurveInterpolation.Sine,
+        dst_transition_time=500,
+        dst_fade_offset=-500,
+        dst_fade_curve=CurveInterpolation.Log1,
+        dst_play_pre_entry=True,
+    )
+
+    intro_transition = MusicTransitionRule().configure(
+        src_transition_time=100,
+        src_fade_offset=100,
+        src_fade_curve=CurveInterpolation.Sine,
+        dest_transition_time=100,
+        dest_fade_curve=CurveInterpolation.Exp3,
+        dest_play_pre_entry=True,
+    )
+
     # Default and heatup tracks
     boss_phases = ["*"]
     if len(tracks) > 1:
@@ -228,155 +444,20 @@ def create_boss_bgm(
 
     # Setup the phase music tracks
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
-        bgm = bnk.add_wem(bgm, SourceType.Streaming)
-
-        phase_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=boss_msc)
-        phase_masters.append(phase_mrsc)
-
-        # Phase intro
-        has_intro = False
-        if play_preloop_intro and play_preloop_intro[i]:
-            if loop_markers and loop_markers[i] is not None:
-                has_intro = True
-
-                main_loop_start = loop_markers[i][0]
-                if main_loop_start <= 1000:
-                    logger.warning(f"Extremly short intro for phase {i}")
-
-                intro_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrsc)
-                intro_track = MusicTrack.new(bnk.new_id(), bgm, parent=intro_seg)
-
-                # Pronounced fade-in
-                intro_track.add_clip(
-                    ClipAutomationType.FadeIn,
-                    [
-                        RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                        RTPCGraphPoint(0.3, 1.0, CurveInterpolation.Constant),
-                    ],
-                )
-
-                intro_seg.attach(intro_track)
-                intro_seg.duration = intro_track.playlist[0].source_duration
-
-                # Trim track to loop_markers marker
-                intro_seg.set_marker(MarkerId.LoopStart.value, 0.0)
-                intro_seg.set_marker(MarkerId.LoopEnd.value, main_loop_start)
-                intro_track.set_trims(0.0, main_loop_start - 1000)
-
-                # Needs a root playlist item first
-                mrs_playlist_root = phase_mrsc.add_playlist_item(
-                    bnk.new_id(),
-                    0,
-                    ers_type=0,
-                    avoid_repeat_count=1,
-                )
-                # Setup playlist item as loop intro
-                phase_mrsc.add_playlist_item(
-                    bnk.new_id(),
-                    intro_seg.id,
-                    loop_base=True,
-                    parent=mrs_playlist_root,
-                )
-            else:
-                logger.warning(
-                    f"Phase {i} has play_intro enabled, but no loop_markers were provided"
-                )
-
-        # Setup the segment and music track
-        phase_seg = MusicSegment.new(bnk.new_id(), parent=phase_mrsc)
-        phase_track = MusicTrack.new(bnk.new_id(), bgm, parent=phase_seg)
-
-        # Pronounced fade in for the track
-        phase_track.add_clip(
-            ClipAutomationType.FadeIn,
-            [
-                RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                RTPCGraphPoint(0.3, 1.0, CurveInterpolation.Constant),
-            ],
+        phase_nodes = _setup_bgm(
+            bnk,
+            bgm,
+            intro=play_preloop_intro and play_preloop_intro[i],
+            loop_start=loop_markers[i][0],
+            loop_end=loop_markers[i][1],
+            fadein=0.3,
+            base_transition=base_transition,
+            intro_transition=intro_transition,
+            extra_transitions=repeat_transitions,
         )
 
-        # Add to segment
-        track_duration_ms = phase_track.playlist[0].source_duration
-        phase_seg.attach(phase_track)
-        phase_seg.duration = track_duration_ms
-
-        # Adjust base transition rule
-        rule = phase_mrsc.music_trans_node_params.transition_rules[0]
-        rule.configure(
-            src_sync_type=SyncType.ExitMarker,
-            src_transition_time=1500,
-            src_fade_offset=1500,
-            src_fade_curve=CurveInterpolation.Sine,
-            dst_transition_time=500,
-            dst_fade_offset=-500,
-            dst_fade_curve=CurveInterpolation.Log1,
-            dst_play_pre_entry=True,
-        )
-
-        # Intro transition rule
-        if has_intro:
-            rule = phase_mrsc.music_trans_node_params.transition_rules[0]
-            rule.source_transition_rule.play_post_exit = 0
-
-            phase_mrsc.add_transition_rule(
-                intro_seg.id,
-                phase_seg.id,
-                SyncType.ExitMarker,
-                source_transition_time=100,
-                source_fade_offset=100,
-                source_fade_curve=CurveInterpolation.Sine,
-                dest_transition_time=100,
-                dest_fade_curve=CurveInterpolation.Exp3,
-                dest_play_pre_entry=True,
-            )
-
-        # Add markers for looping
-        if loop_markers and len(loop_markers) > i and loop_markers[i]:
-            loop_start, loop_end = loop_markers[i]
-        else:
-            loop_start = 0.0
-            loop_end = track_duration_ms
-
-        phase_seg.set_marker(MarkerId.LoopStart.value, loop_start)
-        # According to Shion this is probably just for testing
-        phase_seg.set_marker("LoopCheck", loop_end - 3000)
-        phase_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
-        # Don't trim the loop track!
-
-        # Add the segment to the music container's playlist
-        if not phase_mrsc.playlist_items:
-            mrs_playlist_root = phase_mrsc.add_playlist_item(
-                bnk.new_id(), 0, ers_type=0
-            )
-        else:
-            mrs_playlist_root = phase_mrsc.playlist_items[0].playlist_item_id
-
-        phase_mrsc.add_playlist_item(
-            bnk.new_id(), phase_seg.id, parent=mrs_playlist_root
-        )
-
-        # Setup transition rules when repeating song
-        if repeat_transitions and i < len(repeat_transitions):
-            if i == 0:
-                rule = phase_mrsc.music_trans_node_params.transition_rules[0]
-            else:
-                rule = phase_mrsc.add_transition_rule(
-                    phase_seg.id,
-                    phase_seg.id,
-                )
-
-            rule.apply_src_fade(repeat_transitions[i][0])
-            rule.apply_dst_fade(repeat_transitions[i][1])
-            rule.source_transition_rule.sync_type = SyncType.ExitMarker
-
-        # Add this phase to the boss music manager
-        boss_msc.add_branch([phase], phase_mrsc.id)
-
-        # Collect the nodes we added
-        new_nodes.append(phase_mrsc)
-        if has_intro:
-            new_nodes.extend((intro_seg, intro_track))
-        new_nodes.extend((phase_seg, phase_track))
+        boss_msc.add_branch([phase], phase_nodes[0].id)
+        new_nodes.extend(phase_nodes)
 
     # To disable the boss music, presumably not used by bosses you can't run away from
     if add_nobattle_state:
@@ -423,26 +504,115 @@ def create_boss_bgm(
                 rule.source_transition_rule.sync_type = SyncType.Immediate
 
     # Add new bgm decision branch to master
-    master_state_keys: list[int] = parse_state_path(state_path)
-    master.add_branch(master_state_keys, boss_msc.id)
+    master.add_branch(state_path, boss_msc.id)
 
     # Add nodes to soundbank
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
 
-def create_ambience(
+def create_ambience_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
-    master_branch: Hash | list[Hash],
-    location_tree: DecisionNode,
+    master_branch: list[Hash],
+    location_tree: DecisionNode[AmbientBgm],
+    *,
+    base_transition: MusicTransitionRule = None,
+    intro_transition: MusicTransitionRule = None,
+    extra_transitions: list[MusicTransitionRule] = None,
+    properties: dict[PropID, float] = None,
+) -> list[HIRCNode]:
+    new_nodes = []
+
+    if properties is None:
+        properties = {}
+
+    ambience_msc = MusicSwitchContainer.new(
+        bnk.new_id(),
+        [(arg, GroupType.State) for arg in location_tree.all_args()],
+        props=properties | {PropID.Priority: 80.0},
+        parent=master,
+    )
+    new_nodes.append(ambience_msc)
+
+    # Setup default transition
+    master_rule = ambience_msc.music_trans_node_params.transition_rules[0]
+    master_rule.configure(
+        src_transition_time=1000,
+        src_fade_offset=1000,
+        src_fade_curve=CurveInterpolation.Linear,
+        src_sync_type=SyncType.Immediate,
+        dst_transition_time=1000,
+        dst_fade_curve=CurveInterpolation.Linear,
+    )
+
+    if not base_transition:
+        base_transition = MusicTransitionRule().configure(
+            src_transition_time=3000,
+            src_fade_offset=3000,
+            src_fade_curve=CurveInterpolation.SCurve,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.InvSCurve,
+        )
+
+    if not intro_transition:
+        intro_transition = MusicTransitionRule().configure(
+            src_transition_time=1000,
+            src_fade_offset=1000,
+            src_fade_curve=CurveInterpolation.Sine,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.Exp3,
+        )
+
+    location_branches = location_tree.flatten()
+    for branch, bgm in location_branches.items():
+        # Ambience music typically has one base track and a battle track which is overlayed
+        # rather than being a separate music track, but we don't enforce that here. The
+        # alternative being to have a decision branch on the FieldBattleState, in which case
+        # we won't need the states to control audio layers.
+        tracks = [bgm.audio]
+        state_ctrl = None
+
+        if bgm.battle_audio_layer:
+            tracks.append(bgm.battle_audio_layer)
+            state_ctrl = {
+                # FS usually uses HPF for here (also slightly muffles the base layer during battle)
+                0: [StateCtrl("FieldBattleState", "FieldBattle", {PropID.HPF: 2.0})],
+                1: [StateCtrl("FieldBattleState", "FieldNormal", {PropID.HPF: -400.0})],
+            }
+
+        branch_nodes = _setup_bgm(
+            bnk,
+            tracks,
+            intro=bgm.has_intro,
+            loop_start=bgm.loop_start,
+            loop_end=bgm.loop_end,
+            fadein=0,
+            base_transition=base_transition,
+            intro_transition=intro_transition,
+            extra_transitions=extra_transitions,
+            track_state_ctrl=state_ctrl,
+        )
+
+        ambience_msc.add_branch(branch, branch_nodes[0])
+        new_nodes.extend(branch_nodes)
+
+    # Add to master and soundbank
+    master.add_branch(master_branch, ambience_msc.id)
+    bnk.add_nodes(*new_nodes)
+    return new_nodes
+
+
+# TODO outdated, will need a revisit
+def create_ambience_soundscape(
+    bnk: Soundbank,
+    master: MusicSwitchContainer,
+    master_branch: list[Hash],
+    location_tree: DecisionNode[Path],
     *,
     trims: list[tuple[float, float]] = None,
     properties: dict[PropID, float] = None,
 ) -> list[HIRCNode]:
-    if isinstance(master_branch, (str, int)):
-        master_branch = [master_branch]
-
     new_nodes = []
 
     if properties is None:
@@ -499,12 +669,20 @@ def create_ambience(
         new_nodes.extend([branch_mrsc, branch_seg, branch_track])
 
     master.add_branch(parse_state_path(master_branch), ambience_msc.id)
-
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
 
-def setup_custom_music(bnk: Soundbank, node: MusicSwitchContainer, new_args: str | list[str]) -> None:
+#######################################
+### EXPERIMENTAL 
+#######################################
+
+
+# TODO untested
+# Setup an audio layer that overrides the vanilla states.
+def setup_custom_music_branch(
+    bnk: Soundbank, node: MusicSwitchContainer, new_args: str | list[str]
+) -> None:
     if node.has_argument("CustomMusic"):
         logger.info(f"Node {node} is already prepared")
         return
@@ -531,21 +709,95 @@ def setup_custom_music(bnk: Soundbank, node: MusicSwitchContainer, new_args: str
     bnk.add_nodes(enable_evt, enable_act, disable_evt, disable_act)
 
 
-def create_custom_music_event(bnk: Soundbank, event_id: int, custom_selectors: dict[str, str]) -> None:
+# TODO untested
+def create_custom_music_event(
+    bnk: Soundbank,
+    event_id: int,
+    custom_states: dict[str, str],
+    sound_type: SoundType = SoundType.Sfx,
+) -> None:
+    """Creates a play and stop event which, instead of playing audio, simply set a state. Since they have regular play/stop event names, they can be activated e.g. via EMEVD's PlaySE, SFX, etc. Should be used together with [[create_custom_music_branch]].
+
+    Parameters
+    ----------
+    bnk : Soundbank
+        The soundbank.
+    event_id : int
+        Numeric part of the event name.
+    custom_states : dict[str, str]
+        Additional states to set by the play event.
+    sound_type : SoundType
+        Prefix to use for the event name.
+    """
     state_group_id = calc_hash("CustomMusic")
     on_state = calc_hash("On")
     off_state = calc_hash("None")
 
-    enable_evt = Event.new(f"Play_m{event_id}")
+    enable_evt = Event.new(f"Play_{sound_type.value}{event_id}")
     enable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, on_state)
     enable_evt.actions.append(enable_act)
 
-    for key, val in custom_selectors.items():
-        state_act = Action.new_setstate_action(bnk.new_id(), calc_hash(key), calc_hash(val))
+    for key, val in custom_states.items():
+        state_act = Action.new_setstate_action(
+            bnk.new_id(), calc_hash(key), calc_hash(val)
+        )
         enable_evt.actions.append(state_act)
 
-    disable_evt = Event.new(f"Stop_m{event_id}")
+    disable_evt = Event.new(f"Stop_{sound_type.value}{event_id}")
     disable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, off_state)
     disable_evt.actions.append(disable_act)
 
     bnk.add_nodes(enable_evt, *enable_evt.actions, disable_evt, disable_act)
+
+
+# TODO untested
+# Fixes some shenanigans FS caused in their soundbanks, making it difficult or impossible to add
+# custom music (especially in NR).
+def unmangle_soundbanks(main: Soundbank, smain: Soundbank, game: Game) -> Soundbank:
+    # Both NR and ER have a duplicate ambience structure in cs_smain which is actually
+    # incomplete. The true one in cs_main takes priority, but it's confusing to have
+    smain.delete_subtree("Play_a000000000")
+    smain.delete_subtree("Stop_a000000000")
+
+    if game == Game.EldenRing:
+        pass
+    elif game == Game.Nightreign:
+        # NR contains an orphaned duplicate of the MusicSwitchContainer for music in cs_main
+        # which will shadow the true one from cs_smain
+        main.delete_subtree(1001573296)
+    else:
+        logger.warning(f"Unexpected game {game}")
+
+
+# TODO untested
+# Setup a custom music and ambience soundbank which would be easier to mod
+def setup_music_soundbank(
+    main: Soundbank, smain: Soundbank, new_bnk_path: Path
+) -> Soundbank:
+    from yonder.transfer import copy_wwise_events
+
+    # TODO check if events still exist in cs_main/cs_smain
+
+    music_bnk = Soundbank.create_empty_soundbank(new_bnk_path, "cs_music", True)
+
+    # Transfer a000000000 to music_bnk
+    copy_wwise_events(
+        main,
+        music_bnk,
+        {"Play_a000000000": "Play_a000000000", "Stop_a000000000": "Stop_a000000000"},
+    )
+    main.delete_subtree("Play_a000000000")
+    main.delete_subtree("Stop_a000000000")
+
+    # Transfer m000000000 to music_bnk
+    copy_wwise_events(
+        smain,
+        music_bnk,
+        {"Play_m000000000": "Play_m000000000", "Stop_m000000000": "Stop_m000000000"},
+    )
+    main.delete_subtree("Play_m000000000")
+    main.delete_subtree("Stop_m000000000")
+
+    # Add reference to music_bnk so that it's automatically loaded by the game
+    main.stid.add_bank("cs_music")
+    return music_bnk
