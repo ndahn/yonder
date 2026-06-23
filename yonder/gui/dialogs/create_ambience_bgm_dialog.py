@@ -264,9 +264,7 @@ Ambience tree:
         self._rebuild_ambience_rows()
         self._update_summary()
 
-    def _ambience_branch_to_row(
-        self, entry: AmbientBgm, idx: int
-    ) -> None:
+    def _ambience_branch_to_row(self, entry: AmbientBgm, idx: int) -> None:
         label = self._conditions_summary(entry)
 
         with dpg.tree_node(
@@ -277,19 +275,37 @@ Ambience tree:
         ) as tree_node:
             dpg.add_checkbox(
                 label=µ("Play intro"),
-                callback=self._make_intro_changed_cb(idx),
+                default_value=entry.regular.has_intro,
+                callback=self._make_track_value_changed_cb(
+                    idx, "has_intro", True, True
+                ),
             )
             with dpg.tooltip(dpg.last_item()):
                 dpg.add_text(µ("Use part before loop_start as intro"))
+
+            dpg.add_input_float(
+                label=µ("Fade-in"),
+                default_value=0.0,
+                min_value=0.0,
+                min_clamped=True,
+                width=200,
+                callback=self._make_track_value_changed_cb(idx, "fadein", True, True),
+            )
 
             dpg.add_spacer(height=3)
 
             with dpg.tree_node(label=µ("Regular"), span_full_width=True):
                 add_wav_player(
                     entry.regular.track,
-                    on_file_changed=self._make_track_changed_cb(idx, False),
-                    on_loop_changed=self._make_loop_changed_cb(idx, False),
-                    on_trims_changed=self._make_trims_changed_cb(idx, False),
+                    on_file_changed=self._make_track_value_changed_cb(
+                        idx, "track", True, False
+                    ),
+                    on_loop_changed=self._make_track_value_changed_cb(
+                        idx, "loop_info", True, False
+                    ),
+                    on_trims_changed=self._make_track_value_changed_cb(
+                        idx, "trims", True, False
+                    ),
                 )
                 dpg.add_spacer(height=3)
                 add_properties_table(
@@ -301,9 +317,15 @@ Ambience tree:
             with dpg.tree_node(label=µ("Battle"), span_full_width=True):
                 add_wav_player(
                     entry.battle.track,
-                    on_file_changed=self._make_track_changed_cb(idx, True),
-                    on_loop_changed=self._make_loop_changed_cb(idx, True),
-                    on_trims_changed=self._make_trims_changed_cb(idx, True),
+                    on_file_changed=self._make_track_value_changed_cb(
+                        idx, "track", False, True
+                    ),
+                    on_loop_changed=self._make_track_value_changed_cb(
+                        idx, "loop_info", False, True
+                    ),
+                    on_trims_changed=self._make_track_value_changed_cb(
+                        idx, "trims", False, True
+                    ),
                 )
                 add_properties_table(
                     entry.battle.state_ctrl[0].modifiers,
@@ -330,15 +352,19 @@ Ambience tree:
                 AmbientBgm(
                     BgmTrack(
                         Path(ret),
-                        state_ctrl=[StateCtrl(
-                            "FieldBattleState", "FieldBattle", {PropID.HPF: 2.0}
-                        )],
+                        state_ctrl=[
+                            StateCtrl(
+                                "FieldBattleState", "FieldBattle", {PropID.HPF: 2.0}
+                            )
+                        ],
                     ),
                     BgmTrack(
                         None,
-                        state_ctrl=[StateCtrl(
-                            "FieldBattleState", "FieldNormal", {PropID.HPF: -400.0}
-                        )],
+                        state_ctrl=[
+                            StateCtrl(
+                                "FieldBattleState", "FieldNormal", {PropID.HPF: -400.0}
+                            )
+                        ],
                     ),
                     self._get_default_state_path(),
                 )
@@ -617,43 +643,18 @@ Ambience tree:
                 tag=self._t("btn_okay"),
             )
 
-    def _make_intro_changed_cb(self, idx: int) -> Callable:
-        def cb(sender: str, enabled: bool, user_data: Any) -> None:
+    def _make_track_value_changed_cb(
+        self, idx: int, attr: str, regular: bool, battle: bool
+    ) -> Callable:
+        def cb(sender: str, data: Any, user_data: Any) -> None:
             if idx < len(self._bgm_tracks):
-                self._bgm_tracks[idx].regular.has_intro = enabled
-                self._bgm_tracks[idx].battle.has_intro = enabled
-
-        return cb
-
-    def _make_track_changed_cb(self, idx: int, battle: bool) -> Callable:
-        def cb(sender: str, track: Path, user_data: Any) -> None:
-            if track and idx < len(self._bgm_tracks):
+                track = self._bgm_tracks[idx]
+                if regular:
+                    setattr(track.regular, attr, data)
                 if battle:
-                    self._bgm_tracks[idx].battle.track = track
-                else:
-                    self._bgm_tracks[idx].regular.track = track
+                    setattr(track.battle, attr, data)
 
                 self._update_summary()
-
-        return cb
-
-    def _make_loop_changed_cb(self, idx: int, battle: bool) -> Callable:
-        def cb(sender: str, data: tuple[float, float, bool], user_data: Any) -> None:
-            if idx < len(self._bgm_tracks):
-                if battle:
-                    self._bgm_tracks[idx].battle.loop_info = data[:2]
-                else:
-                    self._bgm_tracks[idx].regular.loop_info = data[:2]
-
-        return cb
-
-    def _make_trims_changed_cb(self, idx: int, battle: bool) -> Callable:
-        def cb(sender: str, data: tuple[float, float], user_data: Any) -> None:
-            if idx < len(self._bgm_tracks):
-                if battle:
-                    self._bgm_tracks[idx].battle.trims = data
-                else:
-                    self._bgm_tracks[idx].regular.trims = data
 
         return cb
 

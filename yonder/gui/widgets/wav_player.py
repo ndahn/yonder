@@ -633,13 +633,13 @@ class add_wav_player(DpgItem):
         """Set a single trim marker; also usable as a DPG callback."""
         if trim_marker == "begin_trim":
             pos = self._get_valid_pos(pos, False)
-            dpg.set_value(self._t("begin_trim"), (-10, -1, pos, 1))
+            dpg.set_value(self._t("begin_trim"), (-10, -2, pos, 2))
             dpg.set_value(self._t("begin_trim_axis"), pos)
         elif trim_marker == "end_trim":
             if pos == 0.0:
                 pos = -0.01
             pos = self._get_valid_pos(pos, False, True)
-            dpg.set_value(self._t("end_trim"), (pos, -1, 1000, 1))
+            dpg.set_value(self._t("end_trim"), (pos, -2, 1000, 2))
             dpg.set_value(self._t("end_trim_axis"), pos)
 
         # Loop offsets are anchored to begin trim, so keep them in sync.

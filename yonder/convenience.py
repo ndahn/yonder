@@ -54,7 +54,6 @@ class BgmTrack:
     loop_info: tuple[float, float] = (0.0, 0.0)
     trims: tuple[float, float] = (0.0, 0.0)
     fadein: float = 0.0
-    fadeout: float = 0.0
     has_intro: bool = False
     state_ctrl: list[StateCtrl] = field(default_factory=list)
 
