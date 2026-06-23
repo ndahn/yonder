@@ -157,6 +157,12 @@ class add_wav_player(DpgItem):
             begin_trim /= 1000
             end_trim /= 1000
 
+        # Loop offsets are kept relative to begin trim (offset into the
+        # trimmed region) and are the source of truth; plot widgets show the
+        # absolute positions derived from them. loop_end == 0.0 means "to end".
+        self._loop_start: float = loop_start
+        self._loop_end: float = loop_end
+
         # SFX curves — set via set_volume / set_lowpass / etc.
         self.volume: list[RTPCGraphPoint] = None
         self.lowpass: list[RTPCGraphPoint] = None
@@ -367,19 +373,15 @@ class add_wav_player(DpgItem):
             return
 
         pos = self._player.position
-        loop_start, loop_end, loop_active = self.get_loop_state(False)
+        _, _, loop_active = self.get_loop_state(False)
+        loop_start, loop_end = self._loop_abs_bounds()
         loop_start = self._get_valid_pos(loop_start)
         loop_end = self._get_valid_pos(loop_end)
 
-        if loop_active:
-            if loop_start >= loop_end:
-                loop_start = 0
-                loop_end = self._player.duration
-            else:
-                if loop_start < 0:
-                    loop_start = 0
-                if loop_end > self._player.duration:
-                    loop_end = self._player.duration
+        # Degenerate region -> loop the whole playable range
+        if loop_active and loop_start >= loop_end:
+            loop_start = self._region_start()
+            loop_end = self._region_end()
 
         loop_test = (
             dpg.get_value(self._t("loop_test"))
@@ -389,7 +391,7 @@ class add_wav_player(DpgItem):
 
         if loop_test:
             # audition only the audio around the loop seam
-            if pos < loop_start:
+            if pos < loop_start or pos >= loop_end:
                 pos = loop_start
                 self._player.seek(pos)
             elif loop_start + 3 <= pos < loop_end - 3:
@@ -523,12 +525,10 @@ class add_wav_player(DpgItem):
     # === Loop markers ==================================================
 
     def get_loop_state(self, millis: bool) -> tuple[float, float, bool]:
-        """Return ``(loop_start, loop_end, enabled)`` in seconds."""
+        """Return ``(loop_start, loop_end, enabled)`` relative to begin trim."""
         if not self._loop_markers_enabled:
             return (0.0, 0.0, False)
 
-        start = dpg.get_value(self._t("loop_start"))
-        end = dpg.get_value(self._t("loop_end"))
         active = (
             dpg.get_value(self._t("loop_enabled"))
             if dpg.does_item_exist(self._t("loop_enabled"))
@@ -536,60 +536,71 @@ class add_wav_player(DpgItem):
         )
 
         if millis:
-            return (start * 1000, end * 1000, active)
+            return (self._loop_start * 1000, self._loop_end * 1000, active)
 
-        return (start, end, active)
+        return (self._loop_start, self._loop_end, active)
 
     def set_loop_state(self, loop_start: float, loop_end: float, enabled: bool) -> None:
-        """Set loop marker positions and enabled state programmatically."""
+        """Set loop positions (relative to begin trim, seconds) and enabled."""
         if not self._loop_markers_enabled:
             raise RuntimeError("loop_markers_enabled is False")
 
-        dpg.set_value(self._t("loop_start"), loop_start)
-        dpg.set_value(self._t("loop_end"), loop_end)
+        self._loop_start = loop_start
+        self._loop_end = loop_end
         if dpg.does_item_exist(self._t("loop_enabled")):
             dpg.set_value(self._t("loop_enabled"), enabled)
         self._update_loop_widgets()
 
-    def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
-        pos = self._get_valid_pos(pos, False)
-        if loop_marker == "loop_end" and pos == 0.0:
-            pos = -0.01
+    def _loop_abs_bounds(self) -> tuple[float, float]:
+        """Absolute loop ``(start, end)`` derived from the relative offsets.
 
-        dpg.set_value(self._t(loop_marker), pos)
-        dpg.set_value(self._t(f"{loop_marker}_axis"), pos)
+        ``loop_end == 0.0`` is the "unset" sentinel and maps to the track end.
+        """
+        begin_trim, _ = self.get_trims(False)
+        duration = self._player.duration if self._player else 0.0
+        start = begin_trim + self._loop_start
+        end = duration if self._loop_end == 0.0 else begin_trim + self._loop_end
+        return start, end
 
+    def _fire_loop_changed(self) -> None:
         if self._on_loop_changed:
-            loop_start, loop_end, enabled = self.get_loop_state(True)
-            self._on_loop_changed(
-                self._tag, (loop_start, loop_end, enabled), self._user_data
-            )
+            self._on_loop_changed(self._tag, self.get_loop_state(True), self._user_data)
+
+    def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
+        # Popup fields are absolute; store the offset from begin trim.
+        begin_trim, _ = self.get_trims(False)
+        rel = self._get_valid_pos(pos, False) - begin_trim
+        if loop_marker == "loop_start":
+            self._loop_start = max(0.0, rel)
+        else:
+            self._loop_end = max(0.001, rel)  # keep clear of the 0.0 sentinel
+
+        self._update_loop_widgets()
+        self._fire_loop_changed()
 
     def _update_loop_widgets(self) -> None:
-        loop_start, loop_end, _ = self.get_loop_state(False)
+        # Plot widgets show absolute time, derived from the relative offsets.
+        start, end = self._loop_abs_bounds()
+        start = self._get_valid_pos(start)
+        end = self._get_valid_pos(end)
+        start = min(start, end)
 
-        loop_start = self._get_valid_pos(loop_start, False)
-        loop_end = self._get_valid_pos(loop_end, False)
-        loop_end_viz = self._player.duration if loop_end == 0.0 else loop_end
+        dpg.set_value(self._t("loop_start"), start)
+        dpg.set_value(self._t("loop_start_axis"), start)
+        dpg.set_value(self._t("loop_start_value"), start)
 
-        loop_start = min(loop_start, loop_end)
-
-        dpg.set_value(self._t("loop_start"), loop_start)
-        dpg.set_value(self._t("loop_start_axis"), loop_start)
-        dpg.set_value(self._t("loop_start_value"), loop_start)
-
-        dpg.set_value(self._t("loop_end"), loop_end_viz)
-        dpg.set_value(self._t("loop_end_axis"), loop_end_viz)
-        dpg.set_value(self._t("loop_end_value"), loop_end)
+        dpg.set_value(self._t("loop_end"), end)
+        dpg.set_value(self._t("loop_end_axis"), end)
+        dpg.set_value(self._t("loop_end_value"), end)
 
     def _on_loop_marker_moved(self) -> None:
-        self._update_loop_widgets()
+        # Drag lines are absolute; store positions as offsets from begin trim.
+        begin_trim, _ = self.get_trims(False)
+        self._loop_start = max(0.0, dpg.get_value(self._t("loop_start")) - begin_trim)
+        self._loop_end = max(0.001, dpg.get_value(self._t("loop_end")) - begin_trim)
 
-        if self._on_loop_changed:
-            loop_start, loop_end, enabled = self.get_loop_state(True)
-            self._on_loop_changed(
-                self._tag, (loop_start, loop_end, enabled), self._user_data
-            )
+        self._update_loop_widgets()
+        self._fire_loop_changed()
 
     # === Trim markers ==================================================
 
@@ -631,6 +642,10 @@ class add_wav_player(DpgItem):
             dpg.set_value(self._t("end_trim"), (pos, -1, 1000, 1))
             dpg.set_value(self._t("end_trim_axis"), pos)
 
+        # Loop offsets are anchored to begin trim, so keep them in sync.
+        if self._loop_markers_enabled:
+            self._update_loop_widgets()
+
         if self._on_trim_marker_changed:
             begin_trim, end_trim = self.get_trims(True)
             self._on_trim_marker_changed(
@@ -651,6 +666,10 @@ class add_wav_player(DpgItem):
         dpg.set_value(self._t("end_trim"), (end_trim_viz, -1, 1000, 1))
         dpg.set_value(self._t("end_trim_axis"), end_trim_viz)
         dpg.set_value(self._t("end_trim_value"), end_trim)  # raw value
+
+        # Loop offsets are anchored to begin trim, so keep them in sync.
+        if self._loop_markers_enabled:
+            self._update_loop_widgets()
 
     def _on_trim_marker_moved(self) -> None:
         # Store raw values in the float widgets
@@ -716,10 +735,10 @@ class add_wav_player(DpgItem):
     def _on_loop_marker_edit(
         self, sender: str, new_loop_info: tuple[float, float, bool], ud: Any
     ) -> None:
-        loop_start, loop_end, _ = new_loop_info
-        dpg.set_value(self._t("loop_start"), loop_start / 1000)
-        dpg.set_value(self._t("loop_end"), loop_end / 1000)
-        self._on_loop_marker_moved()
+        # Dialog reports loop offsets relative to begin trim, in ms.
+        loop_start, loop_end, enabled = new_loop_info
+        self.set_loop_state(loop_start / 1000, loop_end / 1000, enabled)
+        self._fire_loop_changed()
 
     def _on_trim_marker_edit(
         self, sender: str, trims: tuple[float, float], ud: Any
@@ -890,6 +909,11 @@ class add_wav_player(DpgItem):
         initial_begin_trim: float,
         initial_end_trim: float,
     ) -> None:
+        # Loop offsets are relative to begin trim; plot widgets need absolute
+        # positions. regenerate() refines these once the track duration is known.
+        initial_loop_start_abs = initial_begin_trim + initial_loop_start
+        initial_loop_end_abs = initial_begin_trim + initial_loop_end
+
         with dpg.group(tag=self._tag, parent=self._parent):
             dpg.add_text(
                 "Audio not found",
@@ -964,7 +988,7 @@ class add_wav_player(DpgItem):
                         # Playback cursor on marker strip
                         dpg.add_axis_tag(
                             label=" ",
-                            default_value=initial_loop_start,
+                            default_value=initial_begin_trim,
                             color=style.light_blue,
                             parent=self._t("marker_axis"),
                             tag=self._t("progress_axis"),
@@ -973,14 +997,14 @@ class add_wav_player(DpgItem):
                         if self._loop_markers_enabled:
                             dpg.add_axis_tag(
                                 label=µ("L0", "marker"),
-                                default_value=initial_loop_start,
+                                default_value=initial_loop_start_abs,
                                 color=style.green,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("loop_start_axis"),
                             )
                             dpg.add_axis_tag(
                                 label=µ("L1", "marker"),
-                                default_value=initial_loop_end,
+                                default_value=initial_loop_end_abs,
                                 color=style.green,
                                 parent=self._t("marker_axis"),
                                 tag=self._t("loop_end_axis"),
@@ -1053,7 +1077,7 @@ class add_wav_player(DpgItem):
                             dpg.add_drag_line(
                                 label=µ("loop_start", "marker"),
                                 color=style.green,
-                                default_value=initial_loop_start,
+                                default_value=initial_loop_start_abs,
                                 callback=self._on_loop_marker_moved,
                                 no_inputs=not self._edit_markers_inplace,
                                 tag=self._t("loop_start"),
@@ -1061,7 +1085,7 @@ class add_wav_player(DpgItem):
                             dpg.add_drag_line(
                                 label=µ("loop_end", "marker"),
                                 color=style.green,
-                                default_value=initial_loop_end,
+                                default_value=initial_loop_end_abs,
                                 callback=self._on_loop_marker_moved,
                                 no_inputs=not self._edit_markers_inplace,
                                 tag=self._t("loop_end"),
@@ -1216,7 +1240,7 @@ class add_wav_player(DpgItem):
             if self._loop_markers_enabled:
                 dpg.add_input_float(
                     label=µ("loop_start", "marker"),
-                    default_value=initial_loop_start,
+                    default_value=initial_loop_start_abs,
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_start",
@@ -1224,7 +1248,7 @@ class add_wav_player(DpgItem):
                 )
                 dpg.add_input_float(
                     label=µ("loop_end", "marker"),
-                    default_value=initial_loop_end,
+                    default_value=initial_loop_end_abs,
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_end",
