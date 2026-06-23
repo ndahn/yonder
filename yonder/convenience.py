@@ -50,7 +50,7 @@ class StateCtrl:
 
 @dataclass
 class AmbientBgm:
-    regular_track: Path
+    regular_track: Path = None
     battle_track: Path = None
     loop_start: float = 0.0
     loop_end: float = 0.0
@@ -226,6 +226,9 @@ def _setup_bgm(
 
     if isinstance(tracks, Path):
         tracks = [tracks]
+
+    for track in tracks:
+        bnk.add_wem(track, SourceType.Streaming)
 
     if not track_state_ctrl:
         track_state_ctrl = {}

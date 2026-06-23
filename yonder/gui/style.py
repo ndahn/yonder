@@ -282,10 +282,21 @@ def init_themes():
 
     with dpg.theme() as themes.player_plot:
         with dpg.theme_component(dpg.mvPlot):
-            dpg.add_theme_style(dpg.mvPlotStyleVar_PlotPadding, 0, 0)
-            dpg.add_theme_style(dpg.mvPlotStyleVar_LabelPadding, 1, 4)
-            dpg.add_theme_style(dpg.mvPlotStyleVar_AnnotationPadding, 1, 1)
-            dpg.add_theme_style(dpg.mvPlotStyleVar_FitPadding, 0.05, 0.2)
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_PlotPadding, 0, 0, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_LabelPadding, 0, 4, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_AnnotationPadding,
+                1,
+                1,
+                category=dpg.mvThemeCat_Plots,
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_FitPadding, 0.05, 0.2, category=dpg.mvThemeCat_Plots
+            )
 
 
 class HighContrastColorGenerator:
