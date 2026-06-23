@@ -504,21 +504,26 @@ Ambience tree:
 
     def _build_tab_location(self) -> None:
         with dpg.tab(label=µ("location branch")):
-            dpg.add_text(µ("MusicSwitchContainer"))
-            add_select_node(
-                self._get_location_mscs,
-                "MusicSwitchContainer",
-                self._on_msc_selected,
-                get_node_details=get_details_musicswitchcontainer,
-                node_type=MusicSwitchContainer,
-            )
-
-            dpg.add_child_window(
+            with dpg.child_window(
+                border=False,
                 autosize_x=True,
-                auto_resize_y=True,
-                tag=self._t("location_args_group"),
-                show=False,
-            )
+                height=-125,
+            ):
+                dpg.add_text(µ("MusicSwitchContainer"))
+                add_select_node(
+                    self._get_location_mscs,
+                    "MusicSwitchContainer",
+                    self._on_msc_selected,
+                    get_node_details=get_details_musicswitchcontainer,
+                    node_type=MusicSwitchContainer,
+                )
+
+                dpg.add_child_window(
+                    autosize_x=True,
+                    auto_resize_y=True,
+                    tag=self._t("location_args_group"),
+                    show=False,
+                )
 
             add_paragraphs(
                 µ(
@@ -536,27 +541,32 @@ Ambience tree:
 
     def _build_tab_ambience(self) -> None:
         with dpg.tab(label=µ("Ambience tree")):
-            with dpg.tree_node(label="States", default_open=True):
-                self._ambience_states_table = add_widget_table(
-                    list(self.ambience_args),
-                    self._ambience_arg_to_row,
-                    new_item=self._new_ambience_arg,
-                    on_add=self._on_add_ambience_arg,
-                    on_remove=self._on_remove_ambience_arg,
-                    add_item_label=µ("+ Add State"),
-                    show_clear=False,
-                )
+            with dpg.child_window(
+                border=False,
+                autosize_x=True,
+                height=-85,
+            ):
+                with dpg.tree_node(label="States", default_open=True):
+                    self._ambience_states_table = add_widget_table(
+                        list(self.ambience_args),
+                        self._ambience_arg_to_row,
+                        new_item=self._new_ambience_arg,
+                        on_add=self._on_add_ambience_arg,
+                        on_remove=self._on_remove_ambience_arg,
+                        add_item_label=µ("+ Add State"),
+                        show_clear=False,
+                    )
 
-            dpg.add_spacer(height=4)
-            add_widget_table(
-                [],
-                self._ambience_branch_to_row,
-                new_item=self._new_ambience_branch,
-                on_add=self._on_add_ambience_branch,
-                on_remove=self._on_remove_ambience_branch,
-                add_item_label=µ("+ Add Branch"),
-                show_clear=True,
-            )
+                dpg.add_spacer(height=4)
+                add_widget_table(
+                    [],
+                    self._ambience_branch_to_row,
+                    new_item=self._new_ambience_branch,
+                    on_add=self._on_add_ambience_branch,
+                    on_remove=self._on_remove_ambience_branch,
+                    add_item_label=µ("+ Add Branch"),
+                    show_clear=True,
+                )
 
             add_paragraphs(
                 µ(
@@ -575,7 +585,7 @@ Ambience tree:
             dpg.add_text(µ("Ambience decision tree:", "tips"))
 
             dpg.add_spacer(height=3)
-            with dpg.child_window(height=-70):
+            with dpg.child_window(height=-45):
                 dpg.add_text(
                     µ("<nothing to see here>"),
                     tag=self._t("summary_text"),
