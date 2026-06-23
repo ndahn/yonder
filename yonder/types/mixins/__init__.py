@@ -1,3 +1,3 @@
 from .data_node import DataNode
-from .properties import PropertyMixin
+from .property_mixin import PropertyMixin
 from .state_mixin import StateMixin
