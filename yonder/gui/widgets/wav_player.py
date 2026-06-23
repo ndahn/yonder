@@ -98,6 +98,7 @@ class add_wav_player(DpgItem):
         user_markers: dict[Hash, float] = None,
         on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
         edit_markers_inplace: bool = False,
+        show_controls: bool = True,
         max_points: int = 5000,
         markers_in_ms: bool = True,
         width: int = -1,
@@ -118,6 +119,7 @@ class add_wav_player(DpgItem):
         self._edit_markers_inplace = edit_markers_inplace
         self._max_points = max_points
         self._markers_in_ms = markers_in_ms
+        self._show_controls = show_controls
         self._config = get_config()
         self._height = height
         self._parent = parent
@@ -162,10 +164,7 @@ class add_wav_player(DpgItem):
         self.fadein: list[RTPCGraphPoint] = None
         self.fadeout: list[RTPCGraphPoint] = None
 
-        self._setup_content(width, height, loop_start,
-loop_end,
-begin_trim,
-end_trim)
+        self._setup_content(width, height, loop_start, loop_end, begin_trim, end_trim)
 
         if initial_file:
             self.regenerate()
@@ -229,6 +228,13 @@ end_trim)
         self._player.play()
         self._progress_update()
 
+    def set_controls_visible(self, visible: bool) -> None:
+        self._show_controls = visible
+        if visible:
+            dpg.show_item(self._t("player_controls"))
+        else:
+            dpg.hide_item(self._t("player_controls"))
+
     def _get_wav_path(self) -> Path:
         if self._audio is None:
             return None
@@ -253,7 +259,7 @@ end_trim)
                 except ValueError as e:
                     logger.error(f"Failed to convert wav file: {e}", exc_info=e)
                     return None
-                    
+
             return wav
 
         if self._audio.suffix == ".wav":
@@ -266,7 +272,9 @@ end_trim)
         )
         return None
 
-    def _get_valid_pos(self, pos: float, use_trims: bool = True, force_from_end: bool = False) -> float:
+    def _get_valid_pos(
+        self, pos: float, use_trims: bool = True, force_from_end: bool = False
+    ) -> float:
         """Get a valid pos within the audio track range, trims included if desired.
 
         Parameters
@@ -681,7 +689,9 @@ end_trim)
         self._user_markers[mid] = pos
 
         if self._on_user_markers_changed:
-            self._on_user_markers_changed(self._tag, self.get_user_markers(True), self._user_data)
+            self._on_user_markers_changed(
+                self._tag, self.get_user_markers(True), self._user_data
+            )
 
     def _update_user_marker_widget(self, mid: int) -> None:
         pos = dpg.get_value(self._t(f"marker_{mid}"))
@@ -695,10 +705,11 @@ end_trim)
     def _on_user_markers_moved(self) -> None:
         for mid in self._user_markers:
             self._update_user_marker_widget(mid)
-        
-        if self._on_user_markers_changed:
-            self._on_user_markers_changed(self._tag, self.get_user_markers(True), self._user_data)
 
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(
+                self._tag, self.get_user_markers(True), self._user_data
+            )
 
     # === Edit dialog ===================================================
 
@@ -717,7 +728,7 @@ end_trim)
         end_trim = self._get_valid_pos(trims[1] / 1000, False, True)
         dpg.set_value(self._t("begin_trim"), (-10, -1, begin_trim, 1))
         dpg.set_value(self._t("end_trim"), (end_trim, -1, 1000, 1))
-        
+
         self._on_trim_marker_moved()
 
     def _on_user_marker_edit(
@@ -870,10 +881,15 @@ end_trim)
 
     # === Build =========================================================
 
-    def _setup_content(self, width: int, height: int, initial_loop_start: float,
-initial_loop_end: float,
-initial_begin_trim: float,
-initial_end_trim: float) -> None:
+    def _setup_content(
+        self,
+        width: int,
+        height: int,
+        initial_loop_start: float,
+        initial_loop_end: float,
+        initial_begin_trim: float,
+        initial_end_trim: float,
+    ) -> None:
         with dpg.group(tag=self._tag, parent=self._parent):
             dpg.add_text(
                 "Audio not found",
@@ -924,7 +940,7 @@ initial_end_trim: float) -> None:
                         no_inputs=True,
                         no_frame=True,
                         height=1,
-                    ):
+                    ) as marker_plot:
                         dpg.add_plot_axis(
                             dpg.mvXAxis,
                             label=µ("markers"),
@@ -986,7 +1002,9 @@ initial_end_trim: float) -> None:
 
                         if self._user_markers_enabled:
                             colorgen = style.HighContrastColorGenerator()
-                            for i, (mid, pos) in enumerate(self.get_user_markers(False).items()):
+                            for i, (mid, pos) in enumerate(
+                                self.get_user_markers(False).items()
+                            ):
                                 color = colorgen()
                                 marker_label = self._user_marker_labels.get(
                                     mid, f"#{mid}"
@@ -1004,7 +1022,7 @@ initial_end_trim: float) -> None:
                         no_menus=True,
                         no_mouse_pos=True,
                         tag=self._t("plot"),
-                    ):
+                    ) as wave_plot:
                         dpg.add_plot_axis(
                             dpg.mvXAxis,
                             label=µ("amp"),
@@ -1069,7 +1087,9 @@ initial_end_trim: float) -> None:
 
                         if self._user_markers_enabled:
                             colorgen = style.HighContrastColorGenerator()
-                            for i, (mid, pos) in enumerate(self.get_user_markers(False).items()):
+                            for i, (mid, pos) in enumerate(
+                                self.get_user_markers(False).items()
+                            ):
                                 color = colorgen()
                                 marker_label = self._user_marker_labels.get(
                                     mid, f"#{mid}"
@@ -1084,7 +1104,14 @@ initial_end_trim: float) -> None:
                                     user_data=mid,
                                 )
 
-            with dpg.group(horizontal=True):
+                    dpg.bind_item_theme(marker_plot, style.themes.player_plot)
+                    dpg.bind_item_theme(wave_plot, style.themes.player_plot)
+
+            with dpg.group(
+                horizontal=True,
+                show=self._show_controls,
+                tag=self._t("player_controls"),
+            ):
                 dpg.add_button(
                     arrow=True,
                     direction=dpg.mvDir_Right,

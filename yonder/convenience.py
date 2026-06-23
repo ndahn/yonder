@@ -50,11 +50,26 @@ class StateCtrl:
 
 @dataclass
 class AmbientBgm:
-    audio: Path
-    battle_audio_layer: Path = None
+    regular_track: Path
+    battle_track: Path = None
     loop_start: float = 0.0
     loop_end: float = 0.0
     has_intro: bool = False
+    state_ctrl_regular: StateCtrl = None
+    state_ctrl_battle: StateCtrl = None
+
+    def __str__(self) -> str:
+        ret = ""
+
+        if self.regular_track:
+            ret += f"Regular: {self.regular_track.name}"
+        
+        if self.battle_track:
+            if ret:
+                ret += "\n"
+            ret += f"Battle: {self.battle_track.name}"
+
+        return ret
 
 
 @dataclass
@@ -88,16 +103,18 @@ class DecisionNode(Generic[_T]):
 
         return dict(delve(self, []))
 
-    def format_tree(self, indent: int = 0) -> str:
+    def format_tree(self, indent: int = 0, leaf_to_str: callable = str) -> str:
         """Produce a compact text representation of a DecisionNode tree."""
         pad = "  " * indent
         if self.is_leaf:
-            name = self.leaf_value.name if self.leaf_value else "<none>"
-            return f"{pad} -> {name}\n"
+            name = [f"{pad} -> {x}" for x in leaf_to_str(self.leaf_value).splitlines()]
+            return "\n".join(name)
 
         val = self.value if self.value is not None else "*"
         head = f"{pad}[{self.arg} = {val}]\n" if self.arg else ""
-        return head + "".join(c.format_tree(indent + 1) for c in self.children)
+        return head + "".join(
+            c.format_tree(indent + 1, leaf_to_str) for c in self.children
+        )
 
 
 def create_simple_sound(
@@ -245,7 +262,8 @@ def _setup_bgm(
                 )
 
             for ctrl in track_state_ctrl.get(track_idx, []):
-                mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+                if ctrl:
+                    mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
 
             intro_seg.duration = mt.playlist[0].source_duration
             intro_seg.attach(mt)
@@ -558,16 +576,14 @@ def create_ambience_bgm(
         # rather than being a separate music track, but we don't enforce that here. The
         # alternative being to have a decision branch on the FieldBattleState, in which case
         # we won't need the states to control audio layers.
-        tracks = [bgm.audio]
-        state_ctrl = None
+        tracks = [bgm.regular_track]
+        state_ctrl = {
+            0: [bgm.state_ctrl_regular],
+            1: [bgm.state_ctrl_battle],
+        }
 
-        if bgm.battle_audio_layer:
-            tracks.append(bgm.battle_audio_layer)
-            state_ctrl = {
-                # FS usually uses HPF for here (also slightly muffles the base layer during battle)
-                0: [StateCtrl("FieldBattleState", "FieldBattle", {PropID.HPF: 2.0})],
-                1: [StateCtrl("FieldBattleState", "FieldNormal", {PropID.HPF: -400.0})],
-            }
+        if bgm.battle_track:
+            tracks.append(bgm.battle_track)
 
         branch_nodes = _setup_bgm(
             bnk,

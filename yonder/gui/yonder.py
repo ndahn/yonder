@@ -71,7 +71,7 @@ from .dialogs.new_soundbank_dialog import new_soundbank_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
-from .dialogs.create_ambience_track_dialog import create_ambience_track_dialog
+from .dialogs.create_ambience_bgm_dialog import create_ambience_bgm_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
@@ -265,9 +265,14 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_menu_item(
                     label=µ("Ambience Track", "menu"),
-                    callback=self._open_ambience_track_dialog,
+                    callback=self._open_ambience_bgm_dialog,
+                    tag=self._t("menu/create_ambience_bgm"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Soundscape", "menu"),
+                    #callback=self._open_soundscape_dialog,
                     enabled=False,  # TODO
-                    tag=self._t("menu/create_ambience"),
+                    tag=self._t("menu/create_soundscape"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -512,8 +517,7 @@ class BanksOfYonder(DpgItem):
                                 callback=self._regenerate_globals_list,
                                 tag=self._t("globals_filter"),
                             )
-                            
-                            
+
                             with dpg.group(horizontal=True, horizontal_spacing=0):
                                 dpg.add_button(
                                     arrow=True,
@@ -918,7 +922,7 @@ class BanksOfYonder(DpgItem):
                 callback=self.remove_all_pinned_objects,
                 tag=self._t("pin/unpin_all"),
             )
-            
+
             dpg.add_separator()
 
             with dpg.menu(label=µ("Compare", "compare")):
@@ -1577,7 +1581,7 @@ class BanksOfYonder(DpgItem):
 
         if not isinstance(node, HIRCNode):
             node = self.bnk[node]
-        
+
         node_id = node.id
 
         table: str = None
@@ -1835,9 +1839,7 @@ class BanksOfYonder(DpgItem):
             self.bnk.delete_subtree(self._selected_node)
 
         logger.info(
-            µ("Deleted {node} and exclusive children").format(
-                node=self._selected_node
-            )
+            µ("Deleted {node} and exclusive children").format(node=self._selected_node)
         )
 
         self._on_node_selected(None, True, parent)
@@ -2100,7 +2102,7 @@ class BanksOfYonder(DpgItem):
         dpg.split_frame()
         center_window(tag)
 
-    def _open_ambience_track_dialog(self) -> None:
+    def _open_ambience_bgm_dialog(self) -> None:
         tag = self._t("create_ambience_track_dialog")
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)
@@ -2113,7 +2115,7 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
             self.jump_to_node(nodes[0])
 
-        create_ambience_track_dialog(self.bnk, on_ambience_track_created, tag=tag)
+        create_ambience_bgm_dialog(self.bnk, on_ambience_track_created, tag=tag)
 
         dpg.split_frame()
         center_window(tag)

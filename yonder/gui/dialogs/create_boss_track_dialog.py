@@ -29,7 +29,7 @@ class create_boss_track_dialog(DpgItem):
         bnk: Soundbank,
         on_boss_track_created: Callable[[str, list[HIRCNode]], None],
         *,
-        title: str = "New Boss BGM",
+        title: str = "New Boss Bgm",
         tag: str = None,
     ) -> str:
         super().__init__(tag)
@@ -291,11 +291,11 @@ class create_boss_track_dialog(DpgItem):
                 µ(
                     """\
                         - Boss tracks need to be added to cs_Smain (sssss!)
-                        - Use the main music controller (1001573296 in Elden Ring)
+                        - Use the main music controller (1001573296 in ER/NR)
                         - Additional tracks will be used for 'heatup' phases
                         - BgmEnemyType corresponds to BgmBossChrIdConv in Smithbox
-                        - Only already existing BgmEnemyType strings can be used!
-                        - BgmBossChrIdConv params mus be 6-digit for EMEVD
+                        - Without the dll you can ONLY use vanilla strings!
+                        - Add a 6-digit row to BgmBossChrIdConv with your value
                     """,
                     "tips",
                 ),

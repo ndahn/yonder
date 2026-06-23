@@ -136,6 +136,7 @@ class themes:
     no_padding = None
     plot_blue = None
     plot_red = None
+    player_plot = None
 
 
 def init_themes():
@@ -278,6 +279,13 @@ def init_themes():
             dpg.add_theme_color(
                 dpg.mvPlotCol_Line, orange, category=dpg.mvThemeCat_Plots
             )
+
+    with dpg.theme() as themes.player_plot:
+        with dpg.theme_component(dpg.mvPlot):
+            dpg.add_theme_style(dpg.mvPlotStyleVar_PlotPadding, 0, 0)
+            dpg.add_theme_style(dpg.mvPlotStyleVar_LabelPadding, 1, 4)
+            dpg.add_theme_style(dpg.mvPlotStyleVar_AnnotationPadding, 1, 1)
+            dpg.add_theme_style(dpg.mvPlotStyleVar_FitPadding, 0.05, 0.2)
 
 
 class HighContrastColorGenerator:

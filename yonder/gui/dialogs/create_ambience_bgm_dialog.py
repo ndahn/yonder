@@ -1,13 +1,17 @@
 from __future__ import annotations
 from typing import Any, Callable
 from pathlib import Path
-from dataclasses import dataclass, field
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
-from yonder.convenience import create_ambience_soundscape, DecisionNode
+from yonder.enums import PropID
+from yonder.convenience import (
+    create_ambience_bgm,
+    DecisionNode,
+    AmbientBgm,
+)
 from yonder.game import GameObjects
 from yonder.wem import wav2wem
 from yonder.gui import style
@@ -19,6 +23,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_wav_player,
     add_widget_table,
+    add_properties_table,
     loading_indicator,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
@@ -29,16 +34,9 @@ from .file_dialog import open_file_dialog
 # === Data model ============================================================
 
 
-@dataclass
-class TrackEntry:
-    """One row in the condition grid: a leaf value and one condition per arg."""
-
-    leaf_value: Path = None
-    conditions: dict[str, str] = field(default_factory=dict)
-
-
 def build_tree(
-    entries: list[TrackEntry],
+    entries: list[AmbientBgm],
+    conditions: list[dict[str, str]],
     active_args: list[str],
 ) -> DecisionNode:
     """Construct a uniform-depth DecisionNode tree from flat TrackEntry rows.
@@ -48,13 +46,18 @@ def build_tree(
     """
     root = DecisionNode()
 
-    def _insert(node: DecisionNode, entry: TrackEntry, depth: int) -> None:
+    def _insert(
+        node: DecisionNode,
+        entry: AmbientBgm,
+        entry_conditions: dict[str, str],
+        depth: int,
+    ) -> None:
         if depth == len(active_args):
-            node.children.append(DecisionNode(leaf_value=entry.leaf_value))
+            node.children.append(DecisionNode(leaf_value=entry))
             return
 
         arg = active_args[depth]
-        val = entry.conditions.get(arg, _WILDCARD)
+        val = entry_conditions.get(arg, _WILDCARD)
         branch = next(
             (c for c in node.children if c.arg == arg and c.value == val), None
         )
@@ -63,10 +66,10 @@ def build_tree(
             branch = DecisionNode(arg=arg, value=val)
             node.children.append(branch)
 
-        _insert(branch, entry, depth + 1)
+        _insert(branch, entry, entry_conditions, depth + 1)
 
-    for entry in entries:
-        _insert(root, entry, 0)
+    for entry, cond in zip(entries, conditions):
+        _insert(root, entry, cond, 0)
 
     return root
 
@@ -74,8 +77,8 @@ def build_tree(
 _WILDCARD = "*"
 
 
-class create_ambience_track_dialog(DpgItem):
-    """Dialog to create a new ambience ambience.
+class create_ambience_bgm_dialog(DpgItem):
+    """Dialog to create a new ambience bgm.
 
     Creates a branch in an existing location MusicSwitchContainer and a new
     ambience MusicSwitchContainer with its own decision tree.
@@ -99,8 +102,8 @@ class create_ambience_track_dialog(DpgItem):
         bnk: Soundbank,
         on_created: Callable[[list[HIRCNode]], None],
         *,
-        initial_ambience_args: list[str] = ("OutdoorIndoor",),
-        title: str = "New Ambience",
+        initial_ambience_args: list[str] = ("TimeZone", "FieldBattleState"),
+        title: str = "New Ambience Bgm",
         tag: str = None,
     ) -> None:
         super().__init__(tag)
@@ -112,25 +115,26 @@ class create_ambience_track_dialog(DpgItem):
         self.msc: MusicSwitchContainer = None
         self.location_state_path: list[str] = []
 
-        self._track_entries: list[TrackEntry] = []
-        self._bgm_tracks: list[Path] = []
-        self._trim_infos: list[tuple] = []
+        self._bgm_tracks: list[AmbientBgm] = []
+        self._state_paths: list[dict[str, str]] = []
 
         self._build(title)
 
     # === Helpers ===========================================================
 
     def _get_location_mscs(self, filt: str) -> list[MusicSwitchContainer]:
-        valid_msc_arg_hash = calc_hash("Set_State_EnvPlaceType")
+        valid_msc_arg_hash = calc_hash("BgmPlaceType")
         return list(
             self.bnk.query(
                 f"type=MusicSwitchContainer arguments:*/group_id={valid_msc_arg_hash} {filt}"
             )
         )
 
-    def _conditions_summary(self, entry: TrackEntry, join: str = " / ") -> str:
+    def _conditions_summary(
+        self, entry: AmbientBgm, conditions: dict[str, str], join: str = " / "
+    ) -> str:
         """One-line summary of which conditions are set for a track entry."""
-        parts = [entry.conditions.get(arg, _WILDCARD) for arg in self.ambience_args]
+        parts = [conditions.get(arg, _WILDCARD) for arg in self.ambience_args]
         return join.join(parts)
 
     def _update_summary(self) -> None:
@@ -138,7 +142,7 @@ class create_ambience_track_dialog(DpgItem):
         if not location_str:
             location_str = "<invalid>"
 
-        tree = build_tree(self._track_entries, self.ambience_args)
+        tree = build_tree(self._bgm_tracks, self._state_paths, self.ambience_args)
         tree_str = tree.format_tree() or µ("<nothing to see here>")
 
         summary = f"""\
@@ -190,10 +194,15 @@ Ambience tree:
 
     def _rebuild_ambience_rows(self) -> None:
         """Rebuild the per-track header texts from current active args."""
-        for idx, entry in enumerate(self._track_entries):
+        for idx, (entry, conditions) in enumerate(
+            zip(self._bgm_tracks, self._state_paths)
+        ):
             tag = self._t(f"track_conditions:{idx}")
             if dpg.does_item_exist(tag):
-                dpg.set_item_label(tag, self._conditions_summary(entry))
+                dpg.set_item_label(tag, self._conditions_summary(entry, conditions))
+
+    def _get_default_state_path(self) -> list[str]:
+        return {a: _WILDCARD for a in self.ambience_args}
 
     # === DPG callbacks =====================================================
 
@@ -205,6 +214,7 @@ Ambience tree:
     ) -> None:
         if isinstance(selected, int):
             selected = self.bnk.get(selected)
+
         self.msc = selected
         self._rebuild_location_tab()
         dpg.show_item(self._t("location_args_group"))
@@ -244,67 +254,90 @@ Ambience tree:
         self.ambience_args[idx] = value
         self._ambience_states_table.items[idx] = value
 
-        for entry in self._track_entries:
-            entry.conditions.setdefault(value, _WILDCARD)
+        for conditions in self._state_paths:
+            conditions.setdefault(value, _WILDCARD)
 
         dpg.set_value(self._t(f"ambience_state:{idx}"), value)
         dpg.set_value(self._t(f"ambience_state_combo:{idx}"), value)
         self._rebuild_ambience_rows()
         self._update_summary()
 
-    def _ambience_branch_to_row(self, entry: TrackEntry, idx: int) -> None:
-        label = self._conditions_summary(entry)
+    def _ambience_branch_to_row(self, entry: AmbientBgm, idx: int) -> None:
+        if idx < len(self._state_paths):
+            state_path = self._state_paths[idx]
+        else:
+            state_path = self._get_default_state_path()
 
-        with dpg.tree_node(label=label, tag=self._t(f"track_conditions:{idx}")):
-            with dpg.group(horizontal=True):
-                dpg.add_text(µ("Track #{idx}").format(idx=idx))
-                dpg.add_button(
-                    label=µ("State Path", "button"),
-                    callback=self._on_edit_conditions,
-                    user_data=idx,
+        label = self._conditions_summary(entry, state_path)
+
+        with dpg.tree_node(
+            label=label,
+            default_open=True,
+            span_full_width=True,
+            tag=self._t(f"track_conditions:{idx}"),
+        ) as tree_node:
+            with dpg.tree_node(label=µ("Regular"), span_full_width=True):
+                add_wav_player(
+                    entry.regular_track,
+                    on_file_changed=self._make_track_changed_cb(idx, False),
+                    on_loop_changed=self._make_loop_changed_cb(idx, False),
+                )
+                dpg.add_spacer(height=3)
+                add_properties_table(
+                    {PropID.HPF: 2.0},
+                    self._make_properties_changed_cb(idx, False),
+                    label=µ("Properties (in combat)"),
                 )
 
-            add_wav_player(
-                entry.leaf_value,
-                on_file_changed=self._make_track_changed_cb(idx),
-                on_trims_changed=self._make_trim_changed_cb(idx),
+            with dpg.tree_node(label=µ("Battle"), span_full_width=True):
+                add_wav_player(
+                    entry.battle_track,
+                    on_file_changed=self._make_track_changed_cb(idx, True),
+                    on_loop_changed=self._make_loop_changed_cb(idx, True),
+                )
+                add_properties_table(
+                    {PropID.HPF: -400.0},
+                    self._make_properties_changed_cb(idx, True),
+                    label=µ("Properties (out of combat)"),
+                )
+
+        with dpg.item_handler_registry():
+            dpg.add_item_clicked_handler(
+                dpg.mvMouseButton_Right,
+                callback=self._on_edit_conditions,
+                user_data=idx,
             )
 
-    def _new_ambience_branch(self, done: Callable[[TrackEntry], None]) -> None:
+        dpg.bind_item_handler_registry(tree_node, dpg.last_container())
+
+    def _new_ambience_branch(self, done: Callable[[AmbientBgm], None]) -> None:
         ret = open_file_dialog(
             title="Select Audio File",
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
-            done(
-                TrackEntry(
-                    leaf_value=Path(ret),
-                    conditions={a: _WILDCARD for a in self.ambience_args},
-                )
-            )
+            done(AmbientBgm(Path(ret)))
 
     def _on_add_ambience_branch(
         self,
         sender: str,
-        info: tuple[int, TrackEntry, list[TrackEntry]],
+        info: tuple[int, AmbientBgm, list[AmbientBgm]],
         user_data: Any,
     ) -> None:
         entry = info[1]
-        self._track_entries.append(entry)
-        self._bgm_tracks.append(entry.leaf_value)
-        self._trim_infos.append((0.0, 0.0))
+        self._state_paths.append(self._get_default_state_path())
+        self._bgm_tracks.append(entry)
         self._update_summary()
 
     def _on_remove_ambience_branch(
         self,
         sender: str,
-        info: tuple[int, TrackEntry, list[TrackEntry]],
+        info: tuple[int, AmbientBgm, list[AmbientBgm]],
         user_data: Any,
     ) -> None:
         idx = info[0]
-        self._track_entries.pop(idx)
+        self._state_paths.pop(idx)
         self._bgm_tracks.pop(idx)
-        self._trim_infos.pop(idx)
         self._update_summary()
 
     def _on_add_ambience_arg(
@@ -317,8 +350,8 @@ Ambience tree:
         if arg and arg not in self.ambience_args:
             self.ambience_args = list(self.ambience_args) + [arg]
             # seed new key into existing entries so no data is lost
-            for entry in self._track_entries:
-                entry.conditions.setdefault(arg, _WILDCARD)
+            for conditions in self._state_paths:
+                conditions.setdefault(arg, _WILDCARD)
 
         self._rebuild_ambience_rows()
         self._update_summary()
@@ -335,65 +368,28 @@ Ambience tree:
         self._rebuild_ambience_rows()
         self._update_summary()
 
-    def _on_tracks_changed(
-        self,
-        sender: str,
-        data: tuple[list[Path], list[tuple], list[tuple]],
-        user_data: Any,
-    ) -> None:
-        new_tracks, _, new_trims = data[0], data[1], data[2]
-
-        # grow or shrink _track_entries to match
-        while len(self._track_entries) < len(new_tracks):
-            self._track_entries.append(
-                TrackEntry(
-                    leaf_value=new_tracks[len(self._track_entries)],
-                    conditions={a: _WILDCARD for a in self.ambience_args},
-                )
-            )
-        if len(self._track_entries) > len(new_tracks):
-            self._track_entries = self._track_entries[: len(new_tracks)]
-
-        # update leaf_value to stay in sync with player table
-        for entry, path in zip(self._track_entries, new_tracks):
-            entry.leaf_value = path
-
-        self._bgm_tracks = new_tracks
-        self._trim_infos = new_trims
-
-        self._rebuild_ambience_rows()
-        self._update_summary()
-
-    def _on_trim_changed(
-        self, sender: str, data: tuple[int, tuple], user_data: Any
-    ) -> None:
-        idx, trim = data
-        self._trim_infos[idx] = trim
-
     def _on_edit_conditions(self, sender: str, app_data: Any, idx: int) -> None:
         """Open the state-path editor for one track entry."""
-        entry = self._track_entries[idx]
-        active = self.ambience_args
+        entry = self._bgm_tracks[idx]
+        conditions = self._state_paths[idx]
+        state_args = self.ambience_args
+
         # build a synthetic state_path list aligned to the ambience args
-        current_path = [entry.conditions.get(a, _WILDCARD) for a in active]
+        current_path = [conditions.get(a, _WILDCARD) for a in state_args]
 
         def _on_path_selected(_sender: str, state_path: list[str], _ud: Any) -> None:
-            for arg, val in zip(active, state_path):
-                entry.conditions[arg] = val
-
-            entry.leaf_value = (
-                self._bgm_tracks[idx] if idx < len(self._bgm_tracks) else None
-            )
+            for arg, val in zip(state_args, state_path):
+                conditions[arg] = val
 
             tag = self._t(f"track_conditions:{idx}")
             if dpg.does_item_exist(tag):
-                dpg.set_item_label(tag, self._conditions_summary(entry))
+                dpg.set_item_label(tag, self._conditions_summary(entry, conditions))
 
             self._update_summary()
 
         edit_state_path_dialog(
             self.bnk,
-            active,
+            state_args,
             _on_path_selected,
             state_path=current_path,
             hide_node_id=True,
@@ -405,13 +401,19 @@ Ambience tree:
             return
 
         if not self._bgm_tracks:
-            self.show_message(µ("No tracks added", "msg"))
+            self.show_messageµ("No tracks added", "msg")
+            return
+
+        bgm_place_type_idx = self.msc.get_argument_pos("BgmPlaceType")
+        if self.location_state_path[bgm_place_type_idx] in ("", "0", _WILDCARD):
+            self.show_message(µ("BgmPlaceType not set"))
             return
 
         for key in self.location_state_path:
             if not key:
                 self.show_message(µ("Invalid state value {key}").format(key=key))
                 return
+
             if key not in (_WILDCARD, "0"):
                 break
         else:
@@ -419,8 +421,8 @@ Ambience tree:
             return
 
         seen: set[tuple[str]] = set()
-        for idx, track in enumerate(self._track_entries):
-            path = tuple(track.conditions.values())
+        for idx, conditions in enumerate(self._state_paths):
+            path = tuple(conditions.values())
             if path in seen:
                 self.show_message(µ("State path {idx} is redundant").format(idx=idx))
                 return
@@ -429,26 +431,38 @@ Ambience tree:
 
         with loading_indicator(µ("Working")):
             # convert .wav → .wem
-            waves = [f for f in self._bgm_tracks if f.suffix == ".wav"]
+            waves = []
+            indices = []
+            for i, bgm in enumerate(self._bgm_tracks):
+                if bgm.regular_track and bgm.regular_track.suffix == ".wav":
+                    waves.append(bgm.regular_track)
+                    indices.append((i, "regular"))
+
+                if bgm.battle_track and bgm.battle_track.suffix == ".wav":
+                    waves.append(bgm.battle_track)
+                    indices.append((i, "battle"))
+
             if waves:
                 wwise = get_config().locate_wwise()
-                converted = {p.stem: q for p, q in zip(waves, wav2wem(wwise, waves))}
-                for entry in self._track_entries:
-                    if entry.leaf_value and entry.leaf_value.suffix == ".wav":
-                        entry.leaf_value = converted.get(
-                            entry.leaf_value.stem, entry.leaf_value
-                        )
-                self._bgm_tracks = [e.leaf_value for e in self._track_entries]
+                converted = wav2wem(wwise, waves)
+
+                for (idx, state), wem in zip(indices, converted):
+                    if state == "regular":
+                        self._bgm_tracks[idx].regular_track = wem
+                    else:
+                        self._bgm_tracks[idx].battle_track = wem
 
             # TODO transition rules?
-            ambience_tree = build_tree(self._track_entries, self.ambience_args)
+            ambience_tree = build_tree(
+                self._bgm_tracks, self._state_paths, self.ambience_args
+            )
 
-            nodes = create_ambience_soundscape(
+            nodes = create_ambience_bgm(
                 self.bnk,
                 self.msc,
                 self.location_state_path,
                 ambience_tree,
-                trims=self._trim_infos,
+                properties={PropID.Priority: 80.0},
             )
 
         if self.on_created:
@@ -498,11 +512,11 @@ Ambience tree:
             add_paragraphs(
                 µ(
                     """\
-                        - Ambience tracks need to be added to cs_main (no s!)
-                        - Use the main ambience controller (631317376 in Elden Ring)
-                        - Adjust state values to match your location (e.g. BgmPlaceType)
-                        - Check the ambience controller for known state values
-                        - DOES NOT WORK YET
+                        - Ambience tracks need to be added to cs_Smain (sssss!)
+                        - Use the main music controller (1001573296 in ER/NR)
+                        - Set BgmPlaceType to your map's BgmPlaceInfo (vanilla only!)
+                        - (All?) map regions can modify CommonPlaceType
+                        - Use a SoundRegion (not Sound!) and set Unknown 0x0A
                     """,
                     "tips",
                 ),
@@ -537,8 +551,8 @@ Ambience tree:
                 µ(
                     """\
                         - Your location can use additional states
-                        - OutdoorIndoor should always be at the top
-                        - Check other controllers for known state values
+                        - Typical states are TimeZone and FieldBattleState
+                        - Areas usually have a base track and a battle overlay
                     """,
                     "tips",
                 ),
@@ -572,20 +586,33 @@ Ambience tree:
                 tag=self._t("btn_okay"),
             )
 
-    def _make_track_changed_cb(self, idx: int) -> Callable:
+    def _make_track_changed_cb(self, idx: int, battle: bool) -> Callable:
         def cb(sender: str, track: Path, user_data: Any) -> None:
             if track:
-                self._bgm_tracks[idx] = track
-                self._track_entries[idx].leaf_value = track
+                if battle:
+                    self._bgm_tracks[idx].battle_track = track
+                else:
+                    self._bgm_tracks[idx].regular_track = track
+
                 self._update_summary()
 
         return cb
 
-    def _make_trim_changed_cb(self, idx: int) -> Callable:
-        def cb(sender: str, data: tuple, user_data: Any) -> None:
-            _, trim = data
-            if idx < len(self._trim_infos):
-                self._trim_infos[idx] = trim
+    def _make_loop_changed_cb(self, idx: int, battle: bool) -> Callable:
+        def cb(sender: str, data: tuple[float, float, bool], user_data: Any) -> None:
+            if idx < len(self._bgm_tracks):
+                self._bgm_tracks[idx].loop_start = data[0]
+                self._bgm_tracks[idx].loop_end = data[1]
+
+        return cb
+
+    def _make_properties_changed_cb(self, idx: int, battle: bool) -> Callable:
+        def cb(sender: str, data: dict[PropID, float], user_data: Any) -> None:
+            if idx < len(self._bgm_tracks):
+                if battle:
+                    self._bgm_tracks[idx].state_ctrl_battle = data
+                else:
+                    self._bgm_tracks[idx].state_ctrl_regular = data
 
         return cb
 
@@ -597,4 +624,5 @@ Ambience tree:
         if not msg:
             dpg.hide_item(tag)
             return
+
         dpg.configure_item(tag, default_value=msg, color=color, show=True)

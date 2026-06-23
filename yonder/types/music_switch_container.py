@@ -45,7 +45,7 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
         obj = cls(nid)
 
         for arg, group_type in arguments:
-            obj.insert_argument(arg, group_type)
+            obj.insert_argument(-1, arg, group_type)
 
         if branches:
             for state_values, node_id in branches:
@@ -82,7 +82,9 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
 
     @property
     def states(self) -> StateChunk:
-        return self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        return (
+            self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        )
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -124,11 +126,24 @@ class MusicSwitchContainer(PropertyMixin, HIRCNode):
             num_tree_nodes += len(item.children)
             todo.extend(item.children)
 
+    def get_argument_pos(self, arg: Hash) -> int:
+        if isinstance(arg, str):
+            arg = calc_hash(arg)
+
+        for i, x in enumerate(self.arguments):
+            if x.group_id == arg:
+                return i
+
+        return -1
+
     def has_argument(self, argument: Hash) -> None:
         return self.get_argument_pos(argument) >= 0
 
     def insert_argument(
-        self, pos: int, argument: Hash, group_type: GroupType,
+        self,
+        pos: int,
+        argument: Hash,
+        group_type: GroupType,
     ) -> None:
         group_id = calc_hash(argument) if isinstance(argument, str) else argument
 
