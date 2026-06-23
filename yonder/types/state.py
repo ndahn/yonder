@@ -26,6 +26,33 @@ class State(HIRCNode):
 
         return obj
 
+    def get_param(self, prop_idx: int) -> float:
+        for i, p in enumerate(self.parameters):
+            if p == prop_idx:
+                return self.validate[i]
+
+        return None
+
+    def set_param(self, prop_idx: int, value: float) -> int:
+        for i, p in enumerate(self.parameters):
+            if p == prop_idx:
+                self.values[i] = value
+                return i
+        
+        self.parameters.append(prop_idx)
+        self.values.append(value)
+        return len(self.parameters)
+
+    def delete_param(self, prop_idx: int) -> float:
+        for i, p in enumerate(self.parameters):
+            if p == prop_idx:
+                self.parameters.pop(i)
+                return self.values.pop(i)
+
+    def clear_params(self) -> None:
+        self.parameters.clear()
+        self.values.clear()
+
     def validate(self) -> None:
         if len(self.parameters) != len(self.values):
             raise ValueError("parameters and values must be the same length")
