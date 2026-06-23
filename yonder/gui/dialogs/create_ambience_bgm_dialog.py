@@ -275,8 +275,12 @@ Ambience tree:
             span_full_width=True,
             tag=self._t(f"track_conditions:{idx}"),
         ) as tree_node:
-            # TODO
-            dpg.add_checkbox()
+            dpg.add_checkbox(
+                label=µ("Play intro"),
+                callback=self._make_intro_changed_cb(idx),
+            )
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text(µ("Use part before loop_start as intro"))
 
             dpg.add_spacer(height=3)
 
@@ -509,7 +513,7 @@ Ambience tree:
                 self._build_tab_summary()
 
     def _build_tab_location(self) -> None:
-        with dpg.tab(label=µ("location branch")):
+        with dpg.tab(label=µ("Location branch")):
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
@@ -552,7 +556,7 @@ Ambience tree:
                 autosize_x=True,
                 height=-85,
             ):
-                with dpg.tree_node(label="States", default_open=True):
+                with dpg.tree_node(label="States"):
                     self._ambience_states_table = add_widget_table(
                         list(self.ambience_args),
                         self._ambience_arg_to_row,
@@ -613,9 +617,17 @@ Ambience tree:
                 tag=self._t("btn_okay"),
             )
 
+    def _make_intro_changed_cb(self, idx: int) -> Callable:
+        def cb(sender: str, enabled: bool, user_data: Any) -> None:
+            if idx < len(self._bgm_tracks):
+                self._bgm_tracks[idx].regular.has_intro = enabled
+                self._bgm_tracks[idx].battle.has_intro = enabled
+
+        return cb
+
     def _make_track_changed_cb(self, idx: int, battle: bool) -> Callable:
         def cb(sender: str, track: Path, user_data: Any) -> None:
-            if track:
+            if track and idx < len(self._bgm_tracks):
                 if battle:
                     self._bgm_tracks[idx].battle.track = track
                 else:

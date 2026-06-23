@@ -85,7 +85,7 @@ class create_boss_track_dialog(DpgItem):
             )
 
         with dpg.table_row():
-            dpg.add_text("Play intro before loop_start", tag=self._t("intro_enabled"))
+            dpg.add_text(µ("Play intro before loop_start"), tag=self._t("intro_enabled"))
             for i, _ in enumerate(self.bgm_tracks):
                 dpg.add_checkbox(
                     default_value=self.play_intro_enabled[i],
