@@ -15,11 +15,11 @@ from .base_types import (
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class SwitchContainer(PropertyMixin, HIRCNode):
+class SwitchContainer(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 6
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     group_type: int = 0

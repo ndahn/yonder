@@ -19,11 +19,11 @@ from .base_types import (
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicTrack(PropertyMixin, HIRCNode):
+class MusicTrack(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 11
     flags: int = 0
     source_count: int = 0

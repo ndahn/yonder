@@ -6,11 +6,11 @@ from yonder.hash import Hash
 from yonder.enums import PropID
 from .hirc_node import HIRCNode
 from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC, StateChunk
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class AuxiliaryBus(PropertyMixin, HIRCNode):
+class AuxiliaryBus(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 18
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)
 

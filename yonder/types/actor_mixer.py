@@ -7,11 +7,11 @@ from yonder.enums import PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import NodeBaseParams, Children, PropBundle, RTPC, StateChunk
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class ActorMixer(PropertyMixin, HIRCNode):
+class ActorMixer(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

@@ -1,8 +1,7 @@
-from typing import Any, Callable, Literal
+from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, Hash, lookup_name
-from yonder.game import GameObjects
 from yonder.types.state import State
 from yonder.types.base_types import (
     StateChunk,
@@ -10,6 +9,7 @@ from yonder.types.base_types import (
     StatePropertyInfo,
     AkState,
 )
+from yonder.types.mixins import StateMixin
 from yonder.enums import PropID, RtpcAccum, SyncType
 from yonder.gui.localization import µ
 from .editable_table import add_widget_table
@@ -21,7 +21,8 @@ from .select_node import add_select_node
 # TODO there is also a STMG bnk section, do we need to manage that too?
 
 
-class add_states_table(DpgItem):
+# Inherit the StateMixin so we can use its helpers
+class add_states_table(StateMixin, DpgItem):
     """Widget to give access to and edit state chunks. States work as global variables
     that can be set by the game to control how audio is played.
 
@@ -56,8 +57,10 @@ class add_states_table(DpgItem):
     ) -> None:
         super().__init__(tag)
 
+        # Keep public to conform to the StateMixin
+        self.states = states
+
         self._bnk = bnk
-        self._states = states
         self._on_value_changed = on_value_changed
         self._user_data = user_data
         self._jump_to = jump_to
@@ -75,7 +78,7 @@ class add_states_table(DpgItem):
         with dpg.child_window(auto_resize_y=True, border=False, tag=self._tag):
             with dpg.tree_node(label=µ("Controlled Properties"), span_full_width=True):
                 self._properties_table = add_widget_table(
-                    self._states.state_property_info,
+                    self.states.state_property_info,
                     self._property_to_row,
                     new_item=self._new_property,
                     on_add=self._on_property_added,
@@ -96,7 +99,7 @@ class add_states_table(DpgItem):
                 label=µ("State Groups"), span_full_width=True, default_open=True
             ):
                 self._states_table = add_widget_table(
-                    self._states.state_group_chunks,
+                    self.states.state_group_chunks,
                     self._state_group_to_row,
                     new_item=self._new_state_group,
                     on_add=self._on_state_group_added,
@@ -120,7 +123,7 @@ class add_states_table(DpgItem):
                 callback(sender, (obj, field, new_val), cb_user_data)
 
             if self._on_value_changed:
-                self._on_value_changed(self._tag, self._states, self._user_data)
+                self._on_value_changed(self._tag, self.states, self._user_data)
 
         return cb
 
@@ -187,10 +190,10 @@ class add_states_table(DpgItem):
         info: tuple[int, StatePropertyInfo, list[StatePropertyInfo]],
         user_data: Any,
     ) -> None:
-        self._states.state_property_info.append(info[1])
+        self.states.state_property_info.append(info[1])
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     def _on_property_removed(
         self,
@@ -200,7 +203,7 @@ class add_states_table(DpgItem):
     ) -> None:
         from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 
-        self._states.state_property_info.pop(info[0])
+        self.states.state_property_info.pop(info[0])
 
         # Let the user decide what to do with states that now would refer to a different property
         def choice_callback(sender: str, idx: int, cb_user_data: Any) -> None:
@@ -221,7 +224,7 @@ class add_states_table(DpgItem):
         )
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     # === State Groups ======================================================
 
@@ -262,10 +265,10 @@ class add_states_table(DpgItem):
         info: tuple[int, StateGroupChunk, list[StateGroupChunk]],
         user_data: Any,
     ) -> None:
-        self._states.state_group_chunks.append(info[1])
+        self.states.state_group_chunks.append(info[1])
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     def _on_state_group_removed(
         self,
@@ -273,10 +276,10 @@ class add_states_table(DpgItem):
         info: tuple[int, StateGroupChunk, list[StateGroupChunk]],
         user_data: Any,
     ) -> None:
-        self._states.state_group_chunks.pop(info[0])
+        self.states.state_group_chunks.pop(info[0])
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     # === States ======================================================
 
@@ -298,6 +301,7 @@ class add_states_table(DpgItem):
             return new
 
         with dpg.tree_node(label=name, span_full_width=True) as tree_node:
+            # TODO use a node link instead, usually states should not be shared
             add_select_node(
                 self._bnk.query,
                 µ("State ({num_references} refs)").format(num_references=referees),
@@ -418,7 +422,7 @@ class add_states_table(DpgItem):
         group.states.append(info[1])
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     def _on_state_value_removed(
         self,
@@ -429,7 +433,7 @@ class add_states_table(DpgItem):
         group.states.pop(info[0])
 
         if self._on_value_changed:
-            self._on_value_changed(self.tag, self._states, self._user_data)
+            self._on_value_changed(self.tag, self.states, self._user_data)
 
     def _get_state_summary(self, state: State) -> list[str]:
         properties = self.get_controlled_properties()
@@ -448,37 +452,10 @@ class add_states_table(DpgItem):
         self._properties_table.refresh()
         self._states_table.refresh()
 
-    def get_free_properties(self) -> list[PropID]:
-        used = {p.property for p in self._states.state_property_info}
-        return [p for p in PropID if p not in used]
-
-    def get_controlled_properties(self) -> dict[int, PropID]:
-        return {i: p.property for i, p in enumerate(self._states.state_property_info)}
-
-    def get_states_affecting_property(self, prop: PropID) -> dict[int, list[AkState]]:
-        for prop_idx, prop_info in enumerate(self._states.state_property_info):
-            if prop_info.property == prop:
-                break
-        else:
-            return {}
-
-        ret = {}
-        for group in self._states.state_group_chunks:
-            affecting = []
-            for state_value in group.states:
-                state: State = self._bnk.get(state_value.state_instance_id)
-                if state and prop_idx in state.parameters:
-                    affecting.append(state_value)
-
-            if affecting:
-                ret[group.state_group_id] = affecting
-
-        return ret
-
     def update_states_on_property_removal(
         self, prop: PropID, prop_idx: int, include_shared: bool = False
     ) -> None:
-        for group in self._states.state_group_chunks:
+        for group in self.states.state_group_chunks:
             for aks in group.states:
                 if (
                     not include_shared

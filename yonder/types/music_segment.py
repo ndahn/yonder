@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import ClassVar, Any
+from typing import ClassVar
 
 from yonder.hash import calc_hash, Hash
 from yonder.enums import PropID, MarkerId
@@ -15,11 +15,11 @@ from .base_types import (
     StateChunk,
 )
 from .music_track import MusicTrack
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicSegment(PropertyMixin, HIRCNode):
+class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0

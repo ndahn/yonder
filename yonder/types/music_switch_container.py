@@ -16,11 +16,11 @@ from .base_types import (
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicSwitchContainer(PropertyMixin, HIRCNode):
+class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 12
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
