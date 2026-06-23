@@ -11,6 +11,7 @@ from yonder.convenience import (
     create_ambience_bgm,
     DecisionNode,
     AmbientBgm,
+    StateCtrl,
 )
 from yonder.game import GameObjects
 from yonder.wem import wav2wem
@@ -138,7 +139,7 @@ class create_ambience_bgm_dialog(DpgItem):
         return join.join(parts)
 
     def _update_summary(self) -> None:
-        location_str = " > ".join(v for v in self.location_state_path if v != "*")
+        location_str = " / ".join(v for v in self.location_state_path if v != "*")
         if not location_str:
             location_str = "<invalid>"
 
@@ -284,7 +285,7 @@ Ambience tree:
                 )
                 dpg.add_spacer(height=3)
                 add_properties_table(
-                    {PropID.HPF: 2.0},
+                    entry.state_ctrl_regular.modifiers,
                     self._make_properties_changed_cb(idx, False),
                     label=µ("Properties (in combat)"),
                 )
@@ -296,7 +297,7 @@ Ambience tree:
                     on_loop_changed=self._make_loop_changed_cb(idx, True),
                 )
                 add_properties_table(
-                    {PropID.HPF: -400.0},
+                    entry.state_ctrl_battle.modifiers,
                     self._make_properties_changed_cb(idx, True),
                     label=µ("Properties (out of combat)"),
                 )
@@ -316,7 +317,17 @@ Ambience tree:
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
-            done(AmbientBgm(Path(ret)))
+            done(
+                AmbientBgm(
+                    Path(ret),
+                    state_ctrl_regular=StateCtrl(
+                        "FieldBattleState", "FieldBattle", {PropID.HPF: 2.0}
+                    ),
+                    state_ctrl_battle=StateCtrl(
+                        "FieldBattleState", "FieldNormal", {PropID.HPF: -400.0}
+                    ),
+                )
+            )
 
     def _on_add_ambience_branch(
         self,
@@ -430,7 +441,7 @@ Ambience tree:
         self.show_message()
 
         with loading_indicator(µ("Working")):
-            # convert .wav → .wem
+            # convert .wav -> .wem
             waves = []
             indices = []
             for i, bgm in enumerate(self._bgm_tracks):
@@ -610,9 +621,9 @@ Ambience tree:
         def cb(sender: str, data: dict[PropID, float], user_data: Any) -> None:
             if idx < len(self._bgm_tracks):
                 if battle:
-                    self._bgm_tracks[idx].state_ctrl_battle = data
+                    self._bgm_tracks[idx].state_ctrl_battle.modifiers = data
                 else:
-                    self._bgm_tracks[idx].state_ctrl_regular = data
+                    self._bgm_tracks[idx].state_ctrl_regular.modifiers = data
 
         return cb
 

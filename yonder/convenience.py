@@ -107,7 +107,7 @@ class DecisionNode(Generic[_T]):
         """Produce a compact text representation of a DecisionNode tree."""
         pad = "  " * indent
         if self.is_leaf:
-            name = [f"{pad} -> {x}" for x in leaf_to_str(self.leaf_value).splitlines()]
+            name = [f"{pad} + {x}" for x in leaf_to_str(self.leaf_value).splitlines()]
             return "\n".join(name)
 
         val = self.value if self.value is not None else "*"
@@ -210,6 +210,7 @@ def create_simple_sound(
 
 def _setup_bgm(
     bnk: Soundbank,
+    parent: int | HIRCNode,
     tracks: Path | list[Path],
     *,
     intro: bool = False,
@@ -229,7 +230,7 @@ def _setup_bgm(
     if not track_state_ctrl:
         track_state_ctrl = {}
 
-    root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id())
+    root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=parent)
     new_nodes.append(root_mrsc)
 
     if intro and loop_start <= 0:
@@ -263,7 +264,7 @@ def _setup_bgm(
 
             for ctrl in track_state_ctrl.get(track_idx, []):
                 if ctrl:
-                    mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+                    mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
 
             intro_seg.duration = mt.playlist[0].source_duration
             intro_seg.attach(mt)
@@ -306,7 +307,8 @@ def _setup_bgm(
             )
 
         for ctrl in track_state_ctrl.get(track_idx, []):
-            mt.states.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+            if ctrl:
+                mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
 
         # Add to segment
         track_duration_ms = mt.playlist[0].source_duration
@@ -479,6 +481,7 @@ def create_boss_bgm(
     for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
         phase_nodes = _setup_bgm(
             bnk,
+            boss_msc,
             bgm,
             intro=play_intro and play_intro[i],
             loop_start=loop_markers[i][0],
@@ -489,7 +492,7 @@ def create_boss_bgm(
             extra_transitions=extra_transitions,
         )
 
-        boss_msc.add_branch([phase], phase_nodes[0].id)
+        boss_msc.add_branch([phase], phase_nodes[0])
         new_nodes.extend(phase_nodes)
 
     # To disable the boss music, presumably not used by bosses you can't run away from
@@ -497,7 +500,7 @@ def create_boss_bgm(
         boss_msc.add_branch(["NoBattle"], 0)
 
     # Add to master and soundbank
-    master.add_branch(master_branch, boss_msc.id)
+    master.add_branch(master_branch, boss_msc)
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
@@ -587,6 +590,7 @@ def create_ambience_bgm(
 
         branch_nodes = _setup_bgm(
             bnk,
+            ambience_msc,
             tracks,
             intro=bgm.has_intro,
             loop_start=bgm.loop_start,
@@ -602,7 +606,7 @@ def create_ambience_bgm(
         new_nodes.extend(branch_nodes)
 
     # Add to master and soundbank
-    master.add_branch(master_branch, ambience_msc.id)
+    master.add_branch(master_branch, ambience_msc)
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
@@ -668,11 +672,11 @@ def create_ambience_soundscape(
         # Connect the items
         branch_seg.attach(branch_track)
         branch_mrsc.add_playlist_item(bnk.new_id(), branch_seg, ers_type=0)
-        ambience_msc.add_branch(parse_state_path(branch), branch_mrsc.id)
+        ambience_msc.add_branch(parse_state_path(branch), branch_mrsc)
 
         new_nodes.extend([branch_mrsc, branch_seg, branch_track])
 
-    master.add_branch(parse_state_path(master_branch), ambience_msc.id)
+    master.add_branch(parse_state_path(master_branch), ambience_msc)
     bnk.add_nodes(*new_nodes)
     return new_nodes
 

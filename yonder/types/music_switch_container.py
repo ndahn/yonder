@@ -195,7 +195,7 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
         self.group_types.pop(pos)
         self.tree_depth = len(self.arguments)
 
-    def add_branch(self, path: list[Hash], node_id: int) -> None:
+    def add_branch(self, path: list[Hash], node_id: int | HIRCNode) -> None:
         if len(path) != len(self.arguments):
             raise ValueError("Path length must be equal to number of tree arguments")
 
@@ -224,6 +224,9 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
             parent = branch
 
         # Set the node ID on the leaf child
+        if isinstance(node_id, HIRCNode):
+            node_id = node_id.id
+
         node_id = int(node_id)
         branch.node_id = node_id
         if node_id > 0:

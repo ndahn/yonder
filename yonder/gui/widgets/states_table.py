@@ -360,7 +360,7 @@ class add_states_table(StateMixin, DpgItem):
         self, sender: str, connected: bool, info: tuple[State, PropID]
     ) -> None:
         state, prop = info
-        for prop_idx, p in self.get_controlled_properties():
+        for prop_idx, p in self.get_controlled_properties().items():
             if p == prop:
                 break
         else:
@@ -399,7 +399,7 @@ class add_states_table(StateMixin, DpgItem):
         self, sender: str, new_val: float, info: tuple[State, PropID]
     ) -> None:
         state, prop = info
-        for prop_idx, p in self.get_controlled_properties():
+        for prop_idx, p in self.get_controlled_properties().items():
             if p == prop:
                 break
         else:

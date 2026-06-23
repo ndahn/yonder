@@ -1,12 +1,18 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from yonder.hash import Hash, calc_hash
-from yonder.types.state import State
-from yonder.types.base_types import StateChunk, StateGroupChunk, StatePropertyInfo, AkState
+from yonder.types.base_types import (
+    StateChunk,
+    StateGroupChunk,
+    StatePropertyInfo,
+    AkState,
+)
 from yonder.enums import PropID, RtpcAccum
 
 if TYPE_CHECKING:
     from yonder import Soundbank
+    from yonder.types.state import State
 
 
 # NOTE: mixed class must expose a "states" member
@@ -42,7 +48,15 @@ class StateMixin:
 
         return ret
 
-    def get_state(self, bnk: Soundbank, state_group_id: Hash, state_value_id: Hash, unique: bool = True) -> State:
+    def get_state(
+        self,
+        bnk: Soundbank,
+        state_group_id: Hash,
+        state_value_id: Hash,
+        unique: bool = True,
+    ) -> State:
+        from yonder.types.state import State
+
         if isinstance(state_group_id, str):
             state_group_id = calc_hash(state_group_id)
 
@@ -71,7 +85,7 @@ class StateMixin:
             if state_obj.is_shared():
                 # It's shared with other nodes, don't use it
                 state_obj = None
-            
+
         if not state_obj:
             state_obj = State(bnk.new_id())
             value.state_instance_id = state_obj.id
@@ -79,7 +93,9 @@ class StateMixin:
 
         return state_obj
 
-    def remove_ctrl_state(self, bnk: Soundbank, state_group_id: Hash, *state_value_ids: Hash) -> None:
+    def remove_ctrl_state(
+        self, bnk: Soundbank, state_group_id: Hash, *state_value_ids: Hash
+    ) -> None:
         if isinstance(state_group_id, str):
             state_group_id = calc_hash(state_group_id)
 
@@ -95,7 +111,7 @@ class StateMixin:
         else:
             return
 
-        # Remove 
+        # Remove
         for idx, value in enumerate(group.states):
             if not state_value_ids or value.state_id in state_value_ids:
                 group.states.pop(idx)
@@ -118,7 +134,7 @@ class StateMixin:
 
             for val_idx, value in enumerate(group.states):
                 state_obj: State = bnk.get(value.state_instance_id)
-                
+
                 if not state_obj:
                     continue
 
@@ -132,16 +148,29 @@ class StateMixin:
                     del_states.append(state_obj)
 
             # Empty groups are allowed to remain
-            group.states = [s for i, s in enumerate(group.states) if i not in del_values]
+            group.states = [
+                s for i, s in enumerate(group.states) if i not in del_values
+            ]
             bnk.delete_nodes(*del_states)
-    
-    def set_state_ctrl(self, bnk: Soundbank, state_group_id: Hash, state_value_id: Hash, modifiers: dict[PropID, float], update: bool = False, unique: bool = True) -> State:
+
+    def set_state_ctrl(
+        self,
+        bnk: Soundbank,
+        state_group_id: Hash,
+        state_value_id: Hash,
+        modifiers: dict[PropID, float],
+        *,
+        update: bool = False,
+        unique: bool = True,
+    ) -> State:
         state_obj = self.get_state(bnk, state_group_id, state_value_id, unique=unique)
         if not update:
             state_obj.clear_params()
-        
+
         # Update property info
-        property_map = {p.property: i for i, p in enumerate(self.states.state_property_info)}
+        property_map = {
+            p.property: i for i, p in enumerate(self.states.state_property_info)
+        }
         for prop in modifiers.keys():
             if prop not in property_map:
                 self.states.state_property_info.append(
@@ -150,7 +179,7 @@ class StateMixin:
                         RtpcAccum.Additive,
                     )
                 )
-                property_map[prop] = len(self.states.state_property_info)
+                property_map[prop] = len(self.states.state_property_info) - 1
 
         # Set the property values on the state object
         for prop, val in modifiers.items():
