@@ -1,9 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import ClassVar, TYPE_CHECKING
 
 from yonder.hash import calc_hash, Hash
 from .hirc_node import HIRCNode
+
+if TYPE_CHECKING:
+    from yonder import Soundbank
 
 
 @dataclass(repr=False, eq=False)
@@ -25,6 +28,9 @@ class State(HIRCNode):
             obj.values.append(val)
 
         return obj
+
+    def is_shared(self, bnk: Soundbank) -> bool:
+        return len(bnk.get_tree().in_degree(self.id)) > 1
 
     def get_param(self, prop_idx: int) -> float:
         for i, p in enumerate(self.parameters):

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Iterator, TypeVar, Generic
 from dataclasses import dataclass, field
 
-from yonder.hash import lookup_name
+from yonder.hash import Hash, lookup_name, calc_hash
 from yonder.enums import (
     CurveInterpolation,
     ClipAutomationType,
@@ -486,6 +486,16 @@ class StateGroupChunk:
     state_count: int = 0
     states: list[AkState] = field(default_factory=list)
 
+    def get_state_value(self, state_value_id: Hash) -> AkState:
+        if isinstance(state_value_id, str):
+            state_value_id = calc_hash(state_value_id)
+
+        for value in self.states:
+            if value.state_id == state_value_id:
+                return value
+
+        return None
+
 
 @dataclass(slots=True)
 class StateChunk:
@@ -493,6 +503,23 @@ class StateChunk:
     state_property_info: list[StatePropertyInfo] = field(default_factory=list)
     state_group_count: int = 0
     state_group_chunks: list[StateGroupChunk] = field(default_factory=list)
+
+    def get_property_info(self, property: PropID) -> StatePropertyInfo:
+        for info in self.state_property_info:
+            if info.property == property:
+                return info
+
+        return None
+
+    def get_state_group(self, state_group_id: Hash) -> StateGroupChunk:
+        if isinstance(state_group_id, str):
+            state_group_id = calc_hash(state_group_id)
+
+        for chunk in self.state_group_chunks:
+            if chunk.state_group_id == state_group_id:
+                return chunk
+
+        return None
 
 
 @dataclass(slots=True)

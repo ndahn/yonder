@@ -4,6 +4,9 @@ from yonder.enums import PropID
 
 # NOTE: mixed class must expose a "properties" member
 class PropertyMixin:
+    # Dummies, just for the type checker
+    properties: PropBundle
+
     def get_property(self, property: PropID, default: float = None) -> float:
         """Get a property value by name.
 

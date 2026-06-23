@@ -353,6 +353,7 @@ class Soundbank:
         # Don't use `del self[nid]` as it will regenerate the index table on every delete
         self.hirc.objects = [n for i, n in enumerate(self.hirc.objects) if i not in indices]
 
+        # TODO use the tree instead!
         # Search for any nodes referencing the deleted nodes and clear those references
         for node in self.hirc.objects:
             if hasattr(node, "detach"):
