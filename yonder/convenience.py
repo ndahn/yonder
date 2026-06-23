@@ -49,27 +49,20 @@ class StateCtrl:
 
 
 @dataclass
-class AmbientBgm:
-    regular_track: Path = None
-    battle_track: Path = None
-    loop_start: float = 0.0
-    loop_end: float = 0.0
+class BgmTrack:
+    track: Path = None
+    loop_info: tuple[float, float] = (0.0, 0.0)
+    trims: tuple[float, float] = (0.0, 0.0)
+    fadein: float = 0.0
+    fadeout: float = 0.0
     has_intro: bool = False
-    state_ctrl_regular: StateCtrl = None
-    state_ctrl_battle: StateCtrl = None
+    state_ctrl: list[StateCtrl] = field(default_factory=list)
 
     def __str__(self) -> str:
-        ret = ""
+        if self.track:
+            return f"{self.track.name}"
 
-        if self.regular_track:
-            ret += f"Regular: {self.regular_track.name}"
-        
-        if self.battle_track:
-            if ret:
-                ret += "\n"
-            ret += f"Battle: {self.battle_track.name}"
-
-        return ret
+        return "None"
 
 
 @dataclass
@@ -211,27 +204,21 @@ def create_simple_sound(
 def _setup_bgm(
     bnk: Soundbank,
     parent: int | HIRCNode,
-    tracks: Path | list[Path],
+    tracks: BgmTrack | list[BgmTrack],
     *,
     intro: bool = False,
-    loop_start: float = 0.0,
-    loop_end: float = 0.0,
-    fadein: float = 0.3,
     base_transition: MusicTransitionRule = None,
     intro_transition: MusicTransitionRule = None,
     extra_transitions: list[MusicTransitionRule] = None,
-    track_state_ctrl: dict[int, list[StateCtrl]] = None,
 ) -> list[HIRCNode]:
     new_nodes = []
-
-    if isinstance(tracks, Path):
+    if isinstance(tracks, BgmTrack):
         tracks = [tracks]
 
-    for track in tracks:
-        bnk.add_wem(track, SourceType.Streaming)
+    loop_start, loop_end = tracks[0].loop_info
 
-    if not track_state_ctrl:
-        track_state_ctrl = {}
+    for bgm in tracks:
+        bnk.add_wem(bgm.track, SourceType.Streaming)
 
     root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=parent)
     new_nodes.append(root_mrsc)
@@ -250,24 +237,23 @@ def _setup_bgm(
         intro_seg.set_marker(MarkerId.LoopEnd.value, loop_start * 1000)
         new_nodes.append(intro_seg)
 
-        for track_idx, track in enumerate(tracks):
+        for bgm in tracks:
             mt = MusicTrack.new(
-                bnk.new_id(), track, parent=intro_seg, props={PropID.Priority: 80.0}
+                bnk.new_id(), bgm.track, parent=intro_seg, props={PropID.Priority: 80.0}
             )
-            mt.set_trims(0.0, loop_start * 1000)
+            mt.set_trims(bgm.trims[0], loop_start * 1000)
 
-            if fadein:
+            if bgm.fadein > 0:
                 mt.add_clip(
                     ClipAutomationType.FadeIn,
                     [
                         RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                        RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+                        RTPCGraphPoint(bgm.fadein * 1000, 1.0, CurveInterpolation.Constant),
                     ],
                 )
 
-            for ctrl in track_state_ctrl.get(track_idx, []):
-                if ctrl:
-                    mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+            for ctrl in bgm.state_ctrl:
+                mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
 
             intro_seg.duration = mt.playlist[0].source_duration
             intro_seg.attach(mt)
@@ -294,24 +280,45 @@ def _setup_bgm(
     )
     new_nodes.append(bgm_seg)
 
-    for track_idx, track in enumerate(tracks):
+    # Add markers for looping
+    if not loop_end:
+        loop_end = bgm_seg.duration
+    else:
+        loop_end *= 1000
+
+    if loop_end < 0:
+        loop_end = bgm_seg.duration + loop_end
+
+    # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
+    # Leaving the loop marker at 0 and adjusting the begin trim instead should 
+    # be more reliable as it will work even if an intro is used, but can still 
+    # be adjusted per track
+
+    # Intentionally set to 0! We'll trim to loop start instead
+    bgm_seg.set_marker(MarkerId.LoopStart.value, 0)
+    # According to Shion this is probably just for testing
+    bgm_seg.set_marker("LoopCheck", loop_end - 3000)
+    bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
+
+    for bgm in tracks:
         mt = MusicTrack.new(
-            bnk.new_id(), track, parent=bgm_seg, props={PropID.Priority: 80.0}
+            bnk.new_id(), bgm.track, parent=bgm_seg, props={PropID.Priority: 80.0}
         )
+        # NOTE see above
+        mt.set_trims(loop_start, bgm.trims[1])
 
         # Pronounced fade in for the track
-        if fadein > 0.0:
+        if not intro and bgm.fadein > 0.0:
             mt.add_clip(
                 ClipAutomationType.FadeIn,
                 [
                     RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                    RTPCGraphPoint(fadein, 1.0, CurveInterpolation.Constant),
+                    RTPCGraphPoint(bgm.fadein * 1000, 1.0, CurveInterpolation.Constant),
                 ],
             )
 
-        for ctrl in track_state_ctrl.get(track_idx, []):
-            if ctrl:
-                mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+        for ctrl in bgm.state_ctrl:
+            mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
 
         # Add to segment
         track_duration_ms = mt.playlist[0].source_duration
@@ -358,22 +365,6 @@ def _setup_bgm(
                 dest_fade_curve=CurveInterpolation.Exp3,
                 dest_play_pre_entry=True,
             )
-
-    # Add markers for looping
-    if not loop_end:
-        loop_end = bgm_seg.duration
-    else:
-        loop_end *= 1000
-
-    if loop_end < 0:
-        loop_end = bgm_seg.duration - loop_end
-
-    bgm_seg.set_marker(MarkerId.LoopStart.value, loop_start)
-    # According to Shion this is probably just for testing
-    bgm_seg.set_marker("LoopCheck", loop_end - 3000)
-    bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
-
-    # NOTE: Either the begin_trim or the LoopStart marker must remain at 0!
 
     # Add the segment to the music container's playlist
     if not root_mrsc.playlist_items:
@@ -481,15 +472,18 @@ def create_boss_bgm(
     boss_state_keys = parse_state_path(boss_phases)
 
     # Setup the phase music tracks
-    for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
+    for i, (phase, track) in enumerate(zip(boss_state_keys, tracks)):
+        # TODO get BgmTracks passed instead
+        bgm = BgmTrack(
+            track,
+            loop_markers[i],
+            fadein=0.3,
+        )
         phase_nodes = _setup_bgm(
             bnk,
             boss_msc,
             bgm,
             intro=play_intro and play_intro[i],
-            loop_start=loop_markers[i][0],
-            loop_end=loop_markers[i][1],
-            fadein=0.3,
             base_transition=phase_transition,
             intro_transition=intro_transition,
             extra_transitions=extra_transitions,
@@ -512,7 +506,7 @@ def create_ambience_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
     master_branch: Hash | list[Hash],
-    location_tree: DecisionNode[AmbientBgm],
+    location_tree: DecisionNode[tuple[BgmTrack, BgmTrack]],
     *,
     default_transition: MusicTransitionRule = None,
     base_transition: MusicTransitionRule = None,
@@ -577,32 +571,29 @@ def create_ambience_bgm(
                 master_branch.append("*")
 
     location_branches = location_tree.flatten()
-    for branch, bgm in location_branches.items():
+    for branch, (regular_track, battle_track) in location_branches.items():
         # Ambience music typically has one base track and a battle track which is overlayed
         # rather than being a separate music track, but we don't enforce that here. The
         # alternative being to have a decision branch on the FieldBattleState, in which case
         # we won't need the states to control audio layers.
-        tracks = [bgm.regular_track]
-        state_ctrl = {
-            0: [bgm.state_ctrl_regular],
-            1: [bgm.state_ctrl_battle],
-        }
+        tracks = []
+        has_intro = False
 
-        if bgm.battle_track:
-            tracks.append(bgm.battle_track)
+        if regular_track:
+            tracks.append(regular_track)
+            has_intro |= regular_track.has_intro
+
+        if battle_track:
+            has_intro = battle_track.has_intro
 
         branch_nodes = _setup_bgm(
             bnk,
             ambience_msc,
             tracks,
-            intro=bgm.has_intro,
-            loop_start=bgm.loop_start,
-            loop_end=bgm.loop_end,
-            fadein=0,
+            intro=has_intro,
             base_transition=base_transition,
             intro_transition=intro_transition,
             extra_transitions=extra_transitions,
-            track_state_ctrl=state_ctrl,
         )
 
         ambience_msc.add_branch(branch, branch_nodes[0])
