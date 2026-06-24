@@ -1,13 +1,15 @@
 from __future__ import annotations
 from typing import Any, Callable, Literal
 from pathlib import Path
+from copy import deepcopy
 from dataclasses import dataclass, field
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
-from yonder.enums import PropID
+from yonder.types.base_types import MusicTransitionRule
+from yonder.enums import PropID, CurveInterpolation
 from yonder.convenience import (
     create_ambience_bgm,
     DecisionNode,
@@ -28,7 +30,9 @@ from yonder.gui.widgets import (
     loading_indicator,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
+from yonder.gui.widgets.transition_matrix import add_transition_matrix
 from .edit_state_path_dialog import edit_state_path_dialog
+from .edit_transition_dialog import edit_transition_dialog
 from .file_dialog import open_file_dialog
 
 
@@ -170,7 +174,7 @@ class create_ambience_bgm_dialog(DpgItem):
         bnk: Soundbank,
         on_created: Callable[[list[HIRCNode]], None],
         *,
-        initial_ambience_args: list[str] = ("TimeZone", "FieldBattleState"),
+        initial_local_args: list[str] = ("TimeZone", "FieldBattleState"),
         title: str = "New Ambience Bgm",
         tag: str = None,
     ) -> None:
@@ -180,7 +184,17 @@ class create_ambience_bgm_dialog(DpgItem):
         self.on_created = on_created
 
         self.msc: MusicSwitchContainer = None
-        self.area_args = list(initial_ambience_args or [])
+        self.area_transition: MusicTransitionRule = MusicTransitionRule()
+        self.local_transitions: list[MusicTransitionRule] = [
+            MusicTransitionRule().configure(
+                src_transition_time=3000,
+                src_fade_offset=3000,
+                src_fade_curve=CurveInterpolation.SCurve,
+                dst_transition_time=1000,
+                dst_fade_curve=CurveInterpolation.InvSCurve,
+            )
+        ]
+        self.area_args = list(initial_local_args or [])
         self.local_args: list[str] = []
         self._bgm_tracks: list[AmbientBgm] = []
 
@@ -199,11 +213,12 @@ class create_ambience_bgm_dialog(DpgItem):
     def _conditions_summary(
         self,
         entry: AmbientBgm,
+        idx: int,
         join: str = " / ",
     ) -> str:
         """One-line summary of which conditions are set for a track entry."""
         parts = [entry.state_path.get(arg, _WILDCARD) for arg in self.area_args]
-        return join.join(parts)
+        return f"#{idx}: {join.join(parts)}"
 
     def _update_summary(self) -> None:
         def leaf_to_str(leaf: tuple[BgmTrack, BgmTrack]) -> str:
@@ -215,7 +230,9 @@ class create_ambience_bgm_dialog(DpgItem):
             location_str = "<invalid>"
 
         tree = build_tree(self._bgm_tracks, self.area_args)
-        tree_str = tree.format_tree(leaf_to_str=leaf_to_str) or µ("<nothing to see here>")
+        tree_str = tree.format_tree(leaf_to_str=leaf_to_str) or µ(
+            "<nothing to see here>"
+        )
 
         summary = f"""\
 Location selector:
@@ -241,35 +258,46 @@ Ambience tree:
 
         self.local_args = [_WILDCARD] * len(self.msc.arguments)
 
+        dpg.push_container_stack(self._t("location_args_group"))
+        dpg.add_text(µ("State path"))
+
         for idx, arg in enumerate(self.msc.arguments):
             name = lookup_name(arg.group_id, f"#{arg.group_id}")
             values = self._get_values_for_arg(arg.group_id)
 
-            with dpg.group(
-                horizontal=True,
-                parent=self._t("location_args_group"),
-            ):
+            with dpg.group(horizontal=True):
                 dpg.add_input_text(
                     default_value=_WILDCARD,
                     width=160,
                     tag=self._t(f"location_val:{idx}"),
-                    callback=self._on_location_val_changed,
+                    callback=self._on_area_val_changed,
                     user_data=idx,
                 )
                 dpg.add_combo(
                     values,
                     no_preview=True,
-                    callback=self._on_location_val_changed,
+                    callback=self._on_area_val_changed,
                     user_data=idx,
                 )
                 dpg.add_text(name)
 
-    def _rebuild_ambience_rows(self) -> None:
+        dpg.pop_container_stack()
+
+    def _update_local_transitions_matrix(self) -> None:
+        # NOTE not using format to make sure the # survives for later
+        targets = [
+            µ("Track ") + f"#{i}" for i in range(len(self._bgm_tracks))
+        ]
+        self._local_transitions_matrix.targets = targets
+        self._local_transitions_matrix.regenerate()
+
+    def _update_local_branch_labels(self) -> None:
         """Rebuild the per-track header texts from current active args."""
         for idx, entry in enumerate(self._bgm_tracks):
             tag = self._t(f"track_conditions:{idx}")
             if dpg.does_item_exist(tag):
-                dpg.set_item_label(tag, self._conditions_summary(entry))
+                label = self._conditions_summary(entry, idx)
+                dpg.set_item_label(tag, label)
 
     def _get_default_state_path(self) -> dict[str, str]:
         return {a: _WILDCARD for a in self.area_args}
@@ -290,11 +318,13 @@ Ambience tree:
         dpg.show_item(self._t("location_args_group"))
         self.show_message()
 
-    def _on_location_val_changed(self, sender: str, value: str, idx: int) -> None:
+    def _on_area_val_changed(self, sender: str, value: str, idx: int) -> None:
         self.local_args[idx] = value
         input_tag = self._t(f"location_val:{idx}")
         if dpg.does_item_exist(input_tag) and sender != input_tag:
             dpg.set_value(input_tag, value)
+
+        self._update_summary()
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
         """Render one ambience-arg row: input + combo(no_preview) + locked hint."""
@@ -303,14 +333,14 @@ Ambience tree:
             dpg.add_input_text(
                 default_value=arg,
                 width=200,
-                callback=self._on_ambience_arg_name_changed,
+                callback=self._on_local_arg_name_changed,
                 tag=self._t(f"ambience_state:{idx}"),
                 user_data=idx,
             )
             dpg.add_combo(
                 values,
                 no_preview=True,
-                callback=self._on_ambience_arg_name_changed,
+                callback=self._on_local_arg_name_changed,
                 tag=self._t(f"ambience_state_combo:{idx}"),
                 user_data=idx,
             )
@@ -320,7 +350,7 @@ Ambience tree:
         self.area_args.append(arg)
         done(arg)
 
-    def _on_ambience_arg_name_changed(self, sender: str, value: str, idx: int) -> None:
+    def _on_local_arg_name_changed(self, sender: str, value: str, idx: int) -> None:
         self.area_args[idx] = value
         self._ambience_states_table.items[idx] = value
 
@@ -329,11 +359,11 @@ Ambience tree:
 
         dpg.set_value(self._t(f"ambience_state:{idx}"), value)
         dpg.set_value(self._t(f"ambience_state_combo:{idx}"), value)
-        self._rebuild_ambience_rows()
+        self._update_local_branch_labels()
         self._update_summary()
 
     def _local_branch_to_row(self, entry: AmbientBgm, idx: int) -> None:
-        label = self._conditions_summary(entry)
+        label = self._conditions_summary(entry, idx)
 
         with dpg.tree_node(
             label=label,
@@ -346,7 +376,7 @@ Ambience tree:
                 autosize_x=True,
                 auto_resize_y=True,
             ):
-                with dpg.group(horizontal=True):
+                with dpg.group():
                     dpg.add_checkbox(
                         label=µ("Intro"),
                         default_value=entry.intro,
@@ -363,18 +393,8 @@ Ambience tree:
                         width=200,
                         callback=self._make_callback(entry, "fadein"),
                     )
-
-                # TODO
-                with dpg.group(horizontal=True):
-                    dpg.add_text(µ("Transitions:"))
                     dpg.add_button(
-                        label=µ("Default"),
-                    )
-                    dpg.add_button(
-                        label=µ("Branches"),
-                    )
-                    dpg.add_button(
-                        label=µ("Intro"),
+                        label=µ("Transition"),
                     )
 
             dpg.add_spacer(height=3)
@@ -405,7 +425,9 @@ Ambience tree:
                     label=µ("Properties"),
                     user_data=(idx, False),
                 )
-            dpg.bind_item_theme(tree_node_regular, style.themes.get_color_theme(style.green))
+            dpg.bind_item_theme(
+                tree_node_regular, style.themes.get_color_theme(style.green)
+            )
 
             with dpg.tree_node(
                 label=µ("Battle"),
@@ -433,7 +455,9 @@ Ambience tree:
                     label=µ("Properties"),
                     user_data=(idx, True),
                 )
-            dpg.bind_item_theme(tree_node_battle, style.themes.get_color_theme(style.light_red))
+            dpg.bind_item_theme(
+                tree_node_battle, style.themes.get_color_theme(style.light_red)
+            )
 
         with dpg.item_handler_registry():
             dpg.add_item_clicked_handler(
@@ -461,6 +485,7 @@ Ambience tree:
                     state_path=self._get_default_state_path(),
                 )
             )
+            self._update_local_transitions_matrix()
 
     def _on_add_local_branch(
         self,
@@ -573,7 +598,7 @@ Ambience tree:
             for entry in self._bgm_tracks:
                 entry.state_path.setdefault(arg, _WILDCARD)
 
-        self._rebuild_ambience_rows()
+        self._update_local_branch_labels()
         self._update_summary()
 
     def _on_remove_local_arg(
@@ -585,7 +610,7 @@ Ambience tree:
         idx = info[0]
 
         self.area_args = [a for i, a in enumerate(self.area_args) if i != idx]
-        self._rebuild_ambience_rows()
+        self._update_local_branch_labels()
         self._update_summary()
 
     def _edit_state_path(self, sender: str, app_data: Any, idx: int) -> None:
@@ -602,7 +627,7 @@ Ambience tree:
 
             tag = self._t(f"track_conditions:{idx}")
             if dpg.does_item_exist(tag):
-                dpg.set_item_label(tag, self._conditions_summary(entry))
+                dpg.set_item_label(tag, self._conditions_summary(entry, idx))
 
             self._update_summary()
 
@@ -671,14 +696,42 @@ Ambience tree:
                     else:
                         self._bgm_tracks[idx].battle.track = wem
 
-            # TODO transition rules?
+            # Transition rules
+            if dpg.get_value(self._t("custom_area_transition_enabled")):
+                master_transition = self.area_transition
+            else:
+                master_transition = None
+
+            variant_transitions = []
+            for trans in self.local_transitions:
+                trans = deepcopy(trans)
+
+                for idx, track_ref in enumerate(trans.source_ids):
+                    if isinstance(track_ref, str):
+                        track_idx = int(track_ref.split("#")[-1])
+                        trans.source_ids[idx] = track_idx
+
+                for idx, track_ref in enumerate(trans.destination_ids):
+                    if isinstance(track_ref, str):
+                        track_idx = int(track_ref.split("#")[-1])
+                        trans.destination_ids[idx] = track_idx
+
+                variant_transitions.append(trans)
+
+            # TODO
+            track_transitions = []
+
+            # Decision tree
             ambience_tree = build_tree(self._bgm_tracks, self.area_args)
 
+            # Commence!
             nodes = create_ambience_bgm(
                 self.bnk,
                 self.msc,
                 self.local_args,
                 ambience_tree,
+                variant_transitions=variant_transitions,
+                master_transition=master_transition,
                 properties={PropID.Priority: 80.0},
             )
 
@@ -706,10 +759,12 @@ Ambience tree:
             with dpg.tab_bar():
                 self._build_tab_area_selector()
                 self._build_tab_local_tree()
+                self._build_tab_tracks()
                 self._build_tab_summary()
 
     def _build_tab_area_selector(self) -> None:
         with dpg.tab(label=µ("Area selector")):
+            dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
@@ -724,12 +779,27 @@ Ambience tree:
                     node_type=MusicSwitchContainer,
                 )
 
-                dpg.add_child_window(
+                dpg.add_spacer(height=4)
+                with dpg.child_window(
                     autosize_x=True,
                     auto_resize_y=True,
                     tag=self._t("location_args_group"),
-                    show=False,
-                )
+                ):
+                    dpg.add_text(µ("State path"))
+
+                dpg.add_spacer(height=2)
+                with dpg.group(horizontal=True):
+                    dpg.add_text(µ("Custom transition"))
+                    dpg.add_checkbox(
+                        tag=self._t("custom_area_transition_enabled"),
+                    )
+                    dpg.add_button(
+                        label=µ("Edit"),
+                        callback=lambda s, a, u: edit_transition_dialog(
+                            self.area_transition, [], self._on_area_transition_changed
+                        ),
+                        tag=self._t("btn_edit_area_transition"),
+                    )
 
             add_paragraphs(
                 µ(
@@ -747,23 +817,48 @@ Ambience tree:
 
     def _build_tab_local_tree(self) -> None:
         with dpg.tab(label=µ("Local tree")):
+            dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-105,
+                height=-65,
             ):
-                with dpg.tree_node(label="States"):
-                    self._ambience_states_table = add_widget_table(
-                        list(self.area_args),
-                        self._local_arg_to_row,
-                        new_item=self._new_local_arg,
-                        on_add=self._on_add_local_arg,
-                        on_remove=self._on_remove_local_arg,
-                        add_item_label=µ("+ Add State"),
-                        show_clear=False,
-                    )
-
                 dpg.add_spacer(height=4)
+                self._ambience_states_table = add_widget_table(
+                    list(self.area_args),
+                    self._local_arg_to_row,
+                    new_item=self._new_local_arg,
+                    on_add=self._on_add_local_arg,
+                    on_remove=self._on_remove_local_arg,
+                    add_item_label=µ("+ Add State"),
+                    show_clear=False,
+                )
+
+                self._local_transitions_matrix = add_transition_matrix(
+                    self.local_transitions,
+                    [],
+                    self._on_local_transitions_changed,
+                )
+
+            add_paragraphs(
+                µ(
+                    """\
+                        - Your location can use additional states
+                        - Typical states are TimeZone and FieldBattleState
+                    """,
+                    "tips",
+                ),
+                color=style.light_blue,
+            )
+
+    def _build_tab_tracks(self) -> None:
+        with dpg.tab(label=µ("Tracks")):
+            dpg.add_spacer(height=4)
+            with dpg.child_window(
+                border=False,
+                autosize_x=True,
+                height=-65,
+            ):
                 add_widget_table(
                     [],
                     self._local_branch_to_row,
@@ -777,8 +872,6 @@ Ambience tree:
             add_paragraphs(
                 µ(
                     """\
-                        - Your location can use additional states
-                        - Typical states are TimeZone and FieldBattleState
                         - Areas usually have a base track and a battle overlay
                         - Loop markers for regular and battle are linked!
                     """,
@@ -789,9 +882,7 @@ Ambience tree:
 
     def _build_tab_summary(self) -> None:
         with dpg.tab(label=µ("Summary")):
-            dpg.add_text(µ("Ambience decision tree:", "tips"))
-
-            dpg.add_spacer(height=3)
+            dpg.add_spacer(height=4)
             with dpg.child_window(height=-45):
                 dpg.add_text(
                     µ("<nothing to see here>"),
@@ -799,7 +890,7 @@ Ambience tree:
                     color=style.pink,
                 )
 
-            dpg.add_spacer(height=2)
+            dpg.add_spacer(height=1)
             dpg.add_text(
                 "",
                 tag=self._t("notification"),
@@ -825,6 +916,17 @@ Ambience tree:
             self._update_summary()
 
         return cb
+
+    def _on_local_transitions_changed(
+        self, sender: str, transitions: list[MusicTransitionRule], user_data: Any
+    ) -> None:
+        self.local_transitions = transitions
+        self._update_local_transitions_matrix()
+        self._update_summary()
+
+    def _on_area_transition_changed(self, sender: str, transition: MusicTransitionRule, user_data: Any) -> None:
+        self.area_transition = transition
+        self._update_summary()
 
     # === Public ============================================================
 

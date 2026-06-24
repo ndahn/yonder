@@ -176,7 +176,7 @@ class MusicTransitionRule:
         dst_play_pre_entry: bool = None,
         src_ids: list[int] = None,
         dst_ids: list[int] = None,
-    ) -> None:
+    ) -> MusicTransitionRule:
         src_rule = self.source_transition_rule
         dst_rule = self.destination_transition_rule
 
@@ -204,6 +204,8 @@ class MusicTransitionRule:
             self.source_ids = src_ids
         if dst_ids:
             self.destination_ids = dst_ids
+
+        return self
 
     def get_references(self) -> list[tuple[str, int]]:
         refs = []

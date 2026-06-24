@@ -898,7 +898,9 @@ def _create_attributes_attenuation(
             )
 
         with dpg.tree_node(
-            label=µ("Cone params"), span_full_width=True, tag=f"{base_tag}/atttenuation/cone_params"
+            label=µ("Cone params"),
+            span_full_width=True,
+            tag=f"{base_tag}/atttenuation/cone_params",
         ):
             dpg.add_checkbox(
                 label=µ("Cone enabled"),
@@ -1129,13 +1131,18 @@ def _create_attributes_musicrandomsequencecontainer(
             on_node_changed(base_tag, node, user_data)
 
     with dpg.group():
-        add_transition_matrix(node, on_transition_rule_changed, user_data=user_data)
+        add_transition_matrix(
+            node.music_trans_node_params.transition_rules,
+            node.children.items,
+            on_transition_rule_changed,
+            user_data=user_data,
+        )
 
         dpg.add_spacer(height=3)
         dpg.add_separator()
         dpg.add_spacer(height=3)
 
-        # TODO playlist 
+        # TODO playlist
 
 
 def _create_attributes_musicswitchcontainer(
@@ -1311,7 +1318,9 @@ def _create_attributes_musicswitchcontainer(
         )
 
         dpg.add_spacer(height=3)
-        add_transition_matrix(node, None)
+        add_transition_matrix(
+            node.music_trans_node_params.transition_rules, node.children.items, None
+        )
 
         dpg.add_spacer(height=3)
         dpg.add_separator()
@@ -1678,7 +1687,7 @@ def _create_attributes_randomsequencecontainer(
             tag=f"{base_tag}/randomsequencecontainer/playlist",
         )
 
-        # TODO playlist 
+        # TODO playlist
 
 
 def _create_attributes_sound(

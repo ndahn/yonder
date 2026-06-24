@@ -207,9 +207,8 @@ def _setup_bgm(
     tracks: BgmTrack | list[BgmTrack],
     *,
     intro: bool = False,
-    base_transition: MusicTransitionRule = None,
+    track_transition: MusicTransitionRule = None,
     intro_transition: MusicTransitionRule = None,
-    extra_transitions: list[MusicTransitionRule] = None,
 ) -> list[HIRCNode]:
     new_nodes = []
     if isinstance(tracks, BgmTrack):
@@ -243,7 +242,7 @@ def _setup_bgm(
                 bnk.new_id(), bgm.track, parent=intro_seg, props={PropID.Priority: 80.0}
             )
             mt.set_trims(bgm.trims[0], loop_start * 1000)
-            
+
             for prop, val in bgm.properties:
                 mt.set_property(prop, val)
 
@@ -252,7 +251,9 @@ def _setup_bgm(
                     ClipAutomationType.FadeIn,
                     [
                         RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                        RTPCGraphPoint(bgm.fadein * 1000, 1.0, CurveInterpolation.Constant),
+                        RTPCGraphPoint(
+                            bgm.fadein * 1000, 1.0, CurveInterpolation.Constant
+                        ),
                     ],
                 )
 
@@ -294,8 +295,8 @@ def _setup_bgm(
         loop_end = bgm_seg.duration + loop_end
 
     # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
-    # Leaving the loop marker at 0 and adjusting the begin trim instead should 
-    # be more reliable as it will work even if an intro is used, but can still 
+    # Leaving the loop marker at 0 and adjusting the begin trim instead should
+    # be more reliable as it will work even if an intro is used, but can still
     # be adjusted per track
 
     # Intentionally set to 0! We'll trim to loop start instead
@@ -334,15 +335,12 @@ def _setup_bgm(
         new_nodes.append(mt)
 
     # Adjust base transition rule
-    if base_transition:
-        base_transition.source_transition_rule.sync_type = SyncType.ExitMarker
-        root_mrsc.music_trans_node_params.transition_rules[0] = base_transition
-    else:
-        base_rule = root_mrsc.music_trans_node_params.transition_rules[0]
-        base_rule.configure(
-            src_sync_type=SyncType.ExitMarker,
-            src_transition_time=1500,
-            src_fade_offset=1500,
+    if not track_transition:
+        track_transition = root_mrsc.music_trans_node_params.transition_rules[0]
+        track_transition.configure(
+            src_sync_type=SyncType.ExitMarker,  # important!
+            src_transition_time=1000,
+            src_fade_offset=1000,
             src_fade_curve=CurveInterpolation.Sine,
             dst_transition_time=500,
             dst_fade_offset=-500,
@@ -350,28 +348,24 @@ def _setup_bgm(
             dst_play_pre_entry=True,
         )
 
-    # Intro transition rule
-    if intro:
-        base_rule = root_mrsc.music_trans_node_params.transition_rules[0]
-        base_rule.source_transition_rule.play_post_exit = 0
+    root_mrsc.music_trans_node_params.transition_rules[0] = track_transition
 
-        if intro_transition:
-            intro_transition.source_ids.append(intro_seg.id)
-            intro_transition.destination_ids.append(bgm_seg.id)
-            intro_transition.source_transition_rule.sync_type = SyncType.ExitMarker
-            root_mrsc.music_trans_node_params.transition_rules.append(intro_transition)
-        else:
-            root_mrsc.add_transition_rule(
-                intro_seg.id,
-                bgm_seg.id,
-                SyncType.ExitMarker,
-                source_transition_time=1000,
-                source_fade_offset=1000,
-                source_fade_curve=CurveInterpolation.Sine,
-                dest_transition_time=1000,
+    if intro:
+        if not intro_transition:
+            intro_transition = MusicTransitionRule().configure(
+                src_ids=[intro_seg.id],
+                dst_ids=[bgm_seg.id],
+                src_sync_type=SyncType.ExitMarker,
+                src_transition_time=100,
+                src_fade_offset=100,
+                src_fade_curve=CurveInterpolation.Sine,
+                dest_transition_time=100,
                 dest_fade_curve=CurveInterpolation.Exp3,
                 dest_play_pre_entry=True,
+                src_play_post_exit=0,
             )
+        
+        root_mrsc.music_trans_node_params.transition_rules.append(intro_transition)
 
     # Add the segment to the music container's playlist
     if not root_mrsc.playlist_items:
@@ -381,11 +375,39 @@ def _setup_bgm(
 
     root_mrsc.add_playlist_item(bnk.new_id(), bgm_seg.id, parent=playlist_root)
 
-    # Additional transition rules
-    if extra_transitions:
-        root_mrsc.music_trans_node_params.transition_rules.extend(extra_transitions)
-
     return new_nodes
+
+
+def _set_index_transition_ids(
+    transitions: list[MusicTransitionRule], nodes: list[HIRCNode]
+) -> None:
+    def get_id(idx: int) -> int:
+        if idx < 0:
+            return -1
+
+        if idx < len(nodes):
+            return nodes[idx].id
+
+        return None
+
+    for trans in transitions:
+        for idx, src_idx in enumerate(trans.source_ids):
+            true_id = get_id(src_idx)
+            if true_id is None:
+                logger.warning(
+                    f"Extra transition {idx} has invalid source index {src_idx}"
+                )
+            else:
+                trans.source_ids[idx] = true_id
+
+        for idx, dst_idx in enumerate(trans.destination_ids):
+            true_id = get_id(dst_idx)
+            if true_id is None:
+                logger.warning(
+                    f"Extra transition {idx} has invalid destination index {dst_idx}"
+                )
+            else:
+                trans.source_ids[idx] = true_id
 
 
 def create_boss_bgm(
@@ -397,10 +419,9 @@ def create_boss_bgm(
     loop_markers: list[tuple[float, float]] = None,
     play_intro: list[bool] = None,
     add_nobattle_state: bool = True,
-    default_transition: MusicTransitionRule = None,
-    phase_transition: MusicTransitionRule = None,
-    intro_transition: MusicTransitionRule = None,
-    extra_transitions: list[MusicTransitionRule] = None,
+    master_transition: MusicTransitionRule = None,
+    phase_transitions: list[MusicTransitionRule] = None,
+    track_transitions: MusicTransitionRule = None,
     properties: dict[PropID, float] = None,
 ) -> tuple[list[HIRCNode]]:
     # An overview of what's happening:
@@ -417,49 +438,6 @@ def create_boss_bgm(
     # Setup the boss phase music manager
     if properties is None:
         properties = {}
-
-    boss_msc = MusicSwitchContainer.new(
-        bnk.new_id(),
-        [("BossBattleState", GroupType.State)],
-        None,
-        parent=master.id,
-        props=properties | {PropID.Priority: 80.0},
-    )
-    new_nodes.append(boss_msc)
-
-    # Setup transition rules
-    if default_transition:
-        default_transition.source_transition_rule.sync_type = SyncType.Immediate
-        boss_msc.music_trans_node_params.transition_rules[0] = default_transition
-    else:
-        rule = boss_msc.music_trans_node_params.transition_rules[0]
-        rule.configure(
-            src_transition_time=500,
-            src_fade_offset=500,
-            src_sync_type=SyncType.Immediate,
-            dst_transition_time=500,
-        )
-
-    if not phase_transition:
-        phase_transition = MusicTransitionRule().configure(
-            src_transition_time=1500,
-            src_fade_offset=1500,
-            src_fade_curve=CurveInterpolation.Sine,
-            dst_transition_time=500,
-            dst_fade_offset=-500,
-            dst_fade_curve=CurveInterpolation.Log1,
-            dst_play_pre_entry=True,
-        )
-
-    if not intro_transition:
-        intro_transition = MusicTransitionRule().configure(
-            src_transition_time=100,
-            src_fade_offset=100,
-            src_fade_curve=CurveInterpolation.Sine,
-            dest_transition_time=100,
-            dest_fade_curve=CurveInterpolation.Exp3,
-            dest_play_pre_entry=True,
-        )
 
     # Prepare the new master state path
     if isinstance(master_branch, (str, int)):
@@ -478,7 +456,34 @@ def create_boss_bgm(
 
     boss_state_keys = parse_state_path(boss_phases)
 
+    # Boss music manager
+    boss_msc = MusicSwitchContainer.new(
+        bnk.new_id(),
+        [("BossBattleState", GroupType.State)],
+        None,
+        parent=master.id,
+        props=properties | {PropID.Priority: 80.0},
+    )
+    new_nodes.append(boss_msc)
+
+    # Setup transition rules
+    if master_transition:
+        master_transition.destination_ids = [boss_msc.id]
+        master_transition.source_transition_rule.sync_type = SyncType.Immediate
+        master.music_trans_node_params.transition_rules.append(master_transition)
+
+    if not track_transitions:
+        track_transitions = [MusicTransitionRule().configure(
+            src_transition_time=100,
+            src_fade_offset=100,
+            src_fade_curve=CurveInterpolation.Sine,
+            dest_transition_time=100,
+            dest_fade_curve=CurveInterpolation.Exp3,
+            dest_play_pre_entry=True,
+        )] * len(tracks)
+
     # Setup the phase music tracks
+    phase_masters: list[HIRCNode] = []
     for i, (phase, track) in enumerate(zip(boss_state_keys, tracks)):
         # TODO get BgmTracks passed instead
         bgm = BgmTrack(
@@ -491,13 +496,28 @@ def create_boss_bgm(
             boss_msc,
             bgm,
             intro=play_intro and play_intro[i],
-            base_transition=phase_transition,
-            intro_transition=intro_transition,
-            extra_transitions=extra_transitions,
+            track_transition=track_transitions[i],
         )
 
         boss_msc.add_branch([phase], phase_nodes[0])
+        phase_masters.append(phase_nodes[0])
         new_nodes.extend(phase_nodes)
+
+    # Phase transition rules
+    if phase_transitions:
+        _set_index_transition_ids(phase_transitions, phase_masters)
+        boss_msc.music_trans_node_params.transition_rules = phase_transitions
+    else:
+        rule = boss_msc.music_trans_node_params.transition_rules[0]
+        rule.configure(
+            src_transition_time=1500,
+            src_fade_offset=1500,
+            src_fade_curve=CurveInterpolation.Sine,
+            dst_transition_time=500,
+            dst_fade_offset=-500,
+            dst_fade_curve=CurveInterpolation.Log1,
+            dst_play_pre_entry=True,
+        )
 
     # To disable the boss music, presumably not used by bosses you can't run away from
     if add_nobattle_state:
@@ -515,57 +535,15 @@ def create_ambience_bgm(
     master_branch: Hash | list[Hash],
     location_tree: DecisionNode[tuple[BgmTrack, BgmTrack]],
     *,
-    default_transition: MusicTransitionRule = None,
-    base_transition: MusicTransitionRule = None,
-    intro_transition: MusicTransitionRule = None,
-    extra_transitions: list[MusicTransitionRule] = None,
+    master_transition: MusicTransitionRule = None,
+    variant_transitions: list[MusicTransitionRule] = None,
+    track_transitions: list[MusicTransitionRule] = None,
     properties: dict[PropID, float] = None,
 ) -> list[HIRCNode]:
     new_nodes = []
 
     if properties is None:
         properties = {}
-
-    ambience_msc = MusicSwitchContainer.new(
-        bnk.new_id(),
-        [(arg, GroupType.State) for arg in location_tree.all_args()],
-        props=properties | {PropID.Priority: 80.0},
-        parent=master,
-    )
-    new_nodes.append(ambience_msc)
-
-    # Setup transition rules
-    if default_transition:
-        default_transition.source_transition_rule.sync_type = SyncType.Immediate
-        ambience_msc.music_trans_node_params.transition_rules[0] = default_transition
-    else:
-        rule = ambience_msc.music_trans_node_params.transition_rules[0]
-        rule.configure(
-            src_transition_time=1000,
-            src_fade_offset=1000,
-            src_fade_curve=CurveInterpolation.Linear,
-            src_sync_type=SyncType.Immediate,
-            dst_transition_time=1000,
-            dst_fade_curve=CurveInterpolation.Linear,
-        )
-
-    if not base_transition:
-        base_transition = MusicTransitionRule().configure(
-            src_transition_time=3000,
-            src_fade_offset=3000,
-            src_fade_curve=CurveInterpolation.SCurve,
-            dst_transition_time=1000,
-            dst_fade_curve=CurveInterpolation.InvSCurve,
-        )
-
-    if not intro_transition:
-        intro_transition = MusicTransitionRule().configure(
-            src_transition_time=1000,
-            src_fade_offset=1000,
-            src_fade_curve=CurveInterpolation.Sine,
-            dst_transition_time=1000,
-            dst_fade_curve=CurveInterpolation.Exp3,
-        )
 
     # Prepare the new master state path
     if isinstance(master_branch, (str, int)):
@@ -578,7 +556,33 @@ def create_ambience_bgm(
                 master_branch.append("*")
 
     location_branches = location_tree.flatten()
-    for branch, (regular_track, battle_track) in location_branches.items():
+
+    # Manager for this ambience
+    ambience_msc = MusicSwitchContainer.new(
+        bnk.new_id(),
+        [(arg, GroupType.State) for arg in location_tree.all_args()],
+        props=properties | {PropID.Priority: 80.0},
+        parent=master,
+    )
+    new_nodes.append(ambience_msc)
+
+    # Setup transition rules
+    if master_transition:
+        master_transition.destination_ids = [ambience_msc.id]
+        master_transition.source_transition_rule.sync_type = SyncType.Immediate
+        master.music_trans_node_params.transition_rules.append(master_transition)
+
+    if not track_transitions:
+        track_transitions = [MusicTransitionRule().configure(
+            src_transition_time=3000,
+            src_fade_offset=3000,
+            src_fade_curve=CurveInterpolation.SCurve,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.InvSCurve,
+        )] * len(location_branches)
+
+    branch_masters: list[HIRCNode] = []
+    for idx, branch, (regular_track, battle_track) in enumerate(location_branches.items()):
         # Ambience music typically has one base track and a battle track which is overlayed
         # rather than being a separate music track, but we don't enforce that here. The
         # alternative being to have a decision branch on the FieldBattleState, in which case
@@ -598,13 +602,29 @@ def create_ambience_bgm(
             ambience_msc,
             tracks,
             intro=has_intro,
-            base_transition=base_transition,
-            intro_transition=intro_transition,
-            extra_transitions=extra_transitions,
+            track_transition=track_transitions[idx],
         )
 
         ambience_msc.add_branch(branch, branch_nodes[0])
+        branch_masters.append(branch_nodes[0])
         new_nodes.extend(branch_nodes)
+
+    # Variation transition rules
+    if variant_transitions:
+        _set_index_transition_ids(variant_transitions, branch_masters)
+        ambience_msc.music_trans_node_params.transition_rules.extend(
+            variant_transitions
+        )
+    else:
+        rule = ambience_msc.music_trans_node_params.transition_rules[0]
+        rule.configure(
+            src_transition_time=1000,
+            src_fade_offset=1000,
+            src_fade_curve=CurveInterpolation.Linear,
+            src_sync_type=SyncType.Immediate,
+            dst_transition_time=1000,
+            dst_fade_curve=CurveInterpolation.Linear,
+        )
 
     # Add to master and soundbank
     master.add_branch(master_branch, ambience_msc)

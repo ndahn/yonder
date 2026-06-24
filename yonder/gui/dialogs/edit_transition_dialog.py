@@ -2,7 +2,6 @@ from typing import Any, Callable, TypeAlias
 from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
-from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
 from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import CurveInterpolation, SyncType
 from yonder.util import deepmerge
@@ -10,9 +9,6 @@ from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.helpers import dpg_section
 from yonder.gui.widgets import DpgItem
-
-
-TransitionNode: TypeAlias = MusicSwitchContainer | MusicRandomSequenceContainer
 
 
 class edit_transition_dialog(DpgItem):
@@ -39,8 +35,8 @@ class edit_transition_dialog(DpgItem):
 
     def __init__(
         self,
-        node: TransitionNode,
         base_rule: MusicTransitionRule,
+        targets: list[int],
         on_rule_changed: Callable[[str, dict, Any], None],
         *,
         tag: str = 0,
@@ -51,8 +47,8 @@ class edit_transition_dialog(DpgItem):
 
         super().__init__(tag)
 
-        self._node = node
         self._base_rule = base_rule
+        self._targets = targets
         self._rule = deepcopy(base_rule)
         self._src_rule = self._rule.source_transition_rule
         self._dst_rule = self._rule.destination_transition_rule
@@ -94,7 +90,7 @@ class edit_transition_dialog(DpgItem):
 
     def _add_id_footer(self, table: str, rule_key: str) -> None:
         missing = sorted(
-            set(self._node.children).difference(getattr(self._rule, rule_key))
+            set(self._targets).difference(getattr(self._rule, rule_key))
         )
         with dpg.table_row(parent=table):
             dpg.add_combo(missing, width=-1, tag=self._add_item_tag(rule_key))
@@ -128,7 +124,7 @@ class edit_transition_dialog(DpgItem):
         dst = self._dst_rule
 
         with dpg.window(
-            label=µ("Edit Transition ({node_id})").format(node_id=self._node.id),
+            label=µ("Edit Transition"),
             width=400,
             height=400,
             autosize=True,

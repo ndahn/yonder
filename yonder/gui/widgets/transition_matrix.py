@@ -1,8 +1,7 @@
-from typing import Any, Callable, TypeAlias
+from typing import Any, Callable
 from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
-from yonder.types import MusicSwitchContainer, MusicRandomSequenceContainer
 from yonder.types.base_types import (
     MusicTransitionRule,
     MusicTransSrcRule,
@@ -12,9 +11,6 @@ from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 from .dpg_item import DpgItem
-
-
-TransitionNode: TypeAlias = MusicSwitchContainer | MusicRandomSequenceContainer
 
 
 # Deep-copied for every new rule — never mutated directly
@@ -60,8 +56,9 @@ class add_transition_matrix(DpgItem):
 
     def __init__(
         self,
-        node: TransitionNode,
-        on_transition_rules_changed: Callable[[str, TransitionNode, Any], None] = None,
+        rules: list[MusicTransitionRule],
+        targets: list[int],
+        on_transition_rules_changed: Callable[[str, list[MusicTransitionRule], Any], None] = None,
         *,
         label: str = "Transition Rules",
         parent: str | int = 0,
@@ -70,15 +67,13 @@ class add_transition_matrix(DpgItem):
     ) -> None:
         super().__init__(tag)
 
-        self._node = node
+        self.rules = rules
+        self.targets = targets
         self._on_transition_rules_changed = on_transition_rules_changed
         self._user_data = user_data
 
         # Construction-time constants
         self._cell_size = 30
-        table_h = min(
-            400, 60 + self._cell_size * 1.8 + len(node.children) * (self._cell_size + 5)
-        )
 
         # Per-instance color state; cache persists across regenerate() calls
         self._color_gen = style.HighContrastColorGenerator(
@@ -90,12 +85,12 @@ class add_transition_matrix(DpgItem):
         # TODO consider using a heatmap for better performance instead
         if label:
             dpg.add_text(label, parent=parent, tag=self._t("transition_matrix/title"))
+
         dpg.add_table(
             header_row=True,
             no_pad_innerX=True,
             scrollX=True,
             scrollY=True,
-            height=table_h,
             policy=dpg.mvTable_SizingFixedFit,
             parent=parent,
             tag=self._tag,
@@ -212,7 +207,7 @@ class add_transition_matrix(DpgItem):
         new_rule.source_ids = [src]
         new_rule.destination_ids = [dst]
         edit_transition_dialog(
-            self._node, new_rule, self._on_rule_changed, user_data=True
+            new_rule, self.targets, self._on_rule_changed, user_data=True
         )
 
     def _delete_rule_for_cell(
@@ -221,7 +216,7 @@ class add_transition_matrix(DpgItem):
         _, _, rule_idx = cell_info
         # Rule 0 (any -> any) cannot be deleted
         if rule_idx > 0:
-            self._node.transition_rules.pop(rule_idx)
+            self.rules.pop(rule_idx)
             self.regenerate()
 
     def _open_context_menu(
@@ -252,14 +247,14 @@ class add_transition_matrix(DpgItem):
         if is_new:
             rule = deepcopy(_base_transition_rule)
         edit_transition_dialog(
-            self._node, rule, self._on_rule_changed, user_data=is_new
+            rule, self.targets, self._on_rule_changed, user_data=is_new
         )
 
     def _on_rule_changed(self, sender: str, rule: dict, is_new: bool) -> None:
         if is_new:
-            self._node.music_trans_node_params.transition_rules.append(rule)
+            self.rules.append(rule)
         if self._on_transition_rules_changed:
-            self._on_transition_rules_changed(self._tag, self._node, self._user_data)
+            self._on_transition_rules_changed(self._tag, self.rules, self._user_data)
         self.regenerate()
 
     # === Public ========================================================
@@ -270,8 +265,13 @@ class add_transition_matrix(DpgItem):
         dpg.delete_item(self._tag, children_only=True, slot=1)
         dpg.push_container_stack(self._tag)
 
-        children = [-1] + list(self._node.children)
+        children = [-1] + list(self.targets)
         cell_size = self._cell_size
+
+        table_h = min(
+            400, 60 + self._cell_size * 1.8 + len(self.targets) * (self._cell_size + 5)
+        )
+        dpg.configure_item(self._tag, height=table_h)
 
         # Row-label column (no header — header row shows destination IDs)
         dpg.add_table_column()
@@ -290,7 +290,7 @@ class add_transition_matrix(DpgItem):
 
                 for dst in children:
                     rule_idx, rule = self._find_best_rule(
-                        self._node.music_trans_node_params.transition_rules, src, dst
+                        self.rules, src, dst
                     )
 
                     if rule:
