@@ -215,7 +215,8 @@ def _setup_bgm(
     if isinstance(tracks, BgmTrack):
         tracks = [tracks]
 
-    loop_start, loop_end = tracks[0].loop_info
+    # Might sometimes contain the loop_enabled flag, too
+    loop_start, loop_end, *_ = tracks[0].loop_info
 
     for bgm in tracks:
         bnk.add_wem(bgm.track, SourceType.Streaming)

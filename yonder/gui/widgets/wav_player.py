@@ -457,6 +457,8 @@ class add_wav_player(DpgItem):
         else:
             dpg.configure_item(self._t("volume_slider"), min_value=-2, max_value=2)
 
+    # TODO pitch
+
     def get_volume_at(self, pos: float) -> float:
         global_f = self._config.playback_volume
 

@@ -206,12 +206,16 @@ class create_ambience_bgm_dialog(DpgItem):
         return join.join(parts)
 
     def _update_summary(self) -> None:
+        def leaf_to_str(leaf: tuple[BgmTrack, BgmTrack]) -> str:
+            ret = [bgm.track.name for bgm in leaf if bgm.track]
+            return "\n".join(ret)
+
         location_str = " / ".join(v for v in self.location_state_path if v != "*")
         if not location_str:
             location_str = "<invalid>"
 
         tree = build_tree(self._bgm_tracks, self.ambience_args)
-        tree_str = tree.format_tree() or µ("<nothing to see here>")
+        tree_str = tree.format_tree(leaf_to_str=leaf_to_str) or µ("<nothing to see here>")
 
         summary = f"""\
 Location selector:
@@ -338,22 +342,40 @@ Ambience tree:
             span_full_width=True,
             tag=self._t(f"track_conditions:{idx}"),
         ) as tree_node:
-            dpg.add_checkbox(
-                label=µ("Play intro"),
-                default_value=entry.intro,
-                callback=self._make_callback(entry, "intro"),
-            )
-            with dpg.tooltip(dpg.last_item()):
-                dpg.add_text(µ("Use part before loop_start as intro"))
+            with dpg.child_window(
+                autosize_x=True,
+                auto_resize_y=True,
+            ):
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        label=µ("Intro"),
+                        default_value=entry.intro,
+                        callback=self._make_callback(entry, "intro"),
+                    )
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text(µ("Use part before loop_start as intro"))
 
-            dpg.add_input_float(
-                label=µ("Fade-in"),
-                default_value=0.0,
-                min_value=0.0,
-                min_clamped=True,
-                width=200,
-                callback=self._make_callback(entry, "fadein"),
-            )
+                    dpg.add_input_float(
+                        label=µ("Fade-in"),
+                        default_value=0.0,
+                        min_value=0.0,
+                        min_clamped=True,
+                        width=200,
+                        callback=self._make_callback(entry, "fadein"),
+                    )
+
+                # TODO
+                with dpg.group(horizontal=True):
+                    dpg.add_text(µ("Transitions:"))
+                    dpg.add_button(
+                        label=µ("Default"),
+                    )
+                    dpg.add_button(
+                        label=µ("Branches"),
+                    )
+                    dpg.add_button(
+                        label=µ("Intro"),
+                    )
 
             dpg.add_spacer(height=3)
 
@@ -365,7 +387,9 @@ Ambience tree:
                 add_wav_player(
                     entry.regular.track,
                     on_file_changed=self._make_callback(entry.regular, "track"),
+                    loop_markers_enabled=True,
                     on_loop_changed=self._make_callback(entry.regular, "loop_info"),
+                    trim_enabled=True,
                     on_trims_changed=self._make_callback(entry.regular, "trims"),
                 )
                 dpg.add_spacer(height=3)
@@ -391,7 +415,9 @@ Ambience tree:
                 add_wav_player(
                     entry.battle.track,
                     on_file_changed=self._make_callback(entry, "track"),
+                    loop_markers_enabled=True,
                     on_loop_changed=self._make_callback(entry, "loop_info"),
+                    trim_enabled=True,
                     on_trims_changed=self._make_callback(entry, "trims"),
                 )
                 dpg.add_spacer(height=3)
@@ -686,7 +712,7 @@ Ambience tree:
         with dpg.tab(label=µ("Location branch")):
             with dpg.child_window(
                 border=False,
-                width=-30,
+                autosize_x=True,
                 height=-125,
             ):
                 dpg.add_text(µ("MusicSwitchContainer"))
@@ -724,7 +750,7 @@ Ambience tree:
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-85,
+                height=-105,
             ):
                 with dpg.tree_node(label="States"):
                     self._ambience_states_table = add_widget_table(
@@ -754,6 +780,7 @@ Ambience tree:
                         - Your location can use additional states
                         - Typical states are TimeZone and FieldBattleState
                         - Areas usually have a base track and a battle overlay
+                        - Loop markers for regular and battle are linked!
                     """,
                     "tips",
                 ),
@@ -794,7 +821,7 @@ Ambience tree:
             if transformer:
                 value = transformer(value)
 
-            setattr(obj, value)
+            setattr(obj, attr, value)
             self._update_summary()
 
         return cb
