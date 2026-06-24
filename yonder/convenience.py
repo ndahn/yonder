@@ -55,6 +55,7 @@ class BgmTrack:
     trims: tuple[float, float] = (0.0, 0.0)
     fadein: float = 0.0
     has_intro: bool = False
+    properties: dict[PropID, float] = field(default_factory=dict)
     state_ctrl: list[StateCtrl] = field(default_factory=list)
 
     def __str__(self) -> str:
@@ -241,6 +242,9 @@ def _setup_bgm(
                 bnk.new_id(), bgm.track, parent=intro_seg, props={PropID.Priority: 80.0}
             )
             mt.set_trims(bgm.trims[0], loop_start * 1000)
+            
+            for prop, val in bgm.properties:
+                mt.set_property(prop, val)
 
             if bgm.fadein > 0:
                 mt.add_clip(
@@ -303,8 +307,11 @@ def _setup_bgm(
         mt = MusicTrack.new(
             bnk.new_id(), bgm.track, parent=bgm_seg, props={PropID.Priority: 80.0}
         )
-        # NOTE see above
+        # NOTE loop_start is correct, see above
         mt.set_trims(loop_start, bgm.trims[1])
+
+        for prop, val in bgm.properties:
+            mt.set_property(prop, val)
 
         # Pronounced fade in for the track
         if not intro and bgm.fadein > 0.0:

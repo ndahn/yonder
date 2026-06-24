@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Iterable
 import colorsys
+from functools import cache
 from dearpygui import dearpygui as dpg
 
 
@@ -112,8 +113,7 @@ black = RGBA(0, 0, 0, 255)
 
 light_blue = RGBA(112, 214, 255, 255)
 light_green = RGBA(112, 255, 162, 255)
-light_red = RGBA(255, 112, 119)
-
+light_red = RGBA(255, 80, 80)
 
 # Muted colors
 muted_orange = RGBA(200, 120, 80, 255)
@@ -137,6 +137,17 @@ class themes:
     plot_blue = None
     plot_red = None
     player_plot = None
+
+    @cache
+    @staticmethod
+    def get_color_theme(
+        color: RGBA, property: int = dpg.mvThemeCol_Text, item_type: int = dpg.mvAll
+    ) -> int:
+        with dpg.theme() as theme:
+            with dpg.theme_component(item_type):
+                dpg.add_theme_color(property, color)
+
+        return theme
 
 
 def init_themes():

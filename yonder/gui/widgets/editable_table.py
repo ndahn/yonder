@@ -43,6 +43,10 @@ class add_widget_table(DpgItem):
         Show column headers.
     columns : list of str
         Column header labels.
+    column_weights : list[str]
+
+    column_policy : int
+
     label : str, optional
         Text label rendered above the table.
     add_item_label : str
@@ -68,6 +72,7 @@ class add_widget_table(DpgItem):
         on_select: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
         header_row: bool = False,
         columns: list[str] = ("Value",),
+        column_weights: list[int] = None,
         column_policy: int = dpg.mvTable_SizingFixedFit,
         selected_row_color: style.RGBA = style.muted_purple,
         label: str = None,
@@ -95,7 +100,16 @@ class add_widget_table(DpgItem):
         # Maps row index -> tag of its select-indicator button
         self._sel_buttons: dict[int, int] = {}
 
-        self._build(header_row, columns, column_policy, label, parent, width, height)
+        self._build(
+            header_row,
+            columns,
+            column_weights,
+            column_policy,
+            label,
+            parent,
+            width,
+            height,
+        )
         self.refresh()
 
     # === Build =========================================================
@@ -104,6 +118,7 @@ class add_widget_table(DpgItem):
         self,
         header_row: bool,
         columns: list[str],
+        column_weights: list[float],
         column_policy: int,
         label: str,
         parent: str | int,
@@ -112,6 +127,9 @@ class add_widget_table(DpgItem):
     ) -> None:
         if label:
             dpg.add_text(label, parent=parent, tag=self.tag)
+
+        if not column_weights:
+            column_weights = [100] * len(columns)
 
         with dpg.child_window(
             border=False, autosize_x=True, auto_resize_y=True, parent=parent
@@ -133,9 +151,9 @@ class add_widget_table(DpgItem):
                     dpg.add_table_column(
                         label="", width_fixed=True, init_width_or_weight=14
                     )
-                for col in columns:
+                for col, weight in zip(columns, column_weights):
                     dpg.add_table_column(
-                        label=col, width_stretch=True, init_width_or_weight=100
+                        label=col, width_stretch=True, init_width_or_weight=weight
                     )
                 if self._new_item:
                     dpg.add_table_column(
