@@ -30,7 +30,7 @@ class State(HIRCNode):
         return obj
 
     def is_shared(self, bnk: Soundbank) -> bool:
-        return len(bnk.get_tree().in_degree(self.id)) > 1
+        return bnk.tree.in_degree(self.id) > 1
 
     def get_param(self, prop_idx: int) -> float:
         for i, p in enumerate(self.parameters):

@@ -114,6 +114,7 @@ black = RGBA(0, 0, 0, 255)
 light_blue = RGBA(112, 214, 255, 255)
 light_green = RGBA(112, 255, 162, 255)
 light_red = RGBA(255, 80, 80)
+light_orange = RGBA(251, 130, 30, 255)
 
 # Muted colors
 muted_orange = RGBA(200, 120, 80, 255)

@@ -13,6 +13,7 @@ from yonder.enums import PropID, CurveInterpolation
 from yonder.convenience import (
     create_ambience_bgm,
     DecisionNode,
+    AmbienceBgm,
     BgmTrack,
     StateCtrl,
 )
@@ -37,30 +38,31 @@ from .file_dialog import open_file_dialog
 
 
 @dataclass
-class StateProperty:
+class _StateProperty:
     property: PropID = None
     value: float = 0.0
     mode: Literal["default", "regular", "battle"] = "default"
 
 
 @dataclass
-class BgmVariant:
+class _BgmVariant:
     track: Path = None
-    props: list[StateProperty] = field(default_factory=list)
+    props: list[_StateProperty] = field(default_factory=list)
     loop_info: tuple[float, float] = (0.0, 0.0)
     trims: tuple[float, float] = (0.0, 0.0)
 
 
 @dataclass
-class AmbientBgm:
-    regular: BgmVariant = None
-    battle: BgmVariant = None
+class _BgmInfo:
+    regular: _BgmVariant = None
+    battle: _BgmVariant = None
     state_path: dict[str, str] = field(default_factory=dict)
-    fadein: float = 0.0
+    fadein: int = 0
     intro: bool = False
+    intro_length: int = 0
 
     def _collect_properties(
-        self, bgm: BgmVariant
+        self, bgm: _BgmVariant
     ) -> tuple[dict[PropID, float], StateCtrl, StateCtrl]:
         default = {}
         normal = StateCtrl("FieldBattleState", "FieldNormal", {})
@@ -78,7 +80,7 @@ class AmbientBgm:
 
         return (default, normal, battle)
 
-    def to_bgmtrack(self) -> tuple[BgmTrack, BgmTrack]:
+    def to_ambience_bgm(self) -> AmbienceBgm:
         reg_default, reg_ctrl_normal, reg_ctrl_battle = self._collect_properties(
             self.regular
         )
@@ -86,13 +88,12 @@ class AmbientBgm:
             self.battle
         )
 
-        return (
+        return AmbienceBgm(
             BgmTrack(
                 self.regular.track,
                 self.regular.loop_info,
                 self.regular.trims,
                 self.fadein,
-                self.intro,
                 reg_default,
                 [reg_ctrl_normal, reg_ctrl_battle],
             ),
@@ -101,15 +102,15 @@ class AmbientBgm:
                 self.battle.loop_info,
                 self.battle.trims,
                 self.fadein,
-                self.intro,
                 bat_default,
                 [bat_ctrl_normal, bat_ctrl_battle],
             ),
+            self.intro_length if self.intro else 0.0,
         )
 
 
-def build_tree(
-    entries: list[AmbientBgm],
+def _build_tree(
+    entries: list[_BgmInfo],
     active_args: list[str],
 ) -> DecisionNode:
     """Construct a uniform-depth DecisionNode tree from flat TrackEntry rows.
@@ -121,11 +122,11 @@ def build_tree(
 
     def _insert(
         node: DecisionNode,
-        entry: AmbientBgm,
+        entry: _BgmInfo,
         depth: int,
     ) -> None:
         if depth == len(active_args):
-            node.children.append(DecisionNode(leaf_value=entry.to_bgmtrack()))
+            node.children.append(DecisionNode(leaf_value=entry.to_ambience_bgm()))
             return
 
         arg = active_args[depth]
@@ -196,7 +197,7 @@ class create_ambience_bgm_dialog(DpgItem):
         ]
         self.area_args = list(initial_local_args or [])
         self.local_args: list[str] = []
-        self._bgm_tracks: list[AmbientBgm] = []
+        self._bgm_tracks: list[_BgmInfo] = []
 
         self._build(title)
 
@@ -212,7 +213,7 @@ class create_ambience_bgm_dialog(DpgItem):
 
     def _conditions_summary(
         self,
-        entry: AmbientBgm,
+        entry: _BgmInfo,
         idx: int,
         join: str = " / ",
     ) -> str:
@@ -221,16 +222,13 @@ class create_ambience_bgm_dialog(DpgItem):
         return f"#{idx}: {join.join(parts)}"
 
     def _update_summary(self) -> None:
-        def leaf_to_str(leaf: tuple[BgmTrack, BgmTrack]) -> str:
-            ret = [bgm.track.name for bgm in leaf if bgm.track]
-            return "\n".join(ret)
 
         location_str = " / ".join(v for v in self.local_args if v != "*")
         if not location_str:
             location_str = "<invalid>"
 
-        tree = build_tree(self._bgm_tracks, self.area_args)
-        tree_str = tree.format_tree(leaf_to_str=leaf_to_str) or µ(
+        tree = _build_tree(self._bgm_tracks, self.area_args)
+        tree_str = tree.format_tree() or µ(
             "<nothing to see here>"
         )
 
@@ -279,15 +277,19 @@ Ambience tree:
                     callback=self._on_area_val_changed,
                     user_data=idx,
                 )
+
                 dpg.add_text(name)
+                if name in ("BgmPlaceType", "CommonPlaceType"):
+                    dpg.bind_item_theme(
+                        dpg.last_item(),
+                        style.themes.get_color_theme(style.light_orange),
+                    )
 
         dpg.pop_container_stack()
 
     def _update_local_transitions_matrix(self) -> None:
         # NOTE not using format to make sure the # survives for later
-        targets = [
-            µ("Track ") + f"#{i}" for i in range(len(self._bgm_tracks))
-        ]
+        targets = [µ("Track ") + f"#{i}" for i in range(len(self._bgm_tracks))]
         self._local_transitions_matrix.targets = targets
         self._local_transitions_matrix.regenerate()
 
@@ -362,7 +364,7 @@ Ambience tree:
         self._update_local_branch_labels()
         self._update_summary()
 
-    def _local_branch_to_row(self, entry: AmbientBgm, idx: int) -> None:
+    def _local_branch_to_row(self, entry: _BgmInfo, idx: int) -> None:
         label = self._conditions_summary(entry, idx)
 
         with dpg.tree_node(
@@ -372,6 +374,7 @@ Ambience tree:
             span_full_width=True,
             tag=self._t(f"track_conditions:{idx}"),
         ) as tree_node:
+            dpg.add_spacer(height=3)
             with dpg.child_window(
                 autosize_x=True,
                 auto_resize_y=True,
@@ -382,23 +385,29 @@ Ambience tree:
                         default_value=entry.intro,
                         callback=self._make_callback(entry, "intro"),
                     )
-                    with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text(µ("Use part before loop_start as intro"))
-
-                    dpg.add_input_float(
-                        label=µ("Fade-in"),
-                        default_value=0.0,
-                        min_value=0.0,
+                    dpg.add_input_int(
+                        label=µ("Intro start"),
+                        default_value=entry.intro_length,
+                        min_value=0,
                         min_clamped=True,
+                        step=100,
+                        step_fast=1000,
+                        width=200,
+                        callback=self._make_callback(entry, "intro_start"),
+                    )
+
+                    dpg.add_input_int(
+                        label=µ("Fade-in"),
+                        default_value=0,
+                        min_value=0,
+                        min_clamped=True,
+                        step=100,
+                        step_fast=1000,
                         width=200,
                         callback=self._make_callback(entry, "fadein"),
                     )
-                    dpg.add_button(
-                        label=µ("Transition"),
-                    )
 
             dpg.add_spacer(height=3)
-
             with dpg.tree_node(
                 label=µ("Regular"),
                 lines=dpg.mvTreeLines_ToNodes,
@@ -425,6 +434,7 @@ Ambience tree:
                     label=µ("Properties"),
                     user_data=(idx, False),
                 )
+
             dpg.bind_item_theme(
                 tree_node_regular, style.themes.get_color_theme(style.green)
             )
@@ -436,11 +446,11 @@ Ambience tree:
             ) as tree_node_battle:
                 add_wav_player(
                     entry.battle.track,
-                    on_file_changed=self._make_callback(entry, "track"),
+                    on_file_changed=self._make_callback(entry.battle, "track"),
                     loop_markers_enabled=True,
-                    on_loop_changed=self._make_callback(entry, "loop_info"),
+                    on_loop_changed=self._make_callback(entry.battle, "loop_info"),
                     trim_enabled=True,
-                    on_trims_changed=self._make_callback(entry, "trims"),
+                    on_trims_changed=self._make_callback(entry.battle, "trims"),
                 )
                 dpg.add_spacer(height=3)
                 add_widget_table(
@@ -455,9 +465,11 @@ Ambience tree:
                     label=µ("Properties"),
                     user_data=(idx, True),
                 )
+
             dpg.bind_item_theme(
                 tree_node_battle, style.themes.get_color_theme(style.light_red)
             )
+            dpg.add_spacer(height=3)
 
         with dpg.item_handler_registry():
             dpg.add_item_clicked_handler(
@@ -468,19 +480,19 @@ Ambience tree:
 
         dpg.bind_item_handler_registry(tree_node, dpg.last_container())
 
-    def _new_local_branch(self, done: Callable[[AmbientBgm], None]) -> None:
+    def _new_local_branch(self, done: Callable[[_BgmInfo], None]) -> None:
         ret = open_file_dialog(
             title="Select Audio File",
             filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
         )
         if ret:
             done(
-                AmbientBgm(
-                    BgmVariant(
-                        Path(ret), props=[StateProperty(PropID.HPF, 2.0, "battle")]
+                _BgmInfo(
+                    _BgmVariant(
+                        Path(ret), props=[_StateProperty(PropID.HPF, 2.0, "battle")]
                     ),
-                    BgmVariant(
-                        None, props=[StateProperty(PropID.HPF, -400.0, "regular")]
+                    _BgmVariant(
+                        None, props=[_StateProperty(PropID.HPF, -400.0, "regular")]
                     ),
                     state_path=self._get_default_state_path(),
                 )
@@ -490,7 +502,7 @@ Ambience tree:
     def _on_add_local_branch(
         self,
         sender: str,
-        info: tuple[int, AmbientBgm, list[AmbientBgm]],
+        info: tuple[int, _BgmInfo, list[_BgmInfo]],
         user_data: Any,
     ) -> None:
         entry = info[1]
@@ -500,19 +512,21 @@ Ambience tree:
     def _on_remove_local_branch(
         self,
         sender: str,
-        info: tuple[int, AmbientBgm, list[AmbientBgm]],
+        info: tuple[int, _BgmInfo, list[_BgmInfo]],
         user_data: Any,
     ) -> None:
         idx = info[0]
         self._bgm_tracks.pop(idx)
         self._update_summary()
 
-    def _bgm_properties_to_row(self, prop: StateProperty, idx: int) -> None:
+    def _bgm_properties_to_row(
+        self, state_prop: _StateProperty, info: tuple[int, bool]
+    ) -> None:
         def on_property_changed(sender: str, new_val: str, user_data: Any) -> None:
-            prop.property = PropID[new_val]
+            state_prop.property = PropID[new_val]
 
         def on_value_changed(sender: str, new_val: str, user_data: Any) -> None:
-            prop.value = new_val
+            state_prop.value = new_val
 
         def on_mode_toggle(sender: str, enabled: bool, sender_mode: str) -> None:
             if not enabled:
@@ -527,42 +541,48 @@ Ambience tree:
             ]:
                 dpg.set_value(checkbox, mode == sender_mode)
 
-        # TODO remove states that are already in use for properties with the same mode
+        # TODO Only show states that are not yet in use with the same mode
+        # Requires regenerating this table on every change, not that enticing...
+        # idx, battle = info
+        # bgm = self._bgm_tracks[idx].battle if battle else self._bgm_tracks[idx].regular
+        # used_properties = {p.property for p in bgm.props if p.mode == state_prop.mode}
+        # free_properties = [p for p in PropID if p not in used_properties]
+
         dpg.add_combo(
             sorted(p.name for p in PropID),
-            default_value=prop.property.name,
+            default_value=state_prop.property.name,
             width=-1,
             callback=on_property_changed,
         )
         dpg.add_input_float(
-            default_value=prop.value,
+            default_value=state_prop.value,
             width=-1,
             callback=on_value_changed,
         )
 
         check_default = dpg.add_checkbox(
-            default_value=prop.mode == "default",
+            default_value=state_prop.mode == "default",
             callback=on_mode_toggle,
             user_data="default",
         )
         check_regular = dpg.add_checkbox(
-            default_value=prop.mode == "regular",
+            default_value=state_prop.mode == "regular",
             callback=on_mode_toggle,
             user_data="regular",
         )
         check_battle = dpg.add_checkbox(
-            default_value=prop.mode == "battle",
+            default_value=state_prop.mode == "battle",
             callback=on_mode_toggle,
             user_data="battle",
         )
 
-    def _new_bgm_property(self, done: Callable[[StateProperty], None]) -> None:
-        done(StateProperty(PropID.Volume))
+    def _new_bgm_property(self, done: Callable[[_StateProperty], None]) -> None:
+        done(_StateProperty(PropID.Volume))
 
     def _on_add_bgm_property(
         self,
         sender: str,
-        data: tuple[int, StateProperty, list[StateProperty]],
+        data: tuple[int, _StateProperty, list[_StateProperty]],
         info: tuple[int, bool],
     ) -> None:
         idx, battle = info
@@ -575,7 +595,7 @@ Ambience tree:
     def _on_remove_bgm_property(
         self,
         sender: str,
-        data: tuple[int, StateProperty, list[StateProperty]],
+        data: tuple[int, _StateProperty, list[_StateProperty]],
         info: tuple[int, bool],
     ) -> None:
         idx, battle = info
@@ -718,11 +738,8 @@ Ambience tree:
 
                 variant_transitions.append(trans)
 
-            # TODO
-            track_transitions = []
-
             # Decision tree
-            ambience_tree = build_tree(self._bgm_tracks, self.area_args)
+            ambience_tree = _build_tree(self._bgm_tracks, self.area_args)
 
             # Commence!
             nodes = create_ambience_bgm(
@@ -821,7 +838,7 @@ Ambience tree:
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-65,
+                height=-85,
             ):
                 dpg.add_spacer(height=4)
                 self._ambience_states_table = add_widget_table(
@@ -845,6 +862,7 @@ Ambience tree:
                     """\
                         - Your location can use additional states
                         - Typical states are TimeZone and FieldBattleState
+                        - Transitions can be edited once tracks are added
                     """,
                     "tips",
                 ),
@@ -857,7 +875,7 @@ Ambience tree:
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-65,
+                autosize_y=True,
             ):
                 add_widget_table(
                     [],
@@ -869,21 +887,10 @@ Ambience tree:
                     show_clear=True,
                 )
 
-            add_paragraphs(
-                µ(
-                    """\
-                        - Areas usually have a base track and a battle overlay
-                        - Loop markers for regular and battle are linked!
-                    """,
-                    "tips",
-                ),
-                color=style.light_blue,
-            )
-
     def _build_tab_summary(self) -> None:
         with dpg.tab(label=µ("Summary")):
             dpg.add_spacer(height=4)
-            with dpg.child_window(height=-45):
+            with dpg.child_window(height=-65):
                 dpg.add_text(
                     µ("<nothing to see here>"),
                     tag=self._t("summary_text"),
@@ -924,7 +931,9 @@ Ambience tree:
         self._update_local_transitions_matrix()
         self._update_summary()
 
-    def _on_area_transition_changed(self, sender: str, transition: MusicTransitionRule, user_data: Any) -> None:
+    def _on_area_transition_changed(
+        self, sender: str, transition: MusicTransitionRule, user_data: Any
+    ) -> None:
         self.area_transition = transition
         self._update_summary()
 

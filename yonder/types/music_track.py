@@ -192,7 +192,12 @@ class MusicTrack(StateMixin, PropertyMixin, HIRCNode):
         )
 
     def set_trims(self, begin_trim: float, end_trim: float, idx: int = 0) -> None:
-        begin_trim = abs(begin_trim)
+        if begin_trim < 0:
+            raise ValueError("begin_trim must be > 0")
+
+        if end_trim > 0:
+            raise ValueError("end_trim must be < 0")
+
         self.playlist[idx].begin_trim_offset = begin_trim
         self.playlist[idx].play_at = -begin_trim
-        self.playlist[idx].end_trim_offset = -abs(end_trim)
+        self.playlist[idx].end_trim_offset = end_trim

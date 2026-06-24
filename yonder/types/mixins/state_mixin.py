@@ -82,7 +82,7 @@ class StateMixin:
         # Locate the state object
         state_obj = bnk.get(value.state_instance_id)
         if state_obj and unique:
-            if state_obj.is_shared():
+            if state_obj.is_shared(bnk):
                 # It's shared with other nodes, don't use it
                 state_obj = None
 
@@ -116,7 +116,7 @@ class StateMixin:
             if not state_value_ids or value.state_id in state_value_ids:
                 group.states.pop(idx)
                 state: State = bnk.get(value.state_instance_id)
-                if state and not state.is_shared():
+                if state and not state.is_shared(bnk):
                     bnk.delete_nodes(state)
 
     def remove_ctrl_property(self, bnk: Soundbank, property: PropID) -> None:

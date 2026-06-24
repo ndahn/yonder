@@ -215,7 +215,7 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
                 break
         else:
             # For every key we found a matching child, so this path already exists
-            raise ValueError(f"Path already exists: {path}")
+            raise ValueError(f"State path already exists: {path}")
 
         for key in path[offset:]:
             branch = DecisionTreeNode(key, 0)
