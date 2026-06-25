@@ -23,6 +23,7 @@ from yonder.gui.widgets import (
     add_select_node,
     add_paragraphs,
     loading_indicator,
+    yay,
 )
 from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 from .file_dialog import open_multiple_dialog
@@ -364,12 +365,14 @@ class create_batch_sound_builder_dialog(DpgItem):
         if self._callback:
             self._callback(created_pairs)
 
-        self.show_message(µ("Success!", "msg"), color=style.blue)
+        logger.info(f"Created {len(created_pairs)} events")
+        # Keep the dialog open in case the user wants to have another look at what they did
         dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
         dpg.set_item_callback(
             self._t("button_okay"),
             lambda s, a, u: dpg.delete_item(self.tag),
         )
+        yay()
 
     # === GUI Content =============
 

@@ -6,10 +6,10 @@ from yonder import Soundbank
 from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
-from yonder.util import repack_soundbank
+from yonder.util import repack_soundbank, logger
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator
+from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator, yay
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
 from .select_nodes_dialog import select_nodes_of_type
@@ -238,9 +238,10 @@ class mass_transfer_dialog(DpgItem):
         with loading_indicator(µ("Transferring")):
             copy_wwise_events(self._src_bnk, self._dst_bnk, event_map)
 
-        self.show_message("Yay!", color=style.blue)
+        logger.info(f"Transferred {len(event_map)} sounds to {self._dst_bnk.name}")
         dpg.show_item(self._t("button_save"))
         dpg.show_item(self._t("button_repack"))
+        yay()
 
     def _on_save(self) -> None:
         self._dst_bnk.save()

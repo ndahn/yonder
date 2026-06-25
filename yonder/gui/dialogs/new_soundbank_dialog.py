@@ -6,7 +6,7 @@ from yonder import Soundbank
 from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import add_generic_widget, add_paragraphs, loading_indicator
+from yonder.gui.widgets import add_generic_widget, add_paragraphs, loading_indicator, yay
 from yonder.gui.widgets import DpgItem
 
 
@@ -53,7 +53,9 @@ class new_soundbank_dialog(DpgItem):
         if self._on_soundbank_created:
             self._on_soundbank_created(bnk)
 
+        logger.info(f"Created new soundbank {bnk_dir}")
         dpg.delete_item(self.tag)
+        yay()
 
     def _store_path(self, sender: str, path: Path, user_data: Any) -> None:
         self._path = path
