@@ -97,7 +97,7 @@ def exec_file_native(filename: str | Path):
         subprocess.call([opener, str(filename)])
 
 
-def success_countdown(window: int, label: int, countdown: int = 2, delete: bool = True) -> None:
+def success_countdown(window: int, label: int, countdown: int = 3, delete: bool = True) -> None:
     def close():
         if delete:
             dpg.delete_item(window)

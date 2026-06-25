@@ -1,13 +1,13 @@
 from typing import Callable
-import re
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.types import Event, Action
 from yonder.enums import SoundType
+from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_select_node, add_paragraphs
+from yonder.gui.widgets import DpgItem, add_select_node, add_paragraphs, yay
 from yonder.gui.widgets.select_node import get_details_generic
 
 
@@ -72,12 +72,15 @@ class create_wwise_event_dialog(DpgItem):
         if self._callback:
             self._callback(new_nodes)
 
-        self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("playstop/button_okay"), µ("Yay!"))
-        dpg.set_item_callback(
-            self._t("playstop/button_okay"),
-            lambda s, a, u: dpg.delete_item(self.tag),
-        )
+        created_events = []
+        if create_play_event:
+            created_events.append(play_evt.name)
+        if create_stop_event:
+            created_events.append(stop_evt.name)
+
+        logger.info(f"Created new events {created_events} for node {external_id}")
+        dpg.delete_item(self.tag)
+        yay()
 
     def _arbitrary_names_callback(self, sender: str, enabled: bool) -> None:
         if enabled:

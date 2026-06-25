@@ -3,6 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
+from yonder.util import logger
 from yonder.types import MusicSwitchContainer
 from yonder.hash import calc_hash
 from yonder.convenience import create_boss_bgm
@@ -18,6 +19,7 @@ from yonder.gui.widgets import (
     add_player_table,
     add_properties_table,
     loading_indicator,
+    yay,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
@@ -215,12 +217,9 @@ class create_boss_track_dialog(DpgItem):
         if self.on_boss_track_created:
             self.on_boss_track_created(bgm_enemy_type, nodes)
 
-        self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
-        dpg.set_item_callback(
-            self._t("button_okay"),
-            lambda s, a, u: dpg.delete_item(self.tag),
-        )
+        logger.info(f"Created new boss bgm {bgm_enemy_type}")
+        dpg.delete_item(self.tag)
+        yay()
 
     # === Build =========================================================
 

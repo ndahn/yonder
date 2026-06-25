@@ -31,3 +31,4 @@ from .table_tree_nodes import (
     is_row_visible,
 )
 from .transition_matrix import add_transition_matrix
+from .yay import yay

@@ -3,14 +3,16 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder.wem import wav2wem, trim_silence, set_volume, create_prefetch_snippet
+from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
     add_generic_widget,
     add_filepaths_table,
     loading_indicator,
+    yay,
 )
-from yonder.gui.helpers import shorten_path
+from yonder.gui.helpers import shorten_path, exec_file_native
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
 
@@ -115,12 +117,10 @@ class convert_wavs_dialog(DpgItem):
         if self.callback:
             self.callback(out_files)
 
-        self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("convert/button_okay"), µ("Yay!"))
-        dpg.set_item_callback(
-            self._t("convert/button_okay"),
-            lambda s, a, u: dpg.delete_item(self.tag),
-        )
+        logger.info("All sounds converted")
+        exec_file_native(self.output_dir)
+        dpg.delete_item(self.tag)
+        yay()
 
     # === Build ========================================================
 

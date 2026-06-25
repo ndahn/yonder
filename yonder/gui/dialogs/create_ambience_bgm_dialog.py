@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
+from yonder.util import logger
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
 from yonder.types.base_types import MusicTransitionRule
@@ -29,10 +30,10 @@ from yonder.gui.widgets import (
     add_wav_player,
     add_widget_table,
     loading_indicator,
+    add_transition_matrix, 
+    yay,
 )
-from yonder.gui.helpers import success_countdown
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
-from yonder.gui.widgets.transition_matrix import add_transition_matrix
 from .edit_state_path_dialog import edit_state_path_dialog
 from .edit_transition_dialog import edit_transition_dialog
 from .file_dialog import open_file_dialog
@@ -222,7 +223,6 @@ class create_ambience_bgm_dialog(DpgItem):
         return f"#{idx}: {join.join(parts)}"
 
     def _update_summary(self) -> None:
-
         location_str = " / ".join(v for v in self.local_args if v != "*")
         if not location_str:
             location_str = "<invalid>"
@@ -751,7 +751,9 @@ Ambience tree:
         if self.on_created:
             self.on_created(nodes)
 
-        success_countdown(self.tag, self._t("btn_okay"))
+        logger.info(f"Created new ambience node {nodes[0].id} for {self.local_args}")
+        dpg.delete_item(self.tag)
+        yay()
 
     # === Build =============================================================
 

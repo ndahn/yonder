@@ -21,6 +21,8 @@ class ActorMixerDetailProvider:
             self._load_details(amx)
 
     def _load_details(self, amx: ActorMixer) -> None:
+        from yonder.types import ActorMixer
+
         todo: list[HIRCNode] = [amx]
         dependents = set()
 

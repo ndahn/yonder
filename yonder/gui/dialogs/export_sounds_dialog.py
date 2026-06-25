@@ -11,7 +11,7 @@ from yonder.gui import style
 from yonder.gui.helpers import exec_file_native
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
-from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator
+from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator, yay
 
 
 class export_sounds_dialog(DpgItem):
@@ -106,13 +106,10 @@ class export_sounds_dialog(DpgItem):
                 color=style.blue,
             )
 
-            dpg.set_item_label(self._t("button_okay"), µ("Yay!"))
-            dpg.set_item_callback(
-                self._t("button_okay"),
-                lambda s, a, u: dpg.delete_item(self.tag),
-            )
-
+            logger.info("All sounds exported")
             exec_file_native(self._output_dir)
+            dpg.delete_item(self.tag)
+            yay()
 
     def _build(self, title: str) -> None:
         with dpg.window(
