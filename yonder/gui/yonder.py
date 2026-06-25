@@ -103,6 +103,9 @@ class BanksOfYonder(DpgItem):
         self._setup_splash()
         self._set_bnk_menus_enabled(False)
 
+        # Doesn't seem to work when using the windows exit button?
+        dpg.set_exit_callback(self._on_close)
+
         class LogHandler(logging.Handler):
             def emit(this, record: logging.LogRecord):
                 this.format(record)
@@ -119,6 +122,13 @@ class BanksOfYonder(DpgItem):
         sys.excepthook = self._handle_exception
         logger.addHandler(LogHandler())
         dpg.set_frame_callback(5, lambda: logger.info(µ("Hello :3", "log")))
+
+    def _on_close(self) -> None:
+        if self.bnk:
+            lookup_table = get_active_lookup_table()
+            if lookup_table:
+                lookup_table.prune(self.bnk.json_path.read_text("utf-8"))
+                lookup_table.save()
 
     def _handle_exception(
         self, exc_type: Type[Exception], exc_value: Exception, exc_traceback
@@ -1183,6 +1193,11 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("globals_filter"), "")
 
             if self.bnk:
+                table = get_active_lookup_table()
+                if table:
+                    table.prune(self.bnk.json_path.read_text("utf-8"))
+                    table.save()
+                
                 unload_lookup_table(get_bank_lookup_table_path(self.bnk))
 
             now = time.time()
@@ -2181,6 +2196,7 @@ class BanksOfYonder(DpgItem):
         center_window(tag)
 
     def _exit_app(self):
+        self._on_close()
         dpg.stop_dearpygui()
         dpg.destroy_context()
         sys.exit(0)

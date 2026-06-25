@@ -8,7 +8,7 @@ from yonder.util import logger
 from yonder.enums import SourceType
 from yonder.wem import wem2wav
 from yonder.gui import style
-from yonder.gui.helpers import open_file_native
+from yonder.gui.helpers import exec_file_native
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator
@@ -112,7 +112,7 @@ class export_sounds_dialog(DpgItem):
                 lambda s, a, u: dpg.delete_item(self.tag),
             )
 
-            open_file_native(self._output_dir)
+            exec_file_native(self._output_dir)
 
     def _build(self, title: str) -> None:
         with dpg.window(

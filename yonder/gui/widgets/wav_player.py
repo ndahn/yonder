@@ -583,15 +583,14 @@ class add_wav_player(DpgItem):
         # Plot widgets show absolute time, derived from the relative offsets.
         start, end = self._loop_abs_bounds()
         start_viz = self._get_valid_pos(start)
-        end_viz = self._get_valid_pos(end)
-        start_viz = min(start_viz, end_viz)
+        start_viz = min(start_viz, end)
 
         dpg.set_value(self._t("loop_start"), start_viz)
         dpg.set_value(self._t("loop_start_axis"), start_viz)
         dpg.set_value(self._t("loop_start_value"), start)
 
-        dpg.set_value(self._t("loop_end"), end_viz)
-        dpg.set_value(self._t("loop_end_axis"), end_viz)
+        dpg.set_value(self._t("loop_end"), end)
+        dpg.set_value(self._t("loop_end_axis"), end)
         dpg.set_value(self._t("loop_end_value"), end)
 
     def _on_loop_marker_moved(self) -> None:

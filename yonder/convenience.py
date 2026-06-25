@@ -228,7 +228,8 @@ def _setup_bgm(
         tracks = [tracks]
 
     for bgm in tracks:
-        bnk.add_wem(bgm.track, SourceType.Streaming)
+        if bgm.track:
+            bnk.add_wem(bgm.track, SourceType.Streaming)
 
     root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=parent)
     new_nodes.append(root_mrsc)
@@ -245,6 +246,9 @@ def _setup_bgm(
         new_nodes.append(intro_seg)
 
         for bgm in tracks:
+            if not bgm.track:
+                continue
+
             mt = MusicTrack.new(
                 bnk.new_id(), bgm.track, parent=intro_seg, props={PropID.Priority: 80.0}
             )
@@ -314,6 +318,9 @@ def _setup_bgm(
     bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
 
     for bgm in tracks:
+        if not bgm.track:
+            continue
+
         mt = MusicTrack.new(
             bnk.new_id(), bgm.track, parent=bgm_seg, props={PropID.Priority: 80.0}
         )

@@ -30,6 +30,7 @@ from yonder.gui.widgets import (
     add_widget_table,
     loading_indicator,
 )
+from yonder.gui.helpers import success_countdown
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
 from yonder.gui.widgets.transition_matrix import add_transition_matrix
 from .edit_state_path_dialog import edit_state_path_dialog
@@ -59,14 +60,13 @@ class _BgmInfo:
     state_path: dict[str, str] = field(default_factory=dict)
     fadein: int = 0
     intro: bool = False
-    intro_length: int = 0
 
     def _collect_properties(
         self, bgm: _BgmVariant
     ) -> tuple[dict[PropID, float], StateCtrl, StateCtrl]:
         default = {}
         normal = StateCtrl("FieldBattleState", "FieldNormal", {})
-        battle = StateCtrl("FieldBattleState", "FieldNormal", {})
+        battle = StateCtrl("FieldBattleState", "FieldBattle", {})
 
         for p in bgm.props:
             if p.mode == "default":
@@ -105,7 +105,7 @@ class _BgmInfo:
                 bat_default,
                 [bat_ctrl_normal, bat_ctrl_battle],
             ),
-            self.intro_length if self.intro else 0.0,
+            self.regular.loop_info[0] if self.regular and self.intro else 0.0,
         )
 
 
@@ -385,16 +385,8 @@ Ambience tree:
                         default_value=entry.intro,
                         callback=self._make_callback(entry, "intro"),
                     )
-                    dpg.add_input_int(
-                        label=µ("Intro start"),
-                        default_value=entry.intro_length,
-                        min_value=0,
-                        min_clamped=True,
-                        step=100,
-                        step_fast=1000,
-                        width=200,
-                        callback=self._make_callback(entry, "intro_start"),
-                    )
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text(µ("Play intro based on regular track's loop_start"))
 
                     dpg.add_input_int(
                         label=µ("Fade-in"),
@@ -539,7 +531,11 @@ Ambience tree:
                 ("regular", check_regular),
                 ("battle", check_battle),
             ]:
-                dpg.set_value(checkbox, mode == sender_mode)
+                if mode == sender_mode:
+                    dpg.set_value(checkbox, True)
+                    state_prop.mode = sender_mode
+                else:
+                    dpg.set_value(checkbox, False)
 
         # TODO Only show states that are not yet in use with the same mode
         # Requires regenerating this table on every change, not that enticing...
@@ -755,12 +751,7 @@ Ambience tree:
         if self.on_created:
             self.on_created(nodes)
 
-        self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("btn_okay"), µ("Yay!"))
-        dpg.set_item_callback(
-            self._t("btn_okay"),
-            lambda s, a, u: dpg.delete_item(self.tag),
-        )
+        success_countdown(self.tag, self._t("btn_okay"))
 
     # === Build =============================================================
 

@@ -113,7 +113,7 @@ class edit_markers_dialog(DpgItem):
         with dpg.window(
             label=title,
             width=700,
-            height=350,
+            height=355,
             autosize=False,
             no_saved_settings=True,
             tag=self._tag,
@@ -149,7 +149,7 @@ class edit_markers_dialog(DpgItem):
             if self._accept_on_okay:
                 with dpg.group(horizontal=True):
                     dpg.add_button(
-                        label=µ("Okay", "button"),
+                        label=µ("Apply", "button"),
                         callback=self._on_okay,
                         tag=self._t("button_okay"),
                     )

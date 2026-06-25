@@ -12,6 +12,8 @@ from dearpygui import dearpygui as dpg
 from yonder.util import logger
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import CurveInterpolation
+from yonder.gui.localization import µ
+from yonder.gui import style
 
 
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
@@ -87,12 +89,40 @@ def dpg_section(
     dpg.add_separator()
 
 
-def open_file_native(filename: str | Path):
+def exec_file_native(filename: str | Path):
     if sys.platform == "win32":
         os.startfile(str(filename))
     else:
         opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.call([opener, str(filename)])
+
+
+def success_countdown(window: int, label: int, countdown: int = 2, delete: bool = True) -> None:
+    def close():
+        if delete:
+            dpg.delete_item(window)
+        else:
+            dpg.hide_item(window)
+
+    def callback():
+        nonlocal countdown
+
+        if countdown > 0:
+            dpg.set_item_label(
+                label, µ("Yay!") + f" ({countdown})"
+            )
+            countdown -= 1
+            dpg.set_frame_callback(
+                int(dpg.get_frame_count() + dpg.get_frame_rate()), callback
+            )
+        else:
+            close()
+    
+    dpg.bind_item_theme(label, style.themes.get_color_theme(style.light_blue))
+    if dpg.get_item_type(label) == "mvButton":
+        dpg.set_item_callback(label, close)
+
+    callback()
 
 
 class GraphCurve:

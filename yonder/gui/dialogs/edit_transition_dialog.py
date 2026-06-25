@@ -72,8 +72,10 @@ class edit_transition_dialog(DpgItem):
     def _refresh(self, rule_key: str) -> None:
         table = self._table_tag(rule_key)
         dpg.delete_item(table, children_only=True, slot=1)
+
         for node_id in getattr(self._rule, rule_key):
             self._add_id_row(table, node_id, rule_key)
+        
         self._add_id_footer(table, rule_key)
         dpg.configure_item(
             table, height=min(150, 30 + len(getattr(self._rule, rule_key)) * 30)
@@ -92,6 +94,9 @@ class edit_transition_dialog(DpgItem):
         missing = sorted(
             set(self._targets).difference(getattr(self._rule, rule_key))
         )
+        if not missing:
+            return
+
         with dpg.table_row(parent=table):
             dpg.add_combo(missing, width=-1, tag=self._add_item_tag(rule_key))
             dpg.add_button(

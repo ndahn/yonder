@@ -135,9 +135,9 @@ class themes:
     link_button = None
     transparent_button = None
     no_padding = None
+    player_plot = None
     plot_blue = None
     plot_red = None
-    player_plot = None
 
     @cache
     @staticmethod

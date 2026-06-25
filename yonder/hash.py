@@ -47,11 +47,13 @@ class LookupTable:
                 variations.append(f"Play_{val[5:]}")
 
             for variant in variations:
-                end = variant[-1]
-                if end.isdigit():
-                    end = int(end)
-                    fuzz.add(f"{variant[:-1]}{end - 1}")
-                    fuzz.add(f"{variant[:-1]}{end + 1}")
+                end = re.search(r"\d+$", variant)
+                if end:
+                    pad = len(end.group(0))
+                    end_num = int(end.group(0))
+                    if end_num > 0:
+                        fuzz.add(f"{variant[:-1]}{end_num - 1:>0{pad}}")
+                    fuzz.add(f"{variant[:-1]}{end_num + 1:>0{pad}}")
         
         # NOTE: be careful not to use calc_hash here, as it would update the table and save
         self._fuzzy_table = {fnv_1a(v): v for v in fuzz}
