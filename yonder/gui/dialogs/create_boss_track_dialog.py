@@ -1,12 +1,15 @@
 from typing import Any, Callable
 from pathlib import Path
+from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.util import logger
 from yonder.types import MusicSwitchContainer
+from yonder.types.base_types import MusicTransitionRule
+from yonder.enums import CurveInterpolation
 from yonder.hash import calc_hash
-from yonder.convenience import create_boss_bgm
+from yonder.convenience import create_boss_bgm, BossBgm, BgmTrack
 from yonder.wem import wav2wem
 from yonder.game import GameObjects
 from yonder.gui import style
@@ -18,6 +21,7 @@ from yonder.gui.widgets import (
     add_paragraphs,
     add_player_table,
     add_properties_table,
+    add_transition_matrix,
     loading_indicator,
     yay,
 )
@@ -42,10 +46,18 @@ class create_boss_track_dialog(DpgItem):
         self.bgm_enemy_type_hash = calc_hash("BgmEnemyType")
         self.bgm_enemy_type_idx: int = -1
         self.current_state_path: list[str] = []
-        self.bgm_tracks: list[Path] = []
-        self.bgm_loop_infos: list[tuple[float, float, bool]] = []
-        self.bgm_trim_infos: list[tuple[float, float]] = []
-        self.play_intro_enabled: list[bool] = []
+        self.bgm_tracks: list[BossBgm] = []
+        self.phase_transitions: list[MusicTransitionRule] = [
+            MusicTransitionRule().configure(
+                src_transition_time=1500,
+                src_fade_offset=1500,
+                src_fade_curve=CurveInterpolation.Sine,
+                dst_transition_time=500,
+                dst_fade_offset=-500,
+                dst_fade_curve=CurveInterpolation.Log1,
+                dst_play_pre_entry=True,
+            )
+        ]
 
         self._build(title)
 
@@ -87,16 +99,24 @@ class create_boss_track_dialog(DpgItem):
             )
 
         with dpg.table_row():
-            dpg.add_text(µ("Play intro before loop_start"), tag=self._t("intro_enabled"))
-            for i, _ in enumerate(self.bgm_tracks):
+            dpg.add_text(µ("Play intro"), tag=self._t("intro_enabled"))
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text(µ("Play intro based on regular track's loop_start"))
+
+            for i, bgm in enumerate(self.bgm_tracks):
                 dpg.add_checkbox(
-                    default_value=self.play_intro_enabled[i],
+                    default_value=bgm.intro_length > 0,
                     callback=self._update_play_intro,
                     tag=self._t(f"play_intro:{i}"),
                     user_data=i,
                 )
 
         dpg.pop_container_stack()
+
+        # NOTE not using format to make sure the # survives for later
+        targets = [µ("Track ") + f"#{i}" for i in range(len(self.bgm_tracks))]
+        self.phase_transition_matrix.targets = targets
+        self.phase_transition_matrix.regenerate()
 
     # === DPG callbacks =================================================
 
@@ -145,36 +165,41 @@ class create_boss_track_dialog(DpgItem):
         dpg.set_value(self._t("bgm_enemy_type"), state_path[self.bgm_enemy_type_idx])
         self.show_message()
 
-    def _on_bgm_tracks_changed(
-        self, sender: str, data: tuple[list[Path], tuple, tuple, tuple], user_data: Any
-    ) -> None:
-        self.bgm_tracks = data[0]
-        self.bgm_loop_infos = data[1]
-        self.bgm_trim_infos = data[2]
-
-        if len(self.bgm_tracks) < len(self.play_intro_enabled):
-            self.play_intro_enabled[:] = self.play_intro_enabled[: len(self.bgm_tracks)]
-        elif len(self.bgm_tracks) > len(self.play_intro_enabled):
-            self.play_intro_enabled.extend(
-                [False] * (len(self.bgm_tracks) - len(self.play_intro_enabled))
-            )
-
+    def _on_track_added(self, sender: str, path: Path, user_data: Any) -> None:
+        self.bgm_tracks.append(BossBgm(BgmTrack(path), 0.0))
         self._regenerate_per_track_widgets()
+
+    def _on_track_removed(self, sender: str, idx: int, user_data: Any) -> None:
+        self.bgm_tracks.pop(idx)
+        self._regenerate_per_track_widgets()
+
+    def _on_track_changed(
+        self, sender: str, info: tuple[int, Path], user_data: Any
+    ) -> None:
+        idx, path = info
+        self.bgm_tracks[idx].track.track = path
 
     def _update_loop_infos(
         self, sender: str, data: tuple[int, tuple[float, float, bool]], user_data: Any
     ) -> None:
         idx, loop_info = data
-        self.bgm_loop_infos[idx] = loop_info
+        self.bgm_tracks[idx].track.loop_info = loop_info
 
     def _update_trim_infos(
         self, sender: str, data: tuple[int, tuple[float, float]], user_data: Any
     ) -> None:
         idx, trim = data
-        self.bgm_trim_infos[idx] = trim
+        self.bgm_tracks[idx].track.trims = trim
 
     def _update_play_intro(self, sender: str, enabled: bool, idx: int) -> None:
-        self.play_intro_enabled[idx] = enabled
+        # length will be taken from loop_start in on_okay
+        self.bgm_tracks[idx].intro_length = enabled
+
+    def _on_phase_transitions_changed(
+        self, sender: str, transitions: list[MusicTransitionRule], user_data: Any
+    ) -> None:
+        self.phase_transitions = transitions
+        self._regenerate_per_track_widgets()
 
     def _on_okay(self) -> None:
         if not self.msc:
@@ -190,28 +215,57 @@ class create_boss_track_dialog(DpgItem):
             self.show_message(µ("No tracks added", "msg"))
             return
 
+        for track in self.bgm_tracks:
+            if track.intro_length > 0 and track.track.loop_info[0] <= 0:
+                self.show_message(
+                    µ("Track #{idx} has intro enabled but loop_start is 0")
+                )
+                return
+
         self.show_message()
 
         with loading_indicator(µ("Working")):
-            waves = [f for f in self.bgm_tracks if f.name.endswith(".wav")]
+            waves = {
+                i: bgm.track.track
+                for i, bgm in enumerate(self.bgm_tracks)
+                if bgm.track.track.suffix == ".wav"
+            }
             if waves:
                 wwise = get_config().locate_wwise()
-                converted_wavs = wav2wem(wwise, waves)
-                for wem in converted_wavs:
-                    for idx, f in enumerate(self.bgm_tracks):
-                        if f.stem == wem.stem:
-                            self.bgm_tracks[idx] = wem
+                converted_wavs = wav2wem(wwise, list(waves.values()))
+                for wem, idx in zip(converted_wavs, waves.keys()):
+                    self.bgm_tracks[idx].track.track = wem
 
-            # TODO transition rules?
-            loop_info = [(li[0], li[1]) for li in self.bgm_loop_infos]
+            # Replace transition placeholders
+            phase_transitions = []
+            for trans in self.phase_transitions:
+                trans = deepcopy(trans)
+
+                for idx, track_ref in enumerate(trans.source_ids):
+                    if isinstance(track_ref, str):
+                        track_idx = int(track_ref.split("#")[-1])
+                        trans.source_ids[idx] = track_idx
+
+                for idx, track_ref in enumerate(trans.destination_ids):
+                    if isinstance(track_ref, str):
+                        track_idx = int(track_ref.split("#")[-1])
+                        trans.destination_ids[idx] = track_idx
+
+                phase_transitions.append(trans)
+
+            # Fix up intro lengths
+            for track in self.bgm_tracks:
+                if track.intro_length > 0:
+                    track.intro_length = track.track.loop_info[0]
+                    # loop markers are relative to the begin trim
+                    track.track.loop_info = (0.0, track.track.loop_info[1])
+
             nodes = create_boss_bgm(
                 self.bnk,
                 self.msc,
                 self.current_state_path,
                 self.bgm_tracks,
-                loop_markers=loop_info,
-                play_intro=self.play_intro_enabled,
-                properties=self._properties.properties,
+                phase_transitions=phase_transitions,
             )
 
         if self.on_boss_track_created:
@@ -234,56 +288,61 @@ class create_boss_track_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             with dpg.tab_bar():
-                with dpg.tab(label=µ("Tracks")):
-                    add_select_node(
-                        self._get_music_switch_containers,
-                        "MusicSwitchContainer",
-                        self._on_music_switch_container_selected,
-                        get_node_details=get_details_musicswitchcontainer,
-                        node_type=MusicSwitchContainer,
-                    )
+                self._build_tab_tracks()
+                self._build_tab_settings()
 
-                    with dpg.group(horizontal=True):
-                        dpg.add_input_text(
-                            callback=self._on_bgmenemytype_changed,
-                            default_value="*",
-                            tag=self._t("bgm_enemy_type"),
-                        )
-                        dpg.add_combo(
-                            [
-                                x
-                                for x in GameObjects.GameStates["BgmEnemyType"]
-                                if "reserved" in x.lower()
-                            ],
-                            no_preview=True,
-                            callback=self._on_bgmenemytype_changed,
-                        )
-                        dpg.add_text("BgmEnemyType")
-                    dpg.add_button(
-                        label=µ("State Path", "button"),
-                        callback=self._edit_state_path,
-                        tag=self._t("state_path"),
-                    )
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
-                    self._players = add_player_table(
-                        [],
-                        self._on_bgm_tracks_changed,
-                        get_row_label=self.get_phase_label,
-                        on_loop_changed=self._update_loop_infos,
-                        on_trim_changed=self._update_trim_infos,
-                    )
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label=µ("Bring the heat!", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("button_okay"),
+                )
 
-                with dpg.tab(label=µ("Settings")):
-                    self._properties = add_properties_table({}, None)
+    def _build_tab_tracks(self) -> None:
+        with dpg.tab(label=µ("Tracks")):
+            add_select_node(
+                self._get_music_switch_containers,
+                "MusicSwitchContainer",
+                self._on_music_switch_container_selected,
+                get_node_details=get_details_musicswitchcontainer,
+                node_type=MusicSwitchContainer,
+            )
 
-                    dpg.add_spacer(height=4)
-                    with dpg.table(tag=self._t("per_track_settings")):
-                        dpg.add_table_column(width_fixed=True)
-                        with dpg.table_row():
-                            dpg.add_text(
-                                µ("Add a track first to adjust per-track settings"),
-                                color=style.orange,
-                            )
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(
+                    callback=self._on_bgmenemytype_changed,
+                    default_value="*",
+                    tag=self._t("bgm_enemy_type"),
+                )
+                dpg.add_combo(
+                    [
+                        x
+                        for x in GameObjects.GameStates["BgmEnemyType"]
+                        if "reserved" in x.lower()
+                    ],
+                    no_preview=True,
+                    callback=self._on_bgmenemytype_changed,
+                )
+                dpg.add_text("BgmEnemyType")
+            dpg.add_button(
+                label=µ("State Path", "button"),
+                callback=self._edit_state_path,
+                tag=self._t("state_path"),
+            )
+
+            self._players = add_player_table(
+                [],
+                get_row_label=self.get_phase_label,
+                on_track_added=self._on_track_added,
+                on_track_removed=self._on_track_removed,
+                on_track_changed=self._on_track_changed,
+                on_loop_changed=self._update_loop_infos,
+                on_trims_changed=self._update_trim_infos,
+            )
 
             dpg.add_separator()
             add_paragraphs(
@@ -301,16 +360,25 @@ class create_boss_track_dialog(DpgItem):
                 color=style.light_blue,
             )
 
-            dpg.add_separator()
-            dpg.add_spacer(height=2)
-            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
+    def _build_tab_settings(self) -> None:
+        with dpg.tab(label=µ("Settings")):
+            self._properties = add_properties_table({}, None)
 
-            with dpg.group(horizontal=True):
-                dpg.add_button(
-                    label=µ("Bring the heat!", "button"),
-                    callback=self._on_okay,
-                    tag=self._t("button_okay"),
-                )
+            dpg.add_spacer(height=4)
+            with dpg.table(tag=self._t("per_track_settings")):
+                dpg.add_table_column(width_fixed=True)
+                with dpg.table_row():
+                    dpg.add_text(
+                        µ("Add a track first to adjust per-track settings"),
+                        color=style.orange,
+                    )
+
+            self.phase_transition_matrix = add_transition_matrix(
+                self.phase_transitions,
+                [],
+                self._on_phase_transitions_changed,
+                label=µ("Phase Transitions"),
+            )
 
     # === Public ========================================================
 

@@ -529,30 +529,20 @@ class add_player_table(DpgItem):
     def __init__(
         self,
         initial_tracks: list[Path] = None,
-        on_filepaths_changed: Callable[
-            [
-                str,
-                tuple[
-                    list[Path],  # filepaths
-                    list[tuple[float, float, bool]],  # loop infos
-                    list[tuple[float, float]],  # trims
-                    list[tuple[int, float]],  # user markers
-                ],
-                Any,
-            ],
-            None,
-        ] = None,
         *,
         label: str = "Tracks",
         add_item_label: str = "+ Add Tracks",
         get_row_label: Callable[[int], str] = None,
+        on_track_added: Callable[[str, Path, Any], None] = None,
+        on_track_removed: Callable[[str, int, Any], None] = None,
+        on_track_changed: Callable[[str, tuple[int, Path], Any], None] = None,
         on_loop_changed: Callable[
             [str, tuple[int, tuple[float, float, bool]], Any], None
         ] = None,
-        on_trim_changed: Callable[
+        on_trims_changed: Callable[
             [str, tuple[int, tuple[float, float]], Any], None
         ] = None,
-        on_user_marker_changed: Callable[[str, tuple[int, list], Any], None] = None,
+        on_usermarker_changed: Callable[[str, tuple[int, list], Any], None] = None,
         initial_user_markers: list[tuple[str, float]] = None,
         show_clear: bool = False,
         parent: str | int = 0,
@@ -567,10 +557,12 @@ class add_player_table(DpgItem):
 
         super().__init__(tag)
 
-        self._on_filepaths_changed = on_filepaths_changed
-        self._on_loop_changed = on_loop_changed
-        self._on_trim_changed = on_trim_changed
-        self._on_user_marker_changed = on_user_marker_changed
+        self._on_track_added_cb = on_track_added
+        self._on_track_changed_cb = on_track_changed
+        self._on_track_removed_cb = on_track_removed
+        self._on_loop_changed_cb = on_loop_changed
+        self._on_trims_changed_cb = on_trims_changed
+        self._on_usermarker_changed_cb = on_usermarker_changed
         self._initial_user_markers = list(initial_user_markers or [])
         self._get_row_label = get_row_label or (
             lambda i: µ("Track #{idx}").format(idx=i)
@@ -592,15 +584,6 @@ class add_player_table(DpgItem):
             tag=self.tag,
         )
 
-    # === Helpers =======================================================
-
-    def _collect_state(self) -> tuple:
-        paths = self._table.items
-        loop_info = [p.get_loop_state(True) for p in self.players]
-        trims = [p.get_trims(True) for p in self.players]
-        markers = [p.get_user_markers(True) for p in self.players]
-        return (paths, loop_info, trims, markers)
-
     # === DPG callbacks =================================================
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
@@ -612,44 +595,54 @@ class add_player_table(DpgItem):
             for f in ret:
                 done(Path(f))
 
-    def _on_loop_edit(self, sender: str, new_loop: tuple, idx: int) -> None:
-        if self._on_loop_changed:
-            self._on_loop_changed(self.tag, (idx, new_loop), self._user_data)
+    def _on_track_added(
+        self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
+    ) -> None:
+        if self._on_track_added_cb:
+            self._on_track_added_cb(self.tag, info[1], self._user_data)
 
-    def _on_trim_edit(self, sender: str, new_trim: tuple, idx: int) -> None:
-        if self._on_trim_changed:
-            self._on_trim_changed(self.tag, (idx, new_trim), self._user_data)
+        idx = info[0]
+        if self._on_loop_changed_cb:
+            self._on_loop_changed_cb(self.tag, (idx, (0.0, 0.0, True)), self._user_data)
 
-    def _on_user_marker_edit(self, sender: str, new_marker: tuple, idx: int) -> None:
-        if self._on_user_marker_changed:
-            markers = self.players[idx].get_user_marker_pos()
-            self._on_user_marker_changed(self.tag, (idx, markers), self._user_data)
+        if self._on_trims_changed_cb:
+            self._on_trims_changed_cb(self.tag, (idx, (0.0, 0.0)), self._user_data)
 
-    def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
-        if self._on_filepaths_changed:
-            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
-
-    def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
+    def _on_track_removed(
+        self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
+    ) -> None:
         idx = info[0]
         self.players.pop(idx)
-        if self._on_filepaths_changed:
-            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
+        if self._on_track_removed_cb:
+            self._on_track_removed_cb(self.tag, info[0], self._user_data)
 
-    def _on_path_changed(self, sender: str, new_path: Path, idx: int) -> None:
-        if self._on_filepaths_changed:
-            self._on_filepaths_changed(self.tag, self._collect_state(), self._user_data)
+    def _on_track_changed(self, sender: str, new_path: Path, idx: int) -> None:
+        if self._on_track_changed_cb:
+            self._on_track_changed_cb(self.tag, (idx, new_path), self._user_data)
+
+    def _on_loop_edit(self, sender: str, new_loop: tuple, idx: int) -> None:
+        if self._on_loop_changed_cb:
+            self._on_loop_changed_cb(self.tag, (idx, new_loop), self._user_data)
+
+    def _on_trim_edit(self, sender: str, new_trim: tuple, idx: int) -> None:
+        if self._on_trims_changed_cb:
+            self._on_trims_changed_cb(self.tag, (idx, new_trim), self._user_data)
+
+    def _on_user_marker_edit(self, sender: str, new_marker: tuple, idx: int) -> None:
+        if self._on_usermarker_changed_cb:
+            markers = self.players[idx].get_user_marker_pos()
+            self._on_usermarker_changed_cb(self.tag, (idx, markers), self._user_data)
 
     def _create_row(self, path: Path, idx: int) -> None:
-        with dpg.tree_node(label=path.stem, span_full_width=True):
+        with dpg.tree_node(label=self._get_row_label(idx), span_full_width=True):
             player = self._wav_player_cls(
                 path,
-                label=f" <{self._get_row_label(idx)}>",
-                on_file_changed=self._on_path_changed,
-                loop_markers_enabled=bool(self._on_loop_changed),
+                on_file_changed=self._on_track_changed,
+                loop_markers_enabled=bool(self._on_loop_changed_cb),
                 on_loop_changed=self._on_loop_edit,
-                trim_enabled=bool(self._on_trim_changed),
+                trim_enabled=bool(self._on_trims_changed_cb),
                 on_trims_changed=self._on_trim_edit,
-                user_markers_enabled=bool(self._on_user_marker_changed),
+                user_markers_enabled=bool(self._on_usermarker_changed_cb),
                 user_markers=list(self._initial_user_markers),
                 on_user_markers_changed=self._on_user_marker_edit,
                 show_filepath=True,

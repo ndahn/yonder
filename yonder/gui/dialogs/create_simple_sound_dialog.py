@@ -124,8 +124,10 @@ class create_simple_sound_dialog(DpgItem):
             # Sounds
             add_player_table(
                 self._soundfiles,
-                self._on_soundfiles_changed,
                 label=µ("Sounds"),
+                on_track_added=self._on_soundfile_added,
+                on_track_removed=self._on_soundfile_removed,
+                on_track_changed=self._on_soundfile_changed,
                 add_item_label=µ("+ Add Sounds"),
                 get_row_label=lambda i: f"source #{i}",
             )
@@ -171,12 +173,16 @@ class create_simple_sound_dialog(DpgItem):
         self._properties.clear()
         self._properties.update(new_properties)
 
-    def _on_soundfiles_changed(
-        self, sender: str, data: tuple[list[Path], ...], ud: Any
-    ) -> None:
-        self._soundfiles.clear()
-        self._soundfiles.extend(data[0])
+    def _on_soundfile_added(self, sender: str, path: Path, user_data: Any) -> None:
+        self._soundfiles.append(path)
 
+    def _on_soundfile_removed(self, sender: str, idx: int, user_data: Any) -> None:
+        self._soundfiles.pop(idx)
+
+    def _on_soundfile_changed(self, sender: str, info: tuple[int, Path], user_data: Any) -> None:
+        idx, path = info
+        self._soundfiles[idx] = path
+    
     def _on_okay(self) -> None:
         name = dpg.get_value(self._t("name"))
         if not name:

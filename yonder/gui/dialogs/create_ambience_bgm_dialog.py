@@ -89,10 +89,18 @@ class _BgmInfo:
             self.battle
         )
 
+        def get_loop_info(track: _BgmVariant) -> tuple[float, float]:
+            if self.intro:
+                # We use loop_start as our intro marker. Since the track will be 
+                # trimmed up to this point and loop markers are relative to the 
+                # begin trim, we have to set it to 0 so it starts at the trim.
+                return (0.0, track.loop_info[1])
+            return track.loop_info
+
         return AmbienceBgm(
             BgmTrack(
                 self.regular.track,
-                self.regular.loop_info,
+                get_loop_info(self.regular),
                 self.regular.trims,
                 self.fadein,
                 reg_default,
@@ -100,7 +108,7 @@ class _BgmInfo:
             ),
             BgmTrack(
                 self.battle.track,
-                self.battle.loop_info,
+                get_loop_info(self.battle),
                 self.battle.trims,
                 self.fadein,
                 bat_default,
@@ -773,7 +781,7 @@ Ambience tree:
                 self._build_tab_summary()
 
     def _build_tab_area_selector(self) -> None:
-        with dpg.tab(label=µ("Area selector")):
+        with dpg.tab(label=µ("Area Selector")):
             dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
@@ -795,7 +803,7 @@ Ambience tree:
                     auto_resize_y=True,
                     tag=self._t("location_args_group"),
                 ):
-                    dpg.add_text(µ("State path"))
+                    dpg.add_text(µ("State Path"))
 
                 dpg.add_spacer(height=2)
                 with dpg.group(horizontal=True):
@@ -811,6 +819,7 @@ Ambience tree:
                         tag=self._t("btn_edit_area_transition"),
                     )
 
+            dpg.add_separator()
             add_paragraphs(
                 µ(
                     """\
@@ -826,12 +835,12 @@ Ambience tree:
             )
 
     def _build_tab_local_tree(self) -> None:
-        with dpg.tab(label=µ("Local tree")):
+        with dpg.tab(label=µ("Local Tree")):
             dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-85,
+                height=-90,
             ):
                 dpg.add_spacer(height=4)
                 self._ambience_states_table = add_widget_table(
@@ -850,6 +859,7 @@ Ambience tree:
                     self._on_local_transitions_changed,
                 )
 
+            dpg.add_separator()
             add_paragraphs(
                 µ(
                     """\

@@ -191,6 +191,9 @@ class Soundbank:
         Path
             The path to where the wem was stored.
         """
+        if wem.suffix != ".wem":
+            raise ValueError("Only .wem files can be added to a soundbank")
+
         if not wem.stem.isnumeric():
             new_file = wem.parent / (str(calc_hash(wem.stem)) + wem.suffix)
             shutil.copy(wem, new_file)

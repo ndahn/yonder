@@ -139,7 +139,7 @@ class edit_markers_dialog(DpgItem):
                 markers_in_ms=markers_in_ms,
                 max_points=10000,
                 width=-1,
-                height=-60,
+                height=-70,
             )
 
             dpg.add_separator()

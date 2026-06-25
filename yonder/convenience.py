@@ -65,6 +65,12 @@ class BgmTrack:
 
 
 @dataclass
+class BossBgm:
+    track: BgmTrack = None
+    intro_length: float = 0.0
+
+
+@dataclass
 class AmbienceBgm:
     regular: BgmTrack = None
     battle: BgmTrack = None
@@ -162,10 +168,6 @@ def create_simple_sound(
 
     if isinstance(wems, Path):
         wems = [wems]
-
-    for w in wems:
-        if not w.name.endswith(".wem"):
-            raise ValueError("All tracks must be .wem files")
 
     rsc = RandomSequenceContainer.new(
         bnk.new_id(),
@@ -430,15 +432,12 @@ def create_boss_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
     master_branch: Hash | list[Hash],
-    tracks: list[Path] | Path,
+    tracks: BossBgm | list[BossBgm],
     *,
-    loop_markers: list[tuple[float, float]] = None,
-    play_intro: list[bool] = None,
     add_nobattle_state: bool = True,
     master_transition: MusicTransitionRule = None,
     phase_transitions: list[MusicTransitionRule] = None,
     track_transitions: MusicTransitionRule = None,
-    properties: dict[PropID, float] = None,
 ) -> tuple[list[HIRCNode]]:
     # An overview of what's happening:
     # https://docs.google.com/document/d/1Dx8U9q6iEofPtKtZ0JI1kOedJYs9ifhlO7H5Knil5sg/edit?tab=t.0
@@ -446,14 +445,6 @@ def create_boss_bgm(
 
     if isinstance(tracks, Path):
         tracks = [tracks]
-
-    for f in tracks:
-        if not f.name.endswith(".wem"):
-            raise ValueError("All tracks must be .wem files")
-
-    # Setup the boss phase music manager
-    if properties is None:
-        properties = {}
 
     # Prepare the new master state path
     if isinstance(master_branch, (str, int)):
@@ -478,7 +469,7 @@ def create_boss_bgm(
         [("BossBattleState", GroupType.State)],
         None,
         parent=master.id,
-        props=properties | {PropID.Priority: 80.0},
+        props={PropID.Priority: 80.0},
     )
     new_nodes.append(boss_msc)
 
@@ -500,18 +491,12 @@ def create_boss_bgm(
 
     # Setup the phase music tracks
     phase_masters: list[HIRCNode] = []
-    for i, (phase, track) in enumerate(zip(boss_state_keys, tracks)):
-        # TODO get BgmTracks passed instead
-        bgm = BgmTrack(
-            track,
-            loop_markers[i],
-            fadein=300,
-        )
+    for i, (phase, bgm) in enumerate(zip(boss_state_keys, tracks)):
         phase_nodes = _setup_bgm(
             bnk,
             boss_msc,
-            bgm,
-            intro_length=play_intro and play_intro[i],
+            bgm.track,
+            intro_length=bgm.intro_length,
             track_transition=track_transitions[i],
         )
 
