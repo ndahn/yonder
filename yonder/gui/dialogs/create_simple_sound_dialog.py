@@ -3,6 +3,7 @@ from pathlib import Path
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
+from yonder.util import logger
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
 from yonder.enums import PropID, PlaybackMode, RandomMode
@@ -16,6 +17,7 @@ from yonder.gui.widgets import (
     add_select_node,
     add_player_table,
     add_paragraphs,
+    yay,
 )
 from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 
@@ -226,13 +228,10 @@ class create_simple_sound_dialog(DpgItem):
             properties=self._properties,
         )
 
+        logger.info(f"Created simple sound {name}")
         self._callback(play_evt, stop_evt)
-        self.show_message(µ("Success!", "msg"), color=style.blue)
-        dpg.set_item_label(self._t("simple_sound/button_okay"), µ("Yay!"))
-        dpg.set_item_callback(
-            self._t("simple_sound/button_okay"),
-            lambda s, a, u: dpg.delete_item(self.tag),
-        )
+        dpg.delete_item(self.tag)
+        yay()
 
     # === Public ========================================================
 

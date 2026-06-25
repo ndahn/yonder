@@ -6,7 +6,7 @@ from yonder import Soundbank
 from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
-from yonder.util import repack_soundbank, logger
+from yonder.util import repack_soundbank, logger, unpack_soundbank
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator, yay
@@ -30,10 +30,20 @@ class mass_transfer_dialog(DpgItem):
         self._build(title)
 
     def _on_source_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
-        self._src_bnk = Soundbank.load(path)
+        with loading_indicator(µ("Loading")):
+            if path.suffix == ".bnk":
+                bnk2json = get_config().locate_bnk2json()
+                path = unpack_soundbank(bnk2json, path)
+            
+            self._src_bnk = Soundbank.load(path)
 
     def _on_dest_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
-        self._dst_bnk = Soundbank.load(path)
+        with loading_indicator(µ("Loading")):
+            if path.suffix == ".bnk":
+                bnk2json = get_config().locate_bnk2json()
+                path = unpack_soundbank(bnk2json, path)
+            
+            self._dst_bnk = Soundbank.load(path)
 
     def _select_nodes(self) -> None:
         if not self._src_bnk:

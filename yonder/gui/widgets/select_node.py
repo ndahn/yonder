@@ -1,15 +1,13 @@
 from __future__ import annotations
-from typing import Any, Callable, Type, Iterable, TYPE_CHECKING
+from typing import Any, Callable, Type, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
+from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
 from yonder.hash import lookup_name
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
 from .dpg_item import DpgItem
-
-if TYPE_CHECKING:
-    from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
 
 
 class ActorMixerDetailProvider:
