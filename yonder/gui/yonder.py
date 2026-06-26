@@ -71,7 +71,7 @@ from .dialogs.new_soundbank_dialog import new_soundbank_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
-from .dialogs.create_ambience_bgm_dialog import create_ambience_bgm_dialog
+from .dialogs.create_area_bgm_dialog import create_area_bgm_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
@@ -269,20 +269,20 @@ class BanksOfYonder(DpgItem):
                     tag=self._t("menu/create_simple_sound"),
                 )
                 dpg.add_menu_item(
-                    label=µ("Boss Track", "menu"),
+                    label=µ("Boss BGM", "menu"),
                     callback=self._open_boss_track_dialog,
                     tag=self._t("menu/create_boss_track"),
                 )
                 dpg.add_menu_item(
-                    label=µ("Ambience Track", "menu"),
-                    callback=self._open_ambience_bgm_dialog,
-                    tag=self._t("menu/create_ambience_bgm"),
+                    label=µ("Area BGM", "menu"),
+                    callback=self._open_area_bgm_dialog,
+                    tag=self._t("menu/create_area_bgm"),
                 )
                 dpg.add_menu_item(
-                    label=µ("Soundscape", "menu"),
-                    #callback=self._open_soundscape_dialog,
+                    label=µ("Ambience", "menu"),
+                    # callback=self._open_ambience_dialog,
                     enabled=False,  # TODO
-                    tag=self._t("menu/create_soundscape"),
+                    tag=self._t("menu/create_ambience"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -1197,7 +1197,7 @@ class BanksOfYonder(DpgItem):
                 if table:
                     table.prune(self.bnk.json_path.read_text("utf-8"))
                     table.save()
-                
+
                 unload_lookup_table(get_bank_lookup_table_path(self.bnk))
 
             now = time.time()
@@ -2117,20 +2117,20 @@ class BanksOfYonder(DpgItem):
         dpg.split_frame()
         center_window(tag)
 
-    def _open_ambience_bgm_dialog(self) -> None:
-        tag = self._t("create_ambience_track_dialog")
+    def _open_area_bgm_dialog(self) -> None:
+        tag = self._t("create_area_track_dialog")
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)
             dpg.focus_item(tag)
             return
 
-        def on_ambience_track_created(nodes: list[HIRCNode]) -> None:
+        def on_area_track_created(nodes: list[HIRCNode]) -> None:
             self.add_pinned_object(nodes[0])
-            logger.info(µ("Added ambience track {name}", "log").format(name=nodes[0]))
+            logger.info(µ("Added area track {name}", "log").format(name=nodes[0]))
             self.regenerate()
             self.jump_to_node(nodes[0])
 
-        create_ambience_bgm_dialog(self.bnk, on_ambience_track_created, tag=tag)
+        create_area_bgm_dialog(self.bnk, on_area_track_created, tag=tag)
 
         dpg.split_frame()
         center_window(tag)

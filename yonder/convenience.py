@@ -71,7 +71,7 @@ class BossBgm:
 
 
 @dataclass
-class AmbienceBgm:
+class AreaBgm:
     regular: BgmTrack = None
     battle: BgmTrack = None
     intro_length: float = 0.0
@@ -265,9 +265,7 @@ def _setup_bgm(
                     ClipAutomationType.FadeIn,
                     [
                         RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
-                        RTPCGraphPoint(
-                            bgm.fadein, 1.0, CurveInterpolation.Constant
-                        ),
+                        RTPCGraphPoint(bgm.fadein, 1.0, CurveInterpolation.Constant),
                     ],
                 )
 
@@ -326,7 +324,7 @@ def _setup_bgm(
         mt = MusicTrack.new(
             bnk.new_id(), bgm.track, parent=bgm_seg, props={PropID.Priority: 80.0}
         )
-        
+
         begin_trim = intro_length if intro_length > 0 else bgm.trims[0]
         mt.set_trims(begin_trim, bgm.trims[1])
 
@@ -382,7 +380,7 @@ def _setup_bgm(
                 dst_play_pre_entry=True,
                 src_play_post_exit=0,
             )
-        
+
         root_mrsc.music_trans_node_params.transition_rules.append(intro_transition)
 
     # Add the segment to the music container's playlist
@@ -480,14 +478,16 @@ def create_boss_bgm(
         master.music_trans_node_params.transition_rules.append(master_transition)
 
     if not track_transitions:
-        track_transitions = [MusicTransitionRule().configure(
-            src_transition_time=100,
-            src_fade_offset=100,
-            src_fade_curve=CurveInterpolation.Sine,
-            dst_transition_time=100,
-            dst_fade_curve=CurveInterpolation.Exp3,
-            dst_play_pre_entry=True,
-        )] * len(tracks)
+        track_transitions = [
+            MusicTransitionRule().configure(
+                src_transition_time=100,
+                src_fade_offset=100,
+                src_fade_curve=CurveInterpolation.Sine,
+                dst_transition_time=100,
+                dst_fade_curve=CurveInterpolation.Exp3,
+                dst_play_pre_entry=True,
+            )
+        ] * len(tracks)
 
     # Setup the phase music tracks
     phase_masters: list[HIRCNode] = []
@@ -530,11 +530,11 @@ def create_boss_bgm(
     return new_nodes
 
 
-def create_ambience_bgm(
+def create_area_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
     master_branch: Hash | list[Hash],
-    location_tree: DecisionNode[AmbienceBgm],
+    location_tree: DecisionNode[AreaBgm],
     *,
     master_transition: MusicTransitionRule = None,
     variant_transitions: list[MusicTransitionRule] = None,
@@ -558,33 +558,35 @@ def create_ambience_bgm(
 
     location_branches = location_tree.flatten()
 
-    # Manager for this ambience
-    ambience_msc = MusicSwitchContainer.new(
+    # Manager for this area
+    area_msc = MusicSwitchContainer.new(
         bnk.new_id(),
         [(arg, GroupType.State) for arg in location_tree.all_args()],
         props=properties | {PropID.Priority: 80.0},
         parent=master,
     )
-    new_nodes.append(ambience_msc)
+    new_nodes.append(area_msc)
 
     # Setup transition rules
     if master_transition:
-        master_transition.destination_ids = [ambience_msc.id]
+        master_transition.destination_ids = [area_msc.id]
         master_transition.source_transition_rule.sync_type = SyncType.Immediate
         master.music_trans_node_params.transition_rules.append(master_transition)
 
     if not track_transitions:
-        track_transitions = [MusicTransitionRule().configure(
-            src_transition_time=3000,
-            src_fade_offset=3000,
-            src_fade_curve=CurveInterpolation.SCurve,
-            dst_transition_time=1000,
-            dst_fade_curve=CurveInterpolation.InvSCurve,
-        )] * len(location_branches)
+        track_transitions = [
+            MusicTransitionRule().configure(
+                src_transition_time=3000,
+                src_fade_offset=3000,
+                src_fade_curve=CurveInterpolation.SCurve,
+                dst_transition_time=1000,
+                dst_fade_curve=CurveInterpolation.InvSCurve,
+            )
+        ] * len(location_branches)
 
     branch_masters: list[HIRCNode] = []
     for idx, (branch, bgm) in enumerate(location_branches.items()):
-        # Ambience music typically has one base track and a battle track which is overlayed
+        # area music typically has one base track and a battle track which is overlayed
         # rather than being a separate music track, but we don't enforce that here. The
         # alternative being to have a decision branch on the FieldBattleState, in which case
         # we won't need the states to control audio layers.
@@ -598,22 +600,22 @@ def create_ambience_bgm(
 
         branch_nodes = _setup_bgm(
             bnk,
-            ambience_msc,
+            area_msc,
             tracks,
             intro_length=bgm.intro_length,
             track_transition=track_transitions[idx],
         )
 
-        ambience_msc.add_branch(branch, branch_nodes[0])
+        area_msc.add_branch(branch, branch_nodes[0])
         branch_masters.append(branch_nodes[0])
         new_nodes.extend(branch_nodes)
 
     # Variation transition rules
     if variant_transitions:
         _set_index_transition_ids(variant_transitions, branch_masters)
-        ambience_msc.music_trans_node_params.transition_rules = variant_transitions
+        area_msc.music_trans_node_params.transition_rules = variant_transitions
     else:
-        rule = ambience_msc.music_trans_node_params.transition_rules[0]
+        rule = area_msc.music_trans_node_params.transition_rules[0]
         rule.configure(
             src_transition_time=1000,
             src_fade_offset=1000,
@@ -624,13 +626,13 @@ def create_ambience_bgm(
         )
 
     # Add to master and soundbank
-    master.add_branch(master_branch, ambience_msc)
+    master.add_branch(master_branch, area_msc)
     bnk.add_nodes(*new_nodes)
     return new_nodes
 
 
 # TODO outdated, will need a revisit
-def create_ambience_soundscape(
+def create_ambience(
     bnk: Soundbank,
     master: MusicSwitchContainer,
     master_branch: list[Hash],

@@ -12,9 +12,9 @@ from yonder.types import MusicSwitchContainer
 from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import PropID, CurveInterpolation
 from yonder.convenience import (
-    create_ambience_bgm,
+    create_area_bgm,
     DecisionNode,
-    AmbienceBgm,
+    AreaBgm,
     BgmTrack,
     StateCtrl,
 )
@@ -30,7 +30,7 @@ from yonder.gui.widgets import (
     add_wav_player,
     add_widget_table,
     loading_indicator,
-    add_transition_matrix, 
+    add_transition_matrix,
     yay,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
@@ -81,7 +81,7 @@ class _BgmInfo:
 
         return (default, normal, battle)
 
-    def to_ambience_bgm(self) -> AmbienceBgm:
+    def to_area_bgm(self) -> AreaBgm:
         reg_default, reg_ctrl_normal, reg_ctrl_battle = self._collect_properties(
             self.regular
         )
@@ -91,13 +91,13 @@ class _BgmInfo:
 
         def get_loop_info(track: _BgmVariant) -> tuple[float, float]:
             if self.intro:
-                # We use loop_start as our intro marker. Since the track will be 
-                # trimmed up to this point and loop markers are relative to the 
+                # We use loop_start as our intro marker. Since the track will be
+                # trimmed up to this point and loop markers are relative to the
                 # begin trim, we have to set it to 0 so it starts at the trim.
                 return (0.0, track.loop_info[1])
             return track.loop_info
 
-        return AmbienceBgm(
+        return AreaBgm(
             BgmTrack(
                 self.regular.track,
                 get_loop_info(self.regular),
@@ -135,7 +135,7 @@ def _build_tree(
         depth: int,
     ) -> None:
         if depth == len(active_args):
-            node.children.append(DecisionNode(leaf_value=entry.to_ambience_bgm()))
+            node.children.append(DecisionNode(leaf_value=entry.to_area_bgm()))
             return
 
         arg = active_args[depth]
@@ -159,18 +159,18 @@ def _build_tree(
 _WILDCARD = "*"
 
 
-class create_ambience_bgm_dialog(DpgItem):
-    """Dialog to create a new ambience bgm.
+class create_area_bgm_dialog(DpgItem):
+    """Dialog to create a new area bgm.
 
     Creates a branch in an existing location MusicSwitchContainer and a new
-    ambience MusicSwitchContainer with its own decision tree.
+    area MusicSwitchContainer with its own decision tree.
 
     Parameters
     ----------
     bnk : Soundbank
         Soundbank to modify.
-    ambience_args : dict[str, list[str]]
-        States the ambience may select on and standard values to offer.
+    area_args : dict[str, list[str]]
+        States the area may select on and standard values to offer.
     on_created : callable
         Fired as ``on_created(nodes)`` with the new HIRCNodes on success.
     title : str
@@ -185,7 +185,7 @@ class create_ambience_bgm_dialog(DpgItem):
         on_created: Callable[[list[HIRCNode]], None],
         *,
         initial_local_args: list[str] = ("TimeZone", "FieldBattleState"),
-        title: str = "New Ambience Bgm",
+        title: str = "New Area Bgm",
         tag: str = None,
     ) -> None:
         super().__init__(tag)
@@ -236,15 +236,13 @@ class create_ambience_bgm_dialog(DpgItem):
             location_str = "<invalid>"
 
         tree = _build_tree(self._bgm_tracks, self.area_args)
-        tree_str = tree.format_tree() or µ(
-            "<nothing to see here>"
-        )
+        tree_str = tree.format_tree() or µ("<nothing to see here>")
 
         summary = f"""\
 Location selector:
   {location_str}
 
-Ambience tree:
+Area tree:
 {tree_str}"""
 
         dpg.set_value(self._t("summary_text"), summary)
@@ -337,21 +335,21 @@ Ambience tree:
         self._update_summary()
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
-        """Render one ambience-arg row: input + combo(no_preview) + locked hint."""
+        """Render one area-arg row: input + combo(no_preview) + locked hint."""
         values = list(GameObjects.GameStates.keys())
         with dpg.group(horizontal=True):
             dpg.add_input_text(
                 default_value=arg,
                 width=200,
                 callback=self._on_local_arg_name_changed,
-                tag=self._t(f"ambience_state:{idx}"),
+                tag=self._t(f"area_state:{idx}"),
                 user_data=idx,
             )
             dpg.add_combo(
                 values,
                 no_preview=True,
                 callback=self._on_local_arg_name_changed,
-                tag=self._t(f"ambience_state_combo:{idx}"),
+                tag=self._t(f"area_state_combo:{idx}"),
                 user_data=idx,
             )
 
@@ -362,13 +360,13 @@ Ambience tree:
 
     def _on_local_arg_name_changed(self, sender: str, value: str, idx: int) -> None:
         self.area_args[idx] = value
-        self._ambience_states_table.items[idx] = value
+        self._area_states_table.items[idx] = value
 
         for entry in self._bgm_tracks:
             entry.state_path.setdefault(value, _WILDCARD)
 
-        dpg.set_value(self._t(f"ambience_state:{idx}"), value)
-        dpg.set_value(self._t(f"ambience_state_combo:{idx}"), value)
+        dpg.set_value(self._t(f"area_state:{idx}"), value)
+        dpg.set_value(self._t(f"area_state_combo:{idx}"), value)
         self._update_local_branch_labels()
         self._update_summary()
 
@@ -394,7 +392,9 @@ Ambience tree:
                         callback=self._make_callback(entry, "intro"),
                     )
                     with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text(µ("Play intro based on regular track's loop_start"))
+                        dpg.add_text(
+                            µ("Play intro based on regular track's loop_start")
+                        )
 
                     dpg.add_input_int(
                         label=µ("Fade-in"),
@@ -642,7 +642,7 @@ Ambience tree:
         entry = self._bgm_tracks[idx]
         state_args = self.area_args
 
-        # build a synthetic state_path list aligned to the ambience args
+        # build a synthetic state_path list aligned to the area args
         current_path = [entry.state_path.get(a, _WILDCARD) for a in state_args]
 
         def _on_path_selected(_sender: str, state_path: list[str], _ud: Any) -> None:
@@ -743,14 +743,14 @@ Ambience tree:
                 variant_transitions.append(trans)
 
             # Decision tree
-            ambience_tree = _build_tree(self._bgm_tracks, self.area_args)
+            area_tree = _build_tree(self._bgm_tracks, self.area_args)
 
             # Commence!
-            nodes = create_ambience_bgm(
+            nodes = create_area_bgm(
                 self.bnk,
                 self.msc,
                 self.local_args,
-                ambience_tree,
+                area_tree,
                 variant_transitions=variant_transitions,
                 master_transition=master_transition,
                 properties={PropID.Priority: 80.0},
@@ -759,7 +759,7 @@ Ambience tree:
         if self.on_created:
             self.on_created(nodes)
 
-        logger.info(f"Created new ambience node {nodes[0].id} for {self.local_args}")
+        logger.info(f"Created new area node {nodes[0].id} for {self.local_args}")
         dpg.delete_item(self.tag)
         yay()
 
@@ -823,7 +823,7 @@ Ambience tree:
             add_paragraphs(
                 µ(
                     """\
-                        - Ambience tracks need to be added to cs_Smain (sssss!)
+                        - Area tracks need to be added to cs_Smain (sssss!)
                         - Use the main music controller (1001573296 in ER/NR)
                         - Set BgmPlaceType to your map's BgmPlaceInfo (vanilla only!)
                         - (All?) map regions can modify CommonPlaceType
@@ -843,7 +843,7 @@ Ambience tree:
                 height=-90,
             ):
                 dpg.add_spacer(height=4)
-                self._ambience_states_table = add_widget_table(
+                self._area_states_table = add_widget_table(
                     list(self.area_args),
                     self._local_arg_to_row,
                     new_item=self._new_local_arg,
