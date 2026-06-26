@@ -8,7 +8,7 @@ from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.util import logger
 from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
-from yonder.player import WavPlayer
+from yonder.audio.player import WavPlayer
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
@@ -169,6 +169,7 @@ class add_wav_player(DpgItem):
         self.highpass: list[RTPCGraphPoint] = None
         self.fadein: list[RTPCGraphPoint] = None
         self.fadeout: list[RTPCGraphPoint] = None
+        self.pitch: list[RTPCGraphPoint] = None
 
         self._setup_content(width, height, loop_start, loop_end, begin_trim, end_trim)
 
@@ -410,6 +411,8 @@ class add_wav_player(DpgItem):
         self._player.fx_set_volume_rel(self.get_volume_at(pos))
         self._player.fx_set_lowpass(self.get_lowpass_at(pos))
         self._player.fx_set_highpass(self.get_highpass_at(pos))
+        # Wwise adjusts pitch in cents of semitones
+        self._player.fx_set_pitch(self.get_pitch_at(pos) / 1000)
 
         dpg.set_value(self._t("progress"), pos)
         dpg.set_value(self._t("progress_axis"), pos)
@@ -449,7 +452,7 @@ class add_wav_player(DpgItem):
         return dpg.get_value(self._t("manual_fx"))
 
     def _on_manual_fx_toggled(self, sender: str, value: bool) -> None:
-        for slider in ("volume_slider", "lowpass_slider", "highpass_slider"):
+        for slider in ("volume_slider", "lowpass_slider", "highpass_slider", "pitch_slider"):
             dpg.configure_item(self._t(slider), enabled=value)
 
         if value:
@@ -492,6 +495,14 @@ class add_wav_player(DpgItem):
         dpg.set_value(self._t("highpass_slider"), hpf)
         return hpf
 
+    def get_pitch_at(self, pos: float) -> float:
+        if self._manual_fx():
+            return dpg.get_value(self._t("pitch_slider"))
+
+        pitch = self._interpolate_curve(self.pitch, pos)
+        dpg.set_value(self._t("pitch_slider"), pitch)
+        return pitch
+
     def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
         if isinstance(volume, (float, int)):
             volume = [RTPCGraphPoint(0.0, volume, CurveInterpolation.Constant)]
@@ -523,6 +534,11 @@ class add_wav_player(DpgItem):
                 RTPCGraphPoint(duration, 1.0, CurveInterpolation.Constant),
             ]
         self.fadeout = fadeout
+
+    def set_pitch(self, pitch: float | list[RTPCGraphPoint] = None) -> None:
+        if isinstance(pitch, (float, int)):
+            pitch = [RTPCGraphPoint(0.0, pitch, CurveInterpolation.Constant)]
+        self.pitch = pitch
 
     # === Loop markers ==================================================
 
@@ -1174,7 +1190,7 @@ class add_wav_player(DpgItem):
                         tag=self._t("lowpass_slider"),
                     )
                     dpg.bind_item_theme(
-                        dpg.last_item(), self._make_slider_theme(style.blue.but(a=162))
+                        dpg.last_item(), self._make_slider_theme(style.pink.but(a=162))
                     )
 
                     dpg.add_slider_float(
@@ -1187,7 +1203,21 @@ class add_wav_player(DpgItem):
                     )
                     dpg.bind_item_theme(
                         dpg.last_item(),
-                        self._make_slider_theme(style.light_blue.but(a=162)),
+                        self._make_slider_theme(style.blue.but(a=162)),
+                    )
+
+                    dpg.add_slider_int(
+                        label=µ("Pitch (cents)"),
+                        enabled=False,
+                        default_value=0,
+                        min_value=-2400,
+                        max_value=2400,
+                        clamped=True,
+                        tag=self._t("pitch_slider"),
+                    )
+                    dpg.bind_item_theme(
+                        dpg.last_item(),
+                        self._make_slider_theme(style.light_grey.but(a=162)),
                     )
 
                 dpg.add_text("|")

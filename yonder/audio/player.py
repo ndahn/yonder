@@ -4,6 +4,8 @@ import numpy as np
 # NOTE added fix for WinError 50 directly in sounddevice._initialize
 import sounddevice as sd
 
+from yonder.audio import PitchShifter
+
 
 class WavPlayer:
     def __init__(self, path: str):
@@ -19,6 +21,8 @@ class WavPlayer:
         self._audio = samples.reshape(-1, self._params.nchannels).astype(np.float32)
         self._audio /= float(np.iinfo(dtype).max)
 
+        self._pitch_shifter = PitchShifter(self.num_channels)
+
         self._path = path
         self._cursor = 0
         self._lock = threading.Lock()
@@ -28,6 +32,7 @@ class WavPlayer:
         self._fx_volume_rel = 1.0
         self._fx_lowpass = 0.0
         self._fx_highpass = 0.0
+        self._fx_pitch = 1.0
 
     def _callback(self, outdata: np.ndarray, frames: int, time, status):
         with self._lock:
@@ -68,6 +73,9 @@ class WavPlayer:
                 sig[cutoff_idx_low : n - cutoff_idx_low] = 0
 
             chunk = np.fft.ifft(sig, axis=0).real.astype(np.float32)
+
+        self._pitch_shifter.set_semitones(self._fx_pitch)
+        chunk = self._pitch_shifter.process(chunk)
 
         return chunk
 
@@ -155,6 +163,16 @@ class WavPlayer:
             Highpass threshold in Hz.
         """
         self._fx_highpass = threshold_hz
+
+    def fx_set_pitch(self, ratio: float) -> None:
+        """Adjust the pitch during playback in semitones.
+        
+        Parameters
+        ----------
+        ratio : float
+            By how many semitones to shift the pitch.
+        """
+        self._fx_pitch = ratio
 
     @property
     def position(self) -> float:
