@@ -7,7 +7,7 @@ from yonder import Soundbank, HIRCNode
 from yonder.util import logger
 from yonder.types import MusicSwitchContainer
 from yonder.types.base_types import MusicTransitionRule
-from yonder.enums import CurveInterpolation
+from yonder.enums import CurveInterpolation, SyncType
 from yonder.hash import calc_hash
 from yonder.convenience import create_boss_bgm, BossBgm, BgmTrack
 from yonder.wem import wav2wem
@@ -378,6 +378,7 @@ class create_boss_track_dialog(DpgItem):
                 [],
                 self._on_phase_transitions_changed,
                 label=µ("Phase Transitions"),
+                fixed_sync_type=SyncType.ExitMarker,
             )
 
     # === Public ========================================================

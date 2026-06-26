@@ -2,27 +2,12 @@ from typing import Any, Callable
 from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
-from yonder.types.base_types import (
-    MusicTransitionRule,
-    MusicTransSrcRule,
-    MusicTransDstRule,
-)
+from yonder.types.base_types import MusicTransitionRule
+from yonder.enums import SyncType
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 from .dpg_item import DpgItem
-
-
-# Deep-copied for every new rule — never mutated directly
-_base_transition_rule = MusicTransitionRule(
-    source_transition_rule=MusicTransSrcRule(
-        transition_time=500,
-        fade_offet=500,
-    ),
-    destination_transition_rule=MusicTransDstRule(
-        transition_time=500,
-    ),
-)
 
 
 class add_transition_matrix(DpgItem):
@@ -44,8 +29,11 @@ class add_transition_matrix(DpgItem):
     node : TransitionNode
         Music container whose ``transition_rules`` are displayed and mutated.
     on_transition_rules_changed : callable, optional
-        Fired as ``on_transition_rules_changed(tag, node, user_data)`` after
-        any rule change.
+        Fired as ``on_transition_rules_changed(tag, node, user_data)`` after any rule change.
+    label : str
+        A label to place above this matrix.
+    fixed_sync_type : SyncType
+        If set, rules created by this matrix will use this sync type and the sync type cannot be changed.
     parent : int or str
         DPG parent item.
     tag : int or str
@@ -58,9 +46,13 @@ class add_transition_matrix(DpgItem):
         self,
         rules: list[MusicTransitionRule],
         targets: list[int],
-        on_transition_rules_changed: Callable[[str, list[MusicTransitionRule], Any], None] = None,
+        on_transition_rules_changed: Callable[
+            [str, list[MusicTransitionRule], Any], None
+        ] = None,
         *,
         label: str = "Transition Rules",
+        rule_template: MusicTransitionRule = None,
+        fixed_sync_type: SyncType = None,
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
@@ -69,6 +61,20 @@ class add_transition_matrix(DpgItem):
 
         self.rules = rules
         self.targets = targets
+
+        if rule_template:
+            self._rule_template = deepcopy(rule_template)
+        else:
+            self._rule_template = MusicTransitionRule().configure(
+                src_transition_time=500,
+                src_fade_offset=500,
+                dst_transition_time=500,
+            )
+
+        self._fixed_sync_type = fixed_sync_type
+        if fixed_sync_type:
+            self._rule_template.source_transition_rule.sync_type = fixed_sync_type
+
         self._on_transition_rules_changed = on_transition_rules_changed
         self._user_data = user_data
 
@@ -183,9 +189,7 @@ class add_transition_matrix(DpgItem):
         self._theme_cache[color] = theme_tag
         return theme_tag
 
-    def _register_context_menu(
-        self, btn: str, cell_info: tuple[int, int, int]
-    ) -> None:
+    def _register_context_menu(self, btn: str, cell_info: tuple[int, int, int]) -> None:
         registry = f"{btn}_handlers"
         if not dpg.does_item_exist(registry):
             dpg.add_item_handler_registry(tag=registry)
@@ -203,11 +207,16 @@ class add_transition_matrix(DpgItem):
         self, sender: str, app_data: Any, cell_info: tuple[int, int, int]
     ) -> None:
         src, dst, _ = cell_info
-        new_rule = deepcopy(_base_transition_rule)
+        new_rule = deepcopy(self._rule_template)
         new_rule.source_ids = [src]
         new_rule.destination_ids = [dst]
+
         edit_transition_dialog(
-            new_rule, self.targets, self._on_rule_changed, user_data=True
+            new_rule,
+            self.targets,
+            self._on_rule_changed,
+            lock_sync_type=self._fixed_sync_type is not None,
+            user_data=True,
         )
 
     def _delete_rule_for_cell(
@@ -245,9 +254,13 @@ class add_transition_matrix(DpgItem):
     ) -> None:
         is_new = not rule
         if is_new:
-            rule = deepcopy(_base_transition_rule)
+            rule = deepcopy(self._rule_template)
         edit_transition_dialog(
-            rule, self.targets, self._on_rule_changed, user_data=is_new
+            rule,
+            self.targets,
+            self._on_rule_changed,
+            lock_sync_type=self._fixed_sync_type is not None,
+            user_data=is_new,
         )
 
     def _on_rule_changed(self, sender: str, rule: dict, is_new: bool) -> None:
@@ -289,9 +302,7 @@ class add_transition_matrix(DpgItem):
                 dpg.add_text(self._id_label(src) + " ")
 
                 for dst in children:
-                    rule_idx, rule = self._find_best_rule(
-                        self.rules, src, dst
-                    )
+                    rule_idx, rule = self._find_best_rule(self.rules, src, dst)
 
                     if rule:
                         total_time = (

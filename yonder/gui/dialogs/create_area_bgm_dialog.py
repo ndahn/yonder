@@ -10,7 +10,7 @@ from yonder.util import logger
 from yonder.hash import lookup_name, calc_hash
 from yonder.types import MusicSwitchContainer
 from yonder.types.base_types import MusicTransitionRule
-from yonder.enums import PropID, CurveInterpolation
+from yonder.enums import PropID, CurveInterpolation, SyncType
 from yonder.convenience import (
     create_area_bgm,
     DecisionNode,
@@ -194,7 +194,9 @@ class create_area_bgm_dialog(DpgItem):
         self.on_created = on_created
 
         self.msc: MusicSwitchContainer = None
-        self.area_transition: MusicTransitionRule = MusicTransitionRule()
+        self.area_transition: MusicTransitionRule = MusicTransitionRule().configure(
+            src_sync_type=SyncType.Immediate
+        )
         self.local_transitions: list[MusicTransitionRule] = [
             MusicTransitionRule().configure(
                 src_transition_time=3000,
@@ -814,7 +816,10 @@ Area tree:
                     dpg.add_button(
                         label=µ("Edit"),
                         callback=lambda s, a, u: edit_transition_dialog(
-                            self.area_transition, [], self._on_area_transition_changed
+                            self.area_transition,
+                            [],
+                            self._on_area_transition_changed,
+                            lock_sync_type=True,
                         ),
                         tag=self._t("btn_edit_area_transition"),
                     )
@@ -857,6 +862,7 @@ Area tree:
                     self.local_transitions,
                     [],
                     self._on_local_transitions_changed,
+                    fixed_sync_type=SyncType.ExitMarker,
                 )
 
             dpg.add_separator()

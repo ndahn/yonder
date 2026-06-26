@@ -11,6 +11,9 @@ from yonder.gui.helpers import dpg_section
 from yonder.gui.widgets import DpgItem
 
 
+# https://www.audiokinetic.com/en/public-library/2025.1.8_9170/?source=Help&id=transitions_tab_music_objects
+
+
 class edit_transition_dialog(DpgItem):
     """A dialog for editing a ``MusicTransitionRule`` in place.
 
@@ -27,6 +30,8 @@ class edit_transition_dialog(DpgItem):
         Rule to edit; a deep copy is used internally and merged back on confirm.
     on_rule_changed : callable
         Fired as ``on_rule_changed(tag, base_rule, user_data)`` on confirm.
+    lock_sync_type : bool
+        If True, the sync type cannot be changed (wrong sync type can cause game crashes and other problems).
     tag : int or str
         Explicit tag; auto-generated if 0. Existing item is deleted first.
     user_data : any
@@ -39,6 +44,7 @@ class edit_transition_dialog(DpgItem):
         targets: list[int],
         on_rule_changed: Callable[[str, dict, Any], None],
         *,
+        lock_sync_type: bool = False,
         tag: str = 0,
         user_data: Any = None,
     ) -> None:
@@ -56,7 +62,7 @@ class edit_transition_dialog(DpgItem):
         self._user_data = user_data
         self._window: str = None
 
-        self._build()
+        self._build(lock_sync_type)
 
     # === Helpers =======================================================
 
@@ -124,7 +130,7 @@ class edit_transition_dialog(DpgItem):
 
     # === Build =========================================================
 
-    def _build(self) -> None:
+    def _build(self, lock_sync_type: bool) -> None:
         src = self._src_rule
         dst = self._dst_rule
 
@@ -176,10 +182,17 @@ class edit_transition_dialog(DpgItem):
                 ),
                 tag=self._t("edit_transition/src_fade_curve"),
             )
+            
+            if lock_sync_type:
+                sync_type = f"{src.sync_type.name} (locked)"
+            else:
+                sync_type = src.sync_type.name
+
             dpg.add_combo(
                 label=µ("Sync Type"),
                 items=[s.name for s in SyncType],
-                default_value=src.sync_type.name,
+                default_value=sync_type,
+                enabled=not lock_sync_type,
                 callback=lambda s, a, u: setattr(
                     self._src_rule, "sync_type", SyncType[a]
                 ),

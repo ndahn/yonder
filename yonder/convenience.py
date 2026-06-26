@@ -303,7 +303,7 @@ def _setup_bgm(
     if not loop_end:
         loop_end = bgm_seg.duration
 
-    if loop_end < 0:
+    if loop_end <= 0:
         loop_end = bgm_seg.duration + loop_end
 
     # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
@@ -351,10 +351,13 @@ def _setup_bgm(
         new_nodes.append(mt)
 
     # Adjust base transition rule
-    if not track_transition:
+    if track_transition:
+        # Important, can cause the game to crash otherwise!
+        track_transition.configure(src_sync_type=SyncType.ExitMarker)
+    else:
         track_transition = root_mrsc.music_trans_node_params.transition_rules[0]
         track_transition.configure(
-            src_sync_type=SyncType.ExitMarker,  # important!
+            src_sync_type=SyncType.ExitMarker,
             src_transition_time=1000,
             src_fade_offset=1000,
             src_fade_curve=CurveInterpolation.Sine,
@@ -367,7 +370,9 @@ def _setup_bgm(
     root_mrsc.music_trans_node_params.transition_rules[0] = track_transition
 
     if intro_length > 0:
-        if not intro_transition:
+        if intro_transition:
+            intro_transition.configure(src_sync_type=SyncType.ExitMarker)
+        else:
             intro_transition = MusicTransitionRule().configure(
                 src_ids=[intro_seg.id],
                 dst_ids=[bgm_seg.id],
@@ -480,6 +485,7 @@ def create_boss_bgm(
     if not track_transitions:
         track_transitions = [
             MusicTransitionRule().configure(
+                src_sync_type=SyncType.ExitMarker,
                 src_transition_time=100,
                 src_fade_offset=100,
                 src_fade_curve=CurveInterpolation.Sine,
@@ -576,6 +582,7 @@ def create_area_bgm(
     if not track_transitions:
         track_transitions = [
             MusicTransitionRule().configure(
+                src_sync_type=SyncType.ExitMarker,
                 src_transition_time=3000,
                 src_fade_offset=3000,
                 src_fade_curve=CurveInterpolation.SCurve,
