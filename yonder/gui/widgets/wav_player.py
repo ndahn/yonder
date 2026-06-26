@@ -411,7 +411,8 @@ class add_wav_player(DpgItem):
         self._player.fx_set_volume_rel(self.get_volume_at(pos))
         self._player.fx_set_lowpass(self.get_lowpass_at(pos))
         self._player.fx_set_highpass(self.get_highpass_at(pos))
-        self._player.fx_set_pitch(self.get_pitch_at(pos))
+        # Wwise adjusts pitch in cents of semitones
+        self._player.fx_set_pitch(self.get_pitch_at(pos) / 1000)
 
         dpg.set_value(self._t("progress"), pos)
         dpg.set_value(self._t("progress_axis"), pos)
@@ -496,12 +497,10 @@ class add_wav_player(DpgItem):
 
     def get_pitch_at(self, pos: float) -> float:
         if self._manual_fx():
-            pitch = dpg.get_value(self._t("pitch_slider"))
-        else:
-            pitch = self._interpolate_curve(self.pitch, pos, default=1.0)
-            dpg.set_value(self._t("pitch_slider"), pitch)
-        
-        pitch = max(pitch, 0.001)
+            return dpg.get_value(self._t("pitch_slider"))
+
+        pitch = self._interpolate_curve(self.pitch, pos)
+        dpg.set_value(self._t("pitch_slider"), pitch)
         return pitch
 
     def set_volume(self, volume: float | list[RTPCGraphPoint] = None) -> None:
@@ -1207,12 +1206,13 @@ class add_wav_player(DpgItem):
                         self._make_slider_theme(style.blue.but(a=162)),
                     )
 
-                    dpg.add_slider_float(
+                    dpg.add_slider_int(
                         label=µ("Pitch"),
                         enabled=False,
-                        default_value=1.0,
-                        min_value=0.5,
-                        max_value=2.0,
+                        default_value=0,
+                        min_value=-2400,
+                        max_value=2400,
+                        clamped=True,
                         tag=self._t("pitch_slider"),
                     )
                     dpg.bind_item_theme(
