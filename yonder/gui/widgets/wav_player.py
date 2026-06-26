@@ -8,7 +8,7 @@ from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.util import logger
 from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
-from yonder.player import WavPlayer
+from yonder.audio.player import WavPlayer
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
