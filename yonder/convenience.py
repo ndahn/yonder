@@ -486,10 +486,10 @@ def create_boss_bgm(
         track_transitions = [
             MusicTransitionRule().configure(
                 src_sync_type=SyncType.ExitMarker,
-                src_transition_time=100,
-                src_fade_offset=100,
+                src_transition_time=500,
+                src_fade_offset=500,
                 src_fade_curve=CurveInterpolation.Sine,
-                dst_transition_time=100,
+                dst_transition_time=500,
                 dst_fade_curve=CurveInterpolation.Exp3,
                 dst_play_pre_entry=True,
             )
