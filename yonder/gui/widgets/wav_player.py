@@ -1207,7 +1207,7 @@ class add_wav_player(DpgItem):
                     )
 
                     dpg.add_slider_int(
-                        label=µ("Pitch"),
+                        label=µ("Pitch (cents)"),
                         enabled=False,
                         default_value=0,
                         min_value=-2400,

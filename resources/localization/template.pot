@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-26 00:23+0200\n"
+"POT-Creation-Date: 2026-06-26 02:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1405,6 +1405,10 @@ msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py
 msgid "Highpass (Hz)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Pitch (cents)"
 msgstr ""
 
 #: ../../yonder/gui/widgets/wav_player.py

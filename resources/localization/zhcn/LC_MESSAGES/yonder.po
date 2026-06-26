@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-26 00:23+0200\n"
+"POT-Creation-Date: 2026-06-26 02:36+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -703,7 +703,7 @@ msgstr "文件"
 
 # ../../yonder/gui/dialogs/edit_transition_dialog.py:132
 #: ../../yonder/gui/dialogs/edit_transition_dialog.py
-#, fuzzy, python-brace-format
+#, fuzzy
 msgid "Edit Transition"
 msgstr "编辑过渡（{node_id}）"
 
@@ -1780,6 +1780,10 @@ msgstr "低通滤波"
 #, fuzzy
 msgid "Highpass (Hz)"
 msgstr "高通滤波"
+
+#: ../../yonder/gui/widgets/wav_player.py
+msgid "Pitch (cents)"
+msgstr "音高（音分）"
 
 # ../../yonder/gui/widgets/wav_player.py:981
 #: ../../yonder/gui/widgets/wav_player.py
