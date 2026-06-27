@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yonder"
+version = "1.5.2"
+requires-python = ">=3.12"
+dependencies = [
+    "audioop-lts>=0.2.2 ; python_version >= '3.13'",
+    "crossfiledialog>=1.2.0",
+    "dearpygui>=2.2.0",
+    "docstring-parser>=0.18.0",
+    "lark>=1.3.1",
+    "networkx>=3.6.0",
+    "numpy>=2.4.6",
+    "pydub>=0.25.0",
+    "pyperclip>=1.11.0",
+    "pywin32>=311 ; sys_platform == 'win32'",
+    "pyyaml>=6.0.3",
+    "rapidfuzz>=3.14.5",
+    "sounddevice>=0.5.5",
+    "tqdm>=4.67.3",
+]
+authors = [
+    {name = "Nikolas Dahn"}
+]
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+include = ["yonder*"]

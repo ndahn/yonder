@@ -32,6 +32,13 @@ logger = logging.getLogger("yonder")
 
 
 def resource_dir() -> Path:
+    # TODO move resources into yonder, then use the lines below to access them
+    # from importlib.resources import files
+    # path = files("your_package") / "resources" / "your_file.ext"
+    # 
+    # And in the pyproject.toml:
+    # [tool.setuptools.package-data]
+    # "yonder" = ["resources/**/*"]
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent / "resources"
 

@@ -1,10 +1,7 @@
-- a SoundRegion references an EnvPlaceType row, but modifies BgmPlaceType
-- the string for BgmPlaceType is taken from WwiseValueToStrParam_BgmBossChrIdConv
-- updating the string in-game does not change it even if it has not been used yet
-- the strings are all read only once at game startup
+- Values of interest found while debugging:
+3898567437, 2295136008, 392736999, 2409475058, 3376453967, 2823519739
 
-- there is no obvious link between the two params (neither index, string similarity or order)
--> hardcoded mapping?
+
 -> check if NR pointer chain below is used in ER as well
 
 
