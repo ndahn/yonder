@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-26 02:36+0200\n"
+"POT-Creation-Date: 2026-06-27 03:11+0200\n"
 "PO-Revision-Date: 2026-04-20 00:25+0800\n"
 "Last-Translator: Yonder CN Team <noreply@example.com>\n"
 "Language: zh_CN\n"
@@ -68,7 +68,7 @@ msgstr "选择音频文件"
 
 # ../../yonder/gui/widgets/wav_player.py:201
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "filetypes"
@@ -123,7 +123,7 @@ msgid "Duplicate group {name}"
 msgstr "重复的分组 {name}"
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 #: ../../yonder/gui/dialogs/new_soundbank_dialog.py
 msgid "Working"
@@ -210,7 +210,7 @@ msgstr "随机模式"
 # ../../yonder/gui/dialogs/batch_sound_builder.py:393
 # ../../yonder/gui/widgets/node_widgets.py:165
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/select_node.py
@@ -383,63 +383,63 @@ msgctxt "button"
 msgid "Beat it!"
 msgstr "开始转换！"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "<nothing to see here>"
 msgstr "<空>"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:267
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "State path"
 msgstr "状态路径"
 
 # ../../yonder/gui/yonder.py:179
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 #, fuzzy
 msgid "Track "
 msgstr "音轨"
 
 # ../../yonder/gui/widgets/interpolation_curve.py:91
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "Intro"
 msgstr "输入"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgid "Play intro based on regular track's loop_start"
 msgstr "根据常规轨道的 loop_start 播放前奏"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Fade-in"
 msgstr "淡入"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Regular"
 msgstr "常规"
 
 # ../../yonder/gui/yonder.py:606
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "default"
 msgstr "删除"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "regular"
 msgstr "常规"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "battle"
 msgstr "战斗"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Battle"
 msgstr "战斗"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:66
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:185
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "Select MusicSwitchContainer first"
@@ -447,85 +447,85 @@ msgstr "请先选择 MusicSwitchContainer"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:135
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:190
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "BgmPlaceType not set"
 msgstr "未设置 BgmEnemyType"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, python-brace-format
 msgid "Invalid state value {key}"
 msgstr "无效的状态值 {key}"
 
 # ../../yonder/gui/dialogs/create_simple_sound_dialog.py:165
 # ../../yonder/gui/dialogs/create_wwise_event_dialog.py:32
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "Location state path not specified"
 msgstr "未指定名称"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, python-brace-format
 msgid "State path {idx} is redundant"
 msgstr "状态路径 {idx} 重复"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Area Selector"
 msgstr "区域选择器"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:66
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:185
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "MusicSwitchContainer"
 msgstr "请先选择 MusicSwitchContainer"
 
 # ../../yonder/gui/dialogs/create_boss_track_dialog.py:267
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "State Path"
 msgstr "状态路径"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Custom transition"
 msgstr "自定义过渡"
 
 # ../../yonder/gui/widgets/node_widgets.py:1004
 # ../../yonder/gui/widgets/wav_player.py:1008
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 #, fuzzy
 msgid "Edit"
 msgstr "编辑"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Local Tree"
 msgstr "本地树"
 
 # ../../yonder/gui/widgets/editable_table.py:287
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "+ Add State"
 msgstr "+ 添加路径"
 
 # ../../yonder/gui/yonder.py:179
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 #, fuzzy
 msgid "Tracks"
 msgstr "音轨"
 
 # ../../yonder/gui/widgets/rtpc_table.py:180
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, fuzzy
 msgid "+ Add Branch"
 msgstr "+ 添加 RTPC"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Summary"
 msgstr "摘要"
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgctxt "button"
 msgid "Let there be light!"
 msgstr "让世界充满光！"
@@ -1376,6 +1376,12 @@ msgctxt "table"
 msgid "Weight"
 msgstr "权重"
 
+# ../../yonder/gui/yonder.py:606
+#: ../../yonder/gui/widgets/node_widgets.py
+#, fuzzy
+msgid "(default)"
+msgstr "删除"
+
 #: ../../yonder/gui/widgets/node_widgets.py
 #, fuzzy
 msgid "References"
@@ -1399,12 +1405,11 @@ msgstr "值"
 msgid "Values"
 msgstr "值"
 
-# ../../yonder/gui/dialogs/batch_sound_builder.py:393
-# ../../yonder/gui/widgets/node_widgets.py:165
+# ../../yonder/gui/widgets/rtpc_table.py:147
 #: ../../yonder/gui/widgets/node_widgets.py
 #, fuzzy
-msgid "Property Index"
-msgstr "属性"
+msgid "Parameter"
+msgstr "参数"
 
 # ../../yonder/gui/widgets/node_widgets.py:1294
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -1608,10 +1613,16 @@ msgstr "无效的状态值 {key}"
 msgid "State Group"
 msgstr "添加分组"
 
+# ../../yonder/gui/yonder.py:606
 #: ../../yonder/gui/widgets/states_table.py
-#, python-brace-format
-msgid "State ({num_references} refs)"
-msgstr "状态（{num_references} 个引用）"
+#, fuzzy
+msgid "Default"
+msgstr "删除"
+
+#: ../../yonder/gui/widgets/states_table.py
+#, fuzzy
+msgid "State"
+msgstr "状态："
 
 # ../../yonder/gui/dialogs/convert_wav_dialog.py:168
 #: ../../yonder/gui/widgets/states_table.py
@@ -1931,24 +1942,22 @@ msgctxt "menu"
 msgid "Simple Sound"
 msgstr "创建音效"
 
-# ../../yonder/gui/yonder.py:240
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
-msgid "Boss Track"
-msgstr "创建Boss音乐"
+msgid "Boss BGM"
+msgstr "首领战背景音乐"
+
+#: ../../yonder/gui/yonder.py
+msgctxt "menu"
+msgid "Area BGM"
+msgstr "区域背景音乐"
 
 # ../../yonder/gui/yonder.py:245
 #: ../../yonder/gui/yonder.py
-msgctxt "menu"
-msgid "Ambience Track"
-msgstr "环境音轨"
-
-# ../../yonder/gui/dialogs/create_simple_sound_dialog.py:117
-#: ../../yonder/gui/yonder.py
 #, fuzzy
 msgctxt "menu"
-msgid "Soundscape"
-msgstr "音效"
+msgid "Ambience"
+msgstr "环境音轨"
 
 # ../../yonder/gui/yonder.py:235
 #: ../../yonder/gui/yonder.py
@@ -2523,9 +2532,9 @@ msgstr "已添加 Boss 音轨 {bgm_enemy_type}"
 
 # ../../yonder/gui/yonder.py:1647
 #: ../../yonder/gui/yonder.py
-#, python-brace-format
+#, fuzzy, python-brace-format
 msgctxt "log"
-msgid "Added ambience track {name}"
+msgid "Added area track {name}"
 msgstr "已添加环境音轨 {name}"
 
 #~ msgid ""
@@ -2673,4 +2682,22 @@ msgstr "已添加环境音轨 {name}"
 
 #~ msgid "is_bus"
 #~ msgstr "是总线"
+
+# ../../yonder/gui/dialogs/batch_sound_builder.py:393
+# ../../yonder/gui/widgets/node_widgets.py:165
+#~ msgid "Property Index"
+#~ msgstr "属性"
+
+#~ msgid "State ({num_references} refs)"
+#~ msgstr "状态（{num_references} 个引用）"
+
+# ../../yonder/gui/yonder.py:240
+#~ msgctxt "menu"
+#~ msgid "Boss Track"
+#~ msgstr "创建Boss音乐"
+
+# ../../yonder/gui/dialogs/create_simple_sound_dialog.py:117
+#~ msgctxt "menu"
+#~ msgid "Soundscape"
+#~ msgstr "音效"
 

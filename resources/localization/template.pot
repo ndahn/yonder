@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-26 02:36+0200\n"
+"POT-Creation-Date: 2026-06-27 03:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,7 +56,7 @@ msgid "Select Audio Files"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/wav_player.py
 msgctxt "filetypes"
@@ -103,7 +103,7 @@ msgid "Duplicate group {name}"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 #: ../../yonder/gui/dialogs/new_soundbank_dialog.py
 msgid "Working"
@@ -168,7 +168,7 @@ msgid "Random Mode"
 msgstr ""
 
 #: ../../yonder/gui/dialogs/batch_sound_builder.py
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_simple_sound_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 #: ../../yonder/gui/widgets/select_node.py
@@ -303,119 +303,119 @@ msgctxt "button"
 msgid "Beat it!"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "<nothing to see here>"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "State path"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgid "Track "
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Intro"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgid "Play intro based on regular track's loop_start"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Fade-in"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Regular"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "default"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "regular"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "battle"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Battle"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgctxt "msg"
 msgid "Select MusicSwitchContainer first"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "BgmPlaceType not set"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, python-brace-format
 msgid "Invalid state value {key}"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Location state path not specified"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #, python-brace-format
 msgid "State path {idx} is redundant"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Area Selector"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "MusicSwitchContainer"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "State Path"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Custom transition"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/widgets/node_widgets.py
 msgid "Edit"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Local Tree"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "+ Add State"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 #: ../../yonder/gui/dialogs/create_boss_track_dialog.py
 msgid "Tracks"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "+ Add Branch"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgid "Summary"
 msgstr ""
 
-#: ../../yonder/gui/dialogs/create_ambience_bgm_dialog.py
+#: ../../yonder/gui/dialogs/create_area_bgm_dialog.py
 msgctxt "button"
 msgid "Let there be light!"
 msgstr ""
@@ -1094,6 +1094,10 @@ msgid "Weight"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
+msgid "(default)"
+msgstr ""
+
+#: ../../yonder/gui/widgets/node_widgets.py
 msgid "References"
 msgstr ""
 
@@ -1110,7 +1114,7 @@ msgid "Values"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
-msgid "Property Index"
+msgid "Parameter"
 msgstr ""
 
 #: ../../yonder/gui/widgets/node_widgets.py
@@ -1270,8 +1274,11 @@ msgid "State Group"
 msgstr ""
 
 #: ../../yonder/gui/widgets/states_table.py
-#, python-brace-format
-msgid "State ({num_references} refs)"
+msgid "Default"
+msgstr ""
+
+#: ../../yonder/gui/widgets/states_table.py
+msgid "State"
 msgstr ""
 
 #: ../../yonder/gui/widgets/states_table.py
@@ -1531,17 +1538,17 @@ msgstr ""
 
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
-msgid "Boss Track"
+msgid "Boss BGM"
 msgstr ""
 
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
-msgid "Ambience Track"
+msgid "Area BGM"
 msgstr ""
 
 #: ../../yonder/gui/yonder.py
 msgctxt "menu"
-msgid "Soundscape"
+msgid "Ambience"
 msgstr ""
 
 #: ../../yonder/gui/yonder.py
@@ -2024,6 +2031,6 @@ msgstr ""
 #: ../../yonder/gui/yonder.py
 #, python-brace-format
 msgctxt "log"
-msgid "Added ambience track {name}"
+msgid "Added area track {name}"
 msgstr ""
 
