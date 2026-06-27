@@ -3,6 +3,7 @@ from typing import Any, Callable, Literal
 from pathlib import Path
 from copy import deepcopy
 from dataclasses import dataclass, field
+from collections import Counter
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -17,6 +18,7 @@ from yonder.convenience import (
     AreaBgm,
     BgmTrack,
     StateCtrl,
+    StateProperty,
 )
 from yonder.game import GameObjects
 from yonder.wem import wav2wem
@@ -40,16 +42,17 @@ from .file_dialog import open_file_dialog
 
 
 @dataclass
-class _StateProperty:
+class _BgmProp:
     property: PropID = None
     value: float = 0.0
     mode: Literal["default", "regular", "battle"] = "default"
+    in_db: bool = False
 
 
 @dataclass
 class _BgmVariant:
     track: Path = None
-    props: list[_StateProperty] = field(default_factory=list)
+    props: list[_BgmProp] = field(default_factory=list)
     loop_info: tuple[float, float] = (0.0, 0.0)
     trims: tuple[float, float] = (0.0, 0.0)
 
@@ -66,18 +69,24 @@ class _BgmInfo:
         self, bgm: _BgmVariant
     ) -> tuple[dict[PropID, float], StateCtrl, StateCtrl]:
         default = {}
-        normal = StateCtrl("FieldBattleState", "FieldNormal", {})
-        battle = StateCtrl("FieldBattleState", "FieldBattle", {})
+        normal = StateCtrl("FieldBattleState", "FieldNormal", [])
+        battle = StateCtrl("FieldBattleState", "FieldBattle", [])
 
         for p in bgm.props:
             if p.mode == "default":
                 default[p.property] = p.value
             elif p.mode == "regular":
-                normal.modifiers[p.property] = p.value
+                normal.modifiers.append(StateProperty(p.property, p.value, p.in_db))
             elif p.mode == "battle":
-                battle.modifiers[p.property] = p.value
+                battle.modifiers.append(StateProperty(p.property, p.value, p.in_db))
             else:
                 raise ValueError(f"Unknown state property mode {p.mode}")
+
+        if normal.modifiers:
+            normal.default = Counter(m.value for m in normal.modifiers).most_common(1)[0][0]
+
+        if battle.modifiers:
+            battle.default = Counter(m.value for m in battle.modifiers).most_common(1)[0][0]
 
         return (default, normal, battle)
 
@@ -491,10 +500,20 @@ Area tree:
             done(
                 _BgmInfo(
                     _BgmVariant(
-                        Path(ret), props=[_StateProperty(PropID.HPF, 2.0, "battle")]
+                        Path(ret), props=[
+                            _BgmProp(PropID.HPF, 2.0, "battle"),
+                            _BgmProp(PropID.LPF, 2.0, "battle"),
+                            _BgmProp(PropID.Priority, 2.0, "battle", True),
+                            _BgmProp(PropID.Volume, 2.0, "battle", True),
+                        ]
                     ),
                     _BgmVariant(
-                        None, props=[_StateProperty(PropID.HPF, -400.0, "regular")]
+                        None, props=[
+                            _BgmProp(PropID.HPF, -400.0, "regular"),
+                            _BgmProp(PropID.LPF, -400.0, "regular"),
+                            _BgmProp(PropID.Priority, -400.0, "regular", True),
+                            _BgmProp(PropID.Volume, -400.0, "regular", True),
+                        ]
                     ),
                     state_path=self._get_default_state_path(),
                 )
@@ -522,7 +541,7 @@ Area tree:
         self._update_summary()
 
     def _bgm_properties_to_row(
-        self, state_prop: _StateProperty, info: tuple[int, bool]
+        self, state_prop: _BgmProp, info: tuple[int, bool]
     ) -> None:
         def on_property_changed(sender: str, new_val: str, user_data: Any) -> None:
             state_prop.property = PropID[new_val]
@@ -582,13 +601,13 @@ Area tree:
             user_data="battle",
         )
 
-    def _new_bgm_property(self, done: Callable[[_StateProperty], None]) -> None:
-        done(_StateProperty(PropID.Volume))
+    def _new_bgm_property(self, done: Callable[[_BgmProp], None]) -> None:
+        done(_BgmProp(PropID.Volume))
 
     def _on_add_bgm_property(
         self,
         sender: str,
-        data: tuple[int, _StateProperty, list[_StateProperty]],
+        data: tuple[int, _BgmProp, list[_BgmProp]],
         info: tuple[int, bool],
     ) -> None:
         idx, battle = info
@@ -601,7 +620,7 @@ Area tree:
     def _on_remove_bgm_property(
         self,
         sender: str,
-        data: tuple[int, _StateProperty, list[_StateProperty]],
+        data: tuple[int, _BgmProp, list[_BgmProp]],
         info: tuple[int, bool],
     ) -> None:
         idx, battle = info

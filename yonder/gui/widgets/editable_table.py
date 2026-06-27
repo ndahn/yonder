@@ -70,6 +70,7 @@ class add_widget_table(DpgItem):
         on_add: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
         on_remove: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
         on_select: Callable[[str, tuple[int, _T, list[_T]], Any], None] = None,
+        can_remove: Callable[[str, tuple[_T, int], Any], bool] = None,
         header_row: bool = False,
         columns: list[str] = ("Value",),
         column_weights: list[int] = None,
@@ -92,6 +93,7 @@ class add_widget_table(DpgItem):
         self._on_add = on_add
         self._on_remove = on_remove
         self._on_select = on_select
+        self._can_remove = can_remove
         self._selected_row_color = selected_row_color
         self._add_item_label = add_item_label
         self._show_clear = show_clear
@@ -192,12 +194,13 @@ class add_widget_table(DpgItem):
 
             remove_btn = None
             if self._new_item:
-                remove_btn = dpg.add_button(
-                    label="x",
-                    callback=self._on_remove_clicked,
-                    user_data=idx,
-                    small=True,
-                )
+                if not self._can_remove or self._can_remove(val, idx):
+                    remove_btn = dpg.add_button(
+                        label="x",
+                        callback=self._on_remove_clicked,
+                        user_data=idx,
+                        small=True,
+                    )
 
         # Bind a clicked handler to every content child (not the indicator or
         # remove button) so clicking text, inputs, etc. also triggers selection.

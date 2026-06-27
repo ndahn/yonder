@@ -26,9 +26,14 @@ class StateMixin:
         return [p for p in PropID if p not in used]
 
     def get_controlled_properties(self) -> dict[int, PropID]:
-        return {i: p.property for i, p in enumerate(self.states.state_property_info)}
+        # Param 0 is the default
+        return {
+            i + 1: p.property for i, p in enumerate(self.states.state_property_info)
+        }
 
-    def get_states_affecting_property(self, prop: PropID) -> dict[int, list[AkState]]:
+    def get_states_affecting_property(
+        self, bnk: Soundbank, prop: PropID
+    ) -> dict[int, list[AkState]]:
         for prop_idx, prop_info in enumerate(self.states.state_property_info):
             if prop_info.property == prop:
                 break
@@ -39,8 +44,8 @@ class StateMixin:
         for group in self.states.state_group_chunks:
             affecting = []
             for state_value in group.states:
-                state: State = self._bnk.get(state_value.state_instance_id)
-                if state and prop_idx in state.parameters:
+                state: State = bnk.get(state_value.state_instance_id)
+                if state and 0 in state.parameters or prop_idx in state.parameters:
                     affecting.append(state_value)
 
             if affecting:
@@ -141,7 +146,7 @@ class StateMixin:
                 if prop_idx not in state_obj.parameters:
                     continue
 
-                state_obj.delete_param(prop_idx)
+                state_obj.remove_param(prop_idx)
                 if not state_obj.parameters:
                     # Mark empty states and state values for deletion
                     del_values.add(val_idx)
@@ -158,7 +163,8 @@ class StateMixin:
         bnk: Soundbank,
         state_group_id: Hash,
         state_value_id: Hash,
-        modifiers: dict[PropID, float],
+        modifiers: dict[PropID, tuple[float | None, bool]],
+        default_value: float = None,
         *,
         update: bool = False,
         unique: bool = True,
@@ -167,23 +173,27 @@ class StateMixin:
         if not update:
             state_obj.clear_params()
 
+        if default_value is not None:
+            state_obj.set_default(default_value)
+
         # Update property info
         property_map = {
-            p.property: i for i, p in enumerate(self.states.state_property_info)
+            p.property: (i + 1) for i, p in enumerate(self.states.state_property_info)
         }
-        for prop in modifiers.keys():
+
+        for prop, (val, in_db) in modifiers.items():
             if prop not in property_map:
                 self.states.state_property_info.append(
                     StatePropertyInfo(
                         prop,
                         RtpcAccum.Additive,
+                        in_db,
                     )
                 )
-                property_map[prop] = len(self.states.state_property_info) - 1
+                property_map[prop] = len(self.states.state_property_info)
 
-        # Set the property values on the state object
-        for prop, val in modifiers.items():
-            prop_idx = property_map[prop]
-            state_obj.set_param(prop_idx, val)
+            if val is not None:
+                prop_idx = property_map[prop]
+                state_obj.set_param(prop_idx, val)
 
         return state_obj

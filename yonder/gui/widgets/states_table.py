@@ -18,7 +18,7 @@ from .dpg_item import DpgItem
 from .select_node import add_select_node
 
 
-# TODO there is also a STMG bnk section, do we need to manage that too?
+_default_prop = object()
 
 
 # Inherit the StateMixin so we can use its helpers
@@ -90,7 +90,7 @@ class add_states_table(StateMixin, DpgItem):
                         µ("in dB"),
                         µ("Affected by"),
                     ],
-                    column_policy=dpg.mvTable_SizingStretchProp,
+                    column_weights=(100, 100, 30, 30),
                     add_item_label=µ("+ Property"),
                     tag=self._t("properties_table"),
                 )
@@ -152,6 +152,9 @@ class add_states_table(StateMixin, DpgItem):
 
     # === Properties ======================================================
 
+    def get_controlled_properties(self) -> dict[int, PropID]:
+        return {0: _default_prop} | super().get_controlled_properties()
+
     def _property_to_row(self, prop: StatePropertyInfo, idx: int) -> None:
         dpg.add_combo(
             [p.name for p in self.get_free_properties()],
@@ -174,7 +177,9 @@ class add_states_table(StateMixin, DpgItem):
             callback=self._make_setter(prop, "in_db", lambda b: int(b)),
             user_data=idx,
         )
-        num_affecting_states = len(self.get_states_affecting_property(prop.property))
+        num_affecting_states = len(
+            self.get_states_affecting_property(self._bnk, prop.property)
+        )
         dpg.add_text(num_affecting_states)
 
     def _new_property(self, done: Callable[[StatePropertyInfo], None]) -> None:
@@ -288,7 +293,10 @@ class add_states_table(StateMixin, DpgItem):
 
         state: State = self._bnk.get(state_value.state_instance_id)
         properties = self.get_controlled_properties()
-        longest_prop = max(len(p.name) for p in properties.values())
+        longest_prop = max(
+            len(µ("Default") if p is _default_prop else p.name)
+            for p in properties.values()
+        )
 
         if state:
             referees = len(list(self._bnk.tree.predecessors(state.id)))
@@ -304,7 +312,7 @@ class add_states_table(StateMixin, DpgItem):
             # TODO use a node link instead, usually states should not be shared
             add_select_node(
                 self._bnk.query,
-                µ("State ({num_references} refs)").format(num_references=referees),
+                µ("State").format(num_references=referees),
                 self._make_setter(state_value, "state_instance_id", lambda n: n.nid),
                 jump_to=self._jump_to,
                 create_new=new_state,
@@ -317,29 +325,35 @@ class add_states_table(StateMixin, DpgItem):
             dpg.add_spacer(height=5)
 
             for i, prop in properties.items():
-                affected = state and (i in state.parameters)
-                param_idx = state.parameters.index(i) if affected else -1
+                has_override = state and (i in state.parameters)
                 value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
+                label = µ("Default") if prop is _default_prop else prop.name
+
+                enabled = bool(state)
+                value = state.get_param(i)
+
+                if value is None:
+                    value = 0.0
 
                 with dpg.group(horizontal=True):
-                    dpg.add_text(prop.name.rjust(longest_prop))
+                    dpg.add_text(label.rjust(longest_prop))
                     dpg.add_checkbox(
                         # label=prop.name.ljust(longest_prop),
-                        default_value=affected,
-                        enabled=bool(state),
-                        callback=self._set_state_property_connected,
+                        default_value=has_override,
+                        enabled=enabled,
+                        callback=self._set_state_property_override,
                         user_data=(state, prop),
                     )
                     dpg.add_input_float(
-                        default_value=(
-                            state.values[param_idx] if param_idx >= 0 else 0.0
-                        ),
+                        default_value=value,
                         width=220,
-                        enabled=affected,
+                        enabled=has_override,
                         callback=self._set_state_property_value,
                         user_data=(state, prop),
                         tag=value_widget_id,
                     )
+
+            dpg.add_spacer(height=3)
 
         # Connect edit dialog
         self._bind_hash_context_menu(
@@ -348,18 +362,20 @@ class add_states_table(StateMixin, DpgItem):
 
     def _get_state_prop_value_widgets(self, state: State, prop: PropID) -> list[str]:
         offset = 0
-        ret = [self._t(f"{state.id}_{prop.name}_#{offset}")]
+        label = "default" if prop is _default_prop else prop.name
+        ret = [self._t(f"{state.id}_{label}_#{offset}")]
 
         while dpg.does_item_exist(ret[-1]):
             offset += 1
-            ret.append(self._t(f"{state.id}_{prop.name}_#{offset}"))
+            ret.append(self._t(f"{state.id}_{label}_#{offset}"))
 
         return ret
 
-    def _set_state_property_connected(
+    def _set_state_property_override(
         self, sender: str, connected: bool, info: tuple[State, PropID]
     ) -> None:
         state, prop = info
+
         for prop_idx, p in self.get_controlled_properties().items():
             if p == prop:
                 break
@@ -377,8 +393,7 @@ class add_states_table(StateMixin, DpgItem):
                     f"State {state} is already connected to {prop}, this should not happen"
                 )
 
-            state.parameters.append(prop_idx)
-            state.values.append(value)
+            state.set_param(prop_idx, value)
 
             for widget in value_widgets:
                 dpg.configure_item(widget, enabled=True, default_value=value)
@@ -388,18 +403,21 @@ class add_states_table(StateMixin, DpgItem):
                     f"State {state} is already disconnected from {prop}, this should not happen"
                 )
 
-            param_idx = state.parameters.index(prop_idx)
-            state.parameters.pop(param_idx)
-            state.values.pop(param_idx)
+            state.remove_param(prop_idx)
+            default_value = state.get_default()
 
             for widget in value_widgets:
                 dpg.disable_item(widget)
+                if default_value is not None:
+                    dpg.set_value(widget, default_value)
 
     def _set_state_property_value(
         self, sender: str, new_val: float, info: tuple[State, PropID]
     ) -> None:
         state, prop = info
-        for prop_idx, p in self.get_controlled_properties().items():
+        properties = self.get_controlled_properties()
+
+        for prop_idx, p in properties.items():
             if p == prop:
                 break
         else:
@@ -407,8 +425,14 @@ class add_states_table(StateMixin, DpgItem):
                 f"Requested to update state value for {prop}, but property is not controlled by state chunk"
             )
 
-        param_idx = state.parameters.index(prop_idx)
-        state.values[param_idx] = new_val
+        state.set_param(prop_idx, new_val)
+
+        if prop is _default_prop:
+            for prop_idx, p in enumerate(properties.values()):
+                if not state.has_param_for(prop_idx):
+                    for widget in self._get_state_prop_value_widgets(state, p):
+                        if dpg.does_item_exist(widget):
+                            dpg.set_value(widget, new_val)
 
     def _create_state_value(self, done: Callable[[AkState], None]) -> None:
         done(AkState())
@@ -440,8 +464,11 @@ class add_states_table(StateMixin, DpgItem):
         ret = []
 
         for idx, val in zip(state.parameters, state.values):
-            prop = properties.get(idx)
-            label = prop.name if prop else f"(p{idx})"
+            if idx == 0:
+                label = µ("Default")
+            else:
+                prop = properties.get(idx)
+                label = prop.name if prop else f"(p{idx})"
             ret.append(f"{label}: {val}")
 
         return ret

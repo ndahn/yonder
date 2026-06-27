@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -16,7 +16,6 @@ from yonder.types import (
     MusicTrack,
 )
 from yonder.types.base_types import (
-    MusicFade,
     RTPCGraphPoint,
     MusicTransitionRule,
 )
@@ -31,7 +30,6 @@ from yonder.enums import (
     MarkerId,
     PlaybackMode,
     RandomMode,
-    VirtualQueueBehavior,
     SoundType,
 )
 from yonder.game import Game
@@ -42,10 +40,18 @@ _T = TypeVar("_T")
 
 
 @dataclass
+class StateProperty:
+    prop: PropID = None
+    value: float = None
+    in_db: bool = False
+
+
+@dataclass
 class StateCtrl:
-    group: str
-    state: str
-    modifiers: dict[PropID, float]
+    group: str = None
+    state: str = None
+    modifiers: list[StateProperty] = field(default_factory=list)
+    default: float = None
 
 
 @dataclass
@@ -270,9 +276,16 @@ def _setup_bgm(
                 )
 
             for ctrl in bgm.state_ctrl:
-                mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+                if ctrl and ctrl.modifiers:
+                    state_props = {
+                        p.prop: (p.value if p.value != ctrl.default else None, p.in_db)
+                        for p in ctrl.modifiers
+                    }
+                    mt.set_state_ctrl(
+                        bnk, ctrl.group, ctrl.state, state_props, ctrl.default
+                    )
 
-            intro_seg.duration = mt.playlist[0].source_duration
+            intro_seg.duration = intro_length
             intro_seg.attach(mt)
             new_nodes.append(mt)
 
@@ -296,26 +309,6 @@ def _setup_bgm(
         bnk.new_id(), parent=root_mrsc, props={PropID.Priority: 80.0}
     )
     new_nodes.append(bgm_seg)
-
-    # Add markers for looping; might sometimes contain the loop_enabled flag, too
-    loop_start, loop_end, *_ = tracks[0].loop_info
-
-    if not loop_end:
-        loop_end = bgm_seg.duration
-
-    if loop_end <= 0:
-        loop_end = bgm_seg.duration + loop_end
-
-    # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
-    # Leaving the loop marker at 0 and adjusting the begin trim instead should
-    # be more reliable as it will work even if an intro is used, but can still
-    # be adjusted per track
-
-    # Intentionally set to 0! We'll trim to loop start instead
-    bgm_seg.set_marker(MarkerId.LoopStart.value, loop_start)
-    # According to Shion this is probably just for testing
-    bgm_seg.set_marker("LoopCheck", loop_end - 3000)
-    bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
 
     for bgm in tracks:
         if not bgm.track:
@@ -342,13 +335,40 @@ def _setup_bgm(
             )
 
         for ctrl in bgm.state_ctrl:
-            mt.set_state_ctrl(bnk, ctrl.group, ctrl.state, ctrl.modifiers)
+            if ctrl and ctrl.modifiers:
+                state_props = {
+                    p.prop: (p.value if p.value != ctrl.default else None, p.in_db)
+                    for p in ctrl.modifiers
+                }
+                mt.set_state_ctrl(
+                    bnk, ctrl.group, ctrl.state, state_props, ctrl.default
+                )
 
         # Add to segment
         track_duration_ms = mt.playlist[0].source_duration
-        bgm_seg.duration = track_duration_ms
+        bgm_seg.duration = max(bgm_seg.duration, track_duration_ms)
         bgm_seg.attach(mt)
         new_nodes.append(mt)
+
+    # Add markers for looping; might sometimes contain the loop_enabled flag, too
+    loop_start, loop_end, *_ = tracks[0].loop_info
+
+    if not loop_end:
+        loop_end = bgm_seg.duration
+
+    if loop_end <= 0:
+        loop_end = bgm_seg.duration + loop_end
+
+    # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
+    # Leaving the loop marker at 0 and adjusting the begin trim instead should
+    # be more reliable as it will work even if an intro is used, but can still
+    # be adjusted per track
+
+    # Intentionally set to 0! We'll trim to loop start instead
+    bgm_seg.set_marker(MarkerId.LoopStart.value, loop_start)
+    # According to Shion this is probably just for testing
+    bgm_seg.set_marker("LoopCheck", loop_end - 3000)
+    bgm_seg.set_marker(MarkerId.LoopEnd.value, loop_end)
 
     # Adjust base transition rule
     if track_transition:

@@ -17,39 +17,54 @@ class State(HIRCNode):
     values: list[float] = field(default_factory=list)
 
     @classmethod
-    def new(cls, nid: Hash, params: dict[Hash, float]) -> State:
+    def new(cls, nid: Hash, params: dict[int, float] = None, default: float = None) -> State:
         obj = cls(nid)
 
-        for key, val in params.items():
-            if isinstance(key, str):
-                key = calc_hash(key)
+        if default is not None:
+            obj.set_default(default)
 
-            obj.parameters.append(key)
-            obj.values.append(val)
+        if params:
+            for prop_idx, val in params.items():
+                if isinstance(prop_idx, str):
+                    prop_idx = calc_hash(prop_idx)
+
+                obj.set_param(prop_idx, val)
 
         return obj
 
     def is_shared(self, bnk: Soundbank) -> bool:
         return bnk.tree.in_degree(self.id) > 1
 
+    def has_param_for(self, prop_idx: int) -> bool:
+        return prop_idx in self.parameters
+
+    def get_default(self) -> float:
+        return self.get_param(0)
+
+    def set_default(self, value: float) -> int:
+        self.set_param(0, value)
+
     def get_param(self, prop_idx: int) -> float:
         for i, p in enumerate(self.parameters):
             if p == prop_idx:
-                return self.validate[i]
+                return self.values[i]
 
-        return None
+        if prop_idx == 0:
+            return None
+
+        return self.get_param(0)
 
     def set_param(self, prop_idx: int, value: float) -> int:
         for i, p in enumerate(self.parameters):
             if p == prop_idx:
                 self.values[i] = value
                 return i
-        
+
         self.parameters.append(prop_idx)
         self.values.append(value)
         return len(self.parameters)
 
-    def delete_param(self, prop_idx: int) -> float:
+    def remove_param(self, prop_idx: int) -> float:
         for i, p in enumerate(self.parameters):
             if p == prop_idx:
                 self.parameters.pop(i)

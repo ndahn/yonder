@@ -1733,8 +1733,9 @@ def _create_attributes_state(
         states: StateChunk = ref_node.states
         properties = {i: p for i, p in enumerate(states.state_property_info)}
         params = [
-            properties[i].property.name if i < len(properties) else "?"
+            properties[i - 1].property.name if 0 < i <= len(properties) else "?"
             for i in node.parameters
+            if i > 0  # don't include the default here
         ]
 
         add_node_link(bnk, ref_node, on_node_selected)
@@ -1752,9 +1753,10 @@ def _create_attributes_state(
         )
         dpg.add_input_float(
             default_value=param[1],
-            callback=on_param_changed,
+            callback=on_param_value_changed,
             user_data=idx,
         )
+        dpg.add_text(µ("(default)") if idx == 0 else "")
 
     def create_param(done: Callable[[tuple[int, float]], None]) -> None:
         next_idx = next((i for i in range(100) if i not in node.parameters), 0)
@@ -1768,6 +1770,7 @@ def _create_attributes_state(
         prop_idx, value = info[1]
         node.parameters.append(prop_idx)
         node.values.append(value)
+        ref_table.refresh()
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
@@ -1780,6 +1783,7 @@ def _create_attributes_state(
         param_idx = info[0]
         node.parameters.pop(param_idx)
         node.values.pop(param_idx)
+        ref_table.refresh()
 
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
@@ -1790,16 +1794,17 @@ def _create_attributes_state(
             dpg.set_value(sender, node.parameters[idx])
         else:
             node.parameters[idx] = new_val
+            ref_table.refresh()
             if on_node_changed:
                 on_node_changed(base_tag, node, user_data)
 
-    def on_param_changed(sender: str, new_val: float, idx: int) -> None:
+    def on_param_value_changed(sender: str, new_val: float, idx: int) -> None:
         node.values[idx] = new_val
         if on_node_changed:
             on_node_changed(base_tag, node, user_data)
 
     referees = list(bnk.tree.predecessors(node.id))
-    add_widget_table(
+    ref_table = add_widget_table(
         referees,
         ref_to_row,
         header_row=True,
@@ -1815,7 +1820,8 @@ def _create_attributes_state(
         on_remove=on_param_removed,
         add_item_label=µ("+ Value"),
         label=µ("Values"),
-        columns=[µ("Property Index"), µ("Value")],
+        columns=[µ("Parameter"), µ("Value"), ""],
+        column_weights=(100, 100, 30),
         header_row=True,
     )
 
