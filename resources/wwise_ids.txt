@@ -56972,8 +56972,10 @@ _81_Snowstorm
 _82_LightningStorm
 _82_Lightningstorm
 _83_Reserved
+_84_Drizzling
 _84_Reserved
 _85_Reserved
+_85_TreeGolden
 _86_Reserved
 _87_Reserved
 _88_Reserved

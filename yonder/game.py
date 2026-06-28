@@ -68,6 +68,8 @@ GameStates_EldenRing = {
         "_81_Snowstorm",
         "_82_Lightningstorm",
         "_83_Reserved",
+        "_84_Drizzling",
+        "_85_TreeGolden",
         "_86_Reserved",
         "_87_Reserved",
         "_88_Reserved",
