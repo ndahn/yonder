@@ -147,10 +147,11 @@ class HIRCNode(DataNode):
         return self.id < other.id
 
     def __str__(self) -> str:
+        label = "".join(s for s in self.type_name if s.isupper())
         name = self.get_name(None)
         if name:
-            return f"{name} #{self.id}"
-        return f"[{self.type_name}] #{self.id}"
+            return f"[{label}] {name} #{self.id}"
+        return f"[{label}] #{self.id}"
 
     def __repr__(self) -> str:
         name = self.get_name("<?>")
