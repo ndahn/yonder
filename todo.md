@@ -1,0 +1,8 @@
+- pin orphans not working
+- jump-to -> select -> regenerate broken in cs_main
+- area bgm properties in_db inverted
+- transition rules missing play pre-entry/post-exit/transition piece
+- selecting pin should cause jump to?
+- editing an MSC branch does not refresh widgets
+- msc branches need to be merged/split when editing their path
+- loading indicator on paste/create state path/etc

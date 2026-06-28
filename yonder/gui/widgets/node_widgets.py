@@ -1176,6 +1176,8 @@ def _create_attributes_musicswitchcontainer(
     def on_node_key_changed(
         sender: str, info: tuple[int, str], branch: tuple[DecisionTreeNode, int, str]
     ) -> None:
+        # TODO this is too naive, we need a way to merge and split off branches
+        # e.g. if the key matches an already existing key of a child at the same level
         tree_node = branch[0]
         tree_node.key = info[0]
         update_branch_label(sender, branch, None)
@@ -1201,6 +1203,7 @@ def _create_attributes_musicswitchcontainer(
         sender: str, choice: int, branch: DecisionTreeNode
     ) -> None:
         if choice != 0:
+            on_node_changed(base_tag, node, user_data)
             return
 
         nodes: set[DecisionTreeNode] = set()

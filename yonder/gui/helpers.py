@@ -3,6 +3,7 @@ import sys
 import os
 from typing import Any, Iterable
 from pathlib import Path
+import shutil
 import tempfile
 import atexit
 from copy import deepcopy
@@ -18,9 +19,14 @@ from yonder.gui import style
 
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
 
-tmp_dir = tempfile.TemporaryDirectory(prefix="yonder_")
-atexit.register(tmp_dir.cleanup)
-logger.info(f"Temporary files will be stored in {tmp_dir.name}")
+_tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
+atexit.register(shutil.rmtree, _tmp_dir)
+logger.info(f"Temporary files will be stored in {_tmp_dir}")
+
+
+def get_temp_dir() -> Path:
+    _tmp_dir.mkdir(parents=True, exist_ok=True)
+    return _tmp_dir
 
 
 def estimate_drawn_text_size(
@@ -97,7 +103,9 @@ def exec_file_native(filename: str | Path):
         subprocess.call([opener, str(filename)])
 
 
-def success_countdown(window: int, label: int, countdown: int = 3, delete: bool = True) -> None:
+def success_countdown(
+    window: int, label: int, countdown: int = 3, delete: bool = True
+) -> None:
     def close():
         if delete:
             dpg.delete_item(window)
@@ -108,16 +116,14 @@ def success_countdown(window: int, label: int, countdown: int = 3, delete: bool 
         nonlocal countdown
 
         if countdown > 0:
-            dpg.set_item_label(
-                label, µ("Yay!") + f" ({countdown})"
-            )
+            dpg.set_item_label(label, µ("Yay!") + f" ({countdown})")
             countdown -= 1
             dpg.set_frame_callback(
                 int(dpg.get_frame_count() + dpg.get_frame_rate()), callback
             )
         else:
             close()
-    
+
     dpg.bind_item_theme(label, style.themes.get_color_theme(style.light_blue))
     if dpg.get_item_type(label) == "mvButton":
         dpg.set_item_callback(label, close)

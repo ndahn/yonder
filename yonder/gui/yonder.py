@@ -32,7 +32,7 @@ from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes
 from yonder.game import Game, GameObjects
 from .config import Config, get_config
-from .helpers import center_window, shorten_path, tmp_dir
+from .helpers import center_window, shorten_path, get_temp_dir
 from .widgets import (
     DpgItem,
     create_node_widgets,
@@ -345,7 +345,7 @@ class BanksOfYonder(DpgItem):
                 with dpg.menu(label=µ("Debug", "menu")):
                     dpg.add_menu_item(
                         label=µ("Open Temp Dir", "menu"),
-                        callback=lambda s, a, u: os.startfile(tmp_dir.name),
+                        callback=lambda s, a, u: os.startfile(str(get_temp_dir())),
                         tag=self._t("menu/open_temp"),
                     )
                     dpg.add_menu_item(
@@ -721,6 +721,7 @@ class BanksOfYonder(DpgItem):
                     callback=self.node_move,
                     tag=self._t("context/move_node"),
                 )
+                dpg.add_separator()
                 dpg.add_menu_item(
                     label=µ("New object", "menu"),
                     callback=self.node_new_object,
@@ -1542,7 +1543,7 @@ class BanksOfYonder(DpgItem):
 
             if not dpg.does_item_exist(row):
                 # Try to catch any pending structural updates
-                self.regenerate()
+                dpg.split_frame()
 
             desc = get_foldable_row_descriptor(row)
             if desc:

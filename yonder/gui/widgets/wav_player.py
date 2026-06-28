@@ -13,7 +13,7 @@ from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
 from yonder.gui.config import get_config
-from yonder.gui.helpers import tmp_dir, shorten_path
+from yonder.gui.helpers import get_temp_dir, shorten_path
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 from .dpg_item import DpgItem
@@ -253,6 +253,7 @@ class add_wav_player(DpgItem):
             return None
 
         if self._audio.suffix == ".wem":
+            tmp_dir = get_temp_dir()
             wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
             if not wav.is_file():
                 try:
@@ -452,7 +453,12 @@ class add_wav_player(DpgItem):
         return dpg.get_value(self._t("manual_fx"))
 
     def _on_manual_fx_toggled(self, sender: str, value: bool) -> None:
-        for slider in ("volume_slider", "lowpass_slider", "highpass_slider", "pitch_slider"):
+        for slider in (
+            "volume_slider",
+            "lowpass_slider",
+            "highpass_slider",
+            "pitch_slider",
+        ):
             dpg.configure_item(self._t(slider), enabled=value)
 
         if value:

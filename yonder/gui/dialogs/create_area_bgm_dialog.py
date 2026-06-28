@@ -492,33 +492,28 @@ Area tree:
         dpg.bind_item_handler_registry(tree_node, dpg.last_container())
 
     def _new_local_branch(self, done: Callable[[_BgmInfo], None]) -> None:
-        ret = open_file_dialog(
-            title="Select Audio File",
-            filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
-        )
-        if ret:
-            done(
-                _BgmInfo(
-                    _BgmVariant(
-                        Path(ret), props=[
-                            _BgmProp(PropID.HPF, 2.0, "battle"),
-                            _BgmProp(PropID.LPF, 2.0, "battle"),
-                            _BgmProp(PropID.Priority, 2.0, "battle", True),
-                            _BgmProp(PropID.Volume, 2.0, "battle", True),
-                        ]
-                    ),
-                    _BgmVariant(
-                        None, props=[
-                            _BgmProp(PropID.HPF, -400.0, "regular"),
-                            _BgmProp(PropID.LPF, -400.0, "regular"),
-                            _BgmProp(PropID.Priority, -400.0, "regular", True),
-                            _BgmProp(PropID.Volume, -400.0, "regular", True),
-                        ]
-                    ),
-                    state_path=self._get_default_state_path(),
-                )
+        done(
+            _BgmInfo(
+                _BgmVariant(
+                    None, props=[
+                        _BgmProp(PropID.HPF, 2.0, "battle"),
+                        _BgmProp(PropID.LPF, 2.0, "battle"),
+                        _BgmProp(PropID.Priority, 2.0, "battle", True),
+                        _BgmProp(PropID.Volume, 2.0, "battle", True),
+                    ]
+                ),
+                _BgmVariant(
+                    None, props=[
+                        _BgmProp(PropID.HPF, -400.0, "regular"),
+                        _BgmProp(PropID.LPF, -400.0, "regular"),
+                        _BgmProp(PropID.Priority, -400.0, "regular", True),
+                        _BgmProp(PropID.Volume, -400.0, "regular", True),
+                    ]
+                ),
+                state_path=self._get_default_state_path(),
             )
-            self._update_local_transitions_matrix()
+        )
+        self._update_local_transitions_matrix()
 
     def _on_add_local_branch(
         self,
@@ -691,11 +686,6 @@ Area tree:
 
         if not self._bgm_tracks:
             self.show_messageµ("No tracks added", "msg")
-            return
-
-        bgm_place_type_idx = self.msc.get_argument_pos("BgmPlaceType")
-        if self.local_args[bgm_place_type_idx] in ("", "0", _WILDCARD):
-            self.show_message(µ("BgmPlaceType not set"))
             return
 
         for key in self.local_args:

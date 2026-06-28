@@ -45,7 +45,7 @@ class StateMixin:
             affecting = []
             for state_value in group.states:
                 state: State = bnk.get(state_value.state_instance_id)
-                if state and 0 in state.parameters or prop_idx in state.parameters:
+                if state and (0 in state.parameters or prop_idx in state.parameters):
                     affecting.append(state_value)
 
             if affecting:
@@ -187,7 +187,7 @@ class StateMixin:
                     StatePropertyInfo(
                         prop,
                         RtpcAccum.Additive,
-                        in_db,
+                        0 if in_db else 1,
                     )
                 )
                 property_map[prop] = len(self.states.state_property_info)

@@ -195,6 +195,23 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
         self.group_types.pop(pos)
         self.tree_depth = len(self.arguments)
 
+    def does_branch_exist(self, path: list[Hash]) -> bool:
+        if len(path) != len(self.arguments):
+            return False
+
+        path: list[int] = parse_state_path(path)
+        parent = self.tree
+
+        for key in path:
+            for child in parent.children:
+                if child.key == key:
+                    parent = child
+                    break
+            else:
+                return False
+
+        return True
+
     def add_branch(self, path: list[Hash], node_id: int | HIRCNode) -> None:
         if len(path) != len(self.arguments):
             raise ValueError("Path length must be equal to number of tree arguments")
@@ -242,6 +259,7 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
             else:
                 raise ValueError(f"Could not resolve branch path {path_to_branch}")
 
+        # TODO doesn't work if it's not a complete path (e.g. only up to level 3/5)
         branch = next(c for c in parent.children if c.key == path_to_branch[-1])
         parent.children.remove(branch)
         return branch

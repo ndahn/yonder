@@ -34,13 +34,14 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
             wem_id = int(wem.stem)
 
         # Copy to the correct location
-        stream_path_rel = Path(f"wem/{str(wem_id)[:2]}/{wem.name}")
+        stream_path_rel = f"wem/{str(wem_id)[:2]}/{wem.name}"
         if str(wem).endswith(str(stream_path_rel)):
             # Handle streamed sounds
             target_path = bnk.bnk_dir.parent / stream_path_rel
         else:
             target_path = bnk.bnk_dir / f"{wem_id}.wem"
 
+        target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(wem, target_path)
 
         # Update memory sizes

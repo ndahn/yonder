@@ -313,7 +313,7 @@ class add_states_table(StateMixin, DpgItem):
             add_select_node(
                 self._bnk.query,
                 µ("State").format(num_references=referees),
-                self._make_setter(state_value, "state_instance_id", lambda n: n.nid),
+                self._make_setter(state_value, "state_instance_id", lambda n: n.id),
                 jump_to=self._jump_to,
                 create_new=new_state,
                 get_node_details=self._get_state_summary,
@@ -324,34 +324,37 @@ class add_states_table(StateMixin, DpgItem):
             )
             dpg.add_spacer(height=5)
 
-            for i, prop in properties.items():
-                has_override = state and (i in state.parameters)
-                value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
-                label = µ("Default") if prop is _default_prop else prop.name
+            if state:
+                for i, prop in properties.items():
+                    has_override = state and (i in state.parameters)
+                    value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
+                    label = µ("Default") if prop is _default_prop else prop.name
 
-                enabled = bool(state)
-                value = state.get_param(i)
+                    enabled = bool(state)
+                    value = state.get_param(i)
 
-                if value is None:
-                    value = 0.0
+                    if value is None:
+                        value = 0.0
 
-                with dpg.group(horizontal=True):
-                    dpg.add_text(label.rjust(longest_prop))
-                    dpg.add_checkbox(
-                        # label=prop.name.ljust(longest_prop),
-                        default_value=has_override,
-                        enabled=enabled,
-                        callback=self._set_state_property_override,
-                        user_data=(state, prop),
-                    )
-                    dpg.add_input_float(
-                        default_value=value,
-                        width=220,
-                        enabled=has_override,
-                        callback=self._set_state_property_value,
-                        user_data=(state, prop),
-                        tag=value_widget_id,
-                    )
+                    with dpg.group(horizontal=True):
+                        dpg.add_text(label.rjust(longest_prop))
+                        dpg.add_checkbox(
+                            # label=prop.name.ljust(longest_prop),
+                            default_value=has_override,
+                            enabled=enabled,
+                            callback=self._set_state_property_override,
+                            user_data=(state, prop),
+                        )
+                        dpg.add_input_float(
+                            default_value=value,
+                            width=220,
+                            enabled=has_override,
+                            callback=self._set_state_property_value,
+                            user_data=(state, prop),
+                            tag=value_widget_id,
+                        )
+            else:
+                dpg.add_text(µ("(state node not found)"))
 
             dpg.add_spacer(height=3)
 
