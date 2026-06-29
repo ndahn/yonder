@@ -187,7 +187,7 @@ class StateMixin:
                     StatePropertyInfo(
                         prop,
                         RtpcAccum.Additive,
-                        0 if in_db else 1,
+                        1 if in_db else 0,
                     )
                 )
                 property_map[prop] = len(self.states.state_property_info)

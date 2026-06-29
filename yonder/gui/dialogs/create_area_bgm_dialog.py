@@ -38,7 +38,6 @@ from yonder.gui.widgets import (
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
 from .edit_state_path_dialog import edit_state_path_dialog
 from .edit_transition_dialog import edit_transition_dialog
-from .file_dialog import open_file_dialog
 
 
 @dataclass

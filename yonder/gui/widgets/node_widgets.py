@@ -1166,8 +1166,8 @@ def _create_attributes_musicswitchcontainer(
         sender: str, state_path: list[int], path_node_id: int
     ) -> None:
         node.add_branch(state_path, path_node_id)
-        # Regenerate
-        on_node_selected(base_tag, node, user_data)
+        # Tree changed, need to regenerate widgets
+        on_structure_changed()
 
     def on_tree_mode_changed(sender: str, mode: str, cb_user_data: Any) -> None:
         node.tree_mode = DecisionTreeMode[mode]
@@ -1203,7 +1203,8 @@ def _create_attributes_musicswitchcontainer(
         sender: str, choice: int, branch: DecisionTreeNode
     ) -> None:
         if choice != 0:
-            on_node_changed(base_tag, node, user_data)
+            # Tree changed, need to regenerate the widgets
+            on_structure_changed()
             return
 
         nodes: set[DecisionTreeNode] = set()
@@ -1220,7 +1221,7 @@ def _create_attributes_musicswitchcontainer(
 
         bnk.delete_nodes(*nodes)
         logger.info(f"Deleted {len(nodes)} nodes related to branch {branch.name}")
-        on_node_changed(base_tag, node, user_data)
+        on_structure_changed()
 
     def update_branch_label(
         sender: str, info: tuple[DecisionTreeNode, int, str], cb_user_data: Any

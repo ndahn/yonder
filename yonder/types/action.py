@@ -145,7 +145,7 @@ class Action(PropertyMixin, HIRCNode):
         return [("external_id", self.external_id)]
 
     def __str__(self) -> str:
-        return f"Action<{self.action_type_enum.name}> #{self.id}"
+        return f"[A] <{self.action_type_enum.name}> #{self.id}"
 
 
 @dataclass

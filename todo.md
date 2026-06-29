@@ -1,8 +1,9 @@
 - pin orphans not working
 - jump-to -> select -> regenerate broken in cs_main
-- area bgm properties in_db inverted
 - transition rules missing play pre-entry/post-exit/transition piece
 - selecting pin should cause jump to?
-- editing an MSC branch does not refresh widgets
 - msc branches need to be merged/split when editing their path
+- msc tree edits only need to rebuild msc widgets, no need to regenerate everything
 - loading indicator on paste/create state path/etc
+- when running from vscode, temp files go to app root??
+- jump-to is not reliable
