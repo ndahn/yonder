@@ -305,7 +305,7 @@ class Soundbank:
             if n.id in self._id2index:
                 if exist_ok:
                     continue
-                
+
                 raise ValueError(f"Soundbank already contains a node with ID {n.id}")
 
             self.hirc.objects.append(n)
@@ -354,7 +354,9 @@ class Soundbank:
             indices.add(self._id2index[n.id])
 
         # Don't use `del self[nid]` as it will regenerate the index table on every delete
-        self.hirc.objects = [n for i, n in enumerate(self.hirc.objects) if i not in indices]
+        self.hirc.objects = [
+            n for i, n in enumerate(self.hirc.objects) if i not in indices
+        ]
 
         # TODO use the tree instead!
         # Search for any nodes referencing the deleted nodes and clear those references
@@ -505,73 +507,14 @@ class Soundbank:
             )
         }
 
-        return [
-            self[nid]
-            for nid, tp in g.nodes.data("type")
-            if tp in search_types and g.in_degree(nid) == 0
-        ]
+        ret = []
+        for nid in g.nodes:
+            if g.in_degree(nid) == 0:
+                n = self[nid]
+                if n.type_name in search_types:
+                    ret.append(n)
 
-    def delete_orphans(self, cascade: bool = True) -> None:
-        g = self.tree
-        indices = set()
-        children = {}
-
-        search_types = {
-            c.__name__
-            for c in (
-                LayerContainer,
-                MusicRandomSequenceContainer,
-                MusicSwitchContainer,
-                MusicSegment,
-                MusicTrack,
-                RandomSequenceContainer,
-                Sound,
-                SwitchContainer,
-            )
-        }
-
-        while True:
-            # Collect non-event nodes with no references to them
-            orphans = [
-                nid
-                for nid, tp in g.nodes.data("type")
-                if tp in search_types and g.in_degree(nid) == 0
-            ]
-            if not orphans:
-                break
-
-            indices.update(self._id2index[n] for n in orphans)
-            
-            for oid in orphans:
-                children[oid] = self[oid].get_references()
-
-            g.remove_nodes_from(orphans)
-
-            # Check if new orphans appeared in the graph from the removal of the
-            # discovered orphans
-            if not cascade:
-                break
-
-        # Clear the hirc
-        orphan_nodes = [str(self.hirc.objects[i]) for i in indices]
-        logger.info(
-            f"The following {len(indices)} nodes have been orphaned (cascade={cascade}):\n{'  \n'.join(orphan_nodes)}"
-        )
-
-        # Orphans may have children that are still referenced by e.g. actions, so we need to 
-        # clean up their parents
-        for oid, refs in children.items():
-            for _, cid in refs:
-                child = self.get(cid)
-                if child and getattr(child, "parent", None) == oid:
-                    child.parent = 0
-
-        self.hirc.objects = [
-            x for i, x in enumerate(self.hirc.objects) if i not in indices
-        ]
-        self._regenerate_index_table()
-
-        logger.info(f"Found and deleted {len(indices)} orphans")
+        return ret
 
     def find_events(
         self, action_type: ActionType = ActionType.Play

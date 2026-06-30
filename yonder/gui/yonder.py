@@ -251,15 +251,16 @@ class BanksOfYonder(DpgItem):
                         callback=self._bank_remove_unused_wems,
                         tag=self._t("menu/remove_unused_wems"),
                     )
-                    dpg.add_menu_item(
-                        label=µ("Delete orphans", "menu"),
-                        callback=self._bank_delete_orphans,
-                        tag=self._t("menu/delete_orphans"),
-                    )
 
             with dpg.menu(label=µ("Create", "menu"), tag=self._t("menu/create")):
                 dpg.add_menu_item(
-                    label=µ("New Play/Stop Event", "menu"),
+                    label=µ("Isolated Node", "menu"),
+                    callback=self._open_create_node_dialog,
+                    tag=self._t("menu/create_node"),
+                )
+                dpg.add_separator()
+                dpg.add_menu_item(
+                    label=µ("Play/Stop Event", "menu"),
                     callback=self._open_new_wwise_event_dialog,
                     tag=self._t("menu/create_event"),
                 )
@@ -723,7 +724,7 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
-                    label=µ("New object", "menu"),
+                    label=µ("Create new", "menu"),
                     callback=self.node_new_object,
                     tag=self._t("context/paste_new"),
                 )
@@ -1103,7 +1104,6 @@ class BanksOfYonder(DpgItem):
             self._load_soundbank_check_unpacked(Path(path))
 
     def _load_soundbank_confirm(self, path: Path) -> None:
-
         def on_choice(sender: str, choice: int, path: Path) -> None:
             if choice == 0:
                 self._save_soundbank()
@@ -1549,7 +1549,11 @@ class BanksOfYonder(DpgItem):
             if desc:
                 sender = desc.selectable
             else:
-                logger.error(f"Could not locate widget for node {node_id}")
+                logger.error(
+                    µ("Could not locate selectable for node {node}").format(
+                        node=node_id
+                    )
+                )
 
         self._on_node_selected(sender, True, node)
 
@@ -1699,11 +1703,6 @@ class BanksOfYonder(DpgItem):
             self.bnk.delete_unused_wems()
             self.regenerate()
 
-    def _bank_delete_orphans(self) -> None:
-        with loading_indicator(µ("Working...")):
-            self.bnk.delete_orphans()
-            self.regenerate()
-
     def node_copy(self) -> None:
         data = {"yonder_nodes": [self._selected_node]}
         pyperclip.copy(json.dumps(serialize(data), indent=2))
@@ -1750,7 +1749,6 @@ class BanksOfYonder(DpgItem):
                     node=node, parent=self._selected_node
                 )
             )
-
             self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
@@ -1759,39 +1757,43 @@ class BanksOfYonder(DpgItem):
         center_window(tag)
 
     def node_paste(self) -> None:
-        try:
-            data = json.loads(pyperclip.paste())
-        except json.JSONDecodeError:
-            raise ValueError("Clipboard does not contain a valid hierarchy")
+        if not self._selected_node:
+            return
 
-        if not isinstance(data, dict) or "yonder_nodes" not in data:
-            raise ValueError("Clipboard does not contain a valid hierarchy")
+        with loading_indicator(µ("Working...")):
+            try:
+                data = json.loads(pyperclip.paste())
+            except json.JSONDecodeError:
+                raise ValueError("Clipboard does not contain a valid hierarchy")
 
-        nodes = [HIRCNode.from_dict(n) for n in data["yonder_nodes"]]
-        id_map = {}
+            if not isinstance(data, dict) or "yonder_nodes" not in data:
+                raise ValueError("Clipboard does not contain a valid hierarchy")
 
-        # Create the ID mappings first
-        for n in reversed(nodes):
-            old_id = n.id
-            new_id = self.bnk.new_id()
-            id_map[old_id] = new_id
-            n.id = new_id
+            nodes = [HIRCNode.from_dict(n) for n in data["yonder_nodes"]]
+            id_map = {}
 
-        # Then update all references, including parent IDs
-        for n in nodes:
-            for path, ref in n.get_references():
-                if ref in id_map:
-                    n.set_value(path, id_map[ref])
+            # Create the ID mappings first
+            for n in reversed(nodes):
+                old_id = n.id
+                new_id = self.bnk.new_id()
+                id_map[old_id] = new_id
+                n.id = new_id
 
-            if not isinstance(n, Action) and n.parent in id_map:
-                n.parent = id_map[n.parent]
+            # Then update all references, including parent IDs
+            for n in nodes:
+                for path, ref in n.get_references():
+                    if ref in id_map:
+                        n.set_value(path, id_map[ref])
 
-        self.bnk.add_nodes(*nodes)
-        for n in nodes:
-            self.add_pinned_object(n)
+                if not isinstance(n, Action) and n.parent in id_map:
+                    n.parent = id_map[n.parent]
 
-        nodes[0].parent = self._selected_node
-        self._selected_node.attach(nodes[0])
+            self.bnk.add_nodes(*nodes)
+            for n in nodes:
+                self.add_pinned_object(n)
+
+            nodes[0].parent = self._selected_node
+            self._selected_node.attach(nodes[0])
 
         logger.info(
             µ("Attached {node} and {num} descendants to {parent}").format(
@@ -1804,36 +1806,44 @@ class BanksOfYonder(DpgItem):
         if not self._selected_node:
             return
 
-        try:
-            data = json.loads(pyperclip.paste())
-        except json.JSONDecodeError:
-            raise ValueError("Clipboard does not contain a valid hierarchy")
+        with loading_indicator(µ("Working...")):
+            try:
+                data = json.loads(pyperclip.paste())
+            except json.JSONDecodeError:
+                raise ValueError("Clipboard does not contain a valid hierarchy")
 
-        if not isinstance(data, dict) or "yonder_nodes" not in data:
-            raise ValueError("Clipboard does not contain a valid hierarchy")
+            if not isinstance(data, dict) or "yonder_nodes" not in data:
+                raise ValueError("Clipboard does not contain a valid hierarchy")
 
-        root_id: HIRCNode = HIRCNode.from_dict(data["yonder_nodes"][0]).id
-        node = self.bnk.get(root_id)
-        if not node:
-            raise ValueError("Copied node does not exist in soundbank")
+            root_id: HIRCNode = HIRCNode.from_dict(data["yonder_nodes"][0]).id
+            node = self.bnk.get(root_id)
+            if not node:
+                raise ValueError("Copied node does not exist in soundbank")
 
-        if hasattr(self._selected_node, "attach"):
-            self._selected_node.attach(node)
-        elif hasattr(self._selected_node, "children"):
-            self._selected_node.children.add(node.id)
-        else:
-            raise ValueError(f"{self._selected_node} is not a valid target")
-
-        parent = self.bnk.get_parent(node)
-        if parent:
-            if hasattr(parent, "detach"):
-                parent.detach(node)
-            elif hasattr(parent, "children"):
-                parent.children.remove(node.id)
+            if hasattr(self._selected_node, "attach"):
+                self._selected_node.attach(node)
+            elif hasattr(self._selected_node, "children"):
+                self._selected_node.children.add(node.id)
             else:
-                raise ValueError(
-                    f"Don't know how to remove child from node {parent}, please tell Mana and do it manually for now"
-                )
+                raise ValueError(f"{self._selected_node} is not a valid target")
+
+            parent = self.bnk.get_parent(node)
+            if parent:
+                if hasattr(parent, "detach"):
+                    parent.detach(node)
+                elif hasattr(parent, "children"):
+                    parent.children.remove(node.id)
+                else:
+                    raise ValueError(
+                        f"Don't know how to remove child from node {parent}, please tell Mana and do it manually for now"
+                    )
+
+        logger.info(
+            µ("Moved {node} to new parent {parent}").format(
+                node=node, parent=self._selected_node
+            )
+        )
+        self.regenerate()
 
     def node_delete(self) -> None:
         if not self._selected_node:
@@ -1973,6 +1983,7 @@ class BanksOfYonder(DpgItem):
         def on_node_created(node: HIRCNode) -> None:
             self.add_pinned_object(node)
             logger.info(µ("Created node {node}", "log").format(node=node))
+            self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
 
