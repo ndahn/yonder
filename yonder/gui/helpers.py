@@ -20,7 +20,7 @@ from yonder.gui import style
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
 
 _tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
-atexit.register(lambda: _tmp_dir.is_dir() and shutil.rmtree)
+atexit.register(lambda t: t.is_dir() and shutil.rmtree(t), _tmp_dir)
 logger.info(f"Temporary files will be stored in {_tmp_dir}")
 
 

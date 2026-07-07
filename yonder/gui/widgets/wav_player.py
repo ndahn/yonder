@@ -254,7 +254,7 @@ class add_wav_player(DpgItem):
 
         if self._audio.suffix == ".wem":
             tmp_dir = get_temp_dir()
-            wav = Path(tmp_dir.name) / (self._audio.stem + ".wav")
+            wav = tmp_dir / (self._audio.stem + ".wav")
             if not wav.is_file():
                 try:
                     vgmstream = get_config().locate_vgmstream()
@@ -263,7 +263,7 @@ class add_wav_player(DpgItem):
                             file=self._audio.name
                         )
                     )
-                    wav = wem2wav(Path(vgmstream), self._audio, Path(tmp_dir.name))[0]
+                    wav = wem2wav(Path(vgmstream), self._audio, tmp_dir)[0]
                 except ValueError as e:
                     logger.error(f"Failed to convert wav file: {e}", exc_info=e)
                     return None
