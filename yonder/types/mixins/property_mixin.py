@@ -5,7 +5,7 @@ from yonder.enums import PropID
 # NOTE: mixed class must expose a "properties" member
 class PropertyMixin:
     # Dummies, just for the type checker
-    properties: PropBundle
+    properties: list[PropBundle]
 
     def get_property(self, property: PropID, default: float = None) -> float:
         """Get a property value by name.
@@ -22,7 +22,6 @@ class PropertyMixin:
         float
             Property value, or default if not found.
         """
-        bundle: PropBundle
         for bundle in self.properties:
             if bundle.prop_id == property:
                 return bundle.value
@@ -41,7 +40,6 @@ class PropertyMixin:
         value : float
             Property value to set.
         """
-        bundle: PropBundle
         for bundle in self.properties:
             if bundle.prop_id == property:
                 bundle.value = value
@@ -62,7 +60,6 @@ class PropertyMixin:
         bool
             True if property was removed, False if not found.
         """
-        bundle: PropBundle
         for i, bundle in enumerate(self.properties):
             if bundle.prop_id == property:
                 self.properties.pop(i)
