@@ -20,6 +20,7 @@ from yonder.types import (
     Section,
     HIRCSection,
     DataNode,
+    ActionType,
 )
 from yonder.types.serialization import serialize
 from yonder.hash import (
@@ -720,7 +721,7 @@ class BanksOfYonder(DpgItem):
                 dpg.add_menu_item(
                     label=µ("Move", "menu"),
                     callback=self.node_move,
-                    tag=self._t("context/move_node"),
+                    tag=self._t("context/paste_move"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -781,6 +782,15 @@ class BanksOfYonder(DpgItem):
                 self._save_soundbank()
             elif key == dpg.mvKey_N:
                 self._open_new_soundbank_dialog()
+            elif key == dpg.mvKey_F:
+                # Focus the search bar
+                tab = dpg.get_item_alias(dpg.get_value(self._t("tabs")))
+                if tab == self._t("tab_globals"):
+                    dpg.focus_item(self._t("globals_filter"))
+                else:
+                    dpg.set_value(self._t("tabs"), self._t("tab_events"))
+                    dpg.focus_item(self._t("events_filter"))
+
             # elif key == dpg.mvKey_Q:
             #     self._exit_app()
             # elif key == dpg.mvKey_Z:
@@ -1526,11 +1536,9 @@ class BanksOfYonder(DpgItem):
             # Don't regenerate when the node is already selected
             self._on_node_selected(item, app_data, node)
 
-        # NOTE hide or show context menu items here if needed
-        if hasattr(self._selected_node, "attach"):
-            dpg.show_item(self._t("context/attach"))
-        else:
-            dpg.hide_item(self._t("context/attach"))
+        # Hide or show context menu items depending on what is selected
+        has_attach = hasattr(self._selected_node, "attach")
+        dpg.configure_item(self._t("context/attach"), show=has_attach)
 
         dpg.set_item_pos(self._t("context_menu"), dpg.get_mouse_pos())
         dpg.show_item(self._t("context_menu"))
@@ -1844,6 +1852,26 @@ class BanksOfYonder(DpgItem):
             )
         )
         self.regenerate()
+
+    # TODO
+    def _delete_node(self, node: HIRCNode, cascade: bool) -> None:
+        def on_event_delete_choice(sender: str, choice: int, user_data: Any) -> None:
+            if choice == 0:
+                pass
+
+            elif choice == 1:
+                pass
+
+        if isinstance(node, Event):
+            # TODO get related events
+            if node.has_action_type(self.bnk, ActionType.Play, ActionType.PlayAndContinue):
+                pass
+
+                simple_choice_dialog(
+                    µ("Delete related play/stop events?"),
+                    [µ("Yes"), µ("No")],
+                    on_event_delete_choice,
+                )
 
     def node_delete(self) -> None:
         if not self._selected_node:
