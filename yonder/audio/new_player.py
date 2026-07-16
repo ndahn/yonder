@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 import networkx as nx
@@ -9,8 +10,9 @@ from yonder import Soundbank, HIRCNode
 from yonder.types import Sound, MusicTrack, MusicSegment
 from yonder.types.base_types import RTPC, StateGroup, ClipAutomation, RTPCGraphPoint
 from yonder.types.mixins import PropertyMixin, StateMixin
-from yonder.enums import PropID, RtpcAccum, MarkerId, ClipAutomationType
+from yonder.enums import PropID, RtpcAccum, MarkerId, ClipAutomationType, WwiseCutoffFrequencies
 from yonder.interpolation import interpolate
+from yonder.util import logger
 
 
 def db_to_amp(db: float) -> float:
@@ -23,32 +25,33 @@ def cents_to_speed(cents: float) -> float:
     return 2.0 ** (cents / 1200.0)
 
 
-def make_interp_table(sample_rate: int, points: list[RTPCGraphPoint]) -> pyo.DataTable:
-    dur = points[-1].from_
-    n = dur * sample_rate
-    data = [0.0] * n
+def make_envelope(
+    points: list[RTPCGraphPoint],
+    conv: Callable[[float], float] = None,
+    resolution: int = 8,
+) -> pyo.Linseg:
+    if not conv:
+        conv = lambda v: v
 
-    # Interval before the first interpolation point
-    x0 = points[0].from_ * sample_rate
-    data[:x0] = points[0].to
+    segs = []
+    if points[0].from_ > 0.0:
+        # Constant before first point
+        segs.append((0.0, conv(points[0].to)))
 
-    p_idx = 0
-    p = points[0]
-    p_next = points[1]
+    for p, nxt in zip(points[:-1], points[1:]):
+        span = nxt.from_ - p.from_
+        if span <= 0.0:
+            continue
 
-    for i in range(x0, n):
-        x = i / sample_rate
-        if x >= p_next.from_:
-            if p_idx + 1 >= len(points):
-                break
+        n = int(span * resolution)
+        for i in range(n):
+            t = i / resolution
+            val = interpolate(p.interpolation, t, p.to, nxt.to)
+            segs.append((p.from_ + t * span, val))
 
-            p_idx += 1
-            p = p_next
-            p_next = points[p_idx + 1]
-
-        data[i] = interpolate(p.interpolation, x, p.to, p_next.to)
-
-    return pyo.DataTable(size=n, init=data)
+    # Extrapolate past final point
+    segs.append((points[-1].from_, conv(points[-1].to)))
+    return pyo.Linseg(segs)
 
 
 @dataclass
@@ -62,26 +65,37 @@ class Voice:
     # TODO apply on top
     rtpc: dict[RTPC, float] = field(default_factory=dict)
     states: dict[StateGroup, float] = field(default_factory=dict)
-    clips: dict[ClipAutomation, float] = field(default_factory=dict)
+
+    ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
+    clips: list[tuple[ClipAutomation, pyo.Linseg]] = field(default_factory=list)
 
     # every PyoObject must stay referenced or pyo's gc silences the voice
     chain: list[pyo.PyoObject] = field(default_factory=list)
-    # SigTo per parameter so runtime changes glide instead of clicking
-    ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
+
+    def __post_init__(self):
+        # TODO LPF|HPF 0-100 -> Hz curve?
+        self.ctrls = {
+            PropID.Pitch: pyo.SigTo(cents_to_speed(0.0), 0.05),
+            PropID.HPF: pyo.SigTo(20.0, 0.05),
+            PropID.LPF: pyo.SigTo(20000.0, 0.05),
+            PropID.Volume: pyo.SigTo(db_to_amp(0.0), 0.05),
+        }
 
     def set_pitch(self, pitch: float, absolute: bool) -> None:
         if absolute:
             self.ctrls[PropID.Pitch].value = cents_to_speed(pitch)
         else:
-            self.ctrls[PropID.Pitch].value += cents_to_speed(pitch)
+            self.ctrls[PropID.Pitch].value *= cents_to_speed(pitch)
 
     def set_highpass(self, hpf: float, absolute: bool) -> None:
+        # TODO wwise uses a curve here: 0..x -> Hz
         if absolute:
             self.ctrls[PropID.HPF].value = hpf
         else:
             self.ctrls[PropID.HPF].value += hpf
 
     def set_lowpass(self, lpf: float, absolute: bool) -> None:
+        # TODO wwise uses a curve here: 0..x -> Hz
         if absolute:
             self.ctrls[PropID.LPF].value = lpf
         else:
@@ -91,21 +105,31 @@ class Voice:
         if absolute:
             self.ctrls[PropID.Volume].value = db_to_amp(vol)
         else:
-            self.ctrls[PropID.Volume].value += db_to_amp(vol)
+            self.ctrls[PropID.Volume].value *= db_to_amp(vol)
 
-    def build(self, fade: float = 0.05) -> pyo.PyoObject:
-        # TODO LPF|HPF 0-100 -> Hz curve?
-        self.ctrls = {
-            PropID.Pitch: pyo.SigTo(cents_to_speed(0.0), fade),
-            PropID.HPF: pyo.SigTo(0.0, fade),
-            PropID.LPF: pyo.SigTo(0.0, fade),
-            PropID.Volume: pyo.SigTo(db_to_amp(0.0), fade),
-        }
+    # TODO pass entire branch, store properties, clips, etc. per attribute so individual objects
+    # can be recalculated easily (e.g. when a HPF value on object i is changed)
+    def build(self) -> pyo.PyoObject:
         c = self.ctrls
+        gain = c[PropID.Volume]
+        hp_freq = c[PropID.HPF]
+        lp_freq = c[PropID.LPF]
+
+        for auto_type, envelope in self.clips:
+            if auto_type in (
+                ClipAutomationType.Volume,
+                ClipAutomationType.FadeIn,
+                ClipAutomationType.FadeOut,
+            ):
+                gain *= envelope
+            elif auto_type == ClipAutomationType.HPF:
+                hp_freq += envelope  # TODO to Hz
+            elif auto_type == ClipAutomationType.LPF:
+                lp_freq += envelope  # TODO to Hz
 
         if self.loop:
             if self.loop_end <= self.loop_start:
-                self.loop_end = sndinfo(self.audiofile)[1]
+                self.loop_end = sndinfo(str(self.audiofile))[1]
 
             # marker loop: SfPlayer only loops whole files, Looper loops a table region
             table = pyo.SndTable(str(self.audiofile))
@@ -123,11 +147,13 @@ class Voice:
             )
 
         # fixed order for all branches: source -> HPF -> LPF -> gain
-        hp = pyo.ButHP(src, freq=c[PropID.HPF])
-        lp = pyo.ButLP(hp, freq=c[PropID.LPF])
-        tail = lp * c[PropID.Volume]
+        hp = pyo.ButHP(src, hp_freq)
+        lp = pyo.ButLP(hp, lp_freq)
+        tail = lp * gain
 
-        self.chain = [src, hp, lp, tail]
+        # Store as part of the chain so they can be started/stopped easily
+        envelopes = [env for _, env in self.clips]
+        self.chain = [*envelopes, src, hp, lp, tail]
         return tail
 
     def start(self) -> None:
@@ -202,28 +228,47 @@ class NewPlayer:
         for branch in nx.all_simple_paths(tree, root, leafs):
             leaf_id = branch[-1]
 
-            if leaf_id not in voices:
-                voice = Voice()
-                voices[leaf_id] = voice
-                leaf_node = bnk.get(leaf_id)
+            if leaf_id in voices:
+                logger.warning(
+                    f"Player will ignore secondary paths to {leaf_id} ({branch})"
+                )
+                continue
 
-                if isinstance(leaf_node, Sound):
-                    voice.audiofile = bnk.get_wem_path(
-                        leaf_node.source_id, leaf_node.bank_source_data.source_type
-                    )
-                elif isinstance(leaf_node, MusicTrack):
-                    # TODO what to do with tracks that have multiple sources?
-                    voice.audiofile = bnk.get_wem_path(
-                        leaf_node.source_ids[0], leaf_node.sources[0].source_type
-                    )
-                    # TODO trims
-                    for clip in leaf_node.clip_items:
-                        table = make_interp_table(
-                            self._server.getSampleRate(), clip.graph_points
+            voice = Voice()
+            voices[leaf_id] = voice
+            leaf_node = bnk.get(leaf_id)
+
+            if isinstance(leaf_node, Sound):
+                voice.audiofile = bnk.get_wem_path(
+                    leaf_node.source_id, leaf_node.bank_source_data.source_type
+                )
+            elif isinstance(leaf_node, MusicTrack):
+                # TODO what to do with tracks that have multiple sources?
+                voice.audiofile = bnk.get_wem_path(
+                    leaf_node.source_ids[0], leaf_node.sources[0].source_type
+                )
+                voice.loop = True
+
+                # TODO trims
+                for clip in leaf_node.clip_items:
+                    if clip.auto_type in (
+                        ClipAutomationType.Volume,
+                        ClipAutomationType.FadeIn,
+                        ClipAutomationType.FadeOut,
+                    ):
+                        conv = db_to_amp
+                    elif clip.auto_type in (
+                        ClipAutomationType.HPF,
+                        ClipAutomationType.LPF,
+                    ):
+                        conv = None  # TODO
+                    else:
+                        raise ValueError(
+                            f"Unhandled ClipAutomationType {clip.auto_type}"
                         )
-                        if clip.auto_type == ClipAutomationType.Volume:
-                            # TODO
-                            pass
+
+                    table = make_envelope(clip.graph_points, conv)
+                    voice.clipse.append(clip.auto_type, table)
 
             voice = voices[leaf_id]
 
@@ -256,8 +301,8 @@ class NewPlayer:
                 # TODO attenuations
 
                 if isinstance(node, MusicSegment):
-                    voice.loop_start = node.get_marker_pos(MarkerId.LoopStart)
-                    voice.loop_end = node.get_marker_pos(MarkerId.LoopEnd)
+                    voice.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+                    voice.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):
@@ -267,7 +312,7 @@ class NewPlayer:
             tail = voice.build(self._default_fade_time)
             voice.stop()
             self._mixer.addInput(idx, tail)
-            self._mixer.setAmp(idx, 0, 0.0)
+            self._mixer.setAmp(idx, 0, 1.0)
 
         self._voices = list(voices.values())
         return self
