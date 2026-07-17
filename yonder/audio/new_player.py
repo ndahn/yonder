@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+import math
 import networkx as nx
 import pyo
 from pyo import sndinfo
@@ -121,10 +122,11 @@ def eval_curve(
     if scaling == CurveScaling.DBToLin:
         return db_to_amp(y)
     elif scaling == CurveScaling.Log:
-        # TODO what to do here?
-        pass
+        # TODO unverified: y is a linear ratio on a log-shaped curve;
+        # convert to dB so it stays additive with the rest of the accumulator.
+        return 20.0 * math.log10(max(y, 1e-9))
     elif scaling == CurveScaling.DB:
-        # TODO what to do here?
+        # y already sits in the same dB domain we accumulate in
         pass
 
     return y
@@ -136,13 +138,13 @@ def accumulate(base: float, val: float, accum: RtpcAccum) -> float:
     elif accum == RtpcAccum.Multiply:
         return base * val
     elif accum == RtpcAccum.Boolean:
-        # TODO probably wrong?
-        return 0 if val <= 0 else 1
+        return val if val > 0 else base
     elif accum == RtpcAccum.Maximum:
         return max(base, val)
     elif accum == RtpcAccum.Filter:
-        # TODO what to do here?
-        pass
+        # lpf/hpf are stored as 0-100 percent where higher = more filtering,
+        # so "most restrictive wins" is the same operation as maximum
+        return max(base, val)
     elif accum == RtpcAccum.Exclusive:
         return val
 
@@ -185,7 +187,7 @@ class PlaybackContext:
 @dataclass
 class Voice:
     audiofile: Path = None
-    ctx: PlaybackContext = None
+    ctx: PlaybackContext = field(default_factory=PlaybackContext)
     ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
     chain: list[pyo.PyoObject] = field(default_factory=list)
 
@@ -202,20 +204,20 @@ class Voice:
         envelopes = []
 
         gain = c[PropID.Volume]
-        for curve in self.ctx.properties[PropID.Volume].curves:
-            env = make_envelope(curve, db_to_amp)
+        for curve in self.ctx.properties[PropID.Volume].clips:
+            env = make_envelope(curve.points, db_to_amp)
             gain *= env
             envelopes.append(env)
 
         hp_freq = c[PropID.HPF]
-        for curve in self.ctx.properties[PropID.HPF].curves:
-            env = make_envelope(curve, hpf_to_hz)
+        for curve in self.ctx.properties[PropID.HPF].clips:
+            env = make_envelope(curve.points, hpf_to_hz)
             hp_freq *= env
             envelopes.append(env)
 
         lp_freq = c[PropID.LPF]
-        for curve in self.ctx.properties[PropID.LPF].curves:
-            env = make_envelope(curve, lpf_to_hz)
+        for curve in self.ctx.properties[PropID.LPF].clips:
+            env = make_envelope(curve.points, lpf_to_hz)
             lp_freq *= env
             envelopes.append(env)
 
@@ -254,11 +256,10 @@ class Voice:
         if not rtpc_params:
             rtpc_params = {}
 
-        for key, val in rtpc_params:
-            rtpc_params[calc_hash(key)] = val
-
         if not active_states:
             active_states = {}
+
+        rtpc_params = {calc_hash(k): v for k, v in rtpc_params.items()}
 
         for prop, p in self.ctx.properties.items():
             val = p.value
@@ -266,7 +267,7 @@ class Voice:
             # RTPCs
             for rtpc in p.rtpcs:
                 x = rtpc_params.get(rtpc.param_id, 0.0)
-                y = eval_curve(rtpc.graph_points, x)
+                y = eval_curve(rtpc.graph_points, x, rtpc.curve_scaling)
                 val = accumulate(val, y, rtpc.rtpc_accum)
 
             # States
@@ -382,7 +383,6 @@ class NewPlayer:
                     pass
 
             voice = voices[leaf_id]
-            ctx = PlaybackContext()
 
             for nid in reversed(branch[:-1]):
                 node = bnk[nid]
@@ -390,10 +390,10 @@ class NewPlayer:
                 # Collect properties
                 if isinstance(node, PropertyMixin):
                     for bundle in node.properties:
-                        if bundle.prop_enum in ctx.properties:
-                            ctx.properties[bundle.prop_enum] += bundle.value
+                        if bundle.prop_enum in voice.ctx.properties:
+                            voice.ctx.properties[bundle.prop_enum] += bundle.value
                         elif bundle.prop_enum == PropID.Loop:
-                            ctx.loop = True
+                            voice.ctx.loop = True
                         else:
                             # Other properties are ignored for now
                             pass
@@ -414,25 +414,26 @@ class NewPlayer:
                         else:
                             continue
 
-                    for chunk in node.states.state_group_chunks:
-                        for state_value in chunk.states:
-                            state: State = bnk.get(state_value.state_instance_id)
-                            if state:
-                                if state.has_param_for(prop_idx):
-                                    adjust = state.get_param(prop_idx)
-                                elif state.has_default():
-                                    adjust = state.get_default()
-                                else:
-                                    continue
+                        # Property found, look for states that affect it
+                        for chunk in node.states.state_group_chunks:
+                            for state_value in chunk.states:
+                                state: State = bnk.get(state_value.state_instance_id)
+                                if state:
+                                    if state.has_param_for(prop_idx):
+                                        adjust = state.get_param(prop_idx)
+                                    elif state.has_default():
+                                        adjust = state.get_default()
+                                    else:
+                                        continue
 
-                                ctx.properties[prop].states.append(
-                                    StateCtrl(
-                                        chunk.state_group_id,
-                                        state_value,
-                                        adjust,
-                                        accum,
+                                    voice.ctx.properties[prop].states.append(
+                                        StateCtrl(
+                                            chunk.state_group_id,
+                                            state_value,
+                                            adjust,
+                                            accum,
+                                        )
                                     )
-                                )
 
                 # Collect rtpcs
                 if hasattr(node, "rtpcs"):
@@ -442,13 +443,13 @@ class NewPlayer:
 
                         # TODO make a better way to compare these
                         if param == "Pitch":
-                            ctx.properties[PropID.Pitch].rtpcs.append(rtpc)
+                            voice.ctx.properties[PropID.Pitch].rtpcs.append(rtpc)
                         elif param == "HPF":
-                            ctx.properties[PropID.HPF].rtpcs.append(rtpc)
+                            voice.ctx.properties[PropID.HPF].rtpcs.append(rtpc)
                         elif param == "LPF":
-                            ctx.properties[PropID.LPF].rtpcs.append(rtpc)
+                            voice.ctx.properties[PropID.LPF].rtpcs.append(rtpc)
                         elif param == "Volume":
-                            ctx.properties[PropID.Volume].rtpcs.append(rtpc)
+                            voice.ctx.properties[PropID.Volume].rtpcs.append(rtpc)
                         else:
                             # Unknown param
                             pass
@@ -456,8 +457,8 @@ class NewPlayer:
                 # TODO Collect attenuations
 
                 if isinstance(node, MusicSegment):
-                    ctx.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
-                    ctx.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+                    voice.ctx.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+                    voice.ctx.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):
