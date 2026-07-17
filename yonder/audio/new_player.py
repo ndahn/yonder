@@ -32,8 +32,11 @@ from yonder.game import GameObjects
 
 
 def db_to_amp(db: float) -> float:
-    # volume properties are stored in dB
     return 10.0 ** (db / 20.0)
+
+
+def amp_to_db(amp: float) -> float:
+    return 20.0 * math.log10(max(amp, 1e-9))
 
 
 def lpf_to_hz(val: float) -> float:
@@ -73,18 +76,57 @@ def to_pyo_domain(prop: PropID, val: float) -> float:
         raise ValueError(f"Unhandled property {prop}")
 
 
+def _scaling_domain(scaling: CurveScaling) -> tuple[Callable, Callable]:
+    """Curve scaling picks which domain the *interpolation itself* happens in, not a post-hoc conversion of the interpolated result:
+    - decibel curves interpolate in linear amplitude (halfway between 0dB and -96.3dB is ~-6dB, i.e. half amplitude, not -48.15dB)
+    - frequency curves interpolate in octaves / log2 (halfway between 1000hz and 4000hz is 2000hz, one octave up, not 2500hz)
+
+    See https://www.audiokinetic.com/en/public-library/2025.1.9_9197/?source=SDK&id=plugin_xml_properties.html
+
+    Parameters
+    ----------
+    scaling : CurveScaling
+        The scaling domain.
+
+    Returns
+    -------
+    tuple[Callable, Callable]
+        (to_interp_domain, from_interp_domain)
+    """
+    if scaling == CurveScaling.DB:
+        return db_to_amp, amp_to_db
+    elif scaling == CurveScaling.DBToLin:
+        # same interpolation domain as DB, but the result stays linear instead of converting
+        # back - for targets whose native unit is already linear rather than dB
+        return db_to_amp, lambda v: v
+    elif scaling == CurveScaling.Log:
+        return lambda v: math.log2(max(v, 1e-6)), lambda v: 2.0**v
+
+    # None_: raw linear interpolation
+    return lambda v: v, lambda v: v
+
+
 def make_envelope(
     points: list[RTPCGraphPoint],
-    conv: Callable[[float], float] = None,
+    scaling: CurveScaling = CurveScaling.None_,
+    out_conv: Callable[[float], float] = None,
     resolution: int = 8,
 ) -> pyo.Linseg:
-    if not conv:
-        conv = lambda v: v
+    # scaling picks the domain interpolation happens in.
+    # out_conv is a separate, final step converting the curve's native unit
+    # (dB, percent, ...) into whatever unit the pyo chain expects (amp, hz)
+    to_domain, from_domain = _scaling_domain(scaling)
+    if not out_conv:
+        out_conv = lambda v: v
+
+    def value_at(p: RTPCGraphPoint, nxt: RTPCGraphPoint, t: float) -> float:
+        y = interpolate(p.interpolation, t, to_domain(p.to), to_domain(nxt.to))
+        return out_conv(from_domain(y))
 
     segs = []
     if points[0].from_ > 0.0:
         # Constant before first point
-        segs.append((0.0, conv(points[0].to)))
+        segs.append((0.0, out_conv(points[0].to)))
 
     for p, nxt in zip(points[:-1], points[1:]):
         span = nxt.from_ - p.from_
@@ -94,11 +136,10 @@ def make_envelope(
         n = int(span * resolution)
         for i in range(n):
             t = i / n
-            val = interpolate(p.interpolation, t, p.to, nxt.to)
-            segs.append((p.from_ + t * span, conv(val)))
+            segs.append((p.from_ + t * span, value_at(p, nxt, t)))
 
     # Extrapolate past final point
-    segs.append((points[-1].from_, conv(points[-1].to)))
+    segs.append((points[-1].from_, out_conv(points[-1].to)))
     return pyo.Linseg(segs)
 
 
@@ -111,25 +152,15 @@ def eval_curve(
     if x >= points[-1].from_:
         return points[-1].to
 
+    to_domain, from_domain = _scaling_domain(scaling)
     for p, nxt in zip(points[:-1], points[1:]):
         if x > p.from_:
             t = (x - p.from_) / (nxt.from_ - p.from_)
-            y = interpolate(p.interpolation, t, p.to, nxt.to)
-            break
+            y = interpolate(p.interpolation, t, to_domain(p.to), to_domain(nxt.to))
+            return from_domain(y)
 
-    # TODO verify DB/Log against known banks: likely means the y axis is
-    # dB/log so interpolation should happen in the scaled domain
-    if scaling == CurveScaling.DBToLin:
-        return db_to_amp(y)
-    elif scaling == CurveScaling.Log:
-        # TODO unverified: y is a linear ratio on a log-shaped curve;
-        # convert to dB so it stays additive with the rest of the accumulator.
-        return 20.0 * math.log10(max(y, 1e-9))
-    elif scaling == CurveScaling.DB:
-        # y already sits in the same dB domain we accumulate in
-        pass
-
-    return y
+    # fallback, shouldn't be reachable
+    return points[-1].to
 
 
 def accumulate(base: float, val: float, accum: RtpcAccum) -> float:
@@ -165,7 +196,7 @@ class PlaybackProperty:
     rtpcs: list[RTPC] = field(default_factory=list)
     states: list[StateCtrl] = field(default_factory=list)
     # TODO attenuations
-    clips: list[ConversionTable] = field(default_factory=list)
+    clips: list[ClipAutomation] = field(default_factory=list)
 
 
 @dataclass
@@ -199,27 +230,30 @@ class Voice:
             PropID.Volume: pyo.SigTo(db_to_amp(0.0), 0.05),
         }
 
-    def build(self) -> pyo.PyoObject:
+    def _build(self) -> pyo.PyoObject:
         c = self.ctrls
         envelopes = []
 
         gain = c[PropID.Volume]
         for curve in self.ctx.properties[PropID.Volume].clips:
-            env = make_envelope(curve.points, db_to_amp)
+            env = make_envelope(curve.points, curve.curve_scaling, db_to_amp)
             gain *= env
             envelopes.append(env)
 
         hp_freq = c[PropID.HPF]
         for curve in self.ctx.properties[PropID.HPF].clips:
-            env = make_envelope(curve.points, hpf_to_hz)
+            env = make_envelope(curve.points, curve.curve_scaling, hpf_to_hz)
             hp_freq *= env
             envelopes.append(env)
 
         lp_freq = c[PropID.LPF]
         for curve in self.ctx.properties[PropID.LPF].clips:
-            env = make_envelope(curve.points, lpf_to_hz)
+            env = make_envelope(curve.points, curve.curve_scaling, lpf_to_hz)
             lp_freq *= env
             envelopes.append(env)
+
+        # ClipAutomation does not support pitch
+        # TODO ClipAutomation.FadeIn and ClipAutomation.FadeOut
 
         if self.ctx.loop:
             if self.ctx.loop_end <= self.ctx.loop_start:
@@ -252,6 +286,8 @@ class Voice:
         self,
         rtpc_params: dict[Hash, float] = None,
         active_states: dict[Hash, list[Hash]] = None,
+        distance: float = 0.0,
+        angle: float = 0.0,
     ) -> None:
         if not rtpc_params:
             rtpc_params = {}
@@ -297,6 +333,7 @@ class NewPlayer:
     def __init__(self):
         self._default_fade_time = 0.05
         self._voices: list[Voice] = []
+        self._node_map: dict[int, list[Voice]] = {}
 
         self._server = pyo.Server().boot()
         # mixes the voice branches; time smooths per-voice amp changes
@@ -330,6 +367,22 @@ class NewPlayer:
 
     def fade(self, target_vol: float, duration: float) -> None:
         self._gate.setValue(target_vol, time=duration)
+
+    def set_node_params(
+        self,
+        nid: HIRCNode | Hash,
+        rtpc_params: dict[Hash, float] = None,
+        active_states: dict[Hash, list[Hash]] = None,
+        distance: float = 0.0,
+        angle: float = 0.0,
+    ) -> None:
+        for voice in self._node_map.get(nid, []):
+            voice.update(
+                rtpc_params=rtpc_params,
+                active_states=active_states,
+                distance=distance,
+                angle=angle,
+            )
 
     def __getitem__(self, idx: int) -> Voice:
         return self._voices[idx]
@@ -365,6 +418,7 @@ class NewPlayer:
             voice = Voice()
             voices[leaf_id] = voice
             leaf_node = bnk.get(leaf_id)
+            self._node_map.setdefault(leaf_id, []).append(voice)
 
             if isinstance(leaf_node, Sound):
                 voice.audiofile = bnk.get_wem_path(
@@ -379,13 +433,27 @@ class NewPlayer:
 
                 # TODO trims
                 for clip in leaf_node.clip_items:
-                    # TODO how to store these in ctx?
-                    pass
+                    if clip.auto_type in (
+                        ClipAutomationType.Volume,
+                        ClipAutomationType.FadeIn,
+                        ClipAutomationType.FadeOut,
+                    ):
+                        voice.ctx.properties[PropID.Volume].clips.append(clip)
+                    elif clip.auto_type == ClipAutomationType.HPF:
+                        voice.ctx.properties[PropID.HPF].clips.append(clip)
+                    elif clip.auto_type == ClipAutomationType.LPF:
+                        voice.ctx.properties[PropID.LPF].clips.append(clip)
+                    else:
+                        # Clips don't support pitch
+                        raise ValueError(
+                            f"Unsupported ClipAutomationType {clip.auto_type}"
+                        )
 
             voice = voices[leaf_id]
 
             for nid in reversed(branch[:-1]):
                 node = bnk[nid]
+                self._node_map.setdefault(nid, []).append(voice)
 
                 # Collect properties
                 if isinstance(node, PropertyMixin):
@@ -457,7 +525,9 @@ class NewPlayer:
                 # TODO Collect attenuations
 
                 if isinstance(node, MusicSegment):
-                    voice.ctx.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+                    voice.ctx.loop_start = (
+                        node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+                    )
                     voice.ctx.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
         # build one pyo chain per leaf and register it as a mixer voice
@@ -465,7 +535,7 @@ class NewPlayer:
             if voice.audiofile is None:
                 continue
 
-            tail = voice.build()
+            tail = voice._build()
             voice.stop()
             self._mixer.addInput(idx, tail)
             self._mixer.setAmp(idx, 0, 1.0)
