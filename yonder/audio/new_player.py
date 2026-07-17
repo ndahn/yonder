@@ -221,7 +221,6 @@ class Voice:
     ctx: PlaybackContext = field(default_factory=PlaybackContext)
     ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
     chain: list[pyo.PyoObject] = field(default_factory=list)
-    gate: pyo.SigTo = None
 
     def __post_init__(self):
         self.ctrls = {
@@ -233,7 +232,6 @@ class Voice:
 
     def _build(self) -> pyo.PyoObject:
         c = self.ctrls
-        self.gate = pyo.SigTo()
         envelopes = []
 
         gain = c[PropID.Volume]
@@ -283,7 +281,7 @@ class Voice:
         # fixed order for all voices: source -> HPF -> LPF -> gain
         hp = pyo.ButHP(src, freq=hp_freq)
         lp = pyo.ButLP(hp, freq=lp_freq)
-        tail = lp * gain * self.gate
+        tail = lp * gain
 
         self.chain = [*envelopes, src, hp, lp, gain, tail]
         return tail
