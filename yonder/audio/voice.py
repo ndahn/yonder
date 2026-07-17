@@ -1,12 +1,7 @@
 from __future__ import annotations
 from typing import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-
-# If there is no official wheel yet:
-# pip install -i https://test.pypi.org/simple/ pyo
 import pyo
-from pyo import sndinfo
 
 from yonder import Hash, calc_hash
 from yonder.types.base_types import (
@@ -30,6 +25,7 @@ from .audiomath import (
     accumulate,
     to_pyo_domain,
 )
+from .stream_source import StreamSource
 
 
 @dataclass
@@ -40,46 +36,33 @@ class StateCtrl:
     accum: RtpcAccum
 
 
-@dataclass
-class PlaybackProperty:
+@dataclass(init=False)
+class ModifierStack:
     value: float = 0.0
     rtpcs: list[RTPC] = field(default_factory=list)
     states: list[StateCtrl] = field(default_factory=list)
     # TODO attenuations
     clips: list[ClipAutomation] = field(default_factory=list)
+    ctrl: pyo.SigTo = None
 
-
-@dataclass
-class PlaybackContext:
-    properties: dict[PropID, PlaybackProperty] = field(default_factory=dict)
-    loop: bool = False
-    loop_start: float = 0.0
-    loop_end: float = 0.0
-
-    def __post_init__(self):
-        self.properties = {
-            PropID.Pitch: PlaybackProperty(),
-            PropID.HPF: PlaybackProperty(),
-            PropID.LPF: PlaybackProperty(),
-            PropID.Volume: PlaybackProperty(),
-        }
+    def __init__(self, ctrl_default: float, time: float = 0.05):
+        self.ctrl = pyo.SigTo(ctrl_default, time=time)
 
 
 @dataclass
 class Voice:
-    audiofile: Path = None
-    ctx: PlaybackContext = field(default_factory=PlaybackContext)
-    ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
+    src: StreamSource
+    mod: dict[PropID, ModifierStack] = field(default_factory=dict)
     chain: list[pyo.PyoObject] = field(default_factory=list)
     on_voice_finished: Callable[[], None] = None
     _trig_finished: pyo.TrigFunc = None
 
     def __post_init__(self):
-        self.ctrls = {
-            PropID.Pitch: pyo.SigTo(cents_to_speed(0.0), 0.05),
-            PropID.HPF: pyo.SigTo(17.0, 0.05),
-            PropID.LPF: pyo.SigTo(20000.0, 0.05),
-            PropID.Volume: pyo.SigTo(db_to_amp(0.0), 0.05),
+        self.mod = {
+            PropID.Pitch: ModifierStack(cents_to_speed(0.0)),
+            PropID.HPF: ModifierStack(17.0),
+            PropID.LPF: ModifierStack(20000.0),
+            PropID.Volume: ModifierStack(db_to_amp(0.0)),
         }
 
     def _finished(self) -> None:
@@ -87,11 +70,11 @@ class Voice:
             self.on_voice_finished()
 
     def _build(self) -> pyo.PyoObject:
-        c = self.ctrls
+        c = self.mod
         envelopes = []
 
-        gain = c[PropID.Volume]
-        for clip in self.ctx.properties[PropID.Volume].clips:
+        gain = c[PropID.Volume].ctrl
+        for clip in c[PropID.Volume].clips:
             if clip.auto_type == ClipAutomationType.Volume:
                 env = make_envelope(clip.graph_points, CurveScaling.DB, db_to_amp)
             else:
@@ -101,46 +84,28 @@ class Voice:
             gain *= env
             envelopes.append(env)
 
-        hp_freq = c[PropID.HPF]
-        for clip in self.ctx.properties[PropID.HPF].clips:
+        hp_freq = c[PropID.HPF].ctrl
+        for clip in c[PropID.HPF].clips:
             env = make_envelope(clip.graph_points, CurveScaling.Log, hpf_to_hz)
             hp_freq *= env
             envelopes.append(env)
 
-        lp_freq = c[PropID.LPF]
-        for clip in self.ctx.properties[PropID.LPF].clips:
+        lp_freq = c[PropID.LPF].ctrl
+        for clip in c[PropID.LPF].clips:
             env = make_envelope(clip.graph_points, CurveScaling.Log, lpf_to_hz)
             lp_freq *= env
             envelopes.append(env)
 
-        # ClipAutomation does not support pitch
-
-        if self.ctx.loop:
-            if self.ctx.loop_end <= self.ctx.loop_start:
-                self.ctx.loop_end = sndinfo(str(self.audiofile))[1]
-
-            # marker loop: SfPlayer only loops whole files, Looper loops a table region
-            table = pyo.SndTable(str(self.audiofile))
-            src = pyo.Looper(
-                table,
-                pitch=c[PropID.Pitch],
-                start=self.ctx.loop_start,
-                dur=self.ctx.loop_end - self.ctx.loop_start,
-                xfade=0,
-                startfromloop=False,  # play intro once, then loop the region
-            )
-        else:
-            src = pyo.SfPlayer(
-                str(self.audiofile), speed=c[PropID.Pitch], loop=self.ctx.loop
-            )
+        # NOTE: ClipAutomation does not support pitch
 
         # fixed order for all voices: source -> HPF -> LPF -> gain
-        hp = pyo.ButHP(src, freq=hp_freq)
+        hp = pyo.ButHP(self.src, freq=hp_freq)
         lp = pyo.ButLP(hp, freq=lp_freq)
         tail = lp * gain
 
-        self.chain = [*envelopes, src, hp, lp, gain, tail]
-        self._trig_finished = pyo.TrigFunc(src["trig"], self._finished)
+        # Add self.src to the chain too so it's easier to start and stop everything
+        self.chain = [*envelopes, self.src, hp, lp, gain, tail]
+        self._trig_finished = pyo.TrigFunc(self.src["trig"], self._finished)
         return tail
 
     def update(
@@ -158,7 +123,7 @@ class Voice:
 
         rtpc_params = {calc_hash(k): v for k, v in rtpc_params.items()}
 
-        for prop, p in self.ctx.properties.items():
+        for prop, p in self.mod.items():
             val = p.value
 
             # RTPCs
@@ -179,7 +144,7 @@ class Voice:
 
             # TODO Attenuations
 
-            self.ctrls[prop].value = to_pyo_domain(prop, val)
+            self.mod[prop].ctrl.value = to_pyo_domain(prop, val)
 
     def start(self) -> None:
         for obj in self.chain:

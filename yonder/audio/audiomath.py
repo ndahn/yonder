@@ -1,9 +1,6 @@
 from __future__ import annotations
 from typing import Callable
 import math
-
-# If there is no official wheel yet:
-# pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 
 from yonder.types.base_types import RTPCGraphPoint

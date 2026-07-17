@@ -6,7 +6,16 @@ import networkx as nx
 import pyo
 
 from yonder import Soundbank, HIRCNode, Hash
-from yonder.types import Sound, MusicTrack, MusicSegment, State
+from yonder.types import (
+    Sound,
+    MusicTrack,
+    MusicSegment,
+    State,
+    RandomSequenceContainer,
+    SwitchContainer,
+    LayerContainer,
+    MusicRandomSequenceContainer,
+)
 from yonder.types.base_types import RTPC
 from yonder.types.mixins import PropertyMixin, StateMixin
 from yonder.enums import (
@@ -16,7 +25,10 @@ from yonder.enums import (
 )
 from yonder.util import logger
 from yonder.game import GameObjects
+
 from .voice import Voice, StateCtrl
+from .stream_source import StreamSource
+from .playback_control import PlaybackControl
 
 
 class Player:
@@ -102,20 +114,19 @@ class Player:
                 continue
 
             voice = Voice()
-            voices[leaf_id] = voice
             leaf_node = bnk.get(leaf_id)
-            self._node_map.setdefault(leaf_id, []).append(voice)
 
             if isinstance(leaf_node, Sound):
-                voice.audiofile = bnk.get_wem_path(
+                path = bnk.get_wem_path(
                     leaf_node.source_id, leaf_node.bank_source_data.source_type
                 )
+                voice = Voice(StreamSource(path))
             elif isinstance(leaf_node, MusicTrack):
                 # TODO what to do with tracks that have multiple sources?
-                voice.audiofile = bnk.get_wem_path(
+                path = bnk.get_wem_path(
                     leaf_node.source_ids[0], leaf_node.sources[0].source_type
                 )
-                voice.ctx.loop = True
+                voice = Voice(StreamSource(path, True))
 
                 # TODO trims
                 for clip in leaf_node.clip_items:
@@ -124,18 +135,19 @@ class Player:
                         ClipAutomationType.FadeIn,
                         ClipAutomationType.FadeOut,
                     ):
-                        voice.ctx.properties[PropID.Volume].clips.append(clip)
+                        voice.mod[PropID.Volume].clips.append(clip)
                     elif clip.auto_type == ClipAutomationType.HPF:
-                        voice.ctx.properties[PropID.HPF].clips.append(clip)
+                        voice.mod[PropID.HPF].clips.append(clip)
                     elif clip.auto_type == ClipAutomationType.LPF:
-                        voice.ctx.properties[PropID.LPF].clips.append(clip)
+                        voice.mod[PropID.LPF].clips.append(clip)
                     else:
                         # Clips don't support pitch
                         raise ValueError(
                             f"Unsupported ClipAutomationType {clip.auto_type}"
                         )
 
-            voice = voices[leaf_id]
+            voices[leaf_id] = voice
+            self._node_map.setdefault(leaf_id, []).append(voice)
 
             for nid in reversed(branch[:-1]):
                 node = bnk[nid]
@@ -144,10 +156,15 @@ class Player:
                 # Collect properties
                 if isinstance(node, PropertyMixin):
                     for bundle in node.properties:
-                        if bundle.prop_enum in voice.ctx.properties:
-                            voice.ctx.properties[bundle.prop_enum] += bundle.value
+                        if bundle.prop_enum in voice.mod:
+                            voice.mod[bundle.prop_enum].value += bundle.value
                         elif bundle.prop_enum == PropID.Loop:
-                            voice.ctx.loop = True
+                            voice.src.loop = True
+                        elif bundle.prop_enum == PropID.LoopStart:
+                            voice.src.loop_start = bundle.value / 1000.0
+                        elif bundle.prop_enum == PropID.LoopEnd:
+                            # TODO verify that this is always positive
+                            voice.src.loop_end = bundle.value / 1000.0
                         else:
                             # Other properties are ignored for now
                             pass
@@ -180,7 +197,7 @@ class Player:
                                     else:
                                         continue
 
-                                    voice.ctx.properties[prop].states.append(
+                                    voice.mod[prop].states.append(
                                         StateCtrl(
                                             chunk.state_group_id,
                                             state_value,
@@ -197,24 +214,35 @@ class Player:
 
                         # TODO make a better way to compare these
                         if param == "Pitch":
-                            voice.ctx.properties[PropID.Pitch].rtpcs.append(rtpc)
+                            voice.mod[PropID.Pitch].rtpcs.append(rtpc)
                         elif param == "HPF":
-                            voice.ctx.properties[PropID.HPF].rtpcs.append(rtpc)
+                            voice.mod[PropID.HPF].rtpcs.append(rtpc)
                         elif param == "LPF":
-                            voice.ctx.properties[PropID.LPF].rtpcs.append(rtpc)
+                            voice.mod[PropID.LPF].rtpcs.append(rtpc)
                         elif param == "Volume":
-                            voice.ctx.properties[PropID.Volume].rtpcs.append(rtpc)
+                            voice.mod[PropID.Volume].rtpcs.append(rtpc)
                         else:
                             # Unknown param
                             pass
 
                 # TODO Collect attenuations
 
+                # TODO playback control (RSC, SC, MRSC)
+
                 if isinstance(node, MusicSegment):
-                    voice.ctx.loop_start = (
+                    voice.src.loop_start = (
                         node.get_marker_pos(MarkerId.LoopStart) / 1000.0
                     )
-                    voice.ctx.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+                    voice.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+
+                elif isinstance(node, RandomSequenceContainer):
+                    pass
+                elif isinstance(node, MusicRandomSequenceContainer):
+                    pass
+                elif isinstance(node, SwitchContainer):
+                    pass
+                elif isinstance(node, LayerContainer):
+                    pass
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):
