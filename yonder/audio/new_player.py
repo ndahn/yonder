@@ -221,6 +221,7 @@ class Voice:
     ctx: PlaybackContext = field(default_factory=PlaybackContext)
     ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
     chain: list[pyo.PyoObject] = field(default_factory=list)
+    gate: pyo.SigTo = None
 
     def __post_init__(self):
         self.ctrls = {
@@ -232,28 +233,33 @@ class Voice:
 
     def _build(self) -> pyo.PyoObject:
         c = self.ctrls
+        self.gate = pyo.SigTo()
         envelopes = []
 
         gain = c[PropID.Volume]
-        for curve in self.ctx.properties[PropID.Volume].clips:
-            env = make_envelope(curve.points, curve.curve_scaling, db_to_amp)
+        for clip in self.ctx.properties[PropID.Volume].clips:
+            if clip.auto_type == ClipAutomationType.Volume:
+                env = make_envelope(clip.graph_points, CurveScaling.DB, db_to_amp)
+            else:
+                # Fades are already normalized to 0..1, no conversion needed
+                env = make_envelope(clip.graph_points, CurveScaling.DB, None)
+            
             gain *= env
             envelopes.append(env)
 
         hp_freq = c[PropID.HPF]
-        for curve in self.ctx.properties[PropID.HPF].clips:
-            env = make_envelope(curve.points, curve.curve_scaling, hpf_to_hz)
+        for clip in self.ctx.properties[PropID.HPF].clips:
+            env = make_envelope(clip.graph_points, CurveScaling.Log, hpf_to_hz)
             hp_freq *= env
             envelopes.append(env)
 
         lp_freq = c[PropID.LPF]
-        for curve in self.ctx.properties[PropID.LPF].clips:
-            env = make_envelope(curve.points, curve.curve_scaling, lpf_to_hz)
+        for clip in self.ctx.properties[PropID.LPF].clips:
+            env = make_envelope(clip.graph_points, CurveScaling.Log, lpf_to_hz)
             lp_freq *= env
             envelopes.append(env)
 
         # ClipAutomation does not support pitch
-        # TODO ClipAutomation.FadeIn and ClipAutomation.FadeOut
 
         if self.ctx.loop:
             if self.ctx.loop_end <= self.ctx.loop_start:
@@ -277,7 +283,7 @@ class Voice:
         # fixed order for all voices: source -> HPF -> LPF -> gain
         hp = pyo.ButHP(src, freq=hp_freq)
         lp = pyo.ButLP(hp, freq=lp_freq)
-        tail = lp * gain
+        tail = lp * gain * self.gate
 
         self.chain = [*envelopes, src, hp, lp, gain, tail]
         return tail
