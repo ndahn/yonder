@@ -7,7 +7,7 @@ import pyo
 from pyo import sndinfo
 
 from yonder import Soundbank, HIRCNode, Hash, calc_hash
-from yonder.types import Sound, MusicTrack, MusicSegment
+from yonder.types import Sound, MusicTrack, MusicSegment, State
 from yonder.types.base_types import (
     RTPC,
     StateGroup,
@@ -27,6 +27,7 @@ from yonder.enums import (
 )
 from yonder.interpolation import interpolate
 from yonder.util import logger
+from yonder.game import GameObjects
 
 
 def db_to_amp(db: float) -> float:
@@ -129,18 +130,38 @@ def eval_curve(
     return y
 
 
+def accumulate(base: float, val: float, accum: RtpcAccum) -> float:
+    if accum == RtpcAccum.Additive:
+        return base + val
+    elif accum == RtpcAccum.Multiply:
+        return base * val
+    elif accum == RtpcAccum.Boolean:
+        # TODO probably wrong?
+        return 0 if val <= 0 else 1
+    elif accum == RtpcAccum.Maximum:
+        return max(base, val)
+    elif accum == RtpcAccum.Filter:
+        # TODO what to do here?
+        pass
+    elif accum == RtpcAccum.Exclusive:
+        return val
+
+    return base
+
+
 @dataclass
-class StateToggle:
-    state: str
+class StateCtrl:
+    group: Hash
+    state: Hash
     adjustment: float
-    active: bool = False
+    accum: RtpcAccum
 
 
 @dataclass
 class PlaybackProperty:
     value: float = 0.0
     rtpcs: list[RTPC] = field(default_factory=list)
-    states: list[StateToggle] = field(default_factory=list)
+    states: list[StateCtrl] = field(default_factory=list)
     # TODO attenuations
     clips: list[ConversionTable] = field(default_factory=list)
 
@@ -225,39 +246,40 @@ class Voice:
         self.chain = [*envelopes, src, hp, lp, gain, tail]
         return tail
 
-    def update(self, rtpc_params: dict[Hash, float] = None) -> None:
+    def update(
+        self,
+        rtpc_params: dict[Hash, float] = None,
+        active_states: dict[Hash, list[Hash]] = None,
+    ) -> None:
         if not rtpc_params:
             rtpc_params = {}
 
         for key, val in rtpc_params:
-            if not isinstance(key, int):
-                rtpc_params[calc_hash(key)] = val
+            rtpc_params[calc_hash(key)] = val
+
+        if not active_states:
+            active_states = {}
 
         for prop, p in self.ctx.properties.items():
             val = p.value
 
+            # RTPCs
             for rtpc in p.rtpcs:
                 x = rtpc_params.get(rtpc.param_id, 0.0)
                 y = eval_curve(rtpc.graph_points, x)
+                val = accumulate(val, y, rtpc.rtpc_accum)
 
-                if rtpc.rtpc_accum == RtpcAccum.Additive:
-                    val += y
-                elif rtpc.rtpc_accum == RtpcAccum.Multiply:
-                    val *= y
-                elif rtpc.rtpc_accum == RtpcAccum.Boolean:
-                    # TODO probably wrong?
-                    val = 0 if y <= 0 else 1
-                elif rtpc.rtpc_accum == RtpcAccum.Maximum:
-                    val = max(val, y)
-                elif rtpc.rtpc_accum == RtpcAccum.Filter:
-                    # TODO what to do here?
-                    pass
-                elif rtpc.rtpc_accum == RtpcAccum.Exclusive:
-                    val = y
-                    break
-                else:
-                    # None_
-                    pass
+            # States
+            for group, states in active_states.items():
+                group = calc_hash(group)
+                states = set(calc_hash(s) for s in states)
+
+                for s in p.states:
+                    if s.group == group and s.state in states:
+                        # TODO how to respect in_db from StatePropertyInfo?
+                        val = accumulate(val, s.adjustment, s.accum)
+
+            # TODO Attenuations
 
             self.ctrls[prop].value = to_pyo_domain(prop, val)
 
@@ -364,6 +386,8 @@ class NewPlayer:
 
             for nid in reversed(branch[:-1]):
                 node = bnk[nid]
+
+                # Collect properties
                 if isinstance(node, PropertyMixin):
                     for bundle in node.properties:
                         if bundle.prop_enum in ctx.properties:
@@ -374,15 +398,62 @@ class NewPlayer:
                             # Other properties are ignored for now
                             pass
 
+                # Collect states
                 if isinstance(node, StateMixin):
-                    # TODO collect states
-                    pass
+                    # Find out which param idx controls the property
+                    for prop in (PropID.Volume, PropID.LPF, PropID.HPF, PropID.Pitch):
+                        prop_idx = None
+                        accum = None
+                        for idx, prop_info in enumerate(
+                            node.states.state_property_info
+                        ):
+                            if prop_info.property == prop:
+                                prop_idx = idx
+                                accum = prop_info.accum_type
+                                break
+                        else:
+                            continue
 
+                    for chunk in node.states.state_group_chunks:
+                        for state_value in chunk.states:
+                            state: State = bnk.get(state_value.state_instance_id)
+                            if state:
+                                if state.has_param_for(prop_idx):
+                                    adjust = state.get_param(prop_idx)
+                                elif state.has_default():
+                                    adjust = state.get_default()
+                                else:
+                                    continue
+
+                                ctx.properties[prop].states.append(
+                                    StateCtrl(
+                                        chunk.state_group_id,
+                                        state_value,
+                                        adjust,
+                                        accum,
+                                    )
+                                )
+
+                # Collect rtpcs
                 if hasattr(node, "rtpcs"):
-                    # TODO collect rtpcs
-                    pass
+                    rtpc: RTPC
+                    for rtpc in node.rtpcs:
+                        param = GameObjects.RTPCParameter(rtpc.param_id).name
 
-                # TODO attenuations
+                        # TODO make a better way to compare these
+                        if param == "Pitch":
+                            ctx.properties[PropID.Pitch].rtpcs.append(rtpc)
+                        elif param == "HPF":
+                            ctx.properties[PropID.HPF].rtpcs.append(rtpc)
+                        elif param == "LPF":
+                            ctx.properties[PropID.LPF].rtpcs.append(rtpc)
+                        elif param == "Volume":
+                            ctx.properties[PropID.Volume].rtpcs.append(rtpc)
+                        else:
+                            # Unknown param
+                            pass
+
+                # TODO Collect attenuations
 
                 if isinstance(node, MusicSegment):
                     ctx.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0

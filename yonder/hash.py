@@ -189,6 +189,9 @@ def fnv_1a(input: str) -> Hash:
 
 
 def calc_hash(input: str) -> Hash:
+    if isinstance(input, int):
+        return input
+    
     h = fnv_1a(input)
 
     if _active_table is not None and h not in _active_table:

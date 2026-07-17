@@ -38,6 +38,9 @@ class State(HIRCNode):
     def has_param_for(self, prop_idx: int) -> bool:
         return prop_idx in self.parameters
 
+    def has_default(self) -> bool:
+        return (0 in self.parameters)
+
     def get_default(self) -> float:
         return self.get_param(0)
 
