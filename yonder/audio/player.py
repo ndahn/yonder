@@ -113,7 +113,6 @@ class Player:
                 )
                 continue
 
-            voice = Voice()
             leaf_node = bnk.get(leaf_id)
 
             if isinstance(leaf_node, Sound):
@@ -126,7 +125,10 @@ class Player:
                 path = bnk.get_wem_path(
                     leaf_node.source_ids[0], leaf_node.sources[0].source_type
                 )
-                voice = Voice(StreamSource(path, True))
+                trims = leaf_node.get_trims()
+                voice = Voice(
+                    StreamSource(path, True, begin_trim=trims[0], end_trim=trims[1])
+                )
 
                 # TODO trims
                 for clip in leaf_node.clip_items:
@@ -227,14 +229,13 @@ class Player:
 
                 # TODO Collect attenuations
 
-                # TODO playback control (RSC, SC, MRSC)
-
                 if isinstance(node, MusicSegment):
                     voice.src.loop_start = (
                         node.get_marker_pos(MarkerId.LoopStart) / 1000.0
                     )
                     voice.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
+                # TODO playback control (RSC, SC, MRSC)
                 elif isinstance(node, RandomSequenceContainer):
                     pass
                 elif isinstance(node, MusicRandomSequenceContainer):

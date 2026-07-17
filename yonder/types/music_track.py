@@ -196,7 +196,7 @@ class MusicTrack(StateMixin, PropertyMixin, HIRCNode):
             raise ValueError("begin_trim must be > 0")
 
         if end_trim > 0:
-            raise ValueError("end_trim must be < 0")
+            raise ValueError("end_trim must be <= 0")
 
         self.playlist[idx].begin_trim_offset = begin_trim
         self.playlist[idx].play_at = -begin_trim
