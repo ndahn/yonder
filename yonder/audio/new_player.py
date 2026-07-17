@@ -1,9 +1,13 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, Literal
 from dataclasses import dataclass, field
 from pathlib import Path
 import math
+import random
 import networkx as nx
+
+# If there is no official wheel yet:
+# pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 from pyo import sndinfo
 
@@ -11,10 +15,8 @@ from yonder import Soundbank, HIRCNode, Hash, calc_hash
 from yonder.types import Sound, MusicTrack, MusicSegment, State
 from yonder.types.base_types import (
     RTPC,
-    StateGroup,
     ClipAutomation,
     RTPCGraphPoint,
-    ConversionTable,
 )
 from yonder.types.mixins import PropertyMixin, StateMixin
 from yonder.enums import (
@@ -40,26 +42,22 @@ def amp_to_db(amp: float) -> float:
 
 
 def lpf_to_hz(val: float) -> float:
+    lower = int(max(0, val))
+    upper = int(min(100, val + 1))
     return interpolate(
         CurveInterpolation.Linear,
-        val - int(val),
-        WwiseCutoffFrequencies[int(val)],
-        WwiseCutoffFrequencies[int(val) + 1],
+        val - lower,
+        WwiseCutoffFrequencies[lower],
+        WwiseCutoffFrequencies[upper],
     )
 
 
 def hpf_to_hz(val: float) -> float:
-    val = 100 - val
-    return interpolate(
-        CurveInterpolation.Linear,
-        1.0 - (val - int(val)),
-        WwiseCutoffFrequencies[int(val) - 1],
-        WwiseCutoffFrequencies[int(val)],
-    )
+    return lpf_to_hz(100 - val)
 
 
 def cents_to_speed(cents: float) -> float:
-    # pitch properties are stored in cents, applied as playback speed
+    # pitch is given in cents, applied as playback speed
     return 2.0 ** (cents / 1200.0)
 
 
@@ -221,6 +219,8 @@ class Voice:
     ctx: PlaybackContext = field(default_factory=PlaybackContext)
     ctrls: dict[PropID, pyo.SigTo] = field(default_factory=dict)
     chain: list[pyo.PyoObject] = field(default_factory=list)
+    on_voice_finished: Callable[[], None] = None
+    _trig_finished: pyo.TrigFunc = None
 
     def __post_init__(self):
         self.ctrls = {
@@ -229,6 +229,10 @@ class Voice:
             PropID.LPF: pyo.SigTo(20000.0, 0.05),
             PropID.Volume: pyo.SigTo(db_to_amp(0.0), 0.05),
         }
+
+    def _finished(self) -> None:
+        if self.on_voice_finished:
+            self.on_voice_finished()
 
     def _build(self) -> pyo.PyoObject:
         c = self.ctrls
@@ -241,7 +245,7 @@ class Voice:
             else:
                 # Fades are already normalized to 0..1, no conversion needed
                 env = make_envelope(clip.graph_points, CurveScaling.DB, None)
-            
+
             gain *= env
             envelopes.append(env)
 
@@ -284,6 +288,7 @@ class Voice:
         tail = lp * gain
 
         self.chain = [*envelopes, src, hp, lp, gain, tail]
+        self._trig_finished = pyo.TrigFunc(src["trig"], self._finished)
         return tail
 
     def update(
@@ -332,6 +337,71 @@ class Voice:
         for obj in self.chain:
             obj.stop()
 
+
+class PlaybackControl:
+    def __init__(
+        self,
+        children: list[Voice],
+        playback_mode: Literal["random", "shuffle", "playlist", "parallel"] = "random",
+        weights: list[int] = None,
+    ):
+        self.children = children
+        self.playback_mode = playback_mode
+        self.weights = list(weights) if weights else [1] * len(children)
+
+        self._current_voice: Voice = None
+        self._playing = False
+
+        for voice in children:
+            voice.on_voice_finished = self._advance
+
+    def start(self) -> None:
+        self._playing = True
+        self._advance()
+
+    def stop(self) -> None:
+        self._playing = False
+
+        voices = self._current_voice or []
+        if isinstance(voices, Voice):
+            voices = [voices]
+
+        for voice in voices:
+            voice.stop()
+
+    def advance(self) -> None:
+        if not self._playing:
+            return
+
+        if self.playback_mode == "random":
+            self._current_voice = random.choices(self.children, self.weights)[0]
+            self._current_voice.start()
+
+        elif self.playback_mode == "shuffle":
+            try:
+                idx = self.children.index(self._current_voice)
+            except ValueError:
+                idx = -1
+
+            self._current_voice = random.choices(
+                [v for i, v in enumerate(self.children) if i != idx],
+                [w for i, w in enumerate(self.weights) if i != idx],
+            )
+            self._current_voice.start()
+
+        elif self.playback_mode == "playlist":
+            try:
+                idx = self.children.index(self._current_voice)
+            except ValueError:
+                idx = 0
+
+            self._current_voice = self.children[(idx + 1) % len(self.children)]
+            self._current_voice.start()
+
+        elif self.playback_mode == "parallel":
+            self._current_voice = self.children
+            for voice in self.children:
+                voice.start()
 
 class NewPlayer:
     def __init__(self):
