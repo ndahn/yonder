@@ -1,210 +1,236 @@
-import wave
-import threading
-import numpy as np
-# NOTE added fix for WinError 50 directly in sounddevice._initialize
-import sounddevice as sd
+from __future__ import annotations
+import networkx as nx
 
-from yonder.audio import PitchShifter
+# If there is no official wheel yet:
+# pip install -i https://test.pypi.org/simple/ pyo
+import pyo
+
+from yonder import Soundbank, HIRCNode, Hash
+from yonder.types import Sound, MusicTrack, MusicSegment, State
+from yonder.types.base_types import RTPC
+from yonder.types.mixins import PropertyMixin, StateMixin
+from yonder.enums import (
+    PropID,
+    MarkerId,
+    ClipAutomationType,
+)
+from yonder.util import logger
+from yonder.game import GameObjects
+from .voice import Voice, StateCtrl
 
 
-class WavPlayer:
-    def __init__(self, path: str):
-        with wave.open(path, "rb") as f:
-            self._params = f.getparams()
-            raw = f.readframes(f.getnframes())
+class Player:
+    def __init__(self):
+        self._default_fade_time = 0.05
+        self._voices: list[Voice] = []
+        self._node_map: dict[int, list[Voice]] = {}
 
-        sampwidth = self._params.sampwidth
-        dtype = {1: np.int8, 2: np.int16, 4: np.int32}[sampwidth]
-        samples = np.frombuffer(raw, dtype=dtype)
+        self._server = pyo.Server().boot()
+        # mixes the voice branches; time smooths per-voice amp changes
+        self._mixer = pyo.Mixer(outs=1, chnls=1, time=self._default_fade_time)
+        # final volume adjustment
+        self._gate = pyo.SigTo(value=1.0, time=self._default_fade_time)
+        # master chain: mixer -> gate -> dac
+        self._master = self._mixer[0] * self._gate
+        self._master.out()
 
-        # Reshape to (nframes, nchannels) and normalize to float32 in [-1.0, 1.0]
-        self._audio = samples.reshape(-1, self._params.nchannels).astype(np.float32)
-        self._audio /= float(np.iinfo(dtype).max)
+    def __del__(self):
+        self._server.stop()
+        self._server.shutdown()
+        self._server = None
 
-        self._pitch_shifter = PitchShifter(self.num_channels)
+    def start(self) -> None:
+        self._server.start()
 
-        self._path = path
-        self._cursor = 0
-        self._lock = threading.Lock()
-        self._stream: sd.OutputStream | None = None
-        self._playing = False
-        self._finished = False
-        self._fx_volume_rel = 1.0
-        self._fx_lowpass = 0.0
-        self._fx_highpass = 0.0
-        self._fx_pitch = 1.0
+    def stop(self) -> None:
+        self._server.stop()
 
-    def _callback(self, outdata: np.ndarray, frames: int, time, status):
-        with self._lock:
-            remaining = len(self._audio) - self._cursor
-            if remaining <= 0:
-                outdata[:] = 0
-                self._playing = False
-                self._finished = True
-                raise sd.CallbackStop
+    def play(self) -> None:
+        for voice in self._voices:
+            voice.start()
 
-            chunk_idx = min(frames, remaining)
-            chunk = self._audio[self._cursor : self._cursor + chunk_idx]
-            outdata[:chunk_idx] = self._apply_filters(chunk)
+    def set_volume(self, vol: float) -> None:
+        self._gate.setValue(vol, time=self._default_fade_time)
 
-            if chunk_idx < frames:
-                outdata[chunk_idx:] = 0
+    def set_muted(self, muted: bool) -> None:
+        self._gate.setValue(0.0 if muted else 1.0, time=self._default_fade_time)
 
-            self._cursor += chunk_idx
+    def fade(self, target_vol: float, duration: float) -> None:
+        self._gate.setValue(target_vol, time=duration)
 
-    def _apply_filters(self, chunk: np.ndarray) -> np.ndarray:
-        if self._fx_volume_rel != 1.0:
-            # dB to linear scale; /20 for amplitude, /10 for power
-            chunk *= self._fx_volume_rel
-
-        if self._fx_lowpass != 0.0 or self._fx_highpass != 0.0:
-            # second half of FFT contains mirrored negative frequency terms
-            sig = np.fft.fft(chunk, axis=0)
-            n = len(sig)
-
-            if self._fx_highpass != 0.0:
-                cutoff_idx_high = int(abs(self._fx_highpass) * n / self.framerate)
-                sig[:cutoff_idx_high] = 0
-                sig[n // 2 : n // 2 + cutoff_idx_high] = 0
-
-            if self._fx_lowpass != 0.0:
-                cutoff_idx_low = int(self._fx_lowpass * n / self.framerate)
-                # zero positive AND mirrored negative band above cutoff
-                sig[cutoff_idx_low : n - cutoff_idx_low] = 0
-
-            chunk = np.fft.ifft(sig, axis=0).real.astype(np.float32)
-
-        self._pitch_shifter.set_semitones(self._fx_pitch)
-        chunk = self._pitch_shifter.process(chunk)
-
-        return chunk
-
-    def play(self):
-        if self._playing:
-            return
-
-        self._playing = True
-
-        if self._stream and self._finished:
-            self._stream.close()
-            self._stream = None
-            self._finished = False
-            if self._cursor >= len(self._audio):
-                self._cursor = 0
-
-        if not self._stream:
-            self._stream = sd.OutputStream(
-                samplerate=self._params.framerate,
-                channels=self._params.nchannels,
-                dtype="float32",
-                callback=self._callback,
-                finished_callback=self._on_finished,
+    def set_node_params(
+        self,
+        nid: HIRCNode | Hash,
+        rtpc_params: dict[Hash, float] = None,
+        active_states: dict[Hash, list[Hash]] = None,
+        distance: float = 0.0,
+        angle: float = 0.0,
+    ) -> None:
+        for voice in self._node_map.get(nid, []):
+            voice.update(
+                rtpc_params=rtpc_params,
+                active_states=active_states,
+                distance=distance,
+                angle=angle,
             )
 
-        self._stream.start()
+    def from_hierarchy(
+        self, bnk: Soundbank, root: int | HIRCNode, full_tree: bool = False
+    ) -> Player:
+        self.stop()
+        self._node_map.clear()
+        self._voices.clear()
 
-    def pause(self):
-        if self._stream and self._playing:
-            self._stream.stop()
-            self._playing = False
+        if isinstance(root, HIRCNode):
+            root = root.id
 
-    def resume(self):
-        if self._stream and not self._playing:
-            self._playing = True
-            self._stream.start()
+        if full_tree:
+            root, tree = next(bnk.find_event_subgraphs_for(root))
+        else:
+            tree = bnk.get_subtree(root, True)
 
-    def seek(self, seconds: float):
-        frame = int(seconds * self._params.framerate)
-        with self._lock:
-            self._cursor = max(0, min(frame, len(self._audio)))
+        leafs = [n for (n, d) in tree.out_degree if d == 0]
+        voices: dict[int, Voice] = {}
 
-    def stop(self):
-        if self._stream:
-            self._stream.stop()
-            self._stream.close()
-            self._stream = None
+        for branch in nx.all_simple_paths(tree, root, leafs):
+            leaf_id = branch[-1]
 
-        self._playing = False
-        self._finished = False
-        self._cursor = 0
+            if leaf_id in voices:
+                logger.warning(
+                    f"Player will ignore secondary paths to {leaf_id} ({branch})"
+                )
+                continue
 
-    def _on_finished(self):
-        self._playing = False
+            voice = Voice()
+            voices[leaf_id] = voice
+            leaf_node = bnk.get(leaf_id)
+            self._node_map.setdefault(leaf_id, []).append(voice)
 
-    def fx_set_volume_abs(self, volume_db: float) -> None:
-        """Live adjust playback gain. Negative values decrease volume, positive values increase it.
+            if isinstance(leaf_node, Sound):
+                voice.audiofile = bnk.get_wem_path(
+                    leaf_node.source_id, leaf_node.bank_source_data.source_type
+                )
+            elif isinstance(leaf_node, MusicTrack):
+                # TODO what to do with tracks that have multiple sources?
+                voice.audiofile = bnk.get_wem_path(
+                    leaf_node.source_ids[0], leaf_node.sources[0].source_type
+                )
+                voice.ctx.loop = True
 
-        Parameters
-        ----------
-        volume_db : float
-            How much to adjust the volume in DB.
-        """
-        self._fx_volume_rel = 10 ** (volume_db / 20)
+                # TODO trims
+                for clip in leaf_node.clip_items:
+                    if clip.auto_type in (
+                        ClipAutomationType.Volume,
+                        ClipAutomationType.FadeIn,
+                        ClipAutomationType.FadeOut,
+                    ):
+                        voice.ctx.properties[PropID.Volume].clips.append(clip)
+                    elif clip.auto_type == ClipAutomationType.HPF:
+                        voice.ctx.properties[PropID.HPF].clips.append(clip)
+                    elif clip.auto_type == ClipAutomationType.LPF:
+                        voice.ctx.properties[PropID.LPF].clips.append(clip)
+                    else:
+                        # Clips don't support pitch
+                        raise ValueError(
+                            f"Unsupported ClipAutomationType {clip.auto_type}"
+                        )
 
-    def fx_set_volume_rel(self, ratio: float) -> None:
-        self._fx_volume_rel = ratio
+            voice = voices[leaf_id]
 
-    def fx_set_lowpass(self, threshold_hz: float) -> None:
-        """Apply a lowpass filter on the signal during playback.
+            for nid in reversed(branch[:-1]):
+                node = bnk[nid]
+                self._node_map.setdefault(nid, []).append(voice)
 
-        Parameters
-        ----------
-        threshold_hz : float
-            Lowpass threshold in Hz.
-        """
-        self._fx_lowpass = threshold_hz
+                # Collect properties
+                if isinstance(node, PropertyMixin):
+                    for bundle in node.properties:
+                        if bundle.prop_enum in voice.ctx.properties:
+                            voice.ctx.properties[bundle.prop_enum] += bundle.value
+                        elif bundle.prop_enum == PropID.Loop:
+                            voice.ctx.loop = True
+                        else:
+                            # Other properties are ignored for now
+                            pass
 
-    def fx_set_highpass(self, threshold_hz: float) -> None:
-        """Apply a highpass filter on the signal during playback.
+                # Collect states
+                if isinstance(node, StateMixin):
+                    # Find out which param idx controls the property
+                    for prop in (PropID.Volume, PropID.LPF, PropID.HPF, PropID.Pitch):
+                        prop_idx = None
+                        accum = None
+                        for idx, prop_info in enumerate(
+                            node.states.state_property_info
+                        ):
+                            if prop_info.property == prop:
+                                prop_idx = idx
+                                accum = prop_info.accum_type
+                                break
+                        else:
+                            continue
 
-        Parameters
-        ----------
-        threshold_hz : float
-            Highpass threshold in Hz.
-        """
-        self._fx_highpass = threshold_hz
+                        # Property found, look for states that affect it
+                        for chunk in node.states.state_group_chunks:
+                            for state_value in chunk.states:
+                                state: State = bnk.get(state_value.state_instance_id)
+                                if state:
+                                    if state.has_param_for(prop_idx):
+                                        adjust = state.get_param(prop_idx)
+                                    elif state.has_default():
+                                        adjust = state.get_default()
+                                    else:
+                                        continue
 
-    def fx_set_pitch(self, ratio: float) -> None:
-        """Adjust the pitch during playback in semitones.
-        
-        Parameters
-        ----------
-        ratio : float
-            By how many semitones to shift the pitch.
-        """
-        self._fx_pitch = ratio
+                                    voice.ctx.properties[prop].states.append(
+                                        StateCtrl(
+                                            chunk.state_group_id,
+                                            state_value,
+                                            adjust,
+                                            accum,
+                                        )
+                                    )
 
-    @property
-    def position(self) -> float:
-        """Position from start in seconds."""
-        return self._cursor / self._params.framerate
+                # Collect rtpcs
+                if hasattr(node, "rtpcs"):
+                    rtpc: RTPC
+                    for rtpc in node.rtpcs:
+                        param = GameObjects.RTPCParameter(rtpc.param_id).name
 
-    @property
-    def duration(self) -> float:
-        """Duration in seconds."""
-        return len(self._audio) / self._params.framerate
+                        # TODO make a better way to compare these
+                        if param == "Pitch":
+                            voice.ctx.properties[PropID.Pitch].rtpcs.append(rtpc)
+                        elif param == "HPF":
+                            voice.ctx.properties[PropID.HPF].rtpcs.append(rtpc)
+                        elif param == "LPF":
+                            voice.ctx.properties[PropID.LPF].rtpcs.append(rtpc)
+                        elif param == "Volume":
+                            voice.ctx.properties[PropID.Volume].rtpcs.append(rtpc)
+                        else:
+                            # Unknown param
+                            pass
 
-    @property
-    def playing(self) -> bool:
-        """Whether playback is ongoing right now."""
-        return self._playing
+                # TODO Collect attenuations
 
-    @property
-    def num_channels(self) -> int:
-        """Number of audio channels."""
-        return self._params.nchannels
+                if isinstance(node, MusicSegment):
+                    voice.ctx.loop_start = (
+                        node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+                    )
+                    voice.ctx.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
-    @property
-    def frames(self) -> np.ndarray:
-        """The audio data."""
-        return self._audio
+        # build one pyo chain per leaf and register it as a mixer voice
+        for idx, voice in enumerate(voices.values()):
+            if voice.audiofile is None:
+                continue
 
-    @property
-    def num_frames(self) -> int:
-        """Total number of frames-"""
-        return self._params.nframes
+            tail = voice._build()
+            voice.stop()
+            self._mixer.addInput(idx, tail)
+            self._mixer.setAmp(idx, 0, 1.0)
 
-    @property
-    def framerate(self) -> int:
-        """Number of frames per second."""
-        return self._params.framerate
+        self._voices = list(voices.values())
+        return self
+
+    def __getitem__(self, idx: int) -> Voice:
+        return self._voices[idx]
+
+    def __len__(self) -> int:
+        return len(self._voices)
