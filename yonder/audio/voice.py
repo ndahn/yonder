@@ -7,6 +7,7 @@ from yonder import Hash, calc_hash
 from yonder.types.base_types import (
     RTPC,
     ClipAutomation,
+    ConversionTable,
 )
 from yonder.enums import (
     PropID,
@@ -41,7 +42,7 @@ class ModifierStack:
     value: float = 0.0
     rtpcs: list[RTPC] = field(default_factory=list)
     states: list[StateCtrl] = field(default_factory=list)
-    # TODO attenuations
+    attenuations: list[ConversionTable] = field(default_factory=list)
     clips: list[ClipAutomation] = field(default_factory=list)
     ctrl: pyo.SigTo = None
 
@@ -113,7 +114,6 @@ class Voice:
         rtpc_params: dict[Hash, float] = None,
         active_states: dict[Hash, list[Hash]] = None,
         distance: float = 0.0,
-        angle: float = 0.0,
     ) -> None:
         if not rtpc_params:
             rtpc_params = {}
@@ -142,7 +142,9 @@ class Voice:
                         # TODO how to respect in_db from StatePropertyInfo?
                         val = accumulate(val, s.adjustment, s.accum)
 
-            # TODO Attenuations
+            # Attenuations
+            for curve in p.attenuations:
+                val += eval_curve(curve.point_count, distance, curve.curve_scaling)
 
             self.mod[prop].ctrl.value = to_pyo_domain(prop, val)
 

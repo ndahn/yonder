@@ -11,6 +11,7 @@ from yonder.types import (
     MusicTrack,
     MusicSegment,
     State,
+    Attenuation,
     RandomSequenceContainer,
     SwitchContainer,
     LayerContainer,
@@ -22,6 +23,7 @@ from yonder.enums import (
     PropID,
     MarkerId,
     ClipAutomationType,
+    CurveParameters,
 )
 from yonder.util import logger
 from yonder.game import GameObjects
@@ -153,6 +155,7 @@ class Player:
 
             for nid in reversed(branch[:-1]):
                 node = bnk[nid]
+                atten: Attenuation = None
                 self._node_map.setdefault(nid, []).append(voice)
 
                 # Collect properties
@@ -167,6 +170,8 @@ class Player:
                         elif bundle.prop_enum == PropID.LoopEnd:
                             # TODO verify that this is always positive
                             voice.src.loop_end = bundle.value / 1000.0
+                        elif bundle.prop_enum == PropID.AttenuationID:
+                            atten = bnk.get(int(bundle.value))
                         else:
                             # Other properties are ignored for now
                             pass
@@ -227,7 +232,17 @@ class Player:
                             # Unknown param
                             pass
 
-                # TODO Collect attenuations
+                # Collect attenuations
+                if atten:
+                    for param, prop in [
+                        (CurveParameters.VolumeDry, PropID.Volume),
+                        (CurveParameters.HPF, PropID.HPF),
+                        (CurveParameters.LPF, PropID.LPF),
+                    ]:
+                        curve_idx = atten.curves_to_use[param.value]
+                        if curve_idx >= 0 and curve_idx < len(atten.curves):
+                            curve = atten.curves[curve_idx]
+                            voice.mod[prop].attenuations.append(curve)
 
                 if isinstance(node, MusicSegment):
                     voice.src.loop_start = (
