@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import global_id_generator, Hash
-from yonder.enums import PropID, CurveInterpolation, SyncType
+from yonder.enums import PropID, CurveInterpolation, SyncType, RandomSequenceMode
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -34,12 +34,12 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         cls,
         nid: Hash,
         playlist: list[int, list[int]] = None,
-        root_ers_type: int = 0,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicRandomSequenceContainer:
         if playlist:
-            items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
+            items = cls.make_playlist(playlist, ers_type=ers_type)
         else:
             items = []
 
@@ -80,18 +80,32 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
 
     @property
     def states(self) -> StateChunk:
-        return self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        return (
+            self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        )
 
-    def set_playlist(self, items: list, root_ers_type: int = 0) -> None:
-        playlist = self.make_playlist(items, root_ers_type)
+    def set_playlist(
+        self,
+        items: list,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
+    ) -> None:
+        playlist = self.make_playlist(items, ers_type)
         self.playlist_items = playlist
         self.music_trans_node_params.music_node_params.children.items = [
             p.segment_id for p in playlist if p.segment_id > 0
         ]
 
+    @property
+    def root_ers_type(self) -> RandomSequenceMode:
+        if not self.playlist_items:
+            return RandomSequenceMode.ContinuousSequence
+
+        return self.playlist_items[0].ers_type_enum
+
     @staticmethod
     def make_playlist(
-        items: list, root_ers_type: int = 0
+        items: list,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
     ) -> list[MusicRanSeqPlaylistItem]:
         def assemble(
             item: int | list | tuple,
@@ -103,23 +117,27 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
                     MusicRanSeqPlaylistItem(
                         item,
                         global_id_generator(),
-                        ers_type=4294967295,
+                        ers_type=RandomSequenceMode.Inherit.value,
                         parent=parent_id,
                     )
                 )
             else:
-                group_ers = 0 if isinstance(item, list) else 1
+                group_ers = (
+                    RandomSequenceMode.ContinuousSequence
+                    if isinstance(item, list)
+                    else RandomSequenceMode.ContinuousRandom
+                )
                 group_node = MusicRanSeqPlaylistItem(
                     0,
                     global_id_generator(),
-                    ers_type=group_ers,
+                    ers_type=group_ers.value,
                     parent=parent_id,
                 )
                 playlist.append(group_node)
                 for child in item:
                     assemble(child, playlist, group_node.playlist_item_id)
 
-        playlist = [MusicRanSeqPlaylistItem(0, 0, ers_type=root_ers_type)]
+        playlist = [MusicRanSeqPlaylistItem(0, 0, ers_type=ers_type.value)]
         for child in items:
             assemble(child, playlist, playlist[-1].playlist_item_id)
 
@@ -134,7 +152,7 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         shuffle: bool = False,
         avoid_repeat_count: int = 0,
         loop_base: bool = False,
-        ers_type: int = 4294967295,
+        ers_type: RandomSequenceMode = RandomSequenceMode.Inherit,
         parent: int | MusicRanSeqPlaylistItem = 0,
     ) -> MusicRanSeqPlaylistItem:
         """Associates a segment with this playlist for random/sequential playback. A playlist is actually a flattened tree structure where children inherit settings from their parents. Use the parent parameter to associate child items to their parents.
@@ -151,8 +169,8 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             Whether to use weight when shuffling. Always True for the first playlist item.
         avoid_repeat : int, default=0
             Number of recent items to avoid repeating.
-        ers_type : int, default=0
-            Playlist playback type (0 - sequence, 1 - random, 2 - shuffle, 4294967295 - inherit).
+        ers_type : RandomSequenceMode, default=RandomSequenceMode.Inherit
+            Playlist playback type.
         parent : int, default=0
             Which playlist item to associate the new item with (0 - root).
         """
@@ -169,15 +187,15 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             if parent > 0:
                 raise ValueError("parent cannot be set for first playlist item")
 
-            if ers_type == 4294967295:
-                ers_type = 0
+            if ers_type == RandomSequenceMode.Inherit:
+                ers_type = RandomSequenceMode.ContinuousSequence
 
             use_weight = True
 
         new_item = MusicRanSeqPlaylistItem(
             segment_id,
             playlist_item_id,
-            ers_type=ers_type,
+            ers_type=ers_type.value,
             loop_base=1 if loop_base else 0,
             weight=weight,
             use_weight=1 if use_weight else 0,

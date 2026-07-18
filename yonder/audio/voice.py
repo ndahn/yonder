@@ -148,7 +148,7 @@ class Voice:
 
             self.mod[prop].ctrl.value = to_pyo_domain(prop, val)
 
-    def start(self) -> None:
+    def play(self) -> None:
         for obj in self.chain:
             obj.play()
 

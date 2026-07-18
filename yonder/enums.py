@@ -48,10 +48,10 @@ class CurveScaling(IntEnum):
 
 
 class CurveParameters(IntEnum):
-    None_ = -1           # slot unused
-    VolumeDry = 0        # "Output Bus Volume" - the distance-volume curve
-    VolumeAuxGame = 1    # game-defined aux send volume
-    VolumeAuxUser = 2    # user-defined aux send volume
+    None_ = -1  # slot unused
+    VolumeDry = 0  # "Output Bus Volume" - the distance-volume curve
+    VolumeAuxGame = 1  # game-defined aux send volume
+    VolumeAuxUser = 2  # user-defined aux send volume
     LPF = 3
     HPF = 4
     Spread = 5
@@ -61,6 +61,14 @@ class CurveParameters(IntEnum):
 class RandomMode(IntEnum):
     Standard = 0
     Shuffle = 1
+
+
+class RandomSequenceMode(IntEnum):
+    ContinuousSequence = 0
+    StepSequence = 1
+    ContinuousRandom = 2
+    StepRandom = 3
+    Inherit = 0xFFFFFFFF
 
 
 class PlaybackMode(IntEnum):

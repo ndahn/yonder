@@ -24,6 +24,8 @@ from yonder.enums import (
     MarkerId,
     ClipAutomationType,
     CurveParameters,
+    RandomMode,
+    RandomSequenceMode,
 )
 from yonder.util import logger
 from yonder.game import GameObjects
@@ -35,8 +37,8 @@ from .playback_control import PlaybackControl
 
 class Player:
     def __init__(self):
-        self._default_fade_time = 0.05
         self._voices: list[Voice] = []
+        self._ctrl: PlaybackControl = None
         self._node_map: dict[int, list[Voice]] = {}
 
         self._server = pyo.Server().boot()
@@ -48,29 +50,34 @@ class Player:
         self._master = self._mixer[0] * self._gate
         self._master.out()
 
+        self._server.start()
+
     def __del__(self):
         self._server.stop()
         self._server.shutdown()
         self._server = None
 
-    def start(self) -> None:
-        self._server.start()
-
     def stop(self) -> None:
-        self._server.stop()
+        if self._ctrl:
+            self._ctrl.stop()
 
     def play(self) -> None:
-        for voice in self._voices:
-            voice.start()
+        self._ctrl.play()
 
-    def set_volume(self, vol: float) -> None:
-        self._gate.setValue(vol, time=self._default_fade_time)
+    @property
+    def pos(self) -> float:
+        # TODO
+        pass
+
+    def seek(self, pos: float) -> None:
+        # TODO
+        pass
+
+    def set_volume(self, vol: float, time: float = 0.05) -> None:
+        self._gate.setValue(vol, time=time)
 
     def set_muted(self, muted: bool) -> None:
-        self._gate.setValue(0.0 if muted else 1.0, time=self._default_fade_time)
-
-    def fade(self, target_vol: float, duration: float) -> None:
-        self._gate.setValue(target_vol, time=duration)
+        self._gate.setValue(0.0 if muted else 1.0, time=0.05)
 
     def set_node_params(
         self,
@@ -88,12 +95,15 @@ class Player:
                 angle=angle,
             )
 
+        # TODO states may also affect SwitchContainers which are part of playback control
+
     def from_hierarchy(
         self, bnk: Soundbank, root: int | HIRCNode, full_tree: bool = False
     ) -> Player:
         self.stop()
         self._node_map.clear()
         self._voices.clear()
+        self._ctrl = None
 
         if isinstance(root, HIRCNode):
             root = root.id
@@ -105,9 +115,12 @@ class Player:
 
         leafs = [n for (n, d) in tree.out_degree if d == 0]
         voices: dict[int, Voice] = {}
+        master_ctrl = PlaybackControl([], playback_mode="parallel")
+        controllers: dict[int, PlaybackControl] = {}
 
         for branch in nx.all_simple_paths(tree, root, leafs):
             leaf_id = branch[-1]
+            ctrl = master_ctrl
 
             if leaf_id in voices:
                 logger.warning(
@@ -132,7 +145,6 @@ class Player:
                     StreamSource(path, True, begin_trim=trims[0], end_trim=trims[1])
                 )
 
-                # TODO trims
                 for clip in leaf_node.clip_items:
                     if clip.auto_type in (
                         ClipAutomationType.Volume,
@@ -153,10 +165,10 @@ class Player:
             voices[leaf_id] = voice
             self._node_map.setdefault(leaf_id, []).append(voice)
 
-            for nid in reversed(branch[:-1]):
-                node = bnk[nid]
+            for branch_idx in range(len(branch)):
+                node = bnk[branch[branch_idx]]
                 atten: Attenuation = None
-                self._node_map.setdefault(nid, []).append(voice)
+                self._node_map.setdefault(branch[branch_idx], []).append(voice)
 
                 # Collect properties
                 if isinstance(node, PropertyMixin):
@@ -172,6 +184,8 @@ class Player:
                             voice.src.loop_end = bundle.value / 1000.0
                         elif bundle.prop_enum == PropID.AttenuationID:
                             atten = bnk.get(int(bundle.value))
+                        # Other properties to consider:
+                        # - Probability
                         else:
                             # Other properties are ignored for now
                             pass
@@ -219,7 +233,7 @@ class Player:
                     for rtpc in node.rtpcs:
                         param = GameObjects.RTPCParameter(rtpc.param_id).name
 
-                        # TODO make a better way to compare these
+                        # TODO provide a better way to compare these
                         if param == "Pitch":
                             voice.mod[PropID.Pitch].rtpcs.append(rtpc)
                         elif param == "HPF":
@@ -250,15 +264,55 @@ class Player:
                     )
                     voice.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
-                # TODO playback control (RSC, SC, MRSC)
-                elif isinstance(node, RandomSequenceContainer):
-                    pass
-                elif isinstance(node, MusicRandomSequenceContainer):
-                    pass
-                elif isinstance(node, SwitchContainer):
-                    pass
-                elif isinstance(node, LayerContainer):
-                    pass
+                # Playback control for different container types
+                if isinstance(
+                    node,
+                    (
+                        RandomSequenceContainer,
+                        MusicRandomSequenceContainer,
+                        SwitchContainer,
+                        LayerContainer,
+                    ),
+                ):
+                    if node.id not in controllers:
+                        new_ctrl = PlaybackControl([])
+                        ctrl.add_child(new_ctrl)
+                        controllers[node.id] = new_ctrl
+                        ctrl = controllers[node.id]
+
+                        if isinstance(node, RandomSequenceContainer):
+                            if node.random_mode_enum == RandomMode.Standard:
+                                ctrl.playback_mode = "random"
+                            else:
+                                ctrl.playback_mode = "shuffle"
+
+                            # Weights; we know that there is always at least a valid leaf node
+                            next_node_id = branch[branch_idx + 1]
+                            for item in node.playlist:
+                                if item.play_id == next_node_id:
+                                    ctrl.weights[-1] = item.weight
+                                    break
+                        elif isinstance(node, MusicRandomSequenceContainer):
+                            if node.root_ers_type in (
+                                RandomSequenceMode.ContinuousSequence,
+                                RandomSequenceMode.StepSequence,
+                            ):
+                                ctrl.playback_mode = "playlist"
+                            else:
+                                ctrl.playback_mode = "random"
+
+                            next_node_id = branch[branch_idx + 1]
+                            for item in node.playlist_items:
+                                if item.segment_id == next_node_id:
+                                    ctrl.weights[-1] = item.weight
+                                    break
+                        elif isinstance(node, SwitchContainer):
+                            ctrl.playback_mode = "select"
+                        elif isinstance(node, LayerContainer):
+                            ctrl.playback_mode = "parallel"
+
+            # Add the voice to whatever is the leaf controller
+            ctrl.children.add_child(voice)
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):
@@ -271,6 +325,7 @@ class Player:
             self._mixer.setAmp(idx, 0, 1.0)
 
         self._voices = list(voices.values())
+        self._ctrl = master_ctrl
         return self
 
     def __getitem__(self, idx: int) -> Voice:

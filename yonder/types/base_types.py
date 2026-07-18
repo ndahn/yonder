@@ -20,6 +20,7 @@ from yonder.enums import (
     CurveScaling,
     SourceType,
     PluginId,
+    RandomSequenceMode,
 )
 
 
@@ -923,7 +924,7 @@ class MusicRanSeqPlaylistItem:
     segment_id: int = 0
     playlist_item_id: int = 0
     child_count: int = 0
-    ers_type: int = 0
+    ers_type: int = 0xFFFFFFFF
     loop_base: int = 0
     loop_min: int = 0
     loop_max: int = 0
@@ -931,6 +932,10 @@ class MusicRanSeqPlaylistItem:
     avoid_repeat_count: int = 0
     use_weight: int = 0
     shuffle: int = 0
+
+    @property
+    def ers_type_enum(self) -> RandomSequenceMode:
+        return RandomSequenceMode(self.ers_type)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("segment_id", self.segment_id)]

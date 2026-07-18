@@ -31,6 +31,7 @@ from yonder.enums import (
     PlaybackMode,
     RandomMode,
     SoundType,
+    RandomSequenceMode,
 )
 from yonder.game import Game
 from yonder.util import logger, parse_state_path
@@ -293,7 +294,7 @@ def _setup_bgm(
         playlist_root = root_mrsc.add_playlist_item(
             bnk.new_id(),
             0,
-            ers_type=0,
+            ers_type=RandomSequenceMode.ContinuousSequence,
             avoid_repeat_count=1,
         )
         # Setup playlist item as loop intro
@@ -410,7 +411,9 @@ def _setup_bgm(
 
     # Add the segment to the music container's playlist
     if not root_mrsc.playlist_items:
-        playlist_root = root_mrsc.add_playlist_item(bnk.new_id(), 0, ers_type=0)
+        playlist_root = root_mrsc.add_playlist_item(
+            bnk.new_id(), 0, ers_type=RandomSequenceMode.ContinuousSequence
+        )
     else:
         playlist_root = root_mrsc.playlist_items[0].playlist_item_id
 
@@ -718,7 +721,9 @@ def create_ambience(
 
         # Connect the items
         branch_seg.attach(branch_track)
-        branch_mrsc.add_playlist_item(bnk.new_id(), branch_seg, ers_type=0)
+        branch_mrsc.add_playlist_item(
+            bnk.new_id(), branch_seg, ers_type=RandomSequenceMode.ContinuousSequence
+        )
         ambience_msc.add_branch(parse_state_path(branch), branch_mrsc)
 
         new_nodes.extend([branch_mrsc, branch_seg, branch_track])
