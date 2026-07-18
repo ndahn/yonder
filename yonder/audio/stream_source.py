@@ -68,9 +68,23 @@ class StreamSource(pyo.PyoObject):
     def end_trim(self) -> float:
         return self._end_trim
 
-    def set_trims(self, from_start: float, from_end: float) -> None:
+    def set_trims(
+        self,
+        from_start: float,
+        from_end: float,
+        keep_loop_marks_stationary: bool = False,
+    ) -> None:
         if from_start >= self.duration - from_end:
             raise ValueError("Trims would result in play duration <= 0")
+
+        if keep_loop_marks_stationary:
+            # negative if trim reduced, positive if increased
+            begin_diff = self._begin_trim - abs(from_start)
+            self._loop_start = max(0.0, self._loop_start - begin_diff)
+
+            # positive if trim reduced, negative if increased
+            end_diff = self._end_trim - abs(from_end)
+            self._loop_end = min(self._duration, self._loop_end - end_diff)
 
         # In wwise, trims are set from the beginning/end of the track
         self._begin_trim = abs(from_start)
