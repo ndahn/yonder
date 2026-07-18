@@ -49,6 +49,7 @@ from .widgets import (
 )
 from . import style
 from .style import themes
+from .icons import load_icons
 from .localization import (
     set_active_language,
     get_active_language,
@@ -97,6 +98,7 @@ class BanksOfYonder(DpgItem):
 
         self.config: Config = get_config()
         set_active_language(self.config.language)
+        load_icons()
 
         self._setup_menu()
         self._setup_content()

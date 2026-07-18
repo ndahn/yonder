@@ -37,7 +37,7 @@ from .playback_control import PlaybackControl
 
 class Player:
     def __init__(self):
-        self._voices: list[Voice] = []
+        self.voices: list[Voice] = []
         self._ctrl: PlaybackControl = None
         self._node_map: dict[int, list[Voice]] = {}
 
@@ -63,6 +63,10 @@ class Player:
 
     def play(self) -> None:
         self._ctrl.play()
+
+    @property
+    def playing(self) -> bool:
+        return self._ctrl._playing
 
     @property
     def pos(self) -> float:
@@ -102,7 +106,7 @@ class Player:
     ) -> Player:
         self.stop()
         self._node_map.clear()
-        self._voices.clear()
+        self.voices.clear()
         self._ctrl = None
 
         if isinstance(root, HIRCNode):
@@ -167,7 +171,7 @@ class Player:
             for branch_idx in range(len(branch)):
                 node = bnk[branch[branch_idx]]
                 self._node_map.setdefault(node.id, []).append(voice)
-                
+
                 # Collect anything from the node that will influence playback
                 self._collect_modifiers(bnk, node, voice)
 
@@ -237,7 +241,7 @@ class Player:
             self._mixer.addInput(idx, tail)
             self._mixer.setAmp(idx, 0, 1.0)
 
-        self._voices = list(voices.values())
+        self.voices = list(voices.values())
         self._ctrl = master_ctrl
         return self
 
@@ -270,9 +274,7 @@ class Player:
             for prop in (PropID.Volume, PropID.LPF, PropID.HPF, PropID.Pitch):
                 prop_idx = None
                 accum = None
-                for idx, prop_info in enumerate(
-                    node.states.state_property_info
-                ):
+                for idx, prop_info in enumerate(node.states.state_property_info):
                     if prop_info.property == prop:
                         prop_idx = idx
                         accum = prop_info.accum_type
@@ -333,7 +335,7 @@ class Player:
                     voice.mod[prop].attenuations.append(curve)
 
     def __getitem__(self, idx: int) -> Voice:
-        return self._voices[idx]
+        return self.voices[idx]
 
     def __len__(self) -> int:
-        return len(self._voices)
+        return len(self.voices)
