@@ -163,100 +163,13 @@ class Player:
                         )
 
             voices[leaf_id] = voice
-            self._node_map.setdefault(leaf_id, []).append(voice)
 
             for branch_idx in range(len(branch)):
                 node = bnk[branch[branch_idx]]
-                atten: Attenuation = None
-                self._node_map.setdefault(branch[branch_idx], []).append(voice)
-
-                # Collect properties
-                if isinstance(node, PropertyMixin):
-                    for bundle in node.properties:
-                        if bundle.prop_enum in voice.mod:
-                            voice.mod[bundle.prop_enum].value += bundle.value
-                        elif bundle.prop_enum == PropID.Loop:
-                            voice.src.loop = True
-                        elif bundle.prop_enum == PropID.LoopStart:
-                            voice.src.loop_start = bundle.value / 1000.0
-                        elif bundle.prop_enum == PropID.LoopEnd:
-                            # TODO verify that this is always positive
-                            voice.src.loop_end = bundle.value / 1000.0
-                        elif bundle.prop_enum == PropID.AttenuationID:
-                            atten = bnk.get(int(bundle.value))
-                        # Other properties to consider:
-                        # - Probability
-                        else:
-                            # Other properties are ignored for now
-                            pass
-
-                # Collect states
-                if isinstance(node, StateMixin):
-                    # Find out which param idx controls the property
-                    for prop in (PropID.Volume, PropID.LPF, PropID.HPF, PropID.Pitch):
-                        prop_idx = None
-                        accum = None
-                        for idx, prop_info in enumerate(
-                            node.states.state_property_info
-                        ):
-                            if prop_info.property == prop:
-                                prop_idx = idx
-                                accum = prop_info.accum_type
-                                break
-                        else:
-                            continue
-
-                        # Property found, look for states that affect it
-                        for chunk in node.states.state_group_chunks:
-                            for state_value in chunk.states:
-                                state: State = bnk.get(state_value.state_instance_id)
-                                if state:
-                                    if state.has_param_for(prop_idx):
-                                        adjust = state.get_param(prop_idx)
-                                    elif state.has_default():
-                                        adjust = state.get_default()
-                                    else:
-                                        continue
-
-                                    voice.mod[prop].states.append(
-                                        StateCtrl(
-                                            chunk.state_group_id,
-                                            state_value,
-                                            adjust,
-                                            accum,
-                                        )
-                                    )
-
-                # Collect rtpcs
-                if hasattr(node, "rtpcs"):
-                    rtpc: RTPC
-                    for rtpc in node.rtpcs:
-                        param = GameObjects.RTPCParameter(rtpc.param_id).name
-
-                        # TODO provide a better way to compare these
-                        if param == "Pitch":
-                            voice.mod[PropID.Pitch].rtpcs.append(rtpc)
-                        elif param == "HPF":
-                            voice.mod[PropID.HPF].rtpcs.append(rtpc)
-                        elif param == "LPF":
-                            voice.mod[PropID.LPF].rtpcs.append(rtpc)
-                        elif param == "Volume":
-                            voice.mod[PropID.Volume].rtpcs.append(rtpc)
-                        else:
-                            # Unknown param
-                            pass
-
-                # Collect attenuations
-                if atten:
-                    for param, prop in [
-                        (CurveParameters.VolumeDry, PropID.Volume),
-                        (CurveParameters.HPF, PropID.HPF),
-                        (CurveParameters.LPF, PropID.LPF),
-                    ]:
-                        curve_idx = atten.curves_to_use[param.value]
-                        if curve_idx >= 0 and curve_idx < len(atten.curves):
-                            curve = atten.curves[curve_idx]
-                            voice.mod[prop].attenuations.append(curve)
+                self._node_map.setdefault(node.id, []).append(voice)
+                
+                # Collect anything from the node that will influence playback
+                self._collect_modifiers(bnk, node, voice)
 
                 if isinstance(node, MusicSegment):
                     voice.src.loop_start = (
@@ -327,6 +240,97 @@ class Player:
         self._voices = list(voices.values())
         self._ctrl = master_ctrl
         return self
+
+    def _collect_modifiers(self, bnk: Soundbank, node: HIRCNode, voice: Voice) -> None:
+        atten: Attenuation = None
+
+        # Properties
+        if isinstance(node, PropertyMixin):
+            for bundle in node.properties:
+                if bundle.prop_enum in voice.mod:
+                    voice.mod[bundle.prop_enum].value += bundle.value
+                elif bundle.prop_enum == PropID.Loop:
+                    voice.src.loop = True
+                elif bundle.prop_enum == PropID.LoopStart:
+                    voice.src.loop_start = bundle.value / 1000.0
+                elif bundle.prop_enum == PropID.LoopEnd:
+                    # TODO verify that this is always positive
+                    voice.src.loop_end = bundle.value / 1000.0
+                elif bundle.prop_enum == PropID.AttenuationID:
+                    atten = bnk.get(int(bundle.value))
+                # Other properties to consider:
+                # - Probability
+                else:
+                    # Other properties are ignored for now
+                    pass
+
+        # States
+        if isinstance(node, StateMixin):
+            # Find out which param idx controls the property
+            for prop in (PropID.Volume, PropID.LPF, PropID.HPF, PropID.Pitch):
+                prop_idx = None
+                accum = None
+                for idx, prop_info in enumerate(
+                    node.states.state_property_info
+                ):
+                    if prop_info.property == prop:
+                        prop_idx = idx
+                        accum = prop_info.accum_type
+                        break
+                else:
+                    continue
+
+                # Property found, look for states that affect it
+                for chunk in node.states.state_group_chunks:
+                    for state_value in chunk.states:
+                        state: State = bnk.get(state_value.state_instance_id)
+                        if state:
+                            if state.has_param_for(prop_idx):
+                                adjust = state.get_param(prop_idx)
+                            elif state.has_default():
+                                adjust = state.get_default()
+                            else:
+                                continue
+
+                            voice.mod[prop].states.append(
+                                StateCtrl(
+                                    chunk.state_group_id,
+                                    state_value,
+                                    adjust,
+                                    accum,
+                                )
+                            )
+
+        # RTPCs
+        if hasattr(node, "rtpcs"):
+            rtpc: RTPC
+            for rtpc in node.rtpcs:
+                param = GameObjects.RTPCParameter(rtpc.param_id).name
+
+                # TODO provide a better way to compare these
+                if param == "Pitch":
+                    voice.mod[PropID.Pitch].rtpcs.append(rtpc)
+                elif param == "HPF":
+                    voice.mod[PropID.HPF].rtpcs.append(rtpc)
+                elif param == "LPF":
+                    voice.mod[PropID.LPF].rtpcs.append(rtpc)
+                elif param == "Volume":
+                    voice.mod[PropID.Volume].rtpcs.append(rtpc)
+                else:
+                    # Unknown param
+                    pass
+
+        # Attenuations
+        if atten:
+            for param, prop in [
+                (CurveParameters.VolumeDry, PropID.Volume),
+                (CurveParameters.HPF, PropID.HPF),
+                (CurveParameters.LPF, PropID.LPF),
+            ]:
+                curve_idx = atten.curves_to_use[param.value]
+                if curve_idx >= 0 and curve_idx < len(atten.curves):
+                    curve = atten.curves[curve_idx]
+                    voice.mod[prop].attenuations.append(curve)
 
     def __getitem__(self, idx: int) -> Voice:
         return self._voices[idx]
