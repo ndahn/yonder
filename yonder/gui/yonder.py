@@ -49,7 +49,7 @@ from .widgets import (
 )
 from . import style
 from .style import themes
-from .icons import load_icons
+from .icons import Icons, load_icons
 from .localization import (
     set_active_language,
     get_active_language,
@@ -478,15 +478,13 @@ class BanksOfYonder(DpgItem):
                                     )
 
                             with dpg.group(horizontal=True, horizontal_spacing=0):
-                                dpg.add_button(
-                                    arrow=True,
-                                    direction=dpg.mvDir_Left,
+                                dpg.add_image_button(
+                                    Icons.previous,
                                     callback=self._prev_events_page,
                                 )
                                 dpg.add_spacer(width=4)
-                                dpg.add_button(
-                                    arrow=True,
-                                    direction=dpg.mvDir_Right,
+                                dpg.add_image_button(
+                                    Icons.next,
                                     callback=self._next_events_page,
                                 )
                                 dpg.add_spacer(width=10)
