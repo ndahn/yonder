@@ -5,11 +5,10 @@ import networkx as nx
 # pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 
-from yonder import Soundbank, HIRCNode, Hash
+from yonder import Soundbank, HIRCNode, Hash, calc_hash
 from yonder.types import (
     Sound,
     MusicTrack,
-    MusicSegment,
     RandomSequenceContainer,
     SwitchContainer,
     LayerContainer,
@@ -18,7 +17,6 @@ from yonder.types import (
 from yonder.types.base_types import MusicRanSeqPlaylistItem
 from yonder.enums import (
     PropID,
-    MarkerId,
     ClipAutomationType,
     RandomMode,
     RandomSequenceMode,
@@ -27,13 +25,14 @@ from yonder.util import logger
 
 from .voice import VoiceBuilder, Voice
 from .stream_source import StreamSource
-from .playback_control import PlaybackControl
+from .playback_control import PlaybackControl, SwitchSelector
 
 
 class Player:
     def __init__(self):
         self.voices: dict[int, Voice] = []
         self._ctrl: PlaybackControl = None
+        self._switch_ctrls: dict[int, PlaybackControl] = []
         self._node_map: dict[int, list[Voice]] = {}
 
         self._server = pyo.Server().boot()
@@ -78,31 +77,35 @@ class Player:
     def set_muted(self, muted: bool) -> None:
         self._gate.setValue(0.0 if muted else 1.0, time=0.05)
 
-    def set_node_params(
+    def update_node_params(
         self,
-        nid: HIRCNode | Hash,
         rtpc_params: dict[Hash, float] = None,
-        active_states: dict[Hash, list[Hash]] = None,
+        active_states: dict[Hash, Hash] = None,
         distance: float = 0.0,
-        angle: float = 0.0,
     ) -> None:
-        for voice in self._node_map.get(nid, []):
-            voice.update(
-                rtpc_params=rtpc_params,
-                active_states=active_states,
-                distance=distance,
-                angle=angle,
-            )
+        for voices in self._node_map.values():
+            for voice in voices:
+                voice.update(
+                    rtpc_params=rtpc_params,
+                    active_states=active_states,
+                    distance=distance,
+                )
 
-        # TODO states may also affect SwitchContainers which are part of playback control
+        # NOTE switches and states are not the same, but for now there's little reason
+        # to distinguish between them and track what each SwitchContainer listens to
+        for key, val in active_states.items():
+            key = calc_hash(key)
+            val = calc_hash(val)
+            for ctrl in self._switch_ctrls.get(key, []):
+                ctrl.selector.state = val
 
     def from_hierarchy(
         self, bnk: Soundbank, root: int | HIRCNode, full_tree: bool = False
     ) -> Player:
         self.stop()
-        self._node_map.clear()
         self.voices.clear()
         self._ctrl = None
+        self._node_map.clear()
 
         if isinstance(root, HIRCNode):
             root = root.id
@@ -114,12 +117,9 @@ class Player:
 
         leafs = [n for (n, d) in tree.out_degree if d == 0]
         voices: dict[int, Voice] = {}
-        master_ctrl = PlaybackControl([], playback_mode="parallel")
-        controllers: dict[int, PlaybackControl] = {}
 
         for branch in nx.all_simple_paths(tree, root, leafs):
             leaf_id = branch[-1]
-            ctrl = master_ctrl
 
             if leaf_id in voices:
                 logger.warning(
@@ -182,12 +182,14 @@ class Player:
             self._mixer.setAmp(idx, 0, 1.0)
 
         self.voices = voices
-        self._ctrl = self._build_control_tree(bnk, root)
+        self._build_control_tree(bnk, root)
         return self
 
     def _build_control_tree(self, bnk: Soundbank, root: int | HIRCNode) -> PlaybackControl:
         if isinstance(root, HIRCNode):
             root = root.id
+
+        switch_ctrls: dict[int, PlaybackControl] = {}
 
         def as_one(playable) -> PlaybackControl:
             # A bare list should play its items in parallel
@@ -290,12 +292,30 @@ class Player:
                 return PlaybackControl(playables, mode, weights)
 
             if isinstance(node, SwitchContainer):
-                return PlaybackControl(playables, "select")
+                ctrl = PlaybackControl(playables, "switch")
+                
+                switch_map = {}
+                for switch in node.switch_groups:
+                    indices = []
+                    for nid in switch.nodes:
+                        try:
+                            indices.append(node.children.items.index(nid))
+                        except ValueError:
+                            continue
+                    
+                    switch_map[switch.switch_id] = indices
+
+                selector: SwitchSelector = ctrl.selector
+                selector.switch_map = switch_map
+                selector.default_state = node.default_switch
+
+                switch_ctrls.setdefault(node.group_id, []).append(ctrl)
 
             # LayerContainer, events
             return PlaybackControl(playables, "parallel")
 
-        return as_one(build(root))
+        self._ctrl = as_one(build(root))
+        self._switch_ctrls = switch_ctrls
 
     def __getitem__(self, idx: int) -> Voice:
         return self.voices[idx]

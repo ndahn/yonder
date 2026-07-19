@@ -53,6 +53,7 @@ from yonder.enums import (
     MarkerId,
     RandomMode,
     PlaybackMode,
+    GroupType,
 )
 from yonder.wem import wav2wem, wem2wav, create_prefetch_snippet
 from yonder.gui import style
@@ -1826,6 +1827,10 @@ def _create_attributes_switchcontainer(
         for switch_tag in empty:
             dpg.configure_item(switch_tag, show=show)
 
+    def on_paramtype_changed(sender: str, group_type: str, cb_user_data: Any) -> None:
+        node.group_type = GroupType[group_type].value
+        on_node_changed(base_tag, node, user_data)
+
     def on_groupid_changed(sender: str, info: tuple[Hash, str], cb_user_data: Any) -> None:
         node.group_id = info[0]
         on_node_changed(base_tag, node, user_data)
@@ -1833,8 +1838,14 @@ def _create_attributes_switchcontainer(
     empty = []
 
     with dpg.group():
+        dpg.add_combo(
+            [t.name for t in GroupType],
+            label=µ("Group Type"),
+            default_value=GroupType(node.group_type).name,
+            callback=on_paramtype_changed,
+        )
         add_hash_widget(
-            node.group_id, on_hash_changed=on_groupid_changed, hash_label=µ("Switch Group")
+            node.group_id, on_hash_changed=on_groupid_changed, hash_label=µ("Group ID")
         )
 
         with dpg.tree_node(

@@ -22,7 +22,13 @@ class RandomSelector(NodeSelector):
 
 
 class ShuffleSelector(NodeSelector):
-    def __init__(self, nodes: list[pyo.PyoObject], weights: list[int], wrap: bool = True, shuffle_after_wrap: bool = False):
+    def __init__(
+        self,
+        nodes: list[pyo.PyoObject],
+        weights: list[int],
+        wrap: bool = True,
+        shuffle_after_wrap: bool = False,
+    ):
         super().__init__(nodes)
         self.weights = weights
         self.wrap = wrap
@@ -97,7 +103,27 @@ class ParallelSelector(NodeSelector):
         yield self.valid
 
 
-class IndexSelector(NodeSelector):
+class SwitchSelector(NodeSelector):
+    def __init__(
+        self,
+        nodes: list[pyo.PyoObject],
+        switch_map: dict[int, list[int]] = None,
+        default_state: int = None,
+    ):
+        super().__init__(nodes)
+        self.switch_map = switch_map
+        self.state: int = default_state
+        self.default_state = default_state
+
+    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
+        indices = self.switch_map.get(self.state)
+        if indices is None:
+            indices = self.switch_map.get(self.default_state, [])
+
+        yield [self.nodes[i] for i in indices]
+
+
+class ManualSelector(NodeSelector):
     def __init__(self, nodes: list[pyo.PyoObject], index: int = 0):
         super().__init__(nodes)
         self.index = index
@@ -111,7 +137,7 @@ class PlaybackControl(pyo.PyoObject):
         self,
         children: pyo.PyoObject | list[pyo.PyoObject],
         playback_mode: Literal[
-            "random", "shuffle", "playlist", "parallel", "select"
+            "random", "shuffle", "playlist", "parallel", "manual"
         ] = "random",
         weights: list[int] = None,
         mul: float = 1,
@@ -135,7 +161,7 @@ class PlaybackControl(pyo.PyoObject):
 
         self._playback_mode = None
         self.playback_mode = playback_mode
-        
+
         if children:
             if isinstance(children, pyo.PyoObject):
                 children = [children]
@@ -151,7 +177,9 @@ class PlaybackControl(pyo.PyoObject):
         return self._playback_mode
 
     @playback_mode.setter
-    def playback_mode(self, mode: Literal["random", "shuffle", "playlist", "parallel", "select"]) -> None:
+    def playback_mode(
+        self, mode: Literal["random", "shuffle", "playlist", "parallel", "manual"]
+    ) -> None:
         if mode == "random":
             self.selector = RandomSelector(self.children, self.weights)
         elif mode == "shuffle":
@@ -160,8 +188,10 @@ class PlaybackControl(pyo.PyoObject):
             self.selector = PlaylistSelector(self.children, self.weights)
         elif mode == "parallel":
             self.selector = ParallelSelector(self.children)
-        elif mode == "select":
-            self.selector = IndexSelector(self.children)
+        elif mode == "switch":
+            self.selector = SwitchSelector(self.children)
+        elif mode == "manual":
+            self.selector = ManualSelector(self.children)
         else:
             raise ValueError(f"Unknown playback mode {mode}")
 
@@ -176,7 +206,9 @@ class PlaybackControl(pyo.PyoObject):
         self._mixer.seAmp(idx, 0, 1.0)
 
         # Wire up the child's end trigger
-        self._watchers.append(pyo.TrigFunc(child["trig"], self._on_child_finished, arg=idx))
+        self._watchers.append(
+            pyo.TrigFunc(child["trig"], self._on_child_finished, arg=idx)
+        )
 
     def _on_child_finished(self, idx: int) -> None:
         if not self._playing:
@@ -196,7 +228,7 @@ class PlaybackControl(pyo.PyoObject):
 
         if not isinstance(selected, list):
             selected = [selected]
-        
+
         self._current_voices = selected
         self._pending = {self.children.index(v) for v in selected}
 
@@ -212,12 +244,14 @@ class PlaybackControl(pyo.PyoObject):
         self._playing = False
         for voice in self._current_voices:
             voice.stop()
-        
+
         return pyo.PyoObject.stop(self, wait)
 
-    def out(self, chnl: int = 0, inc: int = 1, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
+    def out(
+        self, chnl: int = 0, inc: int = 1, dur: float = 0, delay: float = 0
+    ) -> pyo.PyoObject:
         self.play()
-        return pyo.PyoObject.out(self,chnl, inc, dur, delay)
+        return pyo.PyoObject.out(self, chnl, inc, dur, delay)
 
     def _on_finish(self) -> None:
         self._playing = False
@@ -226,5 +260,5 @@ class PlaybackControl(pyo.PyoObject):
     def __getitem__(self, key: str):
         if key == "trig":
             return self._trig
-        
+
         return pyo.PyoObject.__getitem__(self, key)

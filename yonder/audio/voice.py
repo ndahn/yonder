@@ -234,7 +234,7 @@ class Voice(pyo.PyoObject):
     def update(
         self,
         rtpc_params: dict[Hash, float] = None,
-        active_states: dict[Hash, list[Hash]] = None,
+        active_states: dict[Hash, Hash] = None,
         distance: float = 0.0,
     ) -> None:
         if not rtpc_params:
@@ -255,12 +255,12 @@ class Voice(pyo.PyoObject):
                 val = accumulate(val, y, rtpc.rtpc_accum)
 
             # States
-            for group, states in active_states.items():
+            for group, state in active_states.items():
                 group = calc_hash(group)
-                states = set(calc_hash(s) for s in states)
+                state = calc_hash(state)
 
                 for s in p.states:
-                    if s.group == group and s.state in states:
+                    if s.group == group and s.state == state:
                         # TODO how to respect in_db from StatePropertyInfo?
                         val = accumulate(val, s.adjustment, s.accum)
 
