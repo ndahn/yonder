@@ -163,74 +163,13 @@ class Player:
 
             for node_idx in range(len(branch)):
                 node = bnk[branch[node_idx]]
-                self._node_map.setdefault(node.id, []).append(builder)
-
-                # Collect anything from the node that will influence playback
                 builder.collect_modifiers(bnk, node)
 
-                if isinstance(node, MusicSegment):
-                    builder.src.loop_start = (
-                        node.get_marker_pos(MarkerId.LoopStart) / 1000.0
-                    )
-                    builder.src.loop_end = (
-                        node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
-                    )
-
-                # Playback control for different container types
-                if isinstance(
-                    node,
-                    (
-                        RandomSequenceContainer,
-                        MusicRandomSequenceContainer,
-                        SwitchContainer,
-                        LayerContainer,
-                    ),
-                ):
-                    if node.id in controllers:
-                        ctrl = controllers[node.id]
-                    else:
-                        new_ctrl = PlaybackControl([])
-                        weight = 50000
-
-                        if isinstance(node, RandomSequenceContainer):
-                            if node.random_mode_enum == RandomMode.Standard:
-                                new_ctrl.playback_mode = "random"
-                            else:
-                                new_ctrl.playback_mode = "shuffle"
-
-                            # Weights; we know that there is always at least a valid leaf node
-                            next_node_id = branch[node_idx + 1]
-                            for item in node.playlist:
-                                if item.play_id == next_node_id:
-                                    weight = item.weight
-                                    break
-                        elif isinstance(node, MusicRandomSequenceContainer):
-                            if node.root_ers_type in (
-                                RandomSequenceMode.ContinuousSequence,
-                                RandomSequenceMode.StepSequence,
-                            ):
-                                new_ctrl.playback_mode = "playlist"
-                            else:
-                                new_ctrl.playback_mode = "random"
-
-                            next_node_id = branch[node_idx + 1]
-                            for item in node.playlist_items:
-                                if item.segment_id == next_node_id:
-                                    weight = item.weight
-                                    break
-                        elif isinstance(node, SwitchContainer):
-                            new_ctrl.playback_mode = "select"
-                        elif isinstance(node, LayerContainer):
-                            new_ctrl.playback_mode = "parallel"
-
-                        ctrl.add_child(new_ctrl, weight)
-                        controllers[node.id] = new_ctrl
-                        ctrl = controllers[node.id]
-
-            # Add the voice to whatever is the leaf controller
             voice = builder.build()
-            ctrl.add_child(voice)
             voices[leaf_id] = voice
+
+            for nid in branch:
+                self._node_map.setdefault(nid, []).append(voice)
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):

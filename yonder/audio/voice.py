@@ -8,7 +8,7 @@ from yonder.types.base_types import (
     ClipAutomation,
     ConversionTable,
 )
-from yonder.types import State, Attenuation
+from yonder.types import State, Attenuation, MusicSegment
 from yonder.types.mixins import PropertyMixin, StateMixin
 from yonder.enums import (
     PropID,
@@ -16,6 +16,7 @@ from yonder.enums import (
     ClipAutomationType,
     CurveParameters,
     CurveScaling,
+    MarkerId,
 )
 from yonder.game import GameObjects
 
@@ -150,6 +151,15 @@ class VoiceBuilder:
                 if curve_idx >= 0 and curve_idx < len(atten.curves):
                     curve = atten.curves[curve_idx]
                     self.mod[prop].attenuations.append(curve)
+
+        # Other things influencing playback
+        if isinstance(node, MusicSegment):
+            self.src.loop_start = (
+                node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+            )
+            self.src.loop_end = (
+                node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+            )
 
         return self
 
