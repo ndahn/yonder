@@ -1,6 +1,7 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import ClassVar
+from dataclasses import dataclass, field
+import networkx as nx
 
 from yonder.hash import global_id_generator, Hash
 from yonder.enums import PropID, CurveInterpolation, SyncType, RandomSequenceMode
@@ -101,6 +102,25 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             return RandomSequenceMode.ContinuousSequence
 
         return self.playlist_items[0].ers_type_enum
+
+    def get_playlist_tree(self) -> nx.DiGraph:
+        g = nx.DiGraph()
+        idx = 0
+
+        while idx < len(self.playlist_items):
+            item = self.playlist_items[idx]
+            g.add_node(item.playlist_item_id, item=item)
+            
+            for child in self.playlist_items[idx + 1 : idx + 1 + item.child_count]:
+                g.add_node(child.playlist_item_id, item=child)
+                g.add_edge(
+                    item.playlist_item_id,
+                    child.playlist_item_id,
+                    mode=item.ers_type_enum,
+                )
+            idx += item.child_count + 1
+
+        return g
 
     @staticmethod
     def make_playlist(

@@ -15,6 +15,7 @@ from yonder.types import (
     LayerContainer,
     MusicRandomSequenceContainer,
 )
+from yonder.types.base_types import MusicRanSeqPlaylistItem
 from yonder.enums import (
     PropID,
     MarkerId,
@@ -171,7 +172,9 @@ class Player:
                     builder.src.loop_start = (
                         node.get_marker_pos(MarkerId.LoopStart) / 1000.0
                     )
-                    builder.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+                    builder.src.loop_end = (
+                        node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+                    )
 
                 # Playback control for different container types
                 if isinstance(
@@ -243,7 +246,55 @@ class Player:
         self._ctrl = self._build_control_tree(bnk, root)
         return self
 
-    def _build_control_tree(self, bnk: Soundbank, root: HIRCNode) -> PlaybackControl:
+    def _build_control_tree(self, bnk: Soundbank, root: int | HIRCNode) -> PlaybackControl:
+        if isinstance(root, HIRCNode):
+            root = root.id
+
+        def as_one(playable) -> PlaybackControl:
+            # A bare list should play its items in parallel
+            if isinstance(playable, list):
+                if len(playable) == 1:
+                    return playable[0]
+    
+                return PlaybackControl(playable, "parallel")
+
+            return playable
+
+        def build_playlist_item(playlist: nx.DiGraph, item_id: int):
+            item: MusicRanSeqPlaylistItem = playlist.nodes[item_id]["item"]
+            child_ids = list(playlist.successors(item_id))
+
+            if not child_ids:
+                # leaf item (could also be an empty group)
+                segment = build(item.segment_id)
+                return as_one(segment) if segment else None
+
+            child_ctrls = []
+            for cid in child_ids:
+                ctrl = build_playlist_item(playlist, cid)
+                if ctrl:
+                    child_ctrls.append((cid, ctrl))
+
+            if not child_ctrls:
+                return None
+
+            weights = None
+            if item.ers_type_enum in (
+                RandomSequenceMode.ContinuousSequence,
+                RandomSequenceMode.StepSequence,
+            ):
+                # TODO step: play one then wait instead of auto-advance
+                mode = "playlist"
+            else:
+                # standard-vs-shuffle is the item's own flag, not part of ers_type
+                mode = "shuffle" if item.shuffle else "random"
+                if item.use_weight:
+                    # weights sit on the child items
+                    weights = [playlist.nodes[cid]["item"].weight for cid, _ in child_ctrls]
+
+            # TODO loop_base/min/max
+            return PlaybackControl([c for _, c in child_ctrls], mode, weights)
+
         def build(nid: Hash):
             if nid in self.voices:
                 return self.voices[nid]
@@ -252,23 +303,41 @@ class Player:
             if not node:
                 return None
 
-            if not hasattr(node, "children") or not node.children:
+            # MRSCs have tree-like playlist structures
+            if isinstance(node, MusicRandomSequenceContainer):
+                playlist = node.get_playlist_tree()
+                return build_playlist_item(playlist, node.playlist_items[0].playlist_item_id)
+
+            children = getattr(node, "children", None)
+            if not children:
                 return None
 
-            subctrls = list(filter(bool, (build(c) for c in node.children)))
+            child_ctrls = []
+            for cid in children:
+                sub = build(cid)
+                if sub:
+                    child_ctrls.append((cid, sub))
+            
+            if not child_ctrls:
+                return None
 
             if not isinstance(
-                node,
-                (
-                    RandomSequenceContainer,
-                    MusicRandomSequenceContainer,
-                    SwitchContainer,
-                    LayerContainer,
-                ),
+                node, (RandomSequenceContainer, SwitchContainer, LayerContainer)
             ):
-                return subctrls
+                # prevent nested lists that would cause issues
+                flat = []
+                for _, sub in child_ctrls:
+                    if isinstance(sub, list):
+                        flat.extend(sub)
+                    else:
+                        flat.append(sub)
 
-            weights = None
+                return flat
+
+            # Don't flatten, or the current container controller would suddenly see more 
+            # children than the node actually has
+            kept = [(cid, as_one(sub)) for cid, sub in child_ctrls]
+            playables = [c for _, c in kept]
 
             if isinstance(node, RandomSequenceContainer):
                 if node.random_mode_enum == RandomMode.Standard:
@@ -276,30 +345,18 @@ class Player:
                 else:
                     mode = "shuffle"
 
-                weights = [p.weight for p in node.playlist]
-            elif isinstance(node, MusicRandomSequenceContainer):
-                # TODO build playlist control tree
-                if node.root_ers_type in (
-                    RandomSequenceMode.ContinuousSequence,
-                    RandomSequenceMode.StepSequence,
-                ):
-                    mode = "playlist"
-                else:
-                    mode = "random"
+                # weights keyed per child id, aligned with children actually kept
+                wmap = {p.play_id: p.weight for p in node.playlist}
+                weights = [wmap.get(cid, 50000) for cid, _ in kept]
+                return PlaybackControl(playables, mode, weights)
 
-                next_node_id = branch[node_idx + 1]
-                for item in node.playlist_items:
-                    if item.segment_id == next_node_id:
-                        weight = item.weight
-                        break
-            elif isinstance(node, SwitchContainer):
-                mode = "select"
-            else:
-                mode = "parallel"
+            if isinstance(node, SwitchContainer):
+                return PlaybackControl(playables, "select")
 
-            return PlaybackControl(subctrls, mode, weights)
+            # LayerContainer, events
+            return PlaybackControl(playables, "parallel")
 
-        return build(root)
+        return as_one(build(root))
 
     def __getitem__(self, idx: int) -> Voice:
         return self.voices[idx]
