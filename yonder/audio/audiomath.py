@@ -38,7 +38,6 @@ def hpf_to_hz(val: float) -> float:
 
 
 def cents_to_speed(cents: float) -> float:
-    # pitch is given in cents, applied as playback speed
     return 2.0 ** (cents / 1200.0)
 
 
@@ -50,7 +49,8 @@ def to_pyo_domain(prop: PropID, val: float) -> float:
     elif prop == PropID.HPF:
         return hpf_to_hz(val)
     elif prop == PropID.Pitch:
-        return cents_to_speed(val)
+        # semitones (same log domain as cents): no exp, just rescale
+        return val / 100
     else:
         raise ValueError(f"Unhandled property {prop}")
 

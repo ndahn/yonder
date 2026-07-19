@@ -53,6 +53,7 @@ class StreamSource(pyo.PyoObject):
         self.set_loop_points(loop_start, loop_end)
 
         # Our crossfaded sum becomes this object's audio stream
+        self._done = pyo.Trig()
         self._mix = self._players[0] + self._players[1]
         self._base_objs = self._mix.getBaseObjects()
 
@@ -144,6 +145,7 @@ class StreamSource(pyo.PyoObject):
     def _swap(self) -> None:
         if not self.loop:
             self.stop()
+            self._done.play()
             return
 
         # Start the second player which will take over
@@ -180,3 +182,9 @@ class StreamSource(pyo.PyoObject):
     ) -> pyo.PyoObject:
         self.play()
         return pyo.PyoObject.out(self, chnl, inc, dur, delay)
+
+    def __getitem__(self, key: str):
+        if key == "trig":
+            return self._done
+
+        return pyo.PyoObject.__getitem__(self, key)
