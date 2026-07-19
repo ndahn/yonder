@@ -4,7 +4,7 @@ import numpy as np
 # NOTE added fix for WinError 50 directly in sounddevice._initialize
 import sounddevice as sd
 
-from yonder.audio import PitchShifter
+from yonder.audio.old import PitchShifter
 
 
 class WavPlayer:

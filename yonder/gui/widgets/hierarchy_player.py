@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.util import logger
 from yonder.wem import wem2wav
-from yonder.audio.player import Player, Voice  # TODO reorganize imports
+from yonder.audio import Player, Voice
 from yonder.gui import style
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -64,7 +64,8 @@ class add_hierarchy_player(DpgItem):
 
     def _open_voice_ctrl(self, sender: str, app_data: str, voice: Voice) -> None:
         # TODO
-        voice.update()
+        #voice.update()
+        pass
 
     def _setup_content(
         self,
