@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import pyo
 from pyo import sndinfo
 
@@ -19,15 +20,15 @@ class StreamSource(pyo.PyoObject):
         pyo.PyoObject.__init__(self, mul, add)
 
         self._path = Path(path)
-        self._duration = sndinfo(str(path))[1]
+        self._raw_duration = sndinfo(str(path))[1]
+        self._begin_trim = begin_trim
+        self._end_trim = end_trim
 
         if loop_end == 0.0:
-            loop_end = self._duration - abs(end_trim) - abs(begin_trim)
+            loop_end = self.duration
 
         self._loop_start = loop_start
         self._loop_end = loop_end
-        self._begin_trim = begin_trim
-        self._end_trim = end_trim
         self._xfade = xfade
         self.loop = loop
         self.speed = pyo.SigTo(1.0, 0.05)
@@ -85,7 +86,7 @@ class StreamSource(pyo.PyoObject):
 
             # positive if trim reduced, negative if increased
             end_diff = self._end_trim - abs(from_end)
-            self._loop_end = min(self._duration, self._loop_end - end_diff)
+            self._loop_end = min(self._raw_duration, self._loop_end - end_diff)
 
         # In wwise, trims are set from the beginning/end of the track
         self._begin_trim = abs(from_start)
@@ -114,19 +115,26 @@ class StreamSource(pyo.PyoObject):
 
     @property
     def duration(self) -> float:
-        return self._duration
+        return self._raw_duration - self._begin_trim - self._end_trim
+
+    @property
+    def raw_duration(self) -> float:
+        return self._raw_duration
 
     @property
     def play_duration(self) -> float:
-        return self.playback_end - self.playback_start
+        if not self.loop:
+            return self.duration
+
+        return self.play_end - self.play_begin
 
     @property
-    def playback_start(self) -> float:
-        return self._begin_trim + self._loop_start
+    def play_begin(self) -> float:
+        return self.loop_start
 
     @property
-    def playback_end(self) -> float:
-        return min(self._begin_trim + self._loop_end, self._duration - self._end_trim)
+    def play_end(self) -> float:
+        return min(self.loop_end, self.duration)
 
     @property
     def xfade(self) -> float:
@@ -150,7 +158,8 @@ class StreamSource(pyo.PyoObject):
 
         # Start the second player which will take over
         nxt = 1 - self._active
-        self._players[nxt].setOffset(self.playback_start)
+        playback_start = self._begin_trim + self._loop_start
+        self._players[nxt].setOffset(playback_start)
         self._players[nxt].play()
 
         # Let the envelopes handle the crossfade
@@ -158,12 +167,18 @@ class StreamSource(pyo.PyoObject):
         self._envs[self._active].value = 0
         self._active = nxt
 
+    @property
+    def pos(self) -> float:
+        return self._clock.get() * self.duration
+
     def seek(self, pos: float) -> None:
-        self._players[self._active].setOffset(pos)
-        self._clock.phase = (pos - self.playback_start) / self.play_duration
+        dur = self.duration
+        t = self._begin_trim + max(0.0, min(pos, dur - 1e-6))
+        self._players[self._active].setOffset(t)
+        self._clock.phase = t / dur
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
-        self._players[0].setOffset(0)
+        self._players[0].setOffset(self._begin_trim)
         self._players[0].play()
         self._envs[0].value = 1
         self._active = 0

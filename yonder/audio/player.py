@@ -68,8 +68,7 @@ class Player:
         pass
 
     def seek(self, pos: float) -> None:
-        # TODO
-        pass
+        self._ctrl.seek(pos)
 
     def set_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.setValue(vol, time=time)
@@ -77,7 +76,7 @@ class Player:
     def set_muted(self, muted: bool) -> None:
         self._gate.setValue(0.0 if muted else 1.0, time=0.05)
 
-    def update_node_params(
+    def set_state_params(
         self,
         rtpc_params: dict[Hash, float] = None,
         active_states: dict[Hash, Hash] = None,
@@ -85,7 +84,7 @@ class Player:
     ) -> None:
         for voices in self._node_map.values():
             for voice in voices:
-                voice.update(
+                voice.set_state_params(
                     rtpc_params=rtpc_params,
                     active_states=active_states,
                     distance=distance,
@@ -185,7 +184,9 @@ class Player:
         self._build_control_tree(bnk, root)
         return self
 
-    def _build_control_tree(self, bnk: Soundbank, root: int | HIRCNode) -> PlaybackControl:
+    def _build_control_tree(
+        self, bnk: Soundbank, root: int | HIRCNode
+    ) -> PlaybackControl:
         if isinstance(root, HIRCNode):
             root = root.id
 
@@ -196,7 +197,7 @@ class Player:
             if isinstance(playable, list):
                 if len(playable) == 1:
                     return playable[0]
-    
+
                 return PlaybackControl(playable, "parallel")
 
             return playable
@@ -231,7 +232,9 @@ class Player:
                 mode = "shuffle" if item.shuffle else "random"
                 if item.use_weight:
                     # weights sit on the child items
-                    weights = [playlist.nodes[cid]["item"].weight for cid, _ in child_ctrls]
+                    weights = [
+                        playlist.nodes[cid]["item"].weight for cid, _ in child_ctrls
+                    ]
 
             # TODO loop_base/min/max
             return PlaybackControl([c for _, c in child_ctrls], mode, weights)
@@ -247,7 +250,9 @@ class Player:
             # MRSCs have tree-like playlist structures
             if isinstance(node, MusicRandomSequenceContainer):
                 playlist = node.get_playlist_tree()
-                return build_playlist_item(playlist, node.playlist_items[0].playlist_item_id)
+                return build_playlist_item(
+                    playlist, node.playlist_items[0].playlist_item_id
+                )
 
             children = getattr(node, "children", None)
             if not children:
@@ -258,7 +263,7 @@ class Player:
                 sub = build(cid)
                 if sub:
                     child_ctrls.append((cid, sub))
-            
+
             if not child_ctrls:
                 return None
 
@@ -275,7 +280,7 @@ class Player:
 
                 return flat
 
-            # Don't flatten, or the current container controller would suddenly see more 
+            # Don't flatten, or the current container controller would suddenly see more
             # children than the node actually has
             kept = [(cid, as_one(sub)) for cid, sub in child_ctrls]
             playables = [c for _, c in kept]
@@ -293,7 +298,7 @@ class Player:
 
             if isinstance(node, SwitchContainer):
                 ctrl = PlaybackControl(playables, "switch")
-                
+
                 switch_map = {}
                 for switch in node.switch_groups:
                     indices = []
@@ -302,7 +307,7 @@ class Player:
                             indices.append(node.children.items.index(nid))
                         except ValueError:
                             continue
-                    
+
                     switch_map[switch.switch_id] = indices
 
                 selector: SwitchSelector = ctrl.selector

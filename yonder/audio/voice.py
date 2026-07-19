@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
+import math
 import pyo
 
 from yonder import Soundbank, HIRCNode, Hash, calc_hash
@@ -154,12 +155,8 @@ class VoiceBuilder:
 
         # Other things influencing playback
         if isinstance(node, MusicSegment):
-            self.src.loop_start = (
-                node.get_marker_pos(MarkerId.LoopStart) / 1000.0
-            )
-            self.src.loop_end = (
-                node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
-            )
+            self.src.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
+            self.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
 
         return self
 
@@ -231,7 +228,7 @@ class Voice(pyo.PyoObject):
     def tail(self) -> pyo.PyoObject:
         return self.chain[-1]
 
-    def update(
+    def set_state_params(
         self,
         rtpc_params: dict[Hash, float] = None,
         active_states: dict[Hash, Hash] = None,
@@ -270,6 +267,32 @@ class Voice(pyo.PyoObject):
 
             self.modifiers[prop].ctrl.value = to_pyo_domain(prop, val)
 
+    @property
+    def pos(self) -> float:
+        return self.src.pos
+
+    @property
+    def duration(self) -> float:
+        if self.src.loop:
+            # A looping voice has no end, so any positive seek is valid
+            return math.inf
+        
+        return self.src.duration
+
+    def seek(self, pos: float) -> float:
+        if self.src.loop:
+            self.src.seek(pos % self.src.duration)
+            return 0.0
+        
+        if pos >= self.src.duration:
+            self.stop()
+            self._trig.play()
+            # Return remainder that wasn't applied
+            return pos - self.src.duration
+
+        self.src.seek(pos)
+        return 0.0
+
     def play(self, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
         self.src.play()
 
@@ -298,5 +321,5 @@ class Voice(pyo.PyoObject):
     def __getitem__(self, key: str):
         if key == "trig":
             return self._trig
-        
+
         return pyo.PyoObject.__getitem__(self, key)

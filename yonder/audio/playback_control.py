@@ -1,30 +1,37 @@
+from __future__ import annotations
 from typing import Literal, Generator, Iterable
 import random
 import numpy as np
 import pyo
 
+from .voice import Voice
+
+
+class PlaybackControl: ...
+Playable = PlaybackControl | Voice
+
 
 class NodeSelector:
-    def __init__(self, nodes: list[pyo.PyoObject]):
+    def __init__(self, nodes: list[Playable]):
         self.nodes = nodes
 
-    def __next__(self) -> pyo.PyoObject:
+    def __next__(self) -> Playable | list[Playable]:
         raise NotImplementedError()
 
 
 class RandomSelector(NodeSelector):
-    def __init__(self, nodes: list[pyo.PyoObject], weights: list[int]):
+    def __init__(self, nodes: list[Playable], weights: list[int]):
         super().__init__(nodes)
         self.weights = list(weights)
 
-    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
-        yield random.choices(self.nodes, self.weights)[0]
+    def __next__(self) -> Playable:
+        return random.choices(self.nodes, self.weights)[0]
 
 
 class ShuffleSelector(NodeSelector):
     def __init__(
         self,
-        nodes: list[pyo.PyoObject],
+        nodes: list[Playable],
         weights: list[int],
         wrap: bool = True,
         shuffle_after_wrap: bool = False,
@@ -37,7 +44,7 @@ class ShuffleSelector(NodeSelector):
         self.playlist = []
         self.shuffle()
 
-    def shuffle(self) -> list[pyo.PyoObject]:
+    def shuffle(self) -> list[Playable]:
         probabilities = np.asarray(self.weights) / np.sum(self.weights)
         self.playlist = np.random.choice(
             self.nodes,
@@ -47,7 +54,7 @@ class ShuffleSelector(NodeSelector):
         ).tolist()
         return self.playlist
 
-    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
+    def __next__(self) -> Playable:
         self.index += 1
 
         if self.wrap:
@@ -57,30 +64,35 @@ class ShuffleSelector(NodeSelector):
         elif self.index >= len(self.nodes):
             raise StopIteration()
 
-        yield self.playlist[self.index]
+        return self.playlist[self.index]
 
 
 class PlaylistSelector(NodeSelector):
-    def __init__(self, nodes: list[pyo.PyoObject], wrap: bool = True):
+    def __init__(self, nodes: list[Playable], wrap: bool = True):
         super().__init__(nodes)
         self.wrap = wrap
-        self.index = -1
+        self.index = 0
 
-    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
-        self.index += 1
+    @property
+    def current(self) -> Playable:
+        return self.nodes[max(0, self.index)]
+
+    def __next__(self) -> Playable:
+        idx = self.index + 1
 
         if self.wrap:
-            self.index %= len(self.nodes)
-        elif self.index >= len(self.nodes):
+            idx %= len(self.nodes)
+        elif idx >= len(self.nodes):
             raise StopIteration()
 
-        yield self.nodes[self.index]
+        self.index = idx
+        return self.nodes[idx]
 
 
 class ParallelSelector(NodeSelector):
     def __init__(
         self,
-        nodes: list[pyo.PyoObject],
+        nodes: list[Playable],
         whitelist: Iterable[int] = None,
         blacklist: Iterable[int] = None,
     ):
@@ -89,7 +101,7 @@ class ParallelSelector(NodeSelector):
         self.blacklist = set(blacklist or [])
 
     @property
-    def valid(self) -> list[pyo.PyoObject]:
+    def valid(self) -> list[Playable]:
         ret = list(enumerate(self.nodes))
 
         if self.whitelist:
@@ -99,45 +111,45 @@ class ParallelSelector(NodeSelector):
 
         return [x[1] for x in ret]
 
-    def __next__(self) -> Generator[list[pyo.PyoObject], None, None]:
-        yield self.valid
+    def __next__(self) -> list[Playable]:
+        return self.valid
 
 
 class SwitchSelector(NodeSelector):
     def __init__(
         self,
-        nodes: list[pyo.PyoObject],
+        nodes: list[Playable],
         switch_map: dict[int, list[int]] = None,
         default_state: int = None,
     ):
         super().__init__(nodes)
-        self.switch_map = switch_map
+        self.switch_map = switch_map or {}
         self.state: int = default_state
         self.default_state = default_state
 
-    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
+    def __next__(self) -> Playable:
         indices = self.switch_map.get(self.state)
         if indices is None:
             indices = self.switch_map.get(self.default_state, [])
 
-        yield [self.nodes[i] for i in indices]
+        return [self.nodes[i] for i in indices]
 
 
 class ManualSelector(NodeSelector):
-    def __init__(self, nodes: list[pyo.PyoObject], index: int = 0):
+    def __init__(self, nodes: list[Playable], index: int = 0):
         super().__init__(nodes)
         self.index = index
 
-    def __next__(self) -> Generator[pyo.PyoObject, None, None]:
-        yield self.nodes[self.index]
+    def __next__(self) -> Playable:
+        return self.nodes[self.index]
 
 
 class PlaybackControl(pyo.PyoObject):
     def __init__(
         self,
-        children: pyo.PyoObject | list[pyo.PyoObject],
+        children: Playable | list[Playable],
         playback_mode: Literal[
-            "random", "shuffle", "playlist", "parallel", "manual"
+            "random", "shuffle", "playlist", "parallel", "switch", "manual"
         ] = "random",
         weights: list[int] = None,
         mul: float = 1,
@@ -145,12 +157,12 @@ class PlaybackControl(pyo.PyoObject):
     ):
         pyo.PyoObject.__init__(self, mul, add)
 
-        self.children: list[pyo.PyoObject] = []
+        self.children: list[Playable] = []
         self.weights: list[int] = []
         self.selector: NodeSelector = None
         self._pending: set[int] = set()
         self._watchers: list[pyo.TrigFunc] = []
-        self._current_voices: list[pyo.PyoObject] = []
+        self._current_voices: list[Playable] = []
         self._playing = False
 
         # audio side: children feed an internal mixer whose output is this
@@ -163,7 +175,7 @@ class PlaybackControl(pyo.PyoObject):
         self.playback_mode = playback_mode
 
         if children:
-            if isinstance(children, pyo.PyoObject):
+            if not isinstance(children, list):
                 children = [children]
 
             if not weights:
@@ -178,14 +190,14 @@ class PlaybackControl(pyo.PyoObject):
 
     @playback_mode.setter
     def playback_mode(
-        self, mode: Literal["random", "shuffle", "playlist", "parallel", "manual"]
+        self, mode: Literal["random", "shuffle", "playlist", "parallel", "switch", "manual"]
     ) -> None:
         if mode == "random":
             self.selector = RandomSelector(self.children, self.weights)
         elif mode == "shuffle":
             self.selector = ShuffleSelector(self.children, self.weights)
         elif mode == "playlist":
-            self.selector = PlaylistSelector(self.children, self.weights)
+            self.selector = PlaylistSelector(self.children, True)
         elif mode == "parallel":
             self.selector = ParallelSelector(self.children)
         elif mode == "switch":
@@ -195,7 +207,7 @@ class PlaybackControl(pyo.PyoObject):
         else:
             raise ValueError(f"Unknown playback mode {mode}")
 
-    def add_child(self, child: pyo.PyoObject, weight: int = 50000) -> None:
+    def add_child(self, child: Playable, weight: int = 50000) -> None:
         idx = len(self.children)
 
         # selectors share our list instances, so this is enough
@@ -203,7 +215,7 @@ class PlaybackControl(pyo.PyoObject):
         self.weights.append(weight)
 
         self._mixer.addInput(idx, child)
-        self._mixer.seAmp(idx, 0, 1.0)
+        self._mixer.setAmp(idx, 0, 1.0)
 
         # Wire up the child's end trigger
         self._watchers.append(
@@ -220,11 +232,16 @@ class PlaybackControl(pyo.PyoObject):
 
         self._advance()
 
-    def _advance(self) -> None:
+    def _advance(self, inc: int = 1) -> None:
+        if inc <= 0:
+            raise ValueError("inc must be > 0")
+
         try:
-            selected = next(self.selector)
+            for _ in range(inc):
+                selected = next(self.selector)
         except StopIteration:
             self._on_finish()
+            return
 
         if not isinstance(selected, list):
             selected = [selected]
@@ -234,6 +251,57 @@ class PlaybackControl(pyo.PyoObject):
 
         for voice in selected:
             voice.play()
+    
+    @property
+    def duration(self) -> float:
+        # only deterministic modes have a timeline
+        if self._playback_mode == "parallel":
+            return max((c.duration for c in self.selector.valid), default=0.0)
+
+        if self._playback_mode == "playlist":
+            return sum(c.duration for c in self.children)
+
+        # Can't seek past this
+        return np.inf
+
+    @property
+    def pos(self) -> float:
+        if self._playback_mode == "playlist":
+            idx = self.selector.index
+            past = sum(c.duration for c in self.children[:idx])
+            return past + self.children[idx].pos
+        
+        if self._current_voices:
+            return max(v.pos for v in self._current_voices)
+
+        return 0.0
+
+    def seek(self, pos: float) -> float:
+        if self._playback_mode == "parallel":
+            residuals = [v.seek(pos) for v in self._current_voices]
+            if any(r <= 0 for r in residuals):
+                return 0.0
+
+            return min(residuals)
+        
+        if self._playback_mode == "playlist":
+            # TODO child is not always a Voice or even a PlaybackControl
+            for idx, child in enumerate(self.children[self.selector.index:]):
+                if pos < child.duration:
+                    self._advance(idx)
+                    return child.seek(pos)
+                
+                pos -= child.duration
+            
+            # Playlist ended before advancing to pos
+            self._on_finish()
+            return pos
+
+        # All others modes advance to the next item and discard the remainder
+        for child in self._current_voices:
+            child.seek(pos)
+
+        return 0.0
 
     def play(self, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
         self._playing = True
