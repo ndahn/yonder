@@ -122,11 +122,14 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
                     )
                 )
             else:
-                group_ers = (
-                    RandomSequenceMode.ContinuousSequence
-                    if isinstance(item, list)
-                    else RandomSequenceMode.ContinuousRandom
-                )
+                if isinstance(item[0], RandomSequenceMode):
+                    group_ers = item[0]
+                    item = item[1:]
+                elif isinstance(item, list):
+                    group_ers = RandomSequenceMode.ContinuousSequence
+                else:
+                    group_ers = RandomSequenceMode.ContinuousRandom
+
                 group_node = MusicRanSeqPlaylistItem(
                     0,
                     global_id_generator(),

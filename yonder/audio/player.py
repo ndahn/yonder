@@ -10,20 +10,15 @@ from yonder.types import (
     Sound,
     MusicTrack,
     MusicSegment,
-    State,
-    Attenuation,
     RandomSequenceContainer,
     SwitchContainer,
     LayerContainer,
     MusicRandomSequenceContainer,
 )
-from yonder.types.base_types import RTPC
-from yonder.types.mixins import PropertyMixin, StateMixin
 from yonder.enums import (
     PropID,
     MarkerId,
     ClipAutomationType,
-    CurveParameters,
     RandomMode,
     RandomSequenceMode,
 )
@@ -36,7 +31,7 @@ from .playback_control import PlaybackControl
 
 class Player:
     def __init__(self):
-        self.voices: list[Voice] = []
+        self.voices: dict[int, Voice] = []
         self._ctrl: PlaybackControl = None
         self._node_map: dict[int, list[Voice]] = {}
 
@@ -165,8 +160,8 @@ class Player:
                             f"Unsupported ClipAutomationType {clip.auto_type}"
                         )
 
-            for branch_idx in range(len(branch)):
-                node = bnk[branch[branch_idx]]
+            for node_idx in range(len(branch)):
+                node = bnk[branch[node_idx]]
                 self._node_map.setdefault(node.id, []).append(builder)
 
                 # Collect anything from the node that will influence playback
@@ -201,7 +196,7 @@ class Player:
                                 new_ctrl.playback_mode = "shuffle"
 
                             # Weights; we know that there is always at least a valid leaf node
-                            next_node_id = branch[branch_idx + 1]
+                            next_node_id = branch[node_idx + 1]
                             for item in node.playlist:
                                 if item.play_id == next_node_id:
                                     weight = item.weight
@@ -215,7 +210,7 @@ class Player:
                             else:
                                 new_ctrl.playback_mode = "random"
 
-                            next_node_id = branch[branch_idx + 1]
+                            next_node_id = branch[node_idx + 1]
                             for item in node.playlist_items:
                                 if item.segment_id == next_node_id:
                                     weight = item.weight
@@ -244,9 +239,67 @@ class Player:
             self._mixer.addInput(idx, tail)
             self._mixer.setAmp(idx, 0, 1.0)
 
-        self.voices = list(voices.values())
-        self._ctrl = master_ctrl
+        self.voices = voices
+        self._ctrl = self._build_control_tree(bnk, root)
         return self
+
+    def _build_control_tree(self, bnk: Soundbank, root: HIRCNode) -> PlaybackControl:
+        def build(nid: Hash):
+            if nid in self.voices:
+                return self.voices[nid]
+
+            node = bnk.get(nid)
+            if not node:
+                return None
+
+            if not hasattr(node, "children") or not node.children:
+                return None
+
+            subctrls = list(filter(bool, (build(c) for c in node.children)))
+
+            if not isinstance(
+                node,
+                (
+                    RandomSequenceContainer,
+                    MusicRandomSequenceContainer,
+                    SwitchContainer,
+                    LayerContainer,
+                ),
+            ):
+                return subctrls
+
+            weights = None
+
+            if isinstance(node, RandomSequenceContainer):
+                if node.random_mode_enum == RandomMode.Standard:
+                    mode = "random"
+                else:
+                    mode = "shuffle"
+
+                weights = [p.weight for p in node.playlist]
+            elif isinstance(node, MusicRandomSequenceContainer):
+                # TODO build playlist control tree
+                if node.root_ers_type in (
+                    RandomSequenceMode.ContinuousSequence,
+                    RandomSequenceMode.StepSequence,
+                ):
+                    mode = "playlist"
+                else:
+                    mode = "random"
+
+                next_node_id = branch[node_idx + 1]
+                for item in node.playlist_items:
+                    if item.segment_id == next_node_id:
+                        weight = item.weight
+                        break
+            elif isinstance(node, SwitchContainer):
+                mode = "select"
+            else:
+                mode = "parallel"
+
+            return PlaybackControl(subctrls, mode, weights)
+
+        return build(root)
 
     def __getitem__(self, idx: int) -> Voice:
         return self.voices[idx]

@@ -57,8 +57,8 @@ class VoiceBuilder:
         self.src = src
         self.mod: dict[PropID, ModifierStack] = {
             PropID.Pitch: ModifierStack(0.0),  # semitones
-            PropID.HPF: ModifierStack(17.0),  # Hz
-            PropID.LPF: ModifierStack(20000.0),  # Hz
+            PropID.HPF: ModifierStack(hpf_to_hz(0)),  # Hz
+            PropID.LPF: ModifierStack(lpf_to_hz(0)),  # Hz
             PropID.Volume: ModifierStack(db_to_amp(0.0)),  # factor
         }
 
@@ -165,6 +165,10 @@ class VoiceBuilder:
                 # Fades are already normalized to 0..1, no conversion needed
                 env = make_envelope(clip.graph_points, CurveScaling.None_, None)
 
+            # SigTo ──┐
+            #         ├─(×)──┐
+            # env1 ───┘      ├─(×)──> out signal
+            # env2 ──────────┘
             gain *= env
             envelopes.append(env)
 
@@ -206,16 +210,12 @@ class Voice(pyo.PyoObject):
         add: float = 0,
     ):
         pyo.PyoObject.__init__(self, mul, add)
-
         self.src = src
         self.modifiers = modifiers
         self.chain = effect_chain
-        self._done = pyo.Trig()
+        self._trig = pyo.Trig()
         self._fwd = pyo.TrigFunc(src["trig"], self._on_finished)
         self._base_objs = self.tail.getBaseObjects()
-
-    def _on_finished(self) -> None:
-        self._done.play()
 
     @property
     def tail(self) -> pyo.PyoObject:
@@ -281,3 +281,12 @@ class Voice(pyo.PyoObject):
     ) -> pyo.PyoObject:
         self.play()
         return pyo.PyoObject.out(self, chnl, inc, dur, delay)
+
+    def _on_finished(self) -> None:
+        self._trig.play()
+
+    def __getitem__(self, key: str):
+        if key == "trig":
+            return self._trig
+        
+        return pyo.PyoObject.__getitem__(self, key)

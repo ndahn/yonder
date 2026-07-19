@@ -29,6 +29,8 @@ _T = TypeVar("_T")
 
 @dataclass(slots=True)
 class _ItemContainer(Generic[_T]):
+    items: list[_T]
+    
     def add(self, item: _T) -> None:
         from .hirc_node import HIRCNode
 
@@ -73,6 +75,9 @@ class _ItemContainer(Generic[_T]):
 
     def __len__(self) -> int:
         return len(self.items)
+
+    def __bool__(self) -> bool:
+        return bool(self.items)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"items:{i}", item) for i, item in enumerate(self.items)]
