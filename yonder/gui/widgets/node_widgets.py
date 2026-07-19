@@ -307,8 +307,7 @@ def add_node_rtpc(
 ) -> None:
     def on_rtpcs_changed(sender: str, rtpcs: list[RTPC], cb_user_data: Any) -> None:
         node.rtpcs[:] = rtpcs
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     with dpg.tree_node(
         label=µ("RTPC"),
@@ -334,8 +333,7 @@ def add_node_states(
         node.states.state_group_chunks = states.state_group_chunks
         node.states.state_group_count = len(states.state_group_chunks)
 
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     has_states = bool(node.states.state_property_info or node.states.state_group_chunks)
 
@@ -531,9 +529,7 @@ def make_setter(
             new_value = value_transformer(new_value)
 
         node.set_value(path, new_value)
-
-        if on_node_changed:
-            on_node_changed(sender, node, user_data)
+        on_node_changed(sender, node, user_data)
 
     return setter
 
@@ -755,8 +751,7 @@ def _create_attributes_action(
                 # Set regular member
                 setattr(sub, key, val)
 
-            if on_node_changed:
-                on_node_changed(base_tag, node, user_data)
+            on_node_changed(base_tag, node, user_data)
 
         return set_value
 
@@ -850,8 +845,7 @@ def _create_attributes_attenuation(
                 f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
             )
 
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def on_curve_param_changed(sender: str, curve: str, param_idx: int) -> None:
         if curve == "-":
@@ -860,9 +854,7 @@ def _create_attributes_attenuation(
             curve_idx = int(curve.split("#")[-1])
 
         node.curves_to_use[param_idx] = curve_idx
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     with dpg.group():
         with dpg.tree_node(
@@ -1008,10 +1000,7 @@ def _create_attributes_event(
         action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
         bnk.add_nodes(action)
         node.actions.append(action.id)
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
-
+        on_node_changed(base_tag, node, user_data)
         done(action.id)
 
     def get_row_for_action(aid: int, idx: int) -> None:
@@ -1127,8 +1116,7 @@ def _create_attributes_musicrandomsequencecontainer(
     def on_transition_rule_changed(
         sender: str, rule: MusicTransitionRule, cb_user_data: Any
     ) -> None:
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     with dpg.group():
         add_transition_matrix(
@@ -1775,9 +1763,7 @@ def _create_attributes_state(
         node.parameters.append(prop_idx)
         node.values.append(value)
         ref_table.refresh()
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def on_param_removed(
         sender: str,
@@ -1788,9 +1774,7 @@ def _create_attributes_state(
         node.parameters.pop(param_idx)
         node.values.pop(param_idx)
         ref_table.refresh()
-
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     def on_prop_idx_changed(sender: str, new_val: float, idx: int) -> None:
         if new_val in node.parameters:
@@ -1799,13 +1783,11 @@ def _create_attributes_state(
         else:
             node.parameters[idx] = new_val
             ref_table.refresh()
-            if on_node_changed:
-                on_node_changed(base_tag, node, user_data)
+            on_node_changed(base_tag, node, user_data)
 
     def on_param_value_changed(sender: str, new_val: float, idx: int) -> None:
         node.values[idx] = new_val
-        if on_node_changed:
-            on_node_changed(base_tag, node, user_data)
+        on_node_changed(base_tag, node, user_data)
 
     referees = list(bnk.tree.predecessors(node.id))
     ref_table = add_widget_table(
@@ -1841,18 +1823,18 @@ def _create_attributes_switchcontainer(
     user_data: Any = None,
 ) -> None:
     def on_show_empty_switches(sender: str, show: bool, node: SwitchContainer) -> None:
-        for switch in node.switch_groups:
-            dpg.configure_item(
-                f"{base_tag}/node_{node.id}/switch_{switch.switch_id}", show=show
-            )
+        for switch_tag in empty:
+            dpg.configure_item(switch_tag, show=show)
+
+    def on_groupid_changed(sender: str, info: tuple[Hash, str], cb_user_data: Any) -> None:
+        node.group_id = info[0]
+        on_node_changed(base_tag, node, user_data)
+
+    empty = []
 
     with dpg.group():
-        dpg.add_checkbox(
-            label=µ("Show empty switches"),
-            callback=on_show_empty_switches,
-            default_value=False,
-            user_data=node,
-            tag=f"{base_tag}/switchcontainer/show_empty",
+        add_hash_widget(
+            node.group_id, on_hash_changed=on_groupid_changed, hash_label=µ("Switch Group")
         )
 
         with dpg.tree_node(
@@ -1863,12 +1845,16 @@ def _create_attributes_switchcontainer(
             for switch in node.switch_groups:
                 name = lookup_name(switch.switch_id, "?")
                 label = f"({len(switch.nodes)}) / {name} (#{switch.switch_id})"
+                switch_tag = f"{base_tag}/node_{node.id}/switch_{switch.switch_id}"
+
+                if not switch.nodes:
+                    empty.append(switch_tag)
 
                 with dpg.tree_node(
                     label=label,
                     show=bool(switch.nodes),
                     span_full_width=True,
-                    tag=f"{base_tag}/node_{node.id}/switch_{switch.switch_id}",
+                    tag=switch_tag,
                 ):
                     for nid in switch.nodes:
                         switch_node = bnk.get(nid)
@@ -1881,3 +1867,12 @@ def _create_attributes_switchcontainer(
                             )
                         else:
                             dpg.add_text(µ("#{node} (not found)").format(node=nid))
+
+        dpg.add_spacer(height=3)        
+        dpg.add_checkbox(
+            label=µ("Show empty switches"),
+            callback=on_show_empty_switches,
+            default_value=False,
+            user_data=node,
+            tag=f"{base_tag}/switchcontainer/show_empty",
+        )
