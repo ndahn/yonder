@@ -1321,18 +1321,30 @@ class BanksOfYonder(DpgItem):
         return root_row.row
 
     def _next_events_page(self) -> None:
+        if not self.bnk:
+            return
+
         self._events_page += 1
         self._regenerate_events_list()
 
     def _prev_events_page(self) -> None:
+        if not self.bnk:
+            return
+
         self._events_page -= 1
         self._regenerate_events_list()
 
     def _next_globals_page(self) -> None:
+        if not self.bnk:
+            return
+
         self._globals_page += 1
         self._regenerate_globals_list()
 
     def _prev_globals_page(self) -> None:
+        if not self.bnk:
+            return
+
         self._globals_page -= 1
         self._regenerate_globals_list()
 

@@ -85,6 +85,7 @@ class add_hirc_player(DpgItem):
     def _on_ctrl_stop(self) -> None:
         self._player.stop()
         self._player.seek(0)
+        dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
 
     def _on_ctrl_play_pause(self) -> None:
         if self._player.playing:
@@ -104,9 +105,11 @@ class add_hirc_player(DpgItem):
         self.regenerate()
 
     def _open_voice_ctrl(self, sender: str, app_data: str, user_data: Any) -> None:
+        tag = self._t("popup_voice_ctrl")
         pos = dpg.get_item_rect_min(sender)
-        dpg.set_item_pos(self._t("popup_voice_ctrl"), (pos[0], pos[1] - 104))
-        dpg.show_item(self._t("popup_voice_ctrl"))
+        size = dpg.get_item_rect_size(tag)
+        dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
+        dpg.show_item(tag)
 
     def _on_set_volume(self, sender: str, amp: float, user_data: Any) -> None:
         if amp == 0.0:
@@ -161,12 +164,12 @@ class add_hirc_player(DpgItem):
                 dpg.add_image_button(
                     Icons.forward_10s,
                     callback=self._on_ctrl_forward_10s,
-                    tint_color=style.purple,
+                    tint_color=style.purple.mix(style.white),
                 )
                 dpg.add_image_button(
                     Icons.forward_30s,
                     callback=self._on_ctrl_forward_30s,
-                    tint_color=style.pink,
+                    tint_color=style.pink.mix(style.white),
                 )
 
                 dpg.add_text("|")
