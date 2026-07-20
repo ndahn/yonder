@@ -42,6 +42,7 @@ class Icons:
     sound = "tex_icon_sound"
     sound_reset = "tex_icon_sound_reset"
     soundbank = "tex_icon_soundbank"
+    states = "tex_icon_states"
     stop = "tex_icon_stop"
     swap = "tex_icon_swap"
     swords = "tex_icon_swords"

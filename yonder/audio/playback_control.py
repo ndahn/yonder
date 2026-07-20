@@ -366,6 +366,10 @@ class PlaybackControl(pyo.PyoObject):
 
     @property
     def duration(self) -> float:
+        return max((c.duration for c in self._current_voices), default=0.0)
+
+    @property
+    def total_duration(self) -> float:
         return self.selector.duration
 
     @property

@@ -27,6 +27,7 @@ from yonder.enums import (
 from yonder.wem import wem2wav
 from yonder.util import logger
 
+from .equalizer import Equalizer
 from .voice import VoiceBuilder, Voice
 from .stream_source import StreamSource
 from .playback_control import PlaybackControl, SwitchManager
@@ -55,10 +56,11 @@ class Player:
         self._server.boot()
         # mixes the voice branches; time smooths per-voice amp changes
         self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
+        self._equalizer = Equalizer(self._mixer[0])
         # final volume adjustment
         self._gate = pyo.SigTo(value=1.0, time=0.05)
         # master chain: mixer -> gate -> dac
-        self._master = self._mixer[0] * self._gate
+        self._master = self._equalizer * self._gate
         self._master.out()
 
         self._server.start()
@@ -93,6 +95,10 @@ class Player:
 
     @property
     def duration(self) -> float:
+        return self._ctrl.duration
+
+    @property
+    def total_duration(self) -> float:
         """Playable duration of the voices this player currently controls. Will be `inf` if any voices are looping or randomized.
 
         Returns
@@ -100,7 +106,7 @@ class Player:
         float
             Playable duration in seconds.
         """
-        return self._ctrl.duration
+        return self._ctrl.total_duration
 
     @property
     def pos(self) -> float:
@@ -119,6 +125,10 @@ class Player:
     def set_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.time = time
         self._gate.value = vol
+
+    def set_speed(self, speed: float) -> None:
+        for voice in self.voices.values():
+            voice.src.speed.value = speed
 
     def set_muted(self, muted: bool) -> None:
         self._gate.time = 0.05

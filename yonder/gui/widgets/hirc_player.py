@@ -101,15 +101,25 @@ class add_hirc_player(DpgItem):
     def _on_ctrl_forward_30s(self) -> None:
         self._player.seek(self._player.pos + 30.0)
 
-    def _on_ctrl_reset(self) -> None:
-        self.regenerate()
+    def _open_states_ctrl(self) -> None:
+        # TODO
+        pass
+
+    def _open_equalizer(self) -> None:
+        # TODO
+        pass
 
     def _open_voice_ctrl(self, sender: str, app_data: str, user_data: Any) -> None:
         tag = self._t("popup_voice_ctrl")
         pos = dpg.get_item_rect_min(sender)
-        size = dpg.get_item_rect_size(tag)
+        size = tuple(dpg.get_item_rect_size(tag))
         dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
         dpg.show_item(tag)
+
+        # Fix for dpg needing to render the popup once to be able to measure it
+        dpg.render_dearpygui_frame()
+        size = tuple(dpg.get_item_rect_size(tag))
+        dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
 
     def _on_set_volume(self, sender: str, amp: float, user_data: Any) -> None:
         if amp == 0.0:
@@ -117,6 +127,9 @@ class add_hirc_player(DpgItem):
         else:
             self._player.set_muted(False)
             self._player.set_volume(amp)
+
+    def _on_set_speed(self, sender: str, speed: float, user_data: Any) -> None:
+        self._player.set_speed(speed)
 
     def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:
         self._player.voices[voice_id].volume = amp
@@ -175,8 +188,13 @@ class add_hirc_player(DpgItem):
                 dpg.add_text("|")
 
                 dpg.add_image_button(
-                    Icons.sound_reset,
-                    callback=self._on_ctrl_reset,
+                    Icons.states,
+                    callback=self._open_states_ctrl,
+                    tint_color=style.light_grey,
+                )
+                dpg.add_image_button(
+                    Icons.equalizer,
+                    callback=self._open_equalizer,
                     tint_color=style.light_grey,
                 )
                 dpg.add_image_button(
@@ -196,10 +214,18 @@ class add_hirc_player(DpgItem):
                 label=µ("Volume"),
                 callback=self._on_set_volume,
                 default_value=1.0,
+                min_value=0.1,
+                max_value=2.0,
+                clamped=True,
+                width=280,
+            )
+            dpg.add_slider_float(
+                label=µ("Speed"),
+                callback=self._on_set_speed,
+                default_value=1.0,
                 min_value=0.0,
                 max_value=2.0,
                 clamped=True,
-                no_input=True,
                 width=280,
             )
             dpg.add_separator(label=µ("Voices"))
