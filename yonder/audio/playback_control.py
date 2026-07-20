@@ -20,7 +20,13 @@ class VoiceManager:
 
     @property
     def duration(self) -> float:
-        # a seek can never pass this node
+        if not self.nodes:
+            return 0.0
+
+        if len(self.nodes) == 1:
+            return self.nodes[0].duration
+
+        # A seek can never pass this node
         return np.inf
 
     @property

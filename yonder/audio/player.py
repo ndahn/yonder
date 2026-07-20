@@ -51,24 +51,34 @@ class Player:
         self._server.shutdown()
         self._server = None
 
-    def stop(self) -> None:
-        if self._ctrl:
-            self._ctrl.stop()
-
-    def play(self) -> None:
-        self._ctrl.play()
-
     @property
     def playing(self) -> bool:
         return self._ctrl._playing
 
     @property
-    def pos(self) -> float:
-        # TODO
-        pass
+    def duration(self) -> float:
+        """Playable duration of the voices this player currently controls. Will be `inf` if any voices are looping or randomized.
 
-    def seek(self, pos: float) -> None:
-        self._ctrl.seek(pos)
+        Returns
+        -------
+        float
+            Playable duration in seconds.
+        """
+        return self._ctrl.duration
+
+    @property
+    def pos(self) -> float:
+        return self._ctrl.pos
+
+    def seek(self, pos: float) -> float:
+        return self._ctrl.seek(pos)
+
+    def play(self, dur: float = 0, delay: float = 0) -> None:
+        self._ctrl.play(dur, delay)
+
+    def stop(self, wait: float = 0) -> None:
+        if self._ctrl:
+            self._ctrl.stop(wait)
 
     def set_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.setValue(vol, time=time)
