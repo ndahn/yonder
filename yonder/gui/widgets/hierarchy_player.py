@@ -10,29 +10,52 @@ from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 
 
-class add_hierarchy_player(DpgItem):
+class add_hirc_player(DpgItem):
     def __init__(
         self,
-        bnk: Soundbank,
-        entrypoint: HIRCNode,
         *,
-        full_tree: bool = False,
-        max_points: int = 5000,
         width: int = -1,
         height: int = 100,
         tag: str = 0,
         parent: str = 0,
     ) -> None:
         super().__init__(tag)
-
-        self._bnk = bnk
-        self._entrypoint = entrypoint
-        self._max_points = max_points
-
-        vgmstream_exe = get_config().locate_vgmstream()
-        self._player = Player(vgmstream_exe)
-        self._player.from_hierarchy(bnk, entrypoint, full_tree)
+        self._player = Player(None)
         self._setup_content(width, height, parent)
+
+    def load(
+        self, bnk: Soundbank, entrypoint: HIRCNode, full_tree: bool = False
+    ) -> None:
+        self._player.vgmstream_exe = get_config().locate_vgmstream()
+        self._player.from_hierarchy(bnk, entrypoint, full_tree)
+        self.regenerate()
+
+    def regenerate(self) -> None:
+        dpg.delete_item(self._t("players"), children_only=True)
+        dpg.push_container_stack(self._t("players"))
+
+        for voice in self._player.voices:
+            with dpg.group(horizontal=True):
+                dpg.add_checkbox(
+                    default_value=True,
+                    callback=self._toggle_voice,
+                    user_data=voice,
+                )
+                dpg.add_button(
+                    arrow=True,
+                    direction=dpg.mvDir_Down,
+                    callback=self._open_voice_ctrl,
+                    user_data=voice,
+                )
+                with dpg.tree_node(
+                    label=voice.src.path.name,
+                    span_full_width=True,
+                    default_open=False,
+                ):
+                    # TODO visualization
+                    pass
+
+        dpg.pop_container_stack()
 
     def _on_ctrl_seek_zero(self) -> None:
         self._player.seek(0)
@@ -65,7 +88,7 @@ class add_hierarchy_player(DpgItem):
 
     def _open_voice_ctrl(self, sender: str, app_data: str, voice: Voice) -> None:
         # TODO
-        #voice.update()
+        # voice.update()
         pass
 
     def _setup_content(
@@ -119,30 +142,3 @@ class add_hierarchy_player(DpgItem):
                 )
 
             dpg.add_group(tag=self._t("players"))
-
-    def regenerate(self) -> None:
-        dpg.delete_item(self._t("players"), children_only=True)
-        dpg.push_container_stack(self._t("players"))
-
-        for voice in self._player.voices:
-            with dpg.group(horizontal=True):
-                dpg.add_checkbox(
-                    default_value=True,
-                    callback=self._toggle_voice,
-                    user_data=voice,
-                )
-                dpg.add_button(
-                    arrow=True,
-                    direction=dpg.mvDir_Down,
-                    callback=self._open_voice_ctrl,
-                    user_data=voice,
-                )
-                with dpg.tree_node(
-                    label=voice.src.path.name,
-                    span_full_width=True,
-                    default_open=False,
-                ):
-                    # TODO visualization
-                    pass
-
-        dpg.pop_container_stack()

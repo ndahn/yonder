@@ -1,6 +1,7 @@
 from __future__ import annotations
 import networkx as nx
 from pathlib import Path
+import time
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
@@ -32,7 +33,7 @@ from .playback_control import PlaybackControl, SwitchManager
 
 class Player:
     def __init__(self, vgmstream_exe: Path | str):
-        self.vgmstream_exe = Path(vgmstream_exe)
+        self.vgmstream_exe = Path(vgmstream_exe or "")
 
         self.voices: dict[int, Voice] = []
         self._ctrl: PlaybackControl = None
@@ -40,7 +41,9 @@ class Player:
         self._node_map: dict[int, list[Voice]] = {}
 
         # NOTE crashes on some systems with input enabled, but we don't need it
-        self._server = pyo.Server(duplex=0).boot()
+        self._server = pyo.Server(duplex=0)
+        self._server.deactivateMidi()
+        self._server.boot()
         # mixes the voice branches; time smooths per-voice amp changes
         self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
         # final volume adjustment
@@ -52,9 +55,22 @@ class Player:
         self._server.start()
 
     def __del__(self):
-        self._server.stop()
-        self._server.shutdown()
-        self._server = None
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    def close(self) -> None:
+        if self._ctrl:
+            self._ctrl.stop()
+
+        if self._server.getIsStarted():
+            self._server.stop()
+            # Allow the server to drain all buffers and callbacks
+            time.sleep(0.25)
+
+        if self._server.getIsBooted():
+            self._server.shutdown()
 
     @property
     def playing(self) -> bool:

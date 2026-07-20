@@ -47,7 +47,7 @@ class VoiceManager:
 class RandomManager(VoiceManager):
     def __init__(self, nodes: list[Playable], weights: list[int]):
         super().__init__(nodes)
-        self.weights = list(weights)
+        self.weights = weights
 
     def __next__(self) -> Playable:
         return random.choices(self.nodes, self.weights)[0]
@@ -279,6 +279,9 @@ class PlaybackControl(pyo.PyoObject):
 
             for child, weight in zip(children, weights):
                 self.add_child(child, weight)
+
+        # pyo objects start started
+        self.stop()
 
     @property
     def playback_mode(self) -> str:

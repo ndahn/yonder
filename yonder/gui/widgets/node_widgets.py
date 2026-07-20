@@ -1040,10 +1040,6 @@ def _create_attributes_event(
         tag=f"{base_tag}/event/actions",
     )
 
-    # TODO just for testing, add properly
-    from .hierarchy_player import add_hierarchy_player
-    add_hierarchy_player(bnk, node)
-
 
 # TODO only becomes useful once we support per-layer RTPC (or playback)
 def _create_attributes_layercontainer(

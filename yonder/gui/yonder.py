@@ -79,6 +79,7 @@ from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
+from .widgets.hierarchy_player import add_hirc_player
 
 
 class BanksOfYonder(DpgItem):
@@ -608,13 +609,16 @@ class BanksOfYonder(DpgItem):
                             tag=self._t("pinned_nodes_col_nodes"),
                         )
 
-            dpg.add_child_window(
-                width=600,
-                resizable_x=True,
-                autosize_y=True,
-                border=True,
-                tag=self._t("attributes"),
-            )
+            with dpg.group():
+                dpg.add_child_window(
+                    width=600,
+                    height=-40,
+                    resizable_x=True,
+                    # autosize_y=True,
+                    border=True,
+                    tag=self._t("attributes"),
+                )
+                self._hirc_player = add_hirc_player()
 
             with dpg.child_window(
                 width=400,

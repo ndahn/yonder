@@ -11,7 +11,7 @@ from .flags_widget import add_flag_checkboxes
 from .generic_input_widget import add_generic_widget
 from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
-from .hierarchy_player import add_hierarchy_player
+from .hierarchy_player import add_hirc_player
 from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
 from .loading_indicator import loading_indicator
