@@ -35,11 +35,12 @@ class Player:
         self._switch_ctrls: dict[int, PlaybackControl] = []
         self._node_map: dict[int, list[Voice]] = {}
 
-        self._server = pyo.Server().boot()
+        # NOTE crashes on some systems with input enabled, but we don't need it
+        self._server = pyo.Server(duplex=0).boot()
         # mixes the voice branches; time smooths per-voice amp changes
-        self._mixer = pyo.Mixer(outs=1, chnls=1, time=self._default_fade_time)
+        self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
         # final volume adjustment
-        self._gate = pyo.SigTo(value=1.0, time=self._default_fade_time)
+        self._gate = pyo.SigTo(value=1.0, time=0.05)
         # master chain: mixer -> gate -> dac
         self._master = self._mixer[0] * self._gate
         self._master.out()

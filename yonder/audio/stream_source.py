@@ -19,6 +19,7 @@ class StreamSource(pyo.PyoObject):
     ):
         pyo.PyoObject.__init__(self, mul, add)
 
+        # TODO convert to wav
         self._path = Path(path)
         self._raw_duration = sndinfo(str(path))[1]
         self._begin_trim = begin_trim

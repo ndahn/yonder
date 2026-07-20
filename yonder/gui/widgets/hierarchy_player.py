@@ -73,8 +73,6 @@ class add_hierarchy_player(DpgItem):
         height: int,
         parent: str,
     ) -> None:
-        self._load_textures()
-
         with dpg.child_window(
             autosize_x=True,
             auto_resize_y=True,
