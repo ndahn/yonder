@@ -319,6 +319,7 @@ class PlaybackControl(pyo.PyoObject):
 
         self._mixer.addInput(idx, child)
         self._mixer.setAmp(idx, 0, 1.0)
+        child.stop()
 
         # Wire up the child's end trigger
         self._watchers.append(
@@ -387,8 +388,9 @@ class PlaybackControl(pyo.PyoObject):
 
     def stop(self, wait: float = 0) -> pyo.PyoObject:
         self._playing = False
-        for voice in self._current_voices:
-            voice.stop()
+        
+        for child in self.children:
+            child.stop()
 
         return pyo.PyoObject.stop(self, wait)
 

@@ -29,6 +29,7 @@ class StreamSource(pyo.PyoObject):
         self._loop_start = loop_start
         self._loop_end = loop_end
         self._xfade = xfade
+        self._paused_pos = 0.0
         self.loop = loop
         self.speed = pyo.SigTo(1.0, 0.05)
 
@@ -53,7 +54,7 @@ class StreamSource(pyo.PyoObject):
         self.set_loop_points(loop_start, loop_end)
 
         # Our crossfaded sum becomes this object's audio stream
-        self._done = pyo.Trig()
+        self._trig = pyo.Trig()
         self._mix = self._players[0] + self._players[1]
         self._base_objs = self._mix.getBaseObjects()
 
@@ -152,7 +153,7 @@ class StreamSource(pyo.PyoObject):
     def _swap(self) -> None:
         if not self.loop:
             self.stop()
-            self._done.play()
+            self._trig.play()
             return
 
         # Start the second player which will take over
@@ -172,22 +173,48 @@ class StreamSource(pyo.PyoObject):
 
     def seek(self, pos: float) -> None:
         dur = self.duration
-        t = self._begin_trim + max(0.0, min(pos, dur - 1e-6))
-        self._players[self._active].setOffset(t)
-        self._clock.phase = t / dur
+        clamped = max(0.0, min(pos, dur - 1e-6))
+        self._paused_pos = clamped
+
+        if not self.isPlaying():
+            # Only store position for next playback
+            return
+
+        t = self._begin_trim + clamped
+        player = self._players[self._active]
+        player.setOffset(t)
+        # Apply offset
+        player.play()
+
+        # Phase is only what to add, not the internal value
+        self._clock.reset()
+        self._clock.phase = clamped / dur
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
         self._players[0].setOffset(self._begin_trim)
         self._players[0].play()
+        self._players[1].stop
         self._envs[0].value = 1
+        self._envs[1].value = 0
         self._active = 0
+
+        dur = self.duration
+        self._clock.reset()
+        self._clock.phase = self._paused_pos / dur if dur else 0.0
+        self._clock.play()
+        self._mix.play()
 
         return pyo.PyoObject.play(self, dur, delay)
 
     def stop(self, wait: int = 0) -> None:
+        self._paused_pos = self.pos
+        
         for i in range(2):
             self._players[i].stop()
             self._envs[i].value = 0
+
+        self._clock.stop()
+        self._mix.stop()
 
         return pyo.PyoObject.stop(self, wait)
 
@@ -199,6 +226,6 @@ class StreamSource(pyo.PyoObject):
 
     def __getitem__(self, key: str):
         if key == "trig":
-            return self._done
+            return self._trig
 
         return pyo.PyoObject.__getitem__(self, key)

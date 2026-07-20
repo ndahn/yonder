@@ -33,16 +33,24 @@ from .playback_control import PlaybackControl, SwitchManager
 
 
 class Player:
-    def __init__(self, vgmstream_exe: Path | str):
-        self.vgmstream_exe = Path(vgmstream_exe or "")
+    def __init__(
+        self,
+        bnk: Soundbank,
+        entrypoint: HIRCNode,
+        vgmstream_exe: Path | str,
+        full_tree: bool = True,
+    ):
+        if not isinstance(entrypoint, HIRCNode):
+            entrypoint = bnk[entrypoint]
 
-        self.voices: dict[int, Voice] = []
+        self.entrypoint = entrypoint
+        self.voices: dict[int, Voice] = {}
         self._ctrl: PlaybackControl = None
-        self._switch_ctrls: dict[int, PlaybackControl] = []
+        self._switch_ctrls: dict[int, PlaybackControl] = {}
         self._node_map: dict[int, list[Voice]] = {}
 
         # NOTE crashes on some systems with input enabled, but we don't need it
-        self._server = pyo.Server(duplex=0)
+        self._server: pyo.Server = pyo.Server(duplex=0)
         self._server.deactivateMidi()
         self._server.boot()
         # mixes the voice branches; time smooths per-voice amp changes
@@ -56,6 +64,8 @@ class Player:
         self._server.start()
         # Important for proper exit
         atexit.register(self.close)
+
+        self._from_hierarchy(bnk, entrypoint, vgmstream_exe, full_tree)
 
     def __del__(self):
         try:
@@ -74,6 +84,8 @@ class Player:
 
         if self._server.getIsBooted():
             self._server.shutdown()
+
+        atexit.unregister(self.close)
 
     @property
     def playing(self) -> bool:
@@ -110,7 +122,7 @@ class Player:
 
     def set_muted(self, muted: bool) -> None:
         self._gate.time = 0.05
-        self._gate.value =0.0 if muted else 1.0
+        self._gate.value = 0.0 if muted else 1.0
 
     def set_state_params(
         self,
@@ -134,8 +146,12 @@ class Player:
             for ctrl in self._switch_ctrls.get(key, []):
                 ctrl.selector.state = val
 
-    def from_hierarchy(
-        self, bnk: Soundbank, root: int | HIRCNode, full_tree: bool = False
+    def _from_hierarchy(
+        self,
+        bnk: Soundbank,
+        root: HIRCNode,
+        vgmstream_exe: str,
+        full_tree: bool = False,
     ) -> Player:
         self.stop()
         self.voices.clear()
@@ -168,24 +184,24 @@ class Player:
                 wem = bnk.get_wem_path(
                     leaf_node.source_id, leaf_node.bank_source_data.source_type
                 )
-                wav = wem2wav(self.vgmstream_exe, wem)[0]
+                wav = wem2wav(vgmstream_exe, wem)[0]
 
                 if not wav or not wav.is_file():
                     logger.error(f"Failed to create wav for {leaf_node}")
                     continue
-                    
+
                 builder = VoiceBuilder(StreamSource(wav))
             elif isinstance(leaf_node, MusicTrack):
                 # TODO what to do with tracks that have multiple sources?
                 wem = bnk.get_wem_path(
                     leaf_node.source_ids[0], leaf_node.sources[0].source_type
                 )
-                wav = wem2wav(self.vgmstream_exe, wem)[0]
-                
+                wav = wem2wav(vgmstream_exe, wem)[0]
+
                 if not wav or not wav.is_file():
                     logger.error(f"Failed to create wav for {leaf_node}")
                     continue
-                
+
                 trims = leaf_node.get_trims()
                 builder = VoiceBuilder(
                     StreamSource(wav, True, begin_trim=trims[0], end_trim=trims[1])

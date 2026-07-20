@@ -19,7 +19,7 @@ class add_hirc_player(DpgItem):
         parent: str = 0,
     ) -> None:
         super().__init__(tag)
-        self._player = Player(None)
+        self._player: Player = None
         self._setup_content(parent)
         self.set_enabled(False)
 
@@ -32,9 +32,11 @@ class add_hirc_player(DpgItem):
     ) -> None:
         self.set_enabled(False)
 
-        self._player.stop()
-        self._player.vgmstream_exe = get_config().locate_vgmstream()
-        self._player.from_hierarchy(bnk, entrypoint, full_tree)
+        # Removing pyo objects from a running pyo server tends to cause segfaults, so better
+        # to recreate the player each time the structure changes. Closing the server takes a
+        # few ms, but we can let this be handled by the GC in the background.
+
+        self._player = Player(bnk, entrypoint, get_config().locate_vgmstream(), full_tree)
         self.regenerate()
 
         self.set_enabled(True)
@@ -87,10 +89,10 @@ class add_hirc_player(DpgItem):
     def _on_ctrl_play_pause(self) -> None:
         if self._player.playing:
             self._player.stop()
-            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.player_play)
+            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
         else:
             self._player.play()
-            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.player_pause)
+            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.pause)
 
     def _on_ctrl_forward_10s(self) -> None:
         self._player.seek(self._player.pos + 10.0)
@@ -99,8 +101,6 @@ class add_hirc_player(DpgItem):
         self._player.seek(self._player.pos + 30.0)
 
     def _on_ctrl_reset(self) -> None:
-        self._player.stop()
-        self._player.from_hierarchy(self._entrypoint)
         self.regenerate()
 
     def _open_voice_ctrl(self, sender: str, app_data: str, user_data: Any) -> None:
