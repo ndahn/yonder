@@ -90,6 +90,7 @@ class BanksOfYonder(DpgItem):
         self.bnk: Soundbank = None
         self.event_map: dict[int, str] = {}
         self.globals_map: dict[int, str] = {}
+        self._hirc_player: add_hirc_player = None
         self._selected_root: str = None
         self._selected_node: HIRCNode = None
         self._selected_section: Section = None
@@ -609,15 +610,21 @@ class BanksOfYonder(DpgItem):
                             tag=self._t("pinned_nodes_col_nodes"),
                         )
 
-            with dpg.group():
+            with dpg.child_window(
+                width=600,
+                #autosize_x=True,
+                autosize_y=True,
+                border=False,
+            ):
                 dpg.add_child_window(
-                    width=600,
+                    autosize_x=True,
                     height=-40,
                     resizable_x=True,
                     # autosize_y=True,
                     border=True,
                     tag=self._t("attributes"),
                 )
+                dpg.add_spacer(height=1)
                 self._hirc_player = add_hirc_player()
 
             with dpg.child_window(
@@ -1587,6 +1594,7 @@ class BanksOfYonder(DpgItem):
         if isinstance(node, HIRCNode):
             self._backup = node.copy()
             dpg.set_value(self._t("json"), node.json())
+            self._hirc_player.load(self.bnk, node, False)
         else:
             self._backup = None
             dpg.set_value(self._t("json"), "")

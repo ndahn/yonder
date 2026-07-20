@@ -2,6 +2,7 @@ from __future__ import annotations
 import networkx as nx
 from pathlib import Path
 import time
+import atexit
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
@@ -53,6 +54,8 @@ class Player:
         self._master.out()
 
         self._server.start()
+        # Important for proper exit
+        atexit.register(self.close)
 
     def __del__(self):
         try:
@@ -102,10 +105,12 @@ class Player:
             self._ctrl.stop(wait)
 
     def set_volume(self, vol: float, time: float = 0.05) -> None:
-        self._gate.setValue(vol, time=time)
+        self._gate.time = time
+        self._gate.value = vol
 
     def set_muted(self, muted: bool) -> None:
-        self._gate.setValue(0.0 if muted else 1.0, time=0.05)
+        self._gate.time = 0.05
+        self._gate.value =0.0 if muted else 1.0
 
     def set_state_params(
         self,
@@ -164,6 +169,11 @@ class Player:
                     leaf_node.source_id, leaf_node.bank_source_data.source_type
                 )
                 wav = wem2wav(self.vgmstream_exe, wem)[0]
+
+                if not wav or not wav.is_file():
+                    logger.error(f"Failed to create wav for {leaf_node}")
+                    continue
+                    
                 builder = VoiceBuilder(StreamSource(wav))
             elif isinstance(leaf_node, MusicTrack):
                 # TODO what to do with tracks that have multiple sources?
@@ -171,6 +181,11 @@ class Player:
                     leaf_node.source_ids[0], leaf_node.sources[0].source_type
                 )
                 wav = wem2wav(self.vgmstream_exe, wem)[0]
+                
+                if not wav or not wav.is_file():
+                    logger.error(f"Failed to create wav for {leaf_node}")
+                    continue
+                
                 trims = leaf_node.get_trims()
                 builder = VoiceBuilder(
                     StreamSource(wav, True, begin_trim=trims[0], end_trim=trims[1])
@@ -192,6 +207,9 @@ class Player:
                         raise ValueError(
                             f"Unsupported ClipAutomationType {clip.auto_type}"
                         )
+            else:
+                logger.debug(f"Unhandled leaf node {leaf_node}")
+                continue
 
             for node_idx in range(len(branch)):
                 node = bnk[branch[node_idx]]

@@ -14,10 +14,14 @@ class Icons:
     enemy = "tex_icon_enemy"
     equalizer = "tex_icon_equalizer"
     error = "tex_icon_error"
-    file_new_bank = "tex_icon_file_new_bank"
+    fast_forward = "tex_icon_fast_forward"
+    fast_rewind = "tex_icon_fast_rewind"
     file_new = "tex_icon_file_new"
+    file_new_bank = "tex_icon_file_new_bank"
     file_open = "tex_icon_file_open"
     file_save = "tex_icon_file_save"
+    forward_10s = "tex_icon_forward_10s"
+    forward_30s = "tex_icon_forward_30s"
     hash = "tex_icon_hash"
     help = "tex_icon_help"
     info = "tex_icon_info"
@@ -26,21 +30,19 @@ class Icons:
     new_event = "tex_icon_new_event"
     next = "tex_icon_next"
     paste = "tex_icon_paste"
-    player_forward = "tex_icon_player_forward"
-    player_pause = "tex_icon_player_pause"
-    player_play_pause = "tex_icon_player_play_pause"
-    player_play = "tex_icon_player_play"
-    player_reset = "tex_icon_player_reset"
-    player_rewind = "tex_icon_player_rewind"
-    player_seek_end = "tex_icon_player_seek_end"
-    player_seek_zero = "tex_icon_player_seek_zero"
-    player_stop = "tex_icon_player_stop"
+    pause = "tex_icon_pause"
+    play = "tex_icon_play"
+    play_pause = "tex_icon_play_pause"
     previous = "tex_icon_previous"
     repack = "tex_icon_repack"
+    seek_end = "tex_icon_seek_end"
+    seek_zero = "tex_icon_seek_zero"
     settings = "tex_icon_settings"
     sliders = "tex_icon_sliders"
     sound = "tex_icon_sound"
+    sound_reset = "tex_icon_sound_reset"
     soundbank = "tex_icon_soundbank"
+    stop = "tex_icon_stop"
     swap = "tex_icon_swap"
     swords = "tex_icon_swords"
     tool_convert = "tex_icon_tool_convert"
@@ -61,5 +63,8 @@ def load_icons():
                 continue
 
             if not dpg.does_item_exist(val):
-                tw, th, _, tex = dpg.load_image(str(res / "icons" / f"{key}.png"))
-                dpg.add_static_texture(tw, th, tex, tag=val)
+                try:
+                    tw, th, _, tex = dpg.load_image(str(res / "icons" / f"{key}.png"))
+                    dpg.add_static_texture(tw, th, tex, tag=val)
+                except Exception:
+                    raise RuntimeError(f"Failed to load icon {key}")

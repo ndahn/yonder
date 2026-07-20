@@ -1184,7 +1184,7 @@ class add_wav_player(DpgItem):
                     )
                     dpg.bind_item_theme(
                         dpg.last_item(),
-                        self._make_slider_theme(style.purple.but(a=162)),
+                        style.themes.make_slider_theme(style.purple.but(a=162)),
                     )
 
                     dpg.add_slider_float(
@@ -1196,7 +1196,7 @@ class add_wav_player(DpgItem):
                         tag=self._t("lowpass_slider"),
                     )
                     dpg.bind_item_theme(
-                        dpg.last_item(), self._make_slider_theme(style.pink.but(a=162))
+                        dpg.last_item(), style.themes.make_slider_theme(style.pink.but(a=162))
                     )
 
                     dpg.add_slider_float(
@@ -1209,7 +1209,7 @@ class add_wav_player(DpgItem):
                     )
                     dpg.bind_item_theme(
                         dpg.last_item(),
-                        self._make_slider_theme(style.blue.but(a=162)),
+                        style.themes.make_slider_theme(style.blue.but(a=162)),
                     )
 
                     dpg.add_slider_int(
@@ -1223,7 +1223,7 @@ class add_wav_player(DpgItem):
                     )
                     dpg.bind_item_theme(
                         dpg.last_item(),
-                        self._make_slider_theme(style.light_grey.but(a=162)),
+                        style.themes.make_slider_theme(style.light_grey.but(a=162)),
                     )
 
                 dpg.add_text("|")
@@ -1329,18 +1329,3 @@ class add_wav_player(DpgItem):
                         user_data=mid,
                         tag=self._t(f"marker_{mid}_value"),
                     )
-
-    def _make_slider_theme(self, color: style.RGBA, tag: str = None) -> str:
-        if not tag:
-            tag = dpg.generate_uuid()
-
-        with dpg.theme(tag=tag):
-            with dpg.theme_component(0):
-                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, color)
-                dpg.add_theme_color(
-                    dpg.mvThemeCol_SliderGrab, color.brightness(0.7).shift(0.2)
-                )
-                dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, color.shift(0.2))
-                dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, color.shift(0.1))
-
-        return tag

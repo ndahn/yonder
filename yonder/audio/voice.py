@@ -230,6 +230,46 @@ class Voice(pyo.PyoObject):
     def tail(self) -> pyo.PyoObject:
         return self.chain[-1]
 
+    @property
+    def volume(self) -> float:
+        return self.modifiers[PropID.Volume].ctrl.get()
+
+    @volume.setter
+    def volume(self, amp: float) -> None:
+        self.modifiers[PropID.Volume].ctrl.value = amp
+
+    @property
+    def hpf(self) -> float:
+        return self.modifiers[PropID.HPF].ctrl.get()
+
+    @hpf.setter
+    def hpf(self, percent: float) -> None:
+        self.modifiers[PropID.HPF].ctrl.value = percent
+
+    @property
+    def lpf(self) -> float:
+        return self.modifiers[PropID.LPF].ctrl.get()
+
+    @lpf.setter
+    def lpf(self, percent: float) -> None:
+        self.modifiers[PropID.LPF].ctrl.value = percent
+
+    @property
+    def pitch(self) -> float:
+        return self.modifiers[PropID.Pitch].ctrl.get()
+
+    @pitch.setter
+    def pitch(self, semitones: float) -> None:
+        self.modifiers[PropID.Pitch].ctrl.value = semitones
+
+    @property
+    def speed(self) -> float:
+        return self.src.speed.get()
+
+    @speed.setter
+    def speed(self, speed: float) -> None:
+        self.src.speed.value = speed
+
     def set_state_params(
         self,
         rtpc_params: dict[Hash, float] = None,

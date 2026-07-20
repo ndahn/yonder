@@ -20,6 +20,10 @@ class RGBA(tuple):
         return super().__new__(cls, (color_or_r, g, b, a))
 
     @classmethod
+    def create_gradient(cls, start: RGBA, to: RGBA, steps: int) -> list[RGBA]:
+        return [start.mix(to, i / steps) for i in range(steps)]
+
+    @classmethod
     def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> RGBA:
         return RGBA(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
 
@@ -70,10 +74,10 @@ class RGBA(tuple):
 
     def mix(self, other: "tuple | RGBA", ratio: float = 0.5) -> RGBA:
         alpha = other[3] if len(other) > 3 else 255
-        r = ratio * self.r + (1 - ratio) * other[0]
-        g = ratio * self.g + (1 - ratio) * other[1]
-        b = ratio * self.b + (1 - ratio) * other[2]
-        a = ratio * self.a + (1 - ratio) * alpha
+        r = (1 - ratio) * self.r + ratio * other[0]
+        g = (1 - ratio) * self.g + ratio * other[1]
+        b = (1 - ratio) * self.b + ratio * other[2]
+        a = (1 - ratio) * self.a + ratio * alpha
         return RGBA(r, g, b, a)
 
     def shift(self, amount: int) -> RGBA:
@@ -147,6 +151,20 @@ class themes:
         with dpg.theme() as theme:
             with dpg.theme_component(item_type):
                 dpg.add_theme_color(property, color)
+
+        return theme
+
+    @cache
+    @staticmethod
+    def make_slider_theme(color: RGBA) -> str:
+        with dpg.theme() as theme:
+            with dpg.theme_component(0):
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, color)
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_SliderGrab, color.brightness(0.7).shift(0.2)
+                )
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, color.shift(0.2))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, color.shift(0.1))
 
         return theme
 
@@ -343,7 +361,7 @@ class HighContrastColorGenerator:
         """Generates the next high-contrast color."""
         self.hue = (self.hue + self.hue_step) % 1
         r, g, b = colorsys.hsv_to_rgb(self.hue, self.saturation, self.value)
-        return (int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
+        return RGBA(int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
 
     def __call__(self, key: Any = None) -> tuple[int, int, int]:
         """Allows calling the instance directly to get the next color."""
