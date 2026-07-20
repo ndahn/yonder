@@ -4,6 +4,10 @@ from pathlib import Path
 import shutil
 import subprocess
 
+# suppress pydub warning about ffmpeg/avconv, we don't need the encoder
+import warnings
+warnings.filterwarnings("ignore", message="^.*find ffmpeg or avconv.*$")
+
 # NOTE need to manually install audioop-lts
 from pydub import AudioSegment, silence
 

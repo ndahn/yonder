@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Generator, Iterable
+from typing import Literal, Callable, Iterable
 import random
 import numpy as np
 import pyo
@@ -11,15 +11,34 @@ class PlaybackControl: ...
 Playable = PlaybackControl | Voice
 
 
-class NodeSelector:
+class VoiceManager:
     def __init__(self, nodes: list[Playable]):
         self.nodes = nodes
+        # maintained by the owning PlaybackControl
+        self.active: list[Playable] = []
+        self.jump: Callable[[Playable | list[Playable]], None] = None
+
+    @property
+    def duration(self) -> float:
+        # a seek can never pass this node
+        return np.inf
+
+    @property
+    def pos(self) -> float:
+        return max((n.pos for n in self.active), default=0.0)
+
+    def seek(self, pos: float) -> float:
+        # reposition what plays, discard the remainder
+        for n in self.active:
+            n.seek(pos)
+
+        return 0.0
 
     def __next__(self) -> Playable | list[Playable]:
         raise NotImplementedError()
 
 
-class RandomSelector(NodeSelector):
+class RandomManager(VoiceManager):
     def __init__(self, nodes: list[Playable], weights: list[int]):
         super().__init__(nodes)
         self.weights = list(weights)
@@ -28,7 +47,7 @@ class RandomSelector(NodeSelector):
         return random.choices(self.nodes, self.weights)[0]
 
 
-class ShuffleSelector(NodeSelector):
+class ShuffleManager(VoiceManager):
     def __init__(
         self,
         nodes: list[Playable],
@@ -44,14 +63,43 @@ class ShuffleSelector(NodeSelector):
         self.playlist = []
         self.shuffle()
 
+    @property
+    def duration(self) -> float:
+        # wrapping shuffles never end
+        if self.wrap:
+            return np.inf
+
+        return sum(n.duration for n in self.nodes)
+
+    @property
+    def pos(self) -> float:
+        if self.index < 0:
+            return 0.0
+
+        past = sum(n.duration for n in self.playlist[: self.index])
+        return past + self.playlist[self.index].pos
+
+    def seek(self, pos: float) -> float:
+        for idx, node in enumerate(self.playlist):
+            if pos < node.duration:
+                self.index = idx
+                self.jump(node)
+                return node.seek(pos)
+
+            pos -= node.duration
+
+        return pos
+
     def shuffle(self) -> list[Playable]:
         probabilities = np.asarray(self.weights) / np.sum(self.weights)
+
         self.playlist = np.random.choice(
             self.nodes,
             len(self.nodes),
             replace=False,
             p=probabilities,
         ).tolist()
+
         return self.playlist
 
     def __next__(self) -> Playable:
@@ -67,7 +115,7 @@ class ShuffleSelector(NodeSelector):
         return self.playlist[self.index]
 
 
-class PlaylistSelector(NodeSelector):
+class PlaylistManager(VoiceManager):
     def __init__(self, nodes: list[Playable], wrap: bool = True):
         super().__init__(nodes)
         self.wrap = wrap
@@ -77,19 +125,48 @@ class PlaylistSelector(NodeSelector):
     def current(self) -> Playable:
         return self.nodes[max(0, self.index)]
 
+    @property
+    def duration(self) -> float:
+        # a wrapping playlist never ends
+        if self.wrap:
+            return np.inf
+
+        return sum(n.duration for n in self.nodes)
+
+    @property
+    def pos(self) -> float:
+        past = sum(n.duration for n in self.nodes[: self.index])
+        return past + self.current.pos
+
+    def seek(self, pos: float) -> float:
+        total = sum(n.duration for n in self.nodes)
+
+        if self.wrap and np.isfinite(total):
+            pos %= total
+
+        for idx, node in enumerate(self.nodes):
+            if pos < node.duration:
+                # inf children land here
+                self.index = idx
+                self.jump(node)
+                return node.seek(pos)
+
+            pos -= node.duration
+
+        return pos
+
     def __next__(self) -> Playable:
-        idx = self.index + 1
+        self.index += 1
 
         if self.wrap:
-            idx %= len(self.nodes)
-        elif idx >= len(self.nodes):
+            self.index %= len(self.nodes)
+        elif self.index >= len(self.nodes):
             raise StopIteration()
 
-        self.index = idx
-        return self.nodes[idx]
+        return self.nodes[self.index]
 
 
-class ParallelSelector(NodeSelector):
+class ParallelManager(VoiceManager):
     def __init__(
         self,
         nodes: list[Playable],
@@ -106,16 +183,29 @@ class ParallelSelector(NodeSelector):
 
         if self.whitelist:
             ret = [(i, n) for i, n in ret if i in self.whitelist]
+
         if self.blacklist:
             ret = [(i, n) for i, n in ret if i not in self.blacklist]
 
         return [x[1] for x in ret]
 
+    @property
+    def duration(self) -> float:
+        return max((n.duration for n in self.valid), default=0.0)
+
+    def seek(self, pos: float) -> float:
+        residuals = [n.seek(pos) for n in self.active]
+
+        if any(r <= 0 for r in residuals):
+            return 0.0
+
+        return min(residuals)
+
     def __next__(self) -> list[Playable]:
         return self.valid
 
 
-class SwitchSelector(NodeSelector):
+class SwitchManager(VoiceManager):
     def __init__(
         self,
         nodes: list[Playable],
@@ -135,7 +225,7 @@ class SwitchSelector(NodeSelector):
         return [self.nodes[i] for i in indices]
 
 
-class ManualSelector(NodeSelector):
+class ManualManager(VoiceManager):
     def __init__(self, nodes: list[Playable], index: int = 0):
         super().__init__(nodes)
         self.index = index
@@ -159,7 +249,7 @@ class PlaybackControl(pyo.PyoObject):
 
         self.children: list[Playable] = []
         self.weights: list[int] = []
-        self.selector: NodeSelector = None
+        self.selector: VoiceManager = None
         self._pending: set[int] = set()
         self._watchers: list[pyo.TrigFunc] = []
         self._current_voices: list[Playable] = []
@@ -190,22 +280,26 @@ class PlaybackControl(pyo.PyoObject):
 
     @playback_mode.setter
     def playback_mode(
-        self, mode: Literal["random", "shuffle", "playlist", "parallel", "switch", "manual"]
+        self,
+        mode: Literal["random", "shuffle", "playlist", "parallel", "switch", "manual"],
     ) -> None:
         if mode == "random":
-            self.selector = RandomSelector(self.children, self.weights)
+            self.selector = RandomManager(self.children, self.weights)
         elif mode == "shuffle":
-            self.selector = ShuffleSelector(self.children, self.weights)
+            self.selector = ShuffleManager(self.children, self.weights)
         elif mode == "playlist":
-            self.selector = PlaylistSelector(self.children, True)
+            self.selector = PlaylistManager(self.children, True)
         elif mode == "parallel":
-            self.selector = ParallelSelector(self.children)
+            self.selector = ParallelManager(self.children)
         elif mode == "switch":
-            self.selector = SwitchSelector(self.children)
+            self.selector = SwitchManager(self.children)
         elif mode == "manual":
-            self.selector = ManualSelector(self.children)
+            self.selector = ManualManager(self.children)
         else:
             raise ValueError(f"Unknown playback mode {mode}")
+
+        self.selector.jump = self._activate
+        self._playback_mode = mode
 
     def add_child(self, child: Playable, weight: int = 50000) -> None:
         idx = len(self.children)
@@ -243,65 +337,39 @@ class PlaybackControl(pyo.PyoObject):
             self._on_finish()
             return
 
+        self._activate(selected)
+
+    def _activate(self, selected: Playable | list[Playable]) -> None:
         if not isinstance(selected, list):
             selected = [selected]
 
+        for voice in self._current_voices:
+            if voice not in selected:
+                voice.stop()
+
         self._current_voices = selected
-        self._pending = {self.children.index(v) for v in selected}
+        self._pending = {self.children.index(n) for n in selected}
+        self.selector.active = selected
 
         for voice in selected:
             voice.play()
-    
+
     @property
     def duration(self) -> float:
-        # only deterministic modes have a timeline
-        if self._playback_mode == "parallel":
-            return max((c.duration for c in self.selector.valid), default=0.0)
-
-        if self._playback_mode == "playlist":
-            return sum(c.duration for c in self.children)
-
-        # Can't seek past this
-        return np.inf
+        return self.selector.duration
 
     @property
     def pos(self) -> float:
-        if self._playback_mode == "playlist":
-            idx = self.selector.index
-            past = sum(c.duration for c in self.children[:idx])
-            return past + self.children[idx].pos
-        
-        if self._current_voices:
-            return max(v.pos for v in self._current_voices)
-
-        return 0.0
+        return self.selector.pos
 
     def seek(self, pos: float) -> float:
-        if self._playback_mode == "parallel":
-            residuals = [v.seek(pos) for v in self._current_voices]
-            if any(r <= 0 for r in residuals):
-                return 0.0
+        residual = self.selector.seek(pos)
 
-            return min(residuals)
-        
-        if self._playback_mode == "playlist":
-            # TODO child is not always a Voice or even a PlaybackControl
-            for idx, child in enumerate(self.children[self.selector.index:]):
-                if pos < child.duration:
-                    self._advance(idx)
-                    return child.seek(pos)
-                
-                pos -= child.duration
-            
-            # Playlist ended before advancing to pos
-            self._on_finish()
-            return pos
+        if residual > 0:
+            # Seeked past our end. Don't tri
+            self.stop()
 
-        # All others modes advance to the next item and discard the remainder
-        for child in self._current_voices:
-            child.seek(pos)
-
-        return 0.0
+        return residual
 
     def play(self, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
         self._playing = True

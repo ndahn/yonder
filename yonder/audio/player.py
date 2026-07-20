@@ -25,7 +25,7 @@ from yonder.util import logger
 
 from .voice import VoiceBuilder, Voice
 from .stream_source import StreamSource
-from .playback_control import PlaybackControl, SwitchSelector
+from .playback_control import PlaybackControl, SwitchManager
 
 
 class Player:
@@ -310,7 +310,7 @@ class Player:
 
                     switch_map[switch.switch_id] = indices
 
-                selector: SwitchSelector = ctrl.selector
+                selector: SwitchManager = ctrl.selector
                 selector.switch_map = switch_map
                 selector.default_state = node.default_switch
 
