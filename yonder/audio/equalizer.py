@@ -4,13 +4,13 @@ import pyo
 
 class EQPresets:
     flat = (0.0,) * 10
-    acoustic = [5, 5, 4, 1, 2, 2, 3.5, 4, 3.5, 2]
-    electronic = [4, 4, 1, 0, -2, 2, 1, 1.5, 4, 5]
-    piano = [3, 2, 0, 2.5, 3, 1.5, 3.5, 4.5, 3, 4]
-    pop = [-1.5, -1, 0, 2, 4, 4, 2.5, 0, -1, -1.5]
-    rock = [5, 4, 3, 1.5, -0.5, -1, 0.5, 2.5, 3.5, 4.5]
-    bass = [5.5, 4, 3.5, 2.5, 1.5, 0, 0, 0, 0, 0]
-    
+    acoustic = (5, 5, 4, 1, 2, 2, 3.5, 4, 3.5, 2)
+    electronic = (4, 4, 1, 0, -2, 2, 1, 1.5, 4, 5)
+    piano = (3, 2, 0, 2.5, 3, 1.5, 3.5, 4.5, 3, 4)
+    pop = (-1.5, -1, 0, 2, 4, 4, 2.5, 0, -1, -1.5)
+    rock = (5, 4, 3, 1.5, -0.5, -1, 0.5, 2.5, 3.5, 4.5)
+    bass = (5.5, 4, 3.5, 2.5, 1.5, 0, 0, 0, 0, 0)
+
 
 
 class Equalizer(pyo.PyoObject):
@@ -48,7 +48,7 @@ class Equalizer(pyo.PyoObject):
         if len(values) != 10:
             raise ValueError("Preset must be exactly 10 values")
 
-        for idx, boost in enumerate(values.items()):
+        for idx, boost in enumerate(values):
             self.set_boost(5 + idx, boost)
 
     def set_boost(self, pow_or_freq: int, boost: float) -> None:

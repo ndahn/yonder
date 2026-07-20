@@ -157,8 +157,10 @@ class VoiceBuilder:
 
         # Other things influencing playback
         if isinstance(node, MusicSegment):
-            self.src.loop_start = node.get_marker_pos(MarkerId.LoopStart) / 1000.0
-            self.src.loop_end = node.get_marker_pos(MarkerId.LoopEnd) / 1000.0
+            self.src.set_loop_points(
+                node.get_marker_pos(MarkerId.LoopStart) / 1000.0,
+                node.get_marker_pos(MarkerId.LoopEnd) / 1000.0,
+            )
 
         return self
 

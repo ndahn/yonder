@@ -1,10 +1,10 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder.gui import style
-from .dpg_item import DpgItem
-
 from yonder.audio import EQPresets
+from yonder.gui import style
+from yonder.gui.config import get_config
+from .dpg_item import DpgItem
 
 
 class add_equalizer(DpgItem):
@@ -28,9 +28,13 @@ class add_equalizer(DpgItem):
         self._create_content(parent)
 
     def _on_preset_selected(self, sender: str, preset: str, cb_user_data: Any) -> None:
-        self._values = list(getattr(EQPresets, preset.lower()))
-
-        for idx, val in enumerate(self._values):
+        if preset == "Custom":
+            values = get_config().custom_eq
+        else:
+            values = list(getattr(EQPresets, preset.lower()))
+        
+        self._values = values
+        for idx, val in enumerate(values):
             dpg.set_value(self._t(f"boost_{idx}"), val)
 
         if self._on_values_changed:
@@ -38,7 +42,13 @@ class add_equalizer(DpgItem):
 
     def _on_boost_changed(self, sender: str, boost: float, idx: int) -> None:
         self._values[idx] = boost
-        dpg.set_value(self._t("preset"), "")
+
+        if dpg.get_value(self._t("preset")) == "Custom":
+            cfg = get_config()
+            cfg.custom_eq[idx] = boost
+            cfg.save()
+        else:
+            dpg.set_value(self._t("preset"), "")
 
         if self._on_values_changed:
             self._on_values_changed(self._tag, self._values, self._user_data)
@@ -46,6 +56,8 @@ class add_equalizer(DpgItem):
     def _create_content(self, parent: str) -> None:
         with dpg.group(parent=parent):
             presets = [key.capitalize() for key in vars(EQPresets) if not key.startswith("_")]
+            presets.insert(1, "Custom")
+            
             dpg.add_combo(
                 presets,
                 default_value=presets[0],

@@ -20,6 +20,7 @@ class Config:
     language: str = "en"
     playback_volume: float = 1.0
     prune_hash_tables: bool = True
+    custom_eq: list[float] = field(default_factory=lambda: [0.0] * 10)
 
     bnk2json_exe: str = None
     wwise_exe: str = None
