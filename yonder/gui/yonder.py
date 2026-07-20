@@ -79,7 +79,7 @@ from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
-from .widgets.hierarchy_player import add_hirc_player
+from .widgets.hirc_player import add_hirc_player
 
 
 class BanksOfYonder(DpgItem):
