@@ -2,41 +2,53 @@ import math
 import pyo
 
 
+class EQPresets:
+    flat = (0.0,) * 10
+
+
 class Equalizer(pyo.PyoObject):
     def __init__(
         self,
         input: pyo.PyoObject,
-        preset: dict[int, float] = None,
+        preset: list[float] = None,
         mul: float = 1,
         add: float = 0,
     ):
         pyo.PyoObject.__init__(self, mul, add)
 
-        if preset is None:
-            preset = {}
-
-        # pow: (eq, ctrl)
-        self._eq: dict[int, tuple[pyo.EQ, pyo.SigTo]] = {}
+        # keyed by exponent
+        self._eq: dict[int, pyo.EQ] = {}
+        self._ctrl: dict[int, pyo.SigTo] = {}
 
         sig = input
         for pow in range(5, 15):
             freq = 2**pow
-            boost = preset.get(freq, 0.0)
-            ctrl = pyo.SigTo(boost, time=0.05)
+            # Use a SigTo to avoid glitches
+            ctrl = pyo.SigTo(0.0, time=0.05)
             sig = pyo.EQ(sig, freq, boost=ctrl)
-            self._eq[pow] = (sig, ctrl)
+            self._eq[pow] = sig
+            self._ctrl[pow] = ctrl
 
-        self._base_objs = self._eq[14][0].getBaseObjects()
+        if preset:
+            self.set_values(preset)
 
-    def set_preset(self, preset: dict[int, float] = None) -> None:
-        for freq, boost in preset.items():
-            self.set_boost(freq, boost)
+        self._base_objs = self._eq[14].getBaseObjects()
+
+    def set_values(self, values: list[float] = None) -> None:
+        if not values:
+            values = [0.0] * 10
+
+        if len(values) != 10:
+            raise ValueError("Preset must be exactly 10 values")
+
+        for idx, boost in enumerate(values.items()):
+            self.set_boost(5 + idx, boost)
 
     def set_boost(self, pow_or_freq: int, boost: float) -> None:
         if pow_or_freq not in self._eq:
             pow_or_freq = int(round(math.log2(pow_or_freq)))
 
-        self._eq[pow_or_freq][1].value = boost
+        self._ctrl[pow_or_freq].value = boost
 
     def play(self, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
         for eq in self._eq:

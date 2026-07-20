@@ -9,6 +9,7 @@ from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
+from .equalizer_widget import add_equalizer
 
 
 class add_hirc_player(DpgItem):
@@ -101,16 +102,7 @@ class add_hirc_player(DpgItem):
     def _on_ctrl_forward_30s(self) -> None:
         self._player.seek(self._player.pos + 30.0)
 
-    def _open_states_ctrl(self) -> None:
-        # TODO
-        pass
-
-    def _open_equalizer(self) -> None:
-        # TODO
-        pass
-
-    def _open_voice_ctrl(self, sender: str, app_data: str, user_data: Any) -> None:
-        tag = self._t("popup_voice_ctrl")
+    def _open_ctrl_popup(self, sender: str, app_data: str, tag: Any) -> None:
         pos = dpg.get_item_rect_min(sender)
         size = tuple(dpg.get_item_rect_size(tag))
         dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
@@ -120,6 +112,9 @@ class add_hirc_player(DpgItem):
         dpg.render_dearpygui_frame()
         size = tuple(dpg.get_item_rect_size(tag))
         dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
+
+    def _on_eqboost_changed(self, sender: str, values: list[float], user_data: Any) -> None:
+        self._player.set_equalizer(values)
 
     def _on_set_volume(self, sender: str, amp: float, user_data: Any) -> None:
         if amp == 0.0:
@@ -189,26 +184,36 @@ class add_hirc_player(DpgItem):
 
                 dpg.add_image_button(
                     Icons.states,
-                    callback=self._open_states_ctrl,
+                    callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
+                    user_data=self._t("popup_states"),
                 )
                 dpg.add_image_button(
                     Icons.equalizer,
-                    callback=self._open_equalizer,
+                    callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
+                    user_data=self._t("popup_equalizer"),
                 )
                 dpg.add_image_button(
                     Icons.sliders,
-                    callback=self._open_voice_ctrl,
+                    callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
-                    tag=self._t("btn_voice_ctrl"),
+                    user_data=self._t("popup_voices"),
                 )
 
         with dpg.window(
             popup=True,
             min_size=(100, 20),
             show=False,
-            tag=self._t("popup_voice_ctrl"),
+            tag=self._t("popup_equalizer"),
+        ):
+            add_equalizer(self._on_eqboost_changed)
+
+        with dpg.window(
+            popup=True,
+            min_size=(100, 20),
+            show=False,
+            tag=self._t("popup_voices"),
         ):
             dpg.add_slider_float(
                 label=µ("Volume"),

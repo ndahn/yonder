@@ -134,6 +134,9 @@ class Player:
         self._gate.time = 0.05
         self._gate.value = 0.0 if muted else 1.0
 
+    def set_equalizer(self, values: list[float] = None) -> None:
+        self._equalizer.set_values(values)
+
     def set_state_params(
         self,
         rtpc_params: dict[Hash, float] = None,

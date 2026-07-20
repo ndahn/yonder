@@ -5,3 +5,4 @@ del os
 
 from .player import Player
 from .voice import Voice
+from .equalizer import Equalizer, EQPresets
