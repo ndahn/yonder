@@ -81,5 +81,7 @@ class add_equalizer(DpgItem):
                         label = str(hz) if hz < 1000 else f"{hz // 1000}k"
                         dpg.add_text(label)
 
-                        theme = style.themes.make_slider_theme(grad[idx])
+                        color = grad[idx]
+                        handle_color = style.white.mix(color, 0.3)
+                        theme = style.themes.make_slider_theme(color, handle_color)
                         dpg.bind_item_theme(self._t(f"boost_{idx}"), theme)

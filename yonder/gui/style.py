@@ -156,13 +156,14 @@ class themes:
 
     @cache
     @staticmethod
-    def make_slider_theme(color: RGBA) -> str:
+    def make_slider_theme(color: RGBA, handle_color: RGBA = None) -> str:
+        if handle_color is None:
+            handle_color = color.brightness(0.7).shift(0.2)
+
         with dpg.theme() as theme:
             with dpg.theme_component(0):
                 dpg.add_theme_color(dpg.mvThemeCol_FrameBg, color)
-                dpg.add_theme_color(
-                    dpg.mvThemeCol_SliderGrab, color.brightness(0.7).shift(0.2)
-                )
+                dpg.add_theme_color(dpg.mvThemeCol_SliderGrab, handle_color)
                 dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, color.shift(0.2))
                 dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, color.shift(0.1))
 
