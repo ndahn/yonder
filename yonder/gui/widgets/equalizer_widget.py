@@ -3,6 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.audio import EQPresets
 from yonder.gui import style
+from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from .dpg_item import DpgItem
 
@@ -28,10 +29,10 @@ class add_equalizer(DpgItem):
         self._create_content(parent)
 
     def _on_preset_selected(self, sender: str, preset: str, cb_user_data: Any) -> None:
-        if preset == "Custom":
+        if preset == µ("Custom"):
             values = get_config().custom_eq
         else:
-            values = list(getattr(EQPresets, preset.lower()))
+            values = list(EQPresets[preset])
         
         self._values = values
         for idx, val in enumerate(values):
@@ -43,7 +44,8 @@ class add_equalizer(DpgItem):
     def _on_boost_changed(self, sender: str, boost: float, idx: int) -> None:
         self._values[idx] = boost
 
-        if dpg.get_value(self._t("preset")) == "Custom":
+        if dpg.get_value(self._t("preset")) == µ("Custom"):
+            # Update the custom preset
             cfg = get_config()
             cfg.custom_eq[idx] = boost
             cfg.save()
@@ -55,8 +57,8 @@ class add_equalizer(DpgItem):
 
     def _create_content(self, parent: str) -> None:
         with dpg.group(parent=parent):
-            presets = [key.capitalize() for key in vars(EQPresets) if not key.startswith("_")]
-            presets.insert(1, "Custom")
+            presets = [µ(key) for key in EQPresets.keys()]
+            presets.insert(1, µ("Custom"))
             
             dpg.add_combo(
                 presets,
