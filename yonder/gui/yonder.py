@@ -1636,20 +1636,18 @@ class BanksOfYonder(DpgItem):
 
                 if self._selected_node:
                     # Try to find the node in the tree with the current selection if possible
-                    evt, current_graph = next(
-                        self.bnk.find_event_subgraphs_for(self._selected_node),
-                        (None, None),
-                    )
-                    if current_graph and node.id in current_graph:
-                        selected_graph = current_graph
+                    evt = next(self.bnk.find_events_for(self._selected_node), None)
+                    if evt:
+                        current_graph = self.bnk.get_subtree(evt, False)
+                        if node.id in current_graph:
+                            selected_graph = current_graph
 
                 if not selected_graph:
                     # Find the first tree containing the node to select
-                    evt, selected_graph = next(
-                        self.bnk.find_event_subgraphs_for(node), (None, None)
-                    )
+                    evt = next(self.bnk.find_events_for(node), None)
+                    selected_graph = self.bnk.get_subtree(evt, False)
 
-                if selected_graph:
+                if evt:
                     path = nx.shortest_path(selected_graph, evt.id, node_id)
 
                     # Unfold the structure
@@ -1719,7 +1717,7 @@ class BanksOfYonder(DpgItem):
         )
 
     def node_copy_hierarchy(self) -> None:
-        g = self.bnk.get_subtree(self._selected_node, include_external=False)
+        g = self.bnk.get_subtree(self._selected_node, True, include_external=False)
         nodes = []
 
         for nid in g:
@@ -1864,7 +1862,9 @@ class BanksOfYonder(DpgItem):
 
         if isinstance(node, Event):
             # TODO get related events
-            if node.has_action_type(self.bnk, ActionType.Play, ActionType.PlayAndContinue):
+            if node.has_action_type(
+                self.bnk, ActionType.Play, ActionType.PlayAndContinue
+            ):
                 pass
 
                 simple_choice_dialog(

@@ -264,7 +264,7 @@ class PlaybackControl(pyo.PyoObject):
         # audio side: children feed an internal mixer whose output is this
         # object's stream. addInput lets children join while audio runs
         self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
-        self._base_objs = self._mixer[0].getBaseObjects()
+        self._base_objs = self._mixer.getBaseObjects()
         self._trig = pyo.Trig()
 
         self._playback_mode = None

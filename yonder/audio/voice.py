@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 import math
 import pyo
 
@@ -41,8 +41,10 @@ class StateCtrl:
     accum: RtpcAccum
 
 
-@dataclass(init=False)
+@dataclass
 class ModifierStack:
+    ctrl_default: InitVar[float] = 0.0
+    ctrl_time: InitVar[float] = 0.05
     value: float = 0.0
     rtpcs: list[RTPC] = field(default_factory=list)
     states: list[StateCtrl] = field(default_factory=list)
@@ -50,8 +52,8 @@ class ModifierStack:
     clips: list[ClipAutomation] = field(default_factory=list)
     ctrl: pyo.SigTo = None
 
-    def __init__(self, ctrl_default: float, time: float = 0.05):
-        self.ctrl = pyo.SigTo(ctrl_default, time=time)
+    def __post_init__(self, ctrl_default: float = 0.0, ctrl_time: float = 0.05):
+        self.ctrl = pyo.SigTo(ctrl_default, time=ctrl_time)
 
 
 class VoiceBuilder:

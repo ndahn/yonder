@@ -37,9 +37,7 @@ class ActorMixerDetailProvider:
                 if isinstance(child, ActorMixer):
                     dependents.add(child_id)
                 else:
-                    dependents.update(
-                        evt.id for evt, _ in self.bnk.find_event_subgraphs_for(child)
-                    )
+                    dependents.update(evt.id for evt in self.bnk.find_events_for(child))
 
         ret = sorted(dependents)
         self._cache[node.id] = ret

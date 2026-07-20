@@ -1,5 +1,6 @@
 from __future__ import annotations
 import networkx as nx
+from pathlib import Path
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
@@ -21,6 +22,7 @@ from yonder.enums import (
     RandomMode,
     RandomSequenceMode,
 )
+from yonder.wem import wem2wav
 from yonder.util import logger
 
 from .voice import VoiceBuilder, Voice
@@ -29,7 +31,9 @@ from .playback_control import PlaybackControl, SwitchManager
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, vgmstream_exe: Path | str):
+        self.vgmstream_exe = Path(vgmstream_exe)
+
         self.voices: dict[int, Voice] = []
         self._ctrl: PlaybackControl = None
         self._switch_ctrls: dict[int, PlaybackControl] = []
@@ -54,7 +58,7 @@ class Player:
 
     @property
     def playing(self) -> bool:
-        return self._ctrl._playing
+        return self._ctrl.isPlaying()
 
     @property
     def duration(self) -> float:
@@ -114,6 +118,7 @@ class Player:
     ) -> Player:
         self.stop()
         self.voices.clear()
+        self._mixer.clear()
         self._ctrl = None
         self._node_map.clear()
 
@@ -121,10 +126,9 @@ class Player:
             root = root.id
 
         if full_tree:
-            root, tree = next(bnk.find_event_subgraphs_for(root))
-        else:
-            tree = bnk.get_subtree(root, True)
+            root = next(bnk.find_events_for(root, True))
 
+        tree = bnk.get_subtree(root, True)
         leafs = [n for (n, d) in tree.out_degree if d == 0]
         voices: dict[int, Voice] = {}
 
@@ -140,18 +144,20 @@ class Player:
             leaf_node = bnk.get(leaf_id)
 
             if isinstance(leaf_node, Sound):
-                path = bnk.get_wem_path(
+                wem = bnk.get_wem_path(
                     leaf_node.source_id, leaf_node.bank_source_data.source_type
                 )
-                builder = VoiceBuilder(StreamSource(path))
+                wav = wem2wav(self.vgmstream_exe, wem)[0]
+                builder = VoiceBuilder(StreamSource(wav))
             elif isinstance(leaf_node, MusicTrack):
                 # TODO what to do with tracks that have multiple sources?
-                path = bnk.get_wem_path(
+                wem = bnk.get_wem_path(
                     leaf_node.source_ids[0], leaf_node.sources[0].source_type
                 )
+                wav = wem2wav(self.vgmstream_exe, wem)[0]
                 trims = leaf_node.get_trims()
                 builder = VoiceBuilder(
-                    StreamSource(path, True, begin_trim=trims[0], end_trim=trims[1])
+                    StreamSource(wav, True, begin_trim=trims[0], end_trim=trims[1])
                 )
 
                 for clip in leaf_node.clip_items:
@@ -183,12 +189,8 @@ class Player:
 
         # build one pyo chain per leaf and register it as a mixer voice
         for idx, voice in enumerate(voices.values()):
-            if voice.audiofile is None:
-                continue
-
-            tail = voice._build()
             voice.stop()
-            self._mixer.addInput(idx, tail)
+            self._mixer.addInput(idx, voice.tail)
             self._mixer.setAmp(idx, 0, 1.0)
 
         self.voices = voices
@@ -196,11 +198,15 @@ class Player:
         return self
 
     def _build_control_tree(
-        self, bnk: Soundbank, root: int | HIRCNode
+        self, bnk: Soundbank, root: int | HIRCNode, full_tree: bool = False
     ) -> PlaybackControl:
         if isinstance(root, HIRCNode):
             root = root.id
 
+        if full_tree:
+            root = next(bnk.find_events_for(root))
+
+        tree = bnk.get_subtree(root, True)
         switch_ctrls: dict[int, PlaybackControl] = {}
 
         def as_one(playable) -> PlaybackControl:
@@ -265,7 +271,7 @@ class Player:
                     playlist, node.playlist_items[0].playlist_item_id
                 )
 
-            children = getattr(node, "children", None)
+            children = tree.successors(nid)
             if not children:
                 return None
 

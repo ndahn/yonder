@@ -2,9 +2,9 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.util import logger
-from yonder.wem import wem2wav
 from yonder.audio import Player, Voice
 from yonder.gui import style
+from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
@@ -28,8 +28,9 @@ class add_hierarchy_player(DpgItem):
         self._bnk = bnk
         self._entrypoint = entrypoint
         self._max_points = max_points
-        self._player = Player()
 
+        vgmstream_exe = get_config().locate_vgmstream()
+        self._player = Player(vgmstream_exe)
         self._player.from_hierarchy(bnk, entrypoint, full_tree)
         self._setup_content(width, height, parent)
 
@@ -109,7 +110,7 @@ class add_hierarchy_player(DpgItem):
                     tint_color=style.pink,
                 )
 
-                dpg.add_label("|")
+                dpg.add_text("|")
 
                 dpg.add_image_button(
                     Icons.player_reset,
