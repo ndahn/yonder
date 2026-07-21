@@ -1,9 +1,8 @@
 from typing import Any
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode
-from yonder.util import logger
-from yonder.audio import Player, Voice
+from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
+from yonder.audio import Player
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
@@ -21,6 +20,9 @@ class add_hirc_player(DpgItem):
     ) -> None:
         super().__init__(tag)
         self._player: Player = None
+        self._rtpcs: dict[int, float] = {}
+        self._states: dict[int, int] = {}
+        self._distance: float = 0.0
         self._setup_content(parent)
         self.set_enabled(False)
 
@@ -33,18 +35,28 @@ class add_hirc_player(DpgItem):
     ) -> None:
         self.set_enabled(False)
 
+        if self._player:
+            self._player.stop()
+
         # Removing pyo objects from a running pyo server tends to cause segfaults, so better
         # to recreate the player each time the structure changes. Closing the server takes a
         # few ms, but we can let this be handled by the GC in the background.
 
-        self._player = Player(bnk, entrypoint, get_config().locate_vgmstream(), full_tree)
+        cfg = get_config()
+        self._player = Player(
+            bnk,
+            entrypoint,
+            cfg.locate_vgmstream(),
+            cfg.bankdirs,
+            full_tree,
+        )
+        dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
         self.regenerate()
-
         self.set_enabled(True)
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
-        dpg.push_container_stack(self._t("voice_settings"))
+        dpg.delete_item(self._t("popup_states"), children_only=True)
 
         grad1 = style.RGBA.create_gradient(
             style.light_blue.but(a=162), style.light_orange.but(a=162), 10
@@ -53,6 +65,7 @@ class add_hirc_player(DpgItem):
             style.pink.but(a=162), style.light_red.but(a=162), 10
         )
 
+        dpg.push_container_stack(self._t("voice_settings"))
         for idx, (vid, voice) in enumerate(self._player.voices.items()):
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(
@@ -77,6 +90,46 @@ class add_hirc_player(DpgItem):
                 color = grad1[idx % 10] if idx % 2 == 0 else grad2[idx % 10]
                 theme = style.themes.make_slider_theme(color)
                 dpg.bind_item_theme(self._t(f"voice_volume_{vid}"), theme)
+
+        dpg.pop_container_stack()
+
+        rtpcs, states = self._player.collect_control_variables()
+        self._rtpcs = {r: 0.0 for r in rtpcs}
+        self._states = {g: next(s) for g, s in states.items()}
+
+        rtpcs = sorted(lookup_name(r, f"#{r}") for r in rtpcs)
+        states = {
+            lookup_name(g, f"#{g}"): sorted(lookup_name(s, f"#{s}"))
+            for g, vals in states.items()
+            for s in vals
+        }
+
+        dpg.push_container_stack(self._t("popup_states"))
+        
+        if rtpcs:
+            with dpg.tree_node(label=µ("RTPC"), default_open=True):
+                for r in rtpcs:
+                    dpg.add_slider_double(
+                        label=r,
+                        default_value=0.0,
+                        height=15,
+                        callback=self._on_set_rtpc,
+                        user_data=r,
+                    )
+
+        if states:
+            with dpg.tree_node(label=µ("States"), default_open=True):
+                for group, values in states.items():
+                    dpg.add_combo(
+                        values,
+                        default_value=values[0],
+                        label=group,
+                        callback=self._on_set_state,
+                        user_data=group,
+                    )
+
+        if not rtpcs and not states:
+            dpg.add_text(µ("(no RTPCs/states)"), color=style.light_grey)
 
         dpg.pop_container_stack()
 
@@ -113,7 +166,20 @@ class add_hirc_player(DpgItem):
         size = tuple(dpg.get_item_rect_size(tag))
         dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
 
-    def _on_eqboost_changed(self, sender: str, values: list[float], user_data: Any) -> None:
+    def _on_set_rtpc(self, sender: str, value: float, rtpc: str) -> None:
+        h = int(rtpc[1:]) if rtpc.startswith("#") else calc_hash(rtpc)
+        self._rtpcs[h] = value
+        self._player.set_state_params(self._rtpcs, self._states, self._distance)
+
+    def _on_set_state(self, sender: str, state: str, group: str) -> None:
+        g = int(group[1:]) if group.startswith("#") else calc_hash(group)
+        s = int(state[1:]) if state.startswith("#") else calc_hash(state)
+        self._states[g] = s
+        self._player.set_state_params(self._rtpcs, self._states, self._distance)
+
+    def _on_eqboost_changed(
+        self, sender: str, values: list[float], user_data: Any
+    ) -> None:
         self._player.set_equalizer(values)
 
     def _on_set_volume(self, sender: str, amp: float, user_data: Any) -> None:
@@ -201,9 +267,15 @@ class add_hirc_player(DpgItem):
                     user_data=self._t("popup_voices"),
                 )
 
-        with dpg.window(
+        dpg.add_window(
             popup=True,
             min_size=(100, 20),
+            show=False,
+            tag=self._t("popup_states"),
+        )
+
+        with dpg.window(
+            popup=True,
             show=False,
             tag=self._t("popup_equalizer"),
         ):

@@ -20,8 +20,8 @@ class StreamSource(pyo.PyoObject):
 
         self._path = Path(path)
         self._raw_duration = sndinfo(str(path))[1]
-        self._begin_trim = begin_trim
-        self._end_trim = end_trim
+        self._begin_trim = abs(begin_trim)
+        self._end_trim = abs(end_trim)
 
         if loop_end == 0.0:
             loop_end = self.duration
@@ -76,21 +76,24 @@ class StreamSource(pyo.PyoObject):
         from_end: float,
         keep_loop_marks_stationary: bool = False,
     ) -> None:
+        from_start = abs(from_start)
+        from_end = abs(from_end)
+
         if from_start >= self.duration - from_end:
             raise ValueError("Trims would result in play duration <= 0")
 
         if keep_loop_marks_stationary:
             # negative if trim reduced, positive if increased
-            begin_diff = self._begin_trim - abs(from_start)
+            begin_diff = self._begin_trim - from_start
             self._loop_start = max(0.0, self._loop_start - begin_diff)
 
             # positive if trim reduced, negative if increased
-            end_diff = self._end_trim - abs(from_end)
+            end_diff = self._end_trim - from_end
             self._loop_end = min(self._raw_duration, self._loop_end - end_diff)
 
         # In wwise, trims are set from the beginning/end of the track
-        self._begin_trim = abs(from_start)
-        self._end_trim = abs(from_end)
+        self._begin_trim = from_start
+        self._end_trim = from_end
         self._update()
 
     @property

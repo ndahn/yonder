@@ -26,11 +26,17 @@ from yonder.enums import (
 )
 from yonder.wem import wem2wav
 from yonder.util import logger
-
 from .equalizer import Equalizer
 from .voice import VoiceBuilder, Voice
 from .stream_source import StreamSource
 from .playback_control import PlaybackControl, SwitchManager
+
+
+# TODO
+# - fix playback
+# - use S/MT duration instead of file info?
+# - attenuation distance handling
+# - guess steam directory for resolution
 
 
 class Player:
@@ -39,6 +45,7 @@ class Player:
         bnk: Soundbank,
         entrypoint: HIRCNode,
         vgmstream_exe: Path | str,
+        wem_search_paths: list[Path] = None,
         full_tree: bool = True,
     ):
         if not isinstance(entrypoint, HIRCNode):
@@ -67,7 +74,9 @@ class Player:
         # Important for proper exit
         atexit.register(self.close)
 
-        self._from_hierarchy(bnk, entrypoint, vgmstream_exe, full_tree)
+        self._from_hierarchy(
+            bnk, entrypoint, vgmstream_exe, wem_search_paths, full_tree
+        )
 
     def __del__(self):
         try:
@@ -159,11 +168,28 @@ class Player:
             for ctrl in self._switch_ctrls.get(key, []):
                 ctrl.selector.state = val
 
+    def collect_control_variables(self) -> tuple[set[int], dict[int, set[int]]]:
+        rtpcs = set()
+        states = {}
+
+        for voice in self.voices.values():
+            for mod in voice.modifiers.values():
+                rtpcs.update(r.id for r in mod.rtpcs)
+                for state_ctrl in mod.states:
+                    states.setdefault(state_ctrl.group, set()).add(state_ctrl.state)
+
+        for group, ctrl in self._switch_ctrls.items():
+            # TODO store state defaults
+            states.setdefault(group, set()).update(ctrl.selector.state_map.keys())
+
+        return (rtpcs, states)
+
     def _from_hierarchy(
         self,
         bnk: Soundbank,
         root: HIRCNode,
         vgmstream_exe: str,
+        wem_search_paths: list[Path],
         full_tree: bool = False,
     ) -> Player:
         self.stop()
@@ -176,7 +202,7 @@ class Player:
             root = root.id
 
         if full_tree:
-            root = next(bnk.find_events_for(root, True))
+            root = next(bnk.find_events_for(root))
 
         tree = bnk.get_subtree(root, True)
         leafs = [n for (n, d) in tree.out_degree if d == 0]
@@ -195,7 +221,9 @@ class Player:
 
             if isinstance(leaf_node, Sound):
                 wem = bnk.get_wem_path(
-                    leaf_node.source_id, leaf_node.bank_source_data.source_type
+                    leaf_node.source_id,
+                    leaf_node.bank_source_data.source_type,
+                    wem_search_paths,
                 )
                 wav = wem2wav(vgmstream_exe, wem)[0]
 
@@ -207,7 +235,9 @@ class Player:
             elif isinstance(leaf_node, MusicTrack):
                 # TODO what to do with tracks that have multiple sources?
                 wem = bnk.get_wem_path(
-                    leaf_node.source_ids[0], leaf_node.sources[0].source_type
+                    leaf_node.source_ids[0],
+                    leaf_node.sources[0].source_type,
+                    wem_search_paths,
                 )
                 wav = wem2wav(vgmstream_exe, wem)[0]
 
@@ -217,7 +247,12 @@ class Player:
 
                 trims = leaf_node.get_trims()
                 builder = VoiceBuilder(
-                    StreamSource(wav, True, begin_trim=trims[0], end_trim=trims[1])
+                    StreamSource(
+                        wav,
+                        True,
+                        begin_trim=trims[0] / 1000.0,
+                        end_trim=trims[1] / 1000.0,
+                    )
                 )
 
                 for clip in leaf_node.clip_items:

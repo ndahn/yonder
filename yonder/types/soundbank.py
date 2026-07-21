@@ -233,21 +233,26 @@ class Soundbank:
             )
             return target
 
-    def get_wem_path(self, source_id: int, source_type: SourceType) -> Path:
+    def get_wem_path(
+        self, source_id: int, source_type: SourceType, search_paths: list[Path] = None
+    ) -> Path:
         wem = self.bnk_dir / f"{source_id}.wem"
         if source_type == SourceType.Embedded:
-            return wem
+            if wem.is_file():
+                return wem
+            return None
 
         # Find the largest external wem (if any)
-        wem = self.bnk_dir.parent / "wem" / str(source_id)[:2] / f"{source_id}.wem"
-        if wem.is_file():
-            return wem
+        if search_paths is None:
+            search_paths = []
 
-        wem = self.bnk_dir / f"{source_id}.wem"
-        if wem.is_file():
-            return wem
+        search_paths = [self.bnk_dir, self.bnk_dir.parent / "wem"] + search_paths
+        candidates = []
+        for p in search_paths:
+            for f in Path(p).glob(f"**/{source_id}.wem"):
+                candidates.append(f)
 
-        return None
+        return max(candidates, key=lambda f: f.stat().st_size, default=None)
 
     def delete_unused_wems(self) -> None:
         used = set(self.sound_sources())
