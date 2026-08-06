@@ -34,123 +34,93 @@ static constexpr const char *config_filename = "unlock_wwise_states_nr.yaml";
 // rowid -> custom bgm state name, loaded from config_filename
 static std::unordered_map<uint32_t, std::string> bossbgm_overrides;
 
-// --- BgmEnemyType clear-validation NOP ------------------------------------
-// The boss-bgm controller runs an (Arxan-obfuscated) validation that, for
-// values it doesn't recognise, stores 0 into CSSoundBgmController+0x124, which
-// resets BgmEnemyType to None. NOPing that single 6-byte store lets custom
-// values play. We locate it by a unique signature so it survives base ASLR:
+// BgmEnemyType "reset-to-None" write neutralizer.
 //
-//   89 83 24 01 00 00      mov [rbx+0x124], eax   <- store to NOP
-//   48 8B 0D ?? ?? ?? ??   mov rcx, [rip+disp]
-//   E9                     jmp ...                <- E9 (not E8) distinguishes
-//                                                    it from the *active* writer
-// Reference build RVA: 0x230B4BF.  EXPECT TO RE-VALIDATE THIS PER GAME PATCH.
-static constexpr uintptr_t bgm_clear_rva = 0x230B4BF;
-static constexpr size_t bgm_clear_patch_len = 6;
+// The game clears controller+0x124 (BgmEnemyType, 0 = None) via
+//     mov [rbx+0x124], eax        ; 89 83 24 01 00 00   (eax = 0)
+// This is in arxan territory, but we can still NOP those 6 bytes so the 
+// custom value survives and custom boss music keeps playing.
+//
+// There are ~15 stores to +0x124 across the module, so we can't key on the
+// store alone. We anchor on the game-logic guard that precedes THIS store:
+//     movzx ebp,[rdi+0x0A]
+//     cmp ebp, 05                 ; 83 FD 05
+//     jmp <arxan rel32>           ; E9 ?? ?? ?? ??
+//     mov [rbx+0x124], eax        ; 89 83 24 01 00 00   <-- NOP these 6
+// We deliberately do NOT key on the call/jmp that follows the store: that
+// tail is emitted by Arxan and its bytes (E8 vs E9) flip between game builds.
+struct sig_byte { uint8_t value; bool wild; };
 
-struct pattern_elem
-{
-    uint8_t byte;
-    bool wildcard;
+constexpr sig_byte bgm_clear_sig[] = {
+    {0x83, false}, {0xFD, false}, {0x05, false},                    // cmp ebp,05
+    {0xE9, false}, {0, true}, {0, true}, {0, true}, {0, true},      // jmp <rel32>
+    {0x89, false}, {0x83, false}, {0x24, false},                    // mov [rbx+0x124],eax
+    {0x01, false}, {0x00, false}, {0x00, false},
 };
-static constexpr pattern_elem bgm_clear_sig[] = {
-    {0x89, false}, {0x83, false}, {0x24, false}, {0x01, false}, {0x00, false}, {0x00, false},
-    {0x48, false}, {0x8B, false}, {0x0D, false},
-    {0x00, true},  {0x00, true},  {0x00, true},  {0x00, true},
-    {0xe9, false},
-};
-static constexpr size_t bgm_clear_sig_len = sizeof(bgm_clear_sig) / sizeof(bgm_clear_sig[0]);
+constexpr size_t bgm_clear_store_offset = 8;  // store begins here within a match
+constexpr size_t bgm_clear_patch_len    = 6;  // bytes of the store to NOP
 
-static bool sig_matches(const uint8_t *p)
-{
-    for (size_t i = 0; i < bgm_clear_sig_len; ++i)
-        if (!bgm_clear_sig[i].wildcard && p[i] != bgm_clear_sig[i].byte)
-            return false;
-    return true;
-}
-
-static bool apply_nop(uint8_t *target)
-{
-    DWORD old_protect;
-    if (!VirtualProtect(target, bgm_clear_patch_len, PAGE_EXECUTE_READWRITE, &old_protect))
-    {
-        spdlog::error("[unlock_wwise_states] VirtualProtect failed for bgm-clear patch");
-        return false;
+bool sig_match_at(const uint8_t* p) {
+    for (const auto& b : bgm_clear_sig) {
+        if (!b.wild && *p != b.value) return false;
+        ++p;
     }
-    std::memset(target, 0x90, bgm_clear_patch_len);
-    VirtualProtect(target, bgm_clear_patch_len, old_protect, &old_protect);
-    FlushInstructionCache(GetCurrentProcess(), target, bgm_clear_patch_len);
     return true;
 }
 
-// true => done (patched, or ambiguous/impossible so stop). false => not found yet.
-static bool try_patch_bgm_clear()
-{
-    auto base = reinterpret_cast<uint8_t *>(GetModuleHandleW(L"nightreign.exe"));
-    if (!base)
-        return false;
+// Scan every executable section of the host module (nightreign.exe) for the
+// signature. Returns the address of the STORE instruction, or nullptr unless
+// there is EXACTLY one match (0 or >1 -> fail-safe, patch nothing).
+uint8_t* find_bgm_clear_store() {
+    auto base = reinterpret_cast<uint8_t*>(GetModuleHandleW(nullptr));
+    if (!base) return nullptr;
 
-    auto dos = reinterpret_cast<const IMAGE_DOS_HEADER *>(base);
-    auto nt = reinterpret_cast<const IMAGE_NT_HEADERS *>(base + dos->e_lfanew);
+    auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE) return nullptr;
+    auto nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+    if (nt->Signature != IMAGE_NT_SIGNATURE) return nullptr;
 
-    // Fast path: known RVA for this build, but verify the bytes before touching them.
-    if (bgm_clear_rva + bgm_clear_sig_len <= nt->OptionalHeader.SizeOfImage)
-    {
-        uint8_t *rva_target = base + bgm_clear_rva;
-        if (sig_matches(rva_target))
-        {
-            if (apply_nop(rva_target))
-                spdlog::info("[unlock_wwise_states] NOPed bgm-clear validation at rva 0x{:x}",
-                            bgm_clear_rva);
-            return true;
+    constexpr size_t siglen = sizeof(bgm_clear_sig) / sizeof(bgm_clear_sig[0]);
+    auto sec = IMAGE_FIRST_SECTION(nt);
+    uint8_t* hit = nullptr;
+
+    for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i) {
+        if (!(sec[i].Characteristics & IMAGE_SCN_MEM_EXECUTE)) continue;
+        uint8_t* start = base + sec[i].VirtualAddress;
+        size_t   size  = sec[i].Misc.VirtualSize;
+        if (size < siglen) continue;
+        for (uint8_t* p = start; p <= start + size - siglen; ++p) {
+            if (sig_match_at(p)) {
+                if (hit) return nullptr;   // >1 match -> ambiguous, bail out
+                hit = p;
+            }
         }
     }
-
-    // Resilient path: unique signature scan over executable sections.
-    auto sections = IMAGE_FIRST_SECTION(nt);
-    std::vector<uint8_t *> matches;
-    for (WORD i = 0; i < nt->FileHeader.NumberOfSections; ++i)
-    {
-        auto const &sec = sections[i];
-        if (!(sec.Characteristics & IMAGE_SCN_MEM_EXECUTE))
-            continue;
-        size_t size = sec.Misc.VirtualSize ? sec.Misc.VirtualSize : sec.SizeOfRawData;
-        if (size < bgm_clear_sig_len)
-            continue;
-        uint8_t *start = base + sec.VirtualAddress;
-        for (uint8_t *p = start, *last = start + size - bgm_clear_sig_len; p <= last; ++p)
-            if (sig_matches(p))
-                matches.push_back(p);
-    }
-
-    if (matches.size() == 1)
-    {
-        auto target = matches.front();
-        if (apply_nop(target))
-            spdlog::info("[unlock_wwise_states] NOPed bgm-clear validation at rva 0x{:x} (signature)",
-                        static_cast<uintptr_t>(target - base));
-        return true;
-    }
-    if (matches.size() > 1)
-    {
-        spdlog::warn("[unlock_wwise_states] bgm-clear signature matched {} sites; skipping to avoid "
-                    "corrupting the wrong code (re-validate the AOB for this build)",
-                    matches.size());
-        return true; // ambiguous -> fail safe, stop retrying
-    }
-    return false; // not resolved yet
+    return hit ? hit + bgm_clear_store_offset : nullptr;
 }
 
-static void patch_bgm_clear_worker()
-{
-    for (int attempt = 0; attempt < 120; ++attempt)
-    {
-        if (try_patch_bgm_clear())
+bool apply_nop(uint8_t* addr, size_t len) {
+    DWORD old_prot = 0;
+    if (!VirtualProtect(addr, len, PAGE_EXECUTE_READWRITE, &old_prot)) return false;
+    std::memset(addr, 0x90, len);
+    VirtualProtect(addr, len, old_prot, &old_prot);
+    FlushInstructionCache(GetCurrentProcess(), addr, len);
+    return true;
+}
+
+// Arxan can decrypt/relocate late, so retry for a while after startup.
+void patch_bgm_clear_worker() {
+    for (int attempt = 0; attempt < 120; ++attempt) {
+        if (uint8_t* store = find_bgm_clear_store()) {
+            if (apply_nop(store, bgm_clear_patch_len))
+                spdlog::info("[unlock_wwise_states] clear-write neutralized at {}", static_cast<void*>(store));
+            else
+                spdlog::error("[unlock_wwise_states] patch failed (VirtualProtect) at {}", static_cast<void*>(store));
             return;
+        }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    spdlog::warn("[unlock_wwise_states] bgm-clear signature never resolved; custom boss bgm will be "
-                "reset to None. The AOB likely needs updating for this game build.");
+    spdlog::warn("[unlock_wwise_states] clear-write signature not found (0 or >1 matches) after retries; gate not patched");
 }
 
 // ============================================
