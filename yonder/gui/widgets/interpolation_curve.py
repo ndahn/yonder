@@ -88,8 +88,8 @@ class add_interpolation_curve(DpgItem):
         p0 = self._curve[0]
         with dpg.group(tag=self._tag):
             with dpg.plot(width=-1, tag=self._t("canvas")):
-                dpg.add_plot_axis(dpg.mvXAxis, label=µ("Input"), tag=self._t("xaxis"))
-                dpg.add_plot_axis(dpg.mvYAxis, label=µ("Output"), tag=self._t("yaxis"))
+                dpg.add_plot_axis(dpg.mvXAxis, label=µ("Time (s)"), tag=self._t("xaxis"))
+                dpg.add_plot_axis(dpg.mvYAxis, label=µ("Value"), tag=self._t("yaxis"))
 
             dpg.bind_item_theme(self._t("canvas"), style.themes.plot_fit_padding)
 
