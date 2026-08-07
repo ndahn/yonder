@@ -21,6 +21,13 @@ class WavPlayer:
         self._audio = samples.reshape(-1, self._params.nchannels).astype(np.float32)
         self._audio /= float(np.iinfo(dtype).max)
 
+        # The audio backend is limited by the soundcard's channel count. This is usually
+        # not an issue, but cutscene audio may sometimes have 8 channels.
+        max_channels = sd.query_devices(kind="output")["max_output_channels"]
+        self._nchannels = min(max_channels, self._params.nchannels)
+        if self._nchannels < self._params.nchannels:
+            self._audio = self._downmix(self._audio, self._nchannels)
+
         self._pitch_shifter = PitchShifter(self.num_channels)
 
         self._path = path
@@ -33,6 +40,13 @@ class WavPlayer:
         self._fx_lowpass = 0.0
         self._fx_highpass = 0.0
         self._fx_pitch = 1.0
+
+    # TODO move to audio tools module
+    def _downmix(self, audio: np.ndarray, channels: int) -> np.ndarray:
+        # Mix down to mono, then spread across available channels
+        # TODO We can preserve left/right if we know the wem's channel layout
+        mono = audio.mean(axis=1, keepdims=True)
+        return np.tile(mono, (1, channels))
 
     def _callback(self, outdata: np.ndarray, frames: int, time, status):
         with self._lock:
@@ -95,7 +109,7 @@ class WavPlayer:
         if not self._stream:
             self._stream = sd.OutputStream(
                 samplerate=self._params.framerate,
-                channels=self._params.nchannels,
+                channels=self._nchannels,
                 dtype="float32",
                 callback=self._callback,
                 finished_callback=self._on_finished,
@@ -191,8 +205,8 @@ class WavPlayer:
 
     @property
     def num_channels(self) -> int:
-        """Number of audio channels."""
-        return self._params.nchannels
+        """Number of audio channels used for playback."""
+        return self._nchannels
 
     @property
     def frames(self) -> np.ndarray:
