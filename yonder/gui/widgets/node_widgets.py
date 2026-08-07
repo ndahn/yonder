@@ -1514,7 +1514,7 @@ def _create_attributes_musictrack(
     def on_clips_changed(
         sender: str, curves: list[GraphCurve], cb_user_data: Any
     ) -> None:
-        node.clear_clips()
+        node.clip_items.clear()
         for idx, curve in enumerate(curves):
             auto_type = ClipAutomationType[curve.curve_type]
             node.clip_items.append(
