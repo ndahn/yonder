@@ -91,6 +91,8 @@ class add_interpolation_curve(DpgItem):
                 dpg.add_plot_axis(dpg.mvXAxis, label=µ("Input"), tag=self._t("xaxis"))
                 dpg.add_plot_axis(dpg.mvYAxis, label=µ("Output"), tag=self._t("yaxis"))
 
+            dpg.bind_item_theme(self._t("canvas"), style.themes.plot_fit_padding)
+
             with dpg.group(horizontal=True):
                 dpg.add_text("p0", tag=self._t("point_label"))
                 dpg.add_combo(

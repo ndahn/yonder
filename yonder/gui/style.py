@@ -142,6 +142,7 @@ class themes:
     player_plot = None
     plot_blue = None
     plot_red = None
+    plot_fit_padding = None
 
     @cache
     @staticmethod
@@ -309,6 +310,12 @@ def init_themes():
         with dpg.theme_component(dpg.mvLineSeries):
             dpg.add_theme_color(
                 dpg.mvPlotCol_Line, orange, category=dpg.mvThemeCat_Plots
+            )
+
+    with dpg.theme() as themes.plot_fit_padding:
+        with dpg.theme_component():
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_FitPadding, 0.25, 0.25, category=dpg.mvThemeCat_Plots
             )
 
     with dpg.theme() as themes.player_plot:
