@@ -1615,7 +1615,24 @@ class BanksOfYonder(DpgItem):
         self._selected_section = None
         self._set_json_highlight(False)
 
+        # Ppups and windows are root-level containers and may keep other objects alive through
+        # closures. To avoid this we can either:
+        # v1) pass callback for registering items for cleanup -> messy
+        # v2) return list of items to explicitly cleanup -> messy
+        # v3) traverse the dpg tree and close DpgItems explicitly -> yay
+
+        def delve(tag: str) -> None:
+            item = DpgItem.get_instance(tag)
+            if item:
+                item.destroy()
+
+            for children in dpg.get_item_children(tag).values():
+                for child in children:
+                    delve(child)
+
+        delve(self._t("attributes"))
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
+
         if node:
             create_node_widgets(
                 self.bnk,

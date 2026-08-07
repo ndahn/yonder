@@ -130,6 +130,9 @@ class add_select_node(DpgItem):
 
         self._build(label, default, readonly, textbox_width, parent)
 
+    def destroy(self):
+        self._delete_item("context_popup")
+
     # === Build =================
 
     def _build(
@@ -153,7 +156,9 @@ class add_select_node(DpgItem):
             )
 
             if self._jump_to or self._create_new:
-                with dpg.popup(dpg.last_item(), min_size=(100, 20)):
+                with dpg.popup(
+                    dpg.last_item(), min_size=(100, 20), tag=self._t("context_popup")
+                ):
                     if self._jump_to:
                         dpg.add_menu_item(
                             label=µ("Jump To"),

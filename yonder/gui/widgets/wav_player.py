@@ -1,6 +1,7 @@
 from typing import Any, Callable
 from pathlib import Path
 import numpy as np
+import weakref
 
 from dearpygui import dearpygui as dpg
 
@@ -175,6 +176,10 @@ class add_wav_player(DpgItem):
 
         if initial_file:
             self.regenerate()
+
+    def destroy(self):
+        self._delete_item(self._t("sliders_popup"))
+        self._delete_item(self._t("markers_popup"))
 
     # === Playback ======================================================
 
@@ -465,8 +470,6 @@ class add_wav_player(DpgItem):
             dpg.configure_item(self._t("volume_slider"), min_value=-10, max_value=10)
         else:
             dpg.configure_item(self._t("volume_slider"), min_value=-2, max_value=2)
-
-    # TODO pitch
 
     def get_volume_at(self, pos: float) -> float:
         global_f = self._config.playback_volume
@@ -1166,7 +1169,11 @@ class add_wav_player(DpgItem):
 
                 # Slider popup
                 dpg.add_button(label="F")
-                with dpg.popup(dpg.last_item(), dpg.mvMouseButton_Left):
+                with dpg.popup(
+                    dpg.last_item(),
+                    dpg.mvMouseButton_Left,
+                    tag=self._t("sliders_popup"),
+                ):
                     dpg.add_checkbox(
                         label=µ("Manual playback adjustments"),
                         default_value=False,
@@ -1196,7 +1203,8 @@ class add_wav_player(DpgItem):
                         tag=self._t("lowpass_slider"),
                     )
                     dpg.bind_item_theme(
-                        dpg.last_item(), style.themes.make_slider_theme(style.pink.but(a=162))
+                        dpg.last_item(),
+                        style.themes.make_slider_theme(style.pink.but(a=162)),
                     )
 
                     dpg.add_slider_float(
@@ -1265,6 +1273,7 @@ class add_wav_player(DpgItem):
 
                 dpg.add_text("0.000 / 0.000", tag=self._t("progress_value"))
 
+        # TODO use weak cb refs
         with dpg.window(
             popup=True,
             no_move=True,

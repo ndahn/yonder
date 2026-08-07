@@ -55,6 +55,9 @@ class add_rtpc_table(DpgItem):
         dpg.add_child_window(auto_resize_y=True, tag=self._tag)
         self.refresh()
 
+    def destroy(self):
+        self._delete_item("context_popup")
+
     # === Internal ======================================================
 
     def _item_tag(self, idx: int, suffix: str) -> str:
@@ -86,7 +89,7 @@ class add_rtpc_table(DpgItem):
     def _update_label(self, sender: str, info: tuple[RTPC, str, Any], ud: Any) -> None:
         rtpc = info[0]
         idx = self._rtpcs.index(rtpc)
-        
+
         dpg.set_item_label(
             self._item_tag(idx, "tree_node"),
             str(rtpc).ljust(50),
@@ -94,7 +97,10 @@ class add_rtpc_table(DpgItem):
 
     def _bind_context_menu(self, item_tag: str, rtpc: RTPC) -> None:
         with dpg.popup(
-            item_tag, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)
+            item_tag,
+            mousebutton=dpg.mvMouseButton_Right,
+            min_size=(100, 50),
+            tag=self._t("context_popup"),
         ):
             add_hash_widget(
                 rtpc.id,

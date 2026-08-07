@@ -72,6 +72,9 @@ class add_states_table(StateMixin, DpgItem):
         self._states_table: add_widget_table = None
         self._build()
 
+    def destroy(self):
+        self._delete_item("context_popup")
+
     # === Internal ======================================================
 
     def _build(self) -> None:
@@ -140,7 +143,10 @@ class add_states_table(StateMixin, DpgItem):
             dpg.set_item_label(item_tag, name)
 
         with dpg.popup(
-            item_tag, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)
+            item_tag,
+            mousebutton=dpg.mvMouseButton_Right,
+            min_size=(100, 50),
+            tag=self._t("context_popup"),
         ):
             add_hash_widget(
                 getattr(obj, attr),
@@ -327,7 +333,9 @@ class add_states_table(StateMixin, DpgItem):
             if state:
                 for i, prop in properties.items():
                     has_override = state and (i in state.parameters)
-                    value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
+                    value_widget_id = self._get_state_prop_value_widgets(state, prop)[
+                        -1
+                    ]
                     label = µ("Default") if prop is _default_prop else prop.name
 
                     enabled = bool(state)

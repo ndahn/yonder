@@ -34,6 +34,9 @@ class compare_nodes_dialog(DpgItem):
         self._build(title)
         self.update()
 
+    def destroy(self) -> None:
+        self._delete_item("context_popup")
+
     def _build(self, title: str) -> None:
         with dpg.window(label=title, width=700, height=500, tag=self.tag):
             with dpg.group(horizontal=True):
@@ -119,7 +122,7 @@ class compare_nodes_dialog(DpgItem):
                 pyperclip.copy(node.json())
                 logger.info(µ("Copied node {node} to clipboard").format(node))
 
-        with dpg.popup(parent, min_size=(100, 20)):
+        with dpg.popup(parent, min_size=(100, 20), tag=self._t("context_popup")):
             if self._pin_callback:
                 dpg.add_menu_item(
                     label=µ("Pin"),

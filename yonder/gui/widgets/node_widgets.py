@@ -1234,6 +1234,7 @@ def _create_attributes_musicswitchcontainer(
         else:
             val_name = lookup_name(tree_node.key, "<?>")
 
+        # TODO will the popup be cleaned up?
         with dpg.popup(item, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)):
             dpg.add_text(arg_name)
             add_hash_widget(
