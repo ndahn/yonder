@@ -143,7 +143,7 @@ def copy_wwise_events(
     for wwise_src, wwise_dst in wwise_map.items():
         evt: Event = src_bnk[wwise_src]
         if not isinstance(evt, Event):
-            raise ValueError(f"{wwise_src} is not an Event")
+            raise TypeError(f"{wwise_src} is not an Event")
 
         # Copy the event and its actions
         evt = copy_event(src_bnk, dst_bnk, evt, wwise_dst)
@@ -160,9 +160,12 @@ def copy_wwise_events(
                 )
                 continue
 
-            entrypoint = src_bnk[action.external_id]
-            new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
-            wems.extend(new_wems)
+            entrypoint = src_bnk.get(action.external_id)
+            if entrypoint:
+                new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
+                wems.extend(new_wems)
+            else:
+                logger.warning(f"Could not find action target {action.external_id} in source bank")
 
     # Save and verify
     if save:
