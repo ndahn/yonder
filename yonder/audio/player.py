@@ -100,6 +100,9 @@ class Player:
 
     @property
     def playing(self) -> bool:
+        if not self._ctrl:
+            return False
+
         return self._ctrl.isPlaying()
 
     @property
@@ -178,9 +181,11 @@ class Player:
                 for state_ctrl in mod.states:
                     states.setdefault(state_ctrl.group, set()).add(state_ctrl.state)
 
-        for group, ctrl in self._switch_ctrls.items():
-            # TODO store state defaults
-            states.setdefault(group, set()).update(ctrl.selector.state_map.keys())
+        for group, listeners in self._switch_ctrls.items():
+            for ctrl in listeners:
+                # TODO store state defaults
+                # TODO ctrl could also be a switch_manager, which doesn't have a state_map
+                states.setdefault(group, set()).update(ctrl.selector.state_map.keys())
 
         return (rtpcs, states)
 
@@ -225,6 +230,10 @@ class Player:
                     leaf_node.bank_source_data.source_type,
                     wem_search_paths,
                 )
+                if not wem:
+                    logger.warning(f"Could not find wem for {leaf_node}")
+                    continue
+
                 wav = wem2wav(vgmstream_exe, wem)[0]
 
                 if not wav or not wav.is_file():

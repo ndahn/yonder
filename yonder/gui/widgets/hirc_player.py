@@ -95,7 +95,8 @@ class add_hirc_player(DpgItem):
 
         rtpcs, states = self._player.collect_control_variables()
         self._rtpcs = {r: 0.0 for r in rtpcs}
-        self._states = {g: next(s) for g, s in states.items()}
+        # TODO get the default state instead
+        self._states = {g: next(s.__iter__()) for g, s in states.items()}
 
         rtpcs = sorted(lookup_name(r, f"#{r}") for r in rtpcs)
         states = {

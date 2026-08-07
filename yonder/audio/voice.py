@@ -118,7 +118,7 @@ class VoiceBuilder:
                             self.mod[prop].states.append(
                                 StateCtrl(
                                     chunk.state_group_id,
-                                    state_value,
+                                    state_value.state_id,
                                     adjust,
                                     accum,
                                 )
