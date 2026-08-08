@@ -637,8 +637,7 @@ class Soundbank:
                     if ref not in discovered_ids:
                         # For some
                         if (
-                            path.endswith("fx_id")
-                            or path.endswith("bus_id")
+                            path.endswith(("fx_id", "bus_id"))
                             or path[:-1].endswith("aux")
                             or (
                                 isinstance(node, Action)

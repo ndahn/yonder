@@ -126,7 +126,6 @@ class BanksOfYonder(DpgItem):
 
         sys.excepthook = self._handle_exception
         logger.addHandler(LogHandler())
-        dpg.set_frame_callback(5, lambda: logger.info(µ("Hello :3", "log")))
 
     def _on_close(self) -> None:
         if self.bnk:
@@ -665,6 +664,7 @@ class BanksOfYonder(DpgItem):
             no_resize=True,
             no_saved_settings=True,
             min_size=(10, 10),
+            show=False,
             tag=self._t("notification_window"),
         ):
             with dpg.group(width=-1):
@@ -1269,10 +1269,11 @@ class BanksOfYonder(DpgItem):
                 valid_nodes.add(entrypoint.id)
                 g = bnk.get_subtree(entrypoint)
                 selected = query_nodes([bnk[n] for n in g], filt)
-                for node in selected:
-                    valid_nodes.add(node.id)
-                    valid_nodes.update(nx.ancestors(g, node.id))
-                    valid_nodes.update(nx.descendants(g, node.id))
+                # TODO some globals like AMX might have MANY children
+                for n in selected:
+                    valid_nodes.add(n.id)
+                    valid_nodes.update(nx.ancestors(g, n.id))
+                    valid_nodes.update(nx.descendants(g, n.id))
 
             def delve(node: HIRCNode) -> None:
                 references = node.get_references()
@@ -1626,14 +1627,16 @@ class BanksOfYonder(DpgItem):
             if item:
                 item.destroy()
 
-            for children in dpg.get_item_children(tag).values():
-                for child in children:
-                    delve(child)
+            if dpg.does_item_exist(tag):
+                for children in dpg.get_item_children(tag).values():
+                    for child in children:
+                        delve(child)
 
         delve(self._t("attributes"))
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
 
         if node:
+            dpg.split_frame()
             create_node_widgets(
                 self.bnk,
                 node,

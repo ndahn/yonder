@@ -128,6 +128,10 @@ class Player:
         return self._ctrl.seek(pos)
 
     def play(self, dur: float = 0, delay: float = 0) -> None:
+        if not self._ctrl:
+            logger.warning("Nothing to play")
+            return
+
         self._ctrl.play(dur, delay)
 
     def stop(self, wait: float = 0) -> None:
@@ -235,7 +239,6 @@ class Player:
                     continue
 
                 wav = wem2wav(vgmstream_exe, wem)[0]
-
                 if not wav or not wav.is_file():
                     logger.error(f"Failed to create wav for {leaf_node}")
                     continue
@@ -248,8 +251,11 @@ class Player:
                     leaf_node.sources[0].source_type,
                     wem_search_paths,
                 )
-                wav = wem2wav(vgmstream_exe, wem)[0]
+                if not wem:
+                    logger.warning(f"Could not find wem for {leaf_node}")
+                    continue
 
+                wav = wem2wav(vgmstream_exe, wem)[0]
                 if not wav or not wav.is_file():
                     logger.error(f"Failed to create wav for {leaf_node}")
                     continue

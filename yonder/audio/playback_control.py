@@ -97,10 +97,13 @@ class ShuffleManager(VoiceManager):
         return pos
 
     def shuffle(self) -> list[Playable]:
+        if not self.nodes:
+            return []
+
         probabilities = np.asarray(self.weights) / np.sum(self.weights)
 
         self.playlist = np.random.choice(
-            self.nodes,
+            np.fromiter(iter(self.nodes), dtype=np.object_),
             len(self.nodes),
             replace=False,
             p=probabilities,
@@ -268,7 +271,6 @@ class PlaybackControl(pyo.PyoObject):
         self._trig = pyo.Trig()
 
         self._playback_mode = None
-        self.playback_mode = playback_mode
 
         if children:
             if not isinstance(children, list):
@@ -279,6 +281,9 @@ class PlaybackControl(pyo.PyoObject):
 
             for child, weight in zip(children, weights):
                 self.add_child(child, weight)
+
+        # Will also initialize the selector
+        self.playback_mode = playback_mode
 
         # pyo objects start started
         self.stop()

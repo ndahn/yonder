@@ -2,6 +2,8 @@ from pathlib import Path
 import pyo
 from pyo import sndinfo
 
+from yonder.util import logger
+
 
 class StreamSource(pyo.PyoObject):
     def __init__(
@@ -18,10 +20,13 @@ class StreamSource(pyo.PyoObject):
     ):
         pyo.PyoObject.__init__(self, mul, add)
 
+        begin_trim = abs(begin_trim)
+        end_trim = abs(end_trim)
+
         self._path = Path(path)
         self._raw_duration = sndinfo(str(path))[1]
-        self._begin_trim = abs(begin_trim)
-        self._end_trim = abs(end_trim)
+        self._begin_trim = begin_trim
+        self._end_trim = end_trim
 
         if loop_end == 0.0:
             loop_end = self.duration
@@ -79,8 +84,13 @@ class StreamSource(pyo.PyoObject):
         from_start = abs(from_start)
         from_end = abs(from_end)
 
-        if from_start >= self.duration - from_end:
-            raise ValueError("Trims would result in play duration <= 0")
+        # This won't work for prefetch streaming items since we're using the file duration
+        # TODO resolve to the proper sound file, and ignore end_trim
+        if from_start >= self.raw_duration - from_end:
+            logger.warning(
+                "Trims would result in play duration <= 0, ignoring end_trim for playback"
+            )
+            from_end = 0.0
 
         if keep_loop_marks_stationary:
             # negative if trim reduced, positive if increased
@@ -196,7 +206,7 @@ class StreamSource(pyo.PyoObject):
     def play(self, dur: int = 0, delay: int = 0) -> None:
         self._players[0].setOffset(self._begin_trim)
         self._players[0].play()
-        self._players[1].stop
+        self._players[1].stop()
         self._envs[0].value = 1
         self._envs[1].value = 0
         self._active = 0
@@ -211,7 +221,7 @@ class StreamSource(pyo.PyoObject):
 
     def stop(self, wait: int = 0) -> None:
         self._paused_pos = self.pos
-        
+
         for i in range(2):
             self._players[i].stop()
             self._envs[i].value = 0
