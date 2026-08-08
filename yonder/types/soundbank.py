@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Generator, Iterator
 from pathlib import Path
+import re
 from random import randrange
 from collections import deque
 import json
@@ -62,6 +63,11 @@ class Soundbank:
         table = self._id2index
         table.clear()
 
+        if "HIRC" not in self.sections:
+            logger.warning(f"Bank {self.name} does not have a HIRC")
+            self._tree = nx.DiGraph()
+            return
+
         for idx, obj in enumerate(self.hirc.objects):
             table[obj.id] = idx
             if obj.name:
@@ -78,6 +84,8 @@ class Soundbank:
         bnk_path: Path = Path(bnk_path).absolute()
         if bnk_path.suffix == ".bnk":
             bnk_path = bnk_path.parent / bnk_path.stem
+            if not bnk_path.is_dir():
+                raise ValueError(f"Bank {bnk_path.name} is not unpacked")
 
         if bnk_path.is_dir():
             json_path = bnk_path / "soundbank.json"
@@ -100,12 +108,12 @@ class Soundbank:
     @property
     def bkhd(self) -> BKHDSection:
         """Section of bank metadata."""
-        return self.sections["BKHD"]
+        return self.sections.get("BKHD")
 
     @property
     def hirc(self) -> HIRCSection:
         """Section of audio nodes."""
-        return self.sections["HIRC"]
+        return self.sections.get("HIRC")
 
     @property
     def stid(self) -> STIDSection:
@@ -490,7 +498,14 @@ class Soundbank:
         return upchain
 
     def query(self, query: str) -> Generator[HIRCNode, None, None]:
-        yield from query_nodes(self.hirc.objects, query)
+        if re.match(r"type=\w+", query):
+            # Pure type queries don't need the full query machinery
+            query_type = query.split("=")[1]
+            for nid, data in self._tree.nodes(data=True):
+                if data["type"] == query_type:
+                    yield self[nid]
+        else:
+            yield from query_nodes(self.hirc.objects, query)
 
     def query_one(self, query: str, default: Any = None) -> HIRCNode:
         return next(self.query(query), default)
@@ -714,9 +729,15 @@ class Soundbank:
             return default
 
     def __iter__(self) -> Iterator[HIRCNode]:
+        if not self.hirc:
+            return
+
         yield from self.hirc.objects
 
     def __len__(self) -> int:
+        if not self.hirc:
+            return 0
+        
         return len(self.hirc.objects)
 
     def __contains__(self, key: Any) -> HIRCNode:
