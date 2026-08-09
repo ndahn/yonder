@@ -4,7 +4,8 @@ __version__ = "1.5.2"
 from .types.soundbank import Soundbank
 from .types.hirc_node import HIRCNode
 from .hash import calc_hash, lookup_name, Hash
-from .game import GameObjects
+from .game import set_game
+from .enums import Game
 from . import enums
 from . import export
 from . import convenience

@@ -1,6 +1,12 @@
 from enum import IntEnum, StrEnum
 
 
+class Game(IntEnum):
+    EldenRing = 0
+    Nightreign = 1
+    #ArmoredCore6 = 2
+
+
 class SoundType(StrEnum):
     Environment = "a"
     Character = "c"

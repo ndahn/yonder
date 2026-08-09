@@ -19,7 +19,7 @@ from yonder.enums import (
     CurveScaling,
     MarkerId,
 )
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 
 from .audiomath import (
     db_to_amp,
@@ -127,8 +127,9 @@ class VoiceBuilder:
         # RTPCs
         if hasattr(node, "rtpcs"):
             rtpc: RTPC
+            game_data = get_selected_game()
             for rtpc in node.rtpcs:
-                param = GameObjects.RTPCParameter(rtpc.param_id).name
+                param = game_data.rtpc_params(rtpc.param_id).name
 
                 # TODO provide a better way to compare these
                 if param == "Pitch":

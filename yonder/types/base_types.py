@@ -551,10 +551,10 @@ class RTPC:
         return []
 
     def __str__(self) -> str:
-        from yonder.game import GameObjects
+        from yonder.game import get_selected_game
 
         try:
-            param = GameObjects.RTPCParameter(self.param_id).name
+            param = get_selected_game().rtpc_params(self.param_id).name
         except KeyError:
             param = str(self.param_id)
 

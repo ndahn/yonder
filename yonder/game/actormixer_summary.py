@@ -8,9 +8,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 from yonder import Soundbank
 from yonder.types import ActorMixer, State
-from yonder.enums import PropID, RtpcType
+from yonder.enums import PropID, RtpcType, Game
 from yonder.util import unpack_soundbank, resource_dir
-from yonder.gamedata import Game
 
 
 @dataclass

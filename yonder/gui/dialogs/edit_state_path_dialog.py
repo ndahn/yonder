@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.util import parse_state_path
 from yonder.hash import lookup_name
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.types.base_types import GameSync
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -104,9 +104,10 @@ class edit_state_path_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
             # All branches have the same length
+            game_states = get_selected_game().game_states
             for i, arg in enumerate(self._arguments):
                 name = self._get_name(arg)
-                values = ["*"] + GameObjects.GameStates.get(name, [])
+                values = ["*"] + game_states.get(name, [])
 
                 with dpg.group(horizontal=True):
                     dpg.add_input_text(

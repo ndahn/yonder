@@ -18,6 +18,7 @@ class ActorMixerDetailProvider:
         for amx in bnk.query("type=ActorMixer"):
             self._load_details(amx)
 
+    # TODO not useful, analyze the cs_main.bnk AMX hierarchies and give some better hints here
     def _load_details(self, amx: ActorMixer) -> None:
         from yonder.types import ActorMixer
 
@@ -37,7 +38,9 @@ class ActorMixerDetailProvider:
                 if isinstance(child, ActorMixer):
                     dependents.add(child_id)
                 else:
-                    dependents.update(evt.id for evt in self.bnk.find_events_for(child))
+                    # TODO this is EXTREMLY slow and needs fixing ASAP for cs_main
+                    for evt in self.bnk.find_events_for(child):
+                        dependents.add(evt.id)
 
         ret = sorted(dependents)
         self._cache[node.id] = ret

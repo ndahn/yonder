@@ -11,7 +11,7 @@ from yonder.enums import CurveInterpolation, SyncType
 from yonder.hash import calc_hash
 from yonder.convenience import create_boss_bgm, BossBgm, BgmTrack
 from yonder.wem import wav2wem
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
@@ -318,12 +318,9 @@ class create_boss_track_dialog(DpgItem):
                     default_value="*",
                     tag=self._t("bgm_enemy_type"),
                 )
+                enemy_keys = get_selected_game().game_states.get("BgmEnemyType")
                 dpg.add_combo(
-                    [
-                        x
-                        for x in GameObjects.GameStates["BgmEnemyType"]
-                        if "reserved" in x.lower()
-                    ],
+                    [x for x in enemy_keys if "reserved" in x.lower()],
                     no_preview=True,
                     callback=self._on_bgmenemytype_changed,
                 )

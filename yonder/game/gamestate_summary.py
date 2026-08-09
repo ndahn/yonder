@@ -4,9 +4,9 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import shutil
 
 from yonder import Soundbank, lookup_name
+from yonder.enums import Game
 from yonder.types.base_types import StateChunk, DecisionTreeNode
 from yonder.util import unpack_soundbank, resource_dir
-from yonder.gamedata import Game
 
 
 def build_bank_states_summary(bnk: Soundbank) -> dict[str, list[str]]:

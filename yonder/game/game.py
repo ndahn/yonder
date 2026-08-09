@@ -4,19 +4,8 @@ import re
 from Crypto.Cipher import AES
 
 from yonder import Soundbank
+from yonder.enums import Game
 from .actormixer_summary import AmxSummary
-
-# Need to load these for subclass discovery even if we're not using them here
-from .eldenring import GameEldenring  # noqa: F401
-from .nightreign import GameNightreign  # noqa: F401
-# from .armoredcore6 import GameArmoredCore6
-# AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
-
-
-class Game(IntEnum):
-    EldenRing = 0
-    Nightreign = 1
-    ArmoredCore6 = 2
 
 
 class EnumWithUnknown(IntEnum):
@@ -39,7 +28,7 @@ class EnumWithUnknown(IntEnum):
 class GameObjects:
     game: ClassVar[Game]
     regbin_key: ClassVar[bytes]
-    rtpc_params: ClassVar[EnumWithUnknown]
+    rtpc_params: ClassVar[type[EnumWithUnknown]]
     game_states: ClassVar[dict[str, list[str]]]
     amx_summary: ClassVar[AmxSummary]
 
@@ -48,6 +37,12 @@ _selected_game: GameObjects = None
 
 
 def set_game(game: Game) -> None:
+    # Need to load these for subclass discovery even if we're not using them here
+    from .eldenring import GameEldenring  # noqa: F401
+    from .nightreign import GameNightreign  # noqa: F401
+    # from .armoredcore6 import GameArmoredCore6
+    # AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
+    
     global _selected_game
 
     for game_spec in GameObjects.__subclasses__():
@@ -58,7 +53,7 @@ def set_game(game: Game) -> None:
         raise ValueError(f"Game {game} is not supported yet")
 
 
-def get_selected_game() -> GameObjects:
+def get_selected_game() -> type[GameObjects]:
     return _selected_game
 
 

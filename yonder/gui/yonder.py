@@ -12,7 +12,7 @@ import networkx as nx
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode
+from yonder import Soundbank, HIRCNode, Game
 from yonder.types import (
     Action,
     ActorMixer,
@@ -31,7 +31,7 @@ from yonder.hash import (
 )
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes
-from yonder.game import Game, GameObjects
+from yonder.game import set_game
 from .config import Config, get_config
 from .helpers import center_window, shorten_path, get_temp_dir
 from .widgets import (
@@ -333,8 +333,8 @@ class BanksOfYonder(DpgItem):
                 with dpg.menu(label=µ("Presets", "menu")):
                     dpg.add_radio_button(
                         [g.name for g in Game],
-                        default_value=GameObjects.selected_game.name,
-                        callback=lambda s, a, u: GameObjects.set_game(Game[a]),
+                        default_value=Game.EldenRing.name,
+                        callback=lambda s, a, u: set_game(Game[a]),
                     )
 
                 with dpg.menu(

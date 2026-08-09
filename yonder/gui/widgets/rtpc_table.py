@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RtpcType, RtpcAccum, CurveScaling
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.types.base_types import RTPC, RTPCGraphPoint
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
@@ -132,9 +132,11 @@ class add_rtpc_table(DpgItem):
                         callback=self._make_setter(rtpc, "rtpc_accum"),
                         tag=self._item_tag(idx, "rtpc_accum"),
                     )
+
+                    rtpc_enum = get_selected_game().rtpc_params
                     add_incomplete_int_enum(
-                        GameObjects.RTPCParameter,
-                        GameObjects.RTPCParameter(rtpc.param_id),
+                       rtpc_enum,
+                       rtpc_enum(rtpc.param_id),
                         "<unknown>",
                         self._make_setter(
                             rtpc, "param_id", callback=self._update_label

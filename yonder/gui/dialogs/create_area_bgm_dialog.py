@@ -20,7 +20,7 @@ from yonder.convenience import (
     StateCtrl,
     StateProperty,
 )
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.wem import wav2wem
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -261,7 +261,8 @@ Area tree:
         if isinstance(arg, int):
             arg = lookup_name(arg, f"#{arg}")
 
-        return ["*"] + GameObjects.GameStates.get(arg, [])
+        states = get_selected_game().game_states
+        return ["*"] + states.get(arg, [])
 
     def _rebuild_location_tab(self) -> None:
         """Regenerate the per-argument input rows after an MSC change."""
@@ -346,7 +347,7 @@ Area tree:
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
         """Render one area-arg row: input + combo(no_preview) + locked hint."""
-        values = list(GameObjects.GameStates.keys())
+        values = list(get_selected_game().game_states.keys())
         with dpg.group(horizontal=True):
             dpg.add_input_text(
                 default_value=arg,

@@ -21,6 +21,7 @@ from yonder.types.base_types import (
 )
 from yonder.hash import lookup_name
 from yonder.enums import (
+    Game,
     SyncType,
     PropID,
     SourceType,
@@ -33,7 +34,6 @@ from yonder.enums import (
     SoundType,
     RandomSequenceMode,
 )
-from yonder.game import Game
 from yonder.util import logger, parse_state_path
 
 

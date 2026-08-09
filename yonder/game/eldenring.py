@@ -1,4 +1,5 @@
-from .game import Game, GameObjects, EnumWithUnknown
+from yonder import Game
+from .game import GameObjects, EnumWithUnknown
 from .actormixer_summary import load_actormixer_summary
 from .gamestate_summary import load_gamestate_summary
 
