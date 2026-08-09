@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Callable, Type, Iterable
 from dearpygui import dearpygui as dpg
 
-from yonder import HIRCNode
+from yonder import HIRCNode, get_selected_game
 from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
 from yonder.hash import lookup_name
 from yonder.gui.localization import µ
@@ -13,56 +13,38 @@ from .dpg_item import DpgItem
 class ActorMixerDetailProvider:
     def __init__(self, bnk: Soundbank):
         self.bnk = bnk
-        self._cache: dict[int, list[int]] = {}
 
-        for amx in bnk.query("type=ActorMixer"):
-            self._load_details(amx)
-
-    # TODO not useful, analyze the cs_main.bnk AMX hierarchies and give some better hints here
-    def _load_details(self, amx: ActorMixer) -> None:
-        from yonder.types import ActorMixer
-
-        todo: list[HIRCNode] = [amx]
-        dependents = set()
-
-        while todo:
-            node = todo.pop()
-            if not hasattr(node, "children"):
-                continue
-
-            for child_id in node.children:
-                child = self.bnk.get(child_id)
-                if not child:
-                    continue
-
-                if isinstance(child, ActorMixer):
-                    dependents.add(child_id)
-                else:
-                    # TODO this is EXTREMLY slow and needs fixing ASAP for cs_main
-                    for evt in self.bnk.find_events_for(child):
-                        dependents.add(evt.id)
-
-        ret = sorted(dependents)
-        self._cache[node.id] = ret
-        return ret
-
+    # TODO should create a proper popup with nicer layout and additional info
+    # TODO AMX should use some of the summary data in their labels
     def __call__(self, amx: ActorMixer) -> list[str]:
-        dependents = self._cache.get(amx.id)
-        if dependents is None:
-            dependents = self._load_details(amx)
+        game_data = get_selected_game()
+        root, info = game_data.amx_summary.get_effective_values(amx.id)
 
-        used_by = []
-        for n in dependents[:10]:
-            node = self.bnk[n]
-            if isinstance(node, Event):
-                used_by.append("Event " + self.bnk[n].get_wwise_name(f"#{n}"))
-            else:
-                used_by.append(node.get_name(f"{node.type_name} #{node.id}"))
+        def name(key: int) -> str:
+            return lookup_name(key, f"#{key}")
 
-        if len(dependents) > 10:
-            used_by.append("...")
+        lines = []
 
-        return [µ("Used by:")] + used_by
+        # TODO show bank the AMX is defined in
+        
+        root_bus = game_data.amx_summary.actormixers[root].bus
+        if root_bus != info.bus:
+            lines.append(f"Bus: {name(info.bus)} ({name(root_bus)})")
+        else:
+            lines.append(f"Bus: {name(info.bus)}")
+
+        for aux in info.aux1, info.aux2, info.aux3, info.aux4:
+            if aux > 0:
+                lines.append(f"-> {name(aux)}")
+
+        lines.append("----------------------")
+        lines.extend([
+            f"{p.name} = {v}" for p, v in info.properties.items()
+        ])
+
+        # TODO RTPCs, states
+
+        return lines
 
 
 def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:

@@ -63,7 +63,7 @@ def guess_game(bnk: Soundbank) -> Game:
     # Search for more reliable clues first
     while True:
         regbin = path / "regulation.bin"
-        if regbin.isfile():
+        if regbin.is_file():
             # Check if we can decrypt the regbin with a known key
             data = regbin.read_bytes()
             for game_spec in GameObjects.__subclasses__():

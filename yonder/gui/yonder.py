@@ -31,7 +31,7 @@ from yonder.hash import (
 )
 from yonder.util import logger, unpack_soundbank, repack_soundbank
 from yonder.query import query_nodes
-from yonder.game import set_game
+from yonder.game import set_game, guess_game
 from .config import Config, get_config
 from .helpers import center_window, shorten_path, get_temp_dir
 from .widgets import (
@@ -228,28 +228,36 @@ class BanksOfYonder(DpgItem):
                     tag=self._t("menu/rename_bank"),
                 )
                 dpg.add_menu_item(
-                    label=µ("Pin Orphans", "menu"),
-                    callback=self.pin_lost_objects,
-                    tag=self._t("menu/pin_orphans"),
+                    label=µ("Verify", "menu"),
+                    callback=self._bank_verify,
+                    tag=self._t("menu/verify"),
                 )
-
-                dpg.add_separator()
                 dpg.add_menu_item(
                     label=µ("Solve HIRC", "menu"),
                     callback=self._bank_solve_hirc,
                     tag=self._t("menu/solve_hirc"),
                 )
-                dpg.add_menu_item(
-                    label=µ("Verify", "menu"),
-                    callback=self._bank_verify,
-                    tag=self._t("menu/verify"),
-                )
 
                 dpg.add_separator()
+                with dpg.menu(label=µ("Game", "menu")):
+                    dpg.add_radio_button(
+                        [g.name for g in Game],
+                        default_value=Game.EldenRing.name,
+                        callback=lambda s, a, u: set_game(Game[a]),
+                        tag=self._t("menu/selected_game"),
+                    )
+
+                dpg.add_separator()
+
                 with dpg.menu(
                     label=µ("Advanced", "menu"),
                     tag=self._t("menu/advanced"),
                 ):
+                    dpg.add_menu_item(
+                        label=µ("Pin Orphans", "menu"),
+                        callback=self.pin_lost_objects,
+                        tag=self._t("menu/pin_orphans"),
+                    )
                     dpg.add_menu_item(
                         label=µ("Delete unused wems", "menu"),
                         callback=self._bank_remove_unused_wems,
@@ -329,13 +337,6 @@ class BanksOfYonder(DpgItem):
                 )
 
                 dpg.add_separator()
-
-                with dpg.menu(label=µ("Presets", "menu")):
-                    dpg.add_radio_button(
-                        [g.name for g in Game],
-                        default_value=Game.EldenRing.name,
-                        callback=lambda s, a, u: set_game(Game[a]),
-                    )
 
                 with dpg.menu(
                     label=µ("Language", "menu"),
@@ -611,7 +612,7 @@ class BanksOfYonder(DpgItem):
 
             with dpg.child_window(
                 width=600,
-                #autosize_x=True,
+                # autosize_x=True,
                 autosize_y=True,
                 border=False,
             ):
@@ -1226,7 +1227,29 @@ class BanksOfYonder(DpgItem):
             self.bnk = Soundbank.load(path)
             diff = time.time() - now
 
+            logger.info(
+                µ(
+                    "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
+                ).format(name=self.bnk.name, num_nodes=len(self.bnk), time=diff)
+            )
+
             load_lookup_table(get_bank_lookup_table_path(self.bnk), True)
+
+            guessed_game = guess_game(self.bnk)
+            if guessed_game:
+                logger.info(f"Guessed game {guessed_game.name}")
+                set_game(guessed_game)
+                dpg.set_value(self._t("menu/selected_game"), guessed_game.name)
+            else:
+
+                def on_game_choice(sender: str, choice: int, user_data: Any) -> None:
+                    set_game(list(Game)[choice])
+
+                simple_choice_dialog(
+                    µ("Choose presets for {bnk}").format(self.bnk.name),
+                    [g.name for g in Game],
+                    on_game_choice,
+                )
 
             # NOTE: don't translate to avoid bakemoji on some windows configurations
             dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
@@ -1236,11 +1259,6 @@ class BanksOfYonder(DpgItem):
 
             self.regenerate()
             self._set_bnk_menus_enabled(True)
-            logger.info(
-                µ(
-                    "Loaded soundbank {name} with {num_nodes} nodes ({time:.3f}s)"
-                ).format(name=self.bnk.name, num_nodes=len(self.bnk), time=diff)
-            )
 
     def _create_root_entry(self, node: HIRCNode, table: str) -> str:
         bnk = self.bnk

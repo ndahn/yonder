@@ -9,7 +9,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from yonder import Soundbank
 from yonder.types import ActorMixer, State
 from yonder.enums import PropID, RtpcType, Game
-from yonder.util import unpack_soundbank, resource_dir
+from yonder.util import unpack_soundbank, resource_dir, logger
 
 
 @dataclass
@@ -38,19 +38,26 @@ class AmxSummary:
     def tree(self) -> nx.DiGraph:
         g = nx.DiGraph()
 
-        for amx in self.actormixers:
-            g.add_node(amx.nid, data=amx)
+        for nid, amx in self.actormixers.items():
+            g.add_node(nid, data=amx)
             if amx.parent > 0:
-                g.add_edge(amx.parent, amx.nid)
+                g.add_edge(amx.parent, nid)
 
         return g
 
-    def get_effective_values(self, target_amx_id: int) -> AmxData:
-        target_amx = self.actormixers[target_amx_id]
+    def get_effective_values(self, target_amx_id: int) -> tuple[int, AmxData]:
+        target_amx = self.actormixers.get(target_amx_id)
+        if not target_amx:
+            logger.warning(
+                f"Could not find ActorMixer {target_amx_id} in game data, wrong game selected?"
+            )
+            return 0, AmxData(target_amx_id, 0)
+
         tree = self.tree
-        root = next(
-            n for n in nx.ancestors(tree, target_amx_id) if tree.in_degree(n) == 0
-        )
+        root = target_amx_id
+        while parents := list(tree.predecessors(root)):
+            root = parents[0]
+
         result = AmxData(target_amx_id, target_amx.bank)
 
         for amxid in nx.shortest_path(tree, root, target_amx_id):
@@ -99,7 +106,7 @@ class AmxSummary:
                 for state, effects in states.items():
                     result.states[group_id][state] = effects
 
-        return result
+        return (root, result)
 
 
 def build_actormixer_summary(bnk: Soundbank) -> AmxSummary:
@@ -189,7 +196,7 @@ def load_actormixer_summary(game: Game) -> AmxSummary:
     for d in data:
         d.properties = {PropID[k]: v for k, v in d.properties.items()}
 
-    return AmxSummary({s.nid: s} for s in data)
+    return AmxSummary({s.nid: s for s in data})
 
 
 if __name__ == "__main__":
