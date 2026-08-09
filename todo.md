@@ -5,4 +5,9 @@
 - msc tree edits only need to rebuild msc widgets, no need to regenerate everything
 - jump-to is not reliable
 - special delete case for events
-- better hints for actormixers ()
+- better hints for actormixers (check hierarchy)
+
+HIRC player
+- don't instantiate parts of tree which are not played (e.g. MSC, SC)
+- fix play/pause/stop
+- fix looping

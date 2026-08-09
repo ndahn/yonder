@@ -80,17 +80,17 @@ class Soundbank:
         return self._tree
 
     @classmethod
-    def load(cls, bnk_path: Path | str) -> Soundbank:
-        bnk_path: Path = Path(bnk_path).absolute()
-        if bnk_path.suffix == ".bnk":
-            bnk_path = bnk_path.parent / bnk_path.stem
-            if not bnk_path.is_dir():
-                raise ValueError(f"Bank {bnk_path.name} is not unpacked")
+    def load(cls, json_or_dir: Path | str) -> Soundbank:
+        json_or_dir: Path = Path(json_or_dir).absolute()
+        if json_or_dir.suffix == ".bnk":
+            json_or_dir = json_or_dir.parent / json_or_dir.stem
+            if not json_or_dir.is_dir():
+                raise ValueError(f"Bank {json_or_dir.name} is not unpacked")
 
-        if bnk_path.is_dir():
-            json_path = bnk_path / "soundbank.json"
+        if json_or_dir.is_dir():
+            json_path = json_or_dir / "soundbank.json"
         else:
-            json_path = bnk_path
+            json_path = json_or_dir
 
         with json_path.open(encoding="utf-8") as f:
             bnk_data = json.load(f)
