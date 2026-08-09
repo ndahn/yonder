@@ -22,6 +22,7 @@ dependencies = [
     "sounddevice>=0.5.5",
     "tqdm>=4.67.3",
     "pyo>=1.0.6",
+    "pycryptodome>=3.23.0",
 ]
 authors = [
     {name = "Nikolas Dahn"}

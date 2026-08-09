@@ -9,7 +9,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from yonder import Soundbank
 from yonder.types import ActorMixer, State
 from yonder.enums import PropID, RtpcType
-from yonder.util import unpack_soundbank
+from yonder.util import unpack_soundbank, resource_dir
+from yonder.gamedata import Game
 
 
 @dataclass
@@ -73,27 +74,19 @@ class AmxSummary:
 
             for prop, val in amx.properties.items():
                 if prop in (
-                    PropID.Volume,
+                    # Derived from the comments in wwiser's AkRTPC_ParameterID_135
+                    # https://github.com/bnnm/wwiser/blob/master/wwiser/parser/wdefs.py
+                    PropID.LFE,
+                    PropID.Pitch,
                     PropID.LPF,
                     PropID.HPF,
-                    PropID.Pitch,
-                    PropID.LFE,
+                    PropID.BusVolume,
+                    PropID.InitialDelay,
                     PropID.MakeUpGain,
-                    PropID.GameAuxSendHPF,
-                    PropID.GameAuxSendLPF,
-                    PropID.GameAuxSendVolume,
-                    PropID.UserAuxSendHPF0,
-                    PropID.UserAuxSendHPF1,
-                    PropID.UserAuxSendHPF2,
-                    PropID.UserAuxSendHPF3,
-                    PropID.UserAuxSendLPF0,
-                    PropID.UserAuxSendLPF1,
-                    PropID.UserAuxSendLPF2,
-                    PropID.UserAuxSendLPF3,
-                    PropID.UserAuxSendVolume0,
-                    PropID.UserAuxSendVolume1,
-                    PropID.UserAuxSendVolume2,
-                    PropID.UserAuxSendVolume3,
+                    PropID.MidiTransposition,
+                    PropID.MidiVelocityOffset,
+                    PropID.PlaybackSpeed,
+                    PropID.MuteRatio,
                 ):
                     result.properties.setdefault(prop, 0.0)
                     result.properties[prop] += val
@@ -182,8 +175,15 @@ def build_game_actormixer_summary(game_path: Path, bnk2json_exe: Path) -> AmxSum
     return AmxSummary(summary)
 
 
-def load_actormixer_summary(summary_json: Path) -> AmxSummary:
-    raw: list[dict] = json.load(summary_json.open())
+def load_actormixer_summary(game: Game) -> AmxSummary:
+    if game == Game.EldenRing:
+        json_path = resource_dir() / "gamedata" / "er" / "amx.json"
+    elif game == Game.Nightreign:
+        json_path = resource_dir() / "gamedata" / "nr" / "amx.json"
+    else:
+        raise ValueError(f"Game {game} is not supported yet")
+
+    raw: list[dict] = json.load(json_path.open())
     data: list[AmxData] = [AmxData(**d) for d in raw]
 
     # Fix up property keys
