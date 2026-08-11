@@ -5,7 +5,7 @@ from Crypto.Cipher import AES
 
 from yonder import Soundbank
 from yonder.enums import Game
-from .actormixer_summary import AmxSummary
+from .collectors.actormixer_summary import AmxSummary
 
 
 class EnumWithUnknown(IntEnum):

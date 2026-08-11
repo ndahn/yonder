@@ -722,6 +722,17 @@ class Soundbank:
 
         return severity
 
+    def check_conflicts(self, other: Soundbank, soft: bool = False) -> list[tuple[int, type, type]]:
+        conflicts = []
+
+        for node in self:
+            on = other.get(node.id)
+            if on:
+                if type(on) != type(node) or soft and on.json() != node.json():
+                    conflicts.append((node.id, type(node), type(on)))
+
+        return conflicts
+
     def get(self, nid: Hash, default: Any = None) -> HIRCNode:
         try:
             return self[nid]
@@ -737,7 +748,7 @@ class Soundbank:
     def __len__(self) -> int:
         if not self.hirc:
             return 0
-        
+
         return len(self.hirc.objects)
 
     def __contains__(self, key: Any) -> HIRCNode:
