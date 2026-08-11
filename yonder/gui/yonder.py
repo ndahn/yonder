@@ -1246,7 +1246,7 @@ class BanksOfYonder(DpgItem):
                     set_game(list(Game)[choice])
 
                 simple_choice_dialog(
-                    µ("Choose presets for {bnk}").format(self.bnk.name),
+                    µ("Choose presets for {bnk}").format(bnk=self.bnk.name),
                     [g.name for g in Game],
                     on_game_choice,
                 )

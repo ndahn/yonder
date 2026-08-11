@@ -29,6 +29,9 @@ class AmxData:
     rtpcs: dict[int, tuple[RtpcType, int]] = field(default_factory=dict)
     states: dict[int, dict[int, dict[PropID, float]]] = field(default_factory=dict)
 
+    def has_aux(self) -> bool:
+        return sum([self.aux1, self.aux2, self.aux3, self.aux4]) > 0
+
 
 @dataclass(frozen=True)
 class AmxSummary:

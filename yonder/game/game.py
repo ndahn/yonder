@@ -96,7 +96,7 @@ def guess_game(bnk: Soundbank) -> Game:
                         return Game.ArmoredCore6
 
         path = path.parent
-        if path == path.anchor:
+        if path.parent == path:
             break
 
     # Check if the path can give us any hints

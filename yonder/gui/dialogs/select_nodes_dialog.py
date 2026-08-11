@@ -75,7 +75,10 @@ class select_nodes_dialog(DpgItem):
                 if details:
                     with dpg.tooltip(dpg.last_item()):
                         for line in details:
-                            dpg.add_text(line)
+                            if line.startswith("#"):
+                                dpg.add_separator(label=line[1:])
+                            else:
+                                dpg.add_text(line)
 
     def _on_row_clicked(self, sender: int, value: bool, row_tag: int) -> None:
         key = self._row_tags.get(row_tag)
