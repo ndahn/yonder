@@ -267,7 +267,7 @@ class MusicSwitchContainer(StateMixin, PropertyMixin, HIRCNode):
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
             raise ValueError(
-                f"Found mismatch between group_types and arguments in {self}"
+                f"{self}: found mismatch between group_types and arguments"
             )
 
         def delve(branch: DecisionTreeNode, path: list) -> None:

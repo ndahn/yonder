@@ -54,7 +54,7 @@ class mass_transfer_dialog(DpgItem):
         select_nodes_dialog(
             lambda s: self._src_bnk.query(s, node_type=Event),
             self._on_nodes_selected,
-            get_node_label=lambda n: n.get_name(f"#{n.id}"),
+            get_node_label=lambda n: n.get_name(),
             multiple=True,
             return_labels=True,
         )

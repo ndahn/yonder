@@ -542,6 +542,9 @@ class RTPC:
     graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
 
     def get_name(self, default: Any = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return lookup_name(self.id, default)
 
     def get_references(self) -> list[tuple[str, int]]:
@@ -558,7 +561,7 @@ class RTPC:
         except KeyError:
             param = str(self.param_id)
 
-        name = self.get_name(f"#{self.id}")
+        name = self.get_name()
         return f"{name} ({param})"
 
 
@@ -954,4 +957,7 @@ class MusicMarkerWwise:
     string: str = ""
 
     def get_name(self, default: Any = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return lookup_name(self.id, default)

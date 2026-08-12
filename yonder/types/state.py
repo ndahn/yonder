@@ -79,4 +79,4 @@ class State(HIRCNode):
 
     def validate(self) -> None:
         if len(self.parameters) != len(self.values):
-            raise ValueError("parameters and values must be the same length")
+            raise ValueError(f"{self}: parameters and values must be the same length")

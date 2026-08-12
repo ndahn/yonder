@@ -51,7 +51,7 @@ class DialogueEvent(PropertyMixin, HIRCNode):
 
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
-            raise ValueError("Found mismatch between group_types and arguments")
+            raise ValueError(f"{self}: found mismatch between group_types and arguments")
 
         # TODO verify all branches have the correct depth
 

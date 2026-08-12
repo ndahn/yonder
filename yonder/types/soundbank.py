@@ -133,6 +133,9 @@ class Soundbank:
         return self.bkhd.bank_name
 
     def get_name(self, default: str = None) -> str:
+        if default is None:
+            default = f"#{self.bank_id}"
+
         return self.bkhd.get_bank_name(default)
 
     def rename_bank(self, new_id: str | int, rename_dir: bool) -> None:

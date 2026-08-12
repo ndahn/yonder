@@ -61,6 +61,9 @@ class HIRCNode(DataNode):
         return type(self).__name__
 
     def get_name(self, default: str = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return self._header.id.get_name(default)
 
     def to_dict(self) -> dict:
@@ -148,7 +151,7 @@ class HIRCNode(DataNode):
 
     def __str__(self) -> str:
         label = "".join(s for s in self.type_name if s.isupper())
-        name = self.get_name(None)
+        name = self.get_name("")
         if name:
             return f"[{label}] {name} #{self.id}"
         return f"[{label}] #{self.id}"
