@@ -1,7 +1,6 @@
 from yonder import Game
 from .game import GameObjects, EnumWithUnknown
-from .collectors.actormixer_summary import load_actormixer_summary
-from .collectors.gamestate_summary import load_gamestate_summary
+from .data import load_actormixer_summary, load_gamestate_summary
 
 
 # From wwiser, AkRTPC_ParameterID_135 seemed to match ER

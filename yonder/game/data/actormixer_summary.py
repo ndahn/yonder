@@ -12,6 +12,7 @@ from yonder.enums import PropID, RtpcType, Game
 from yonder.util import unpack_soundbank, resource_dir, logger
 
 
+# TODO make frozen
 @dataclass
 class AmxData:
     nid: int
@@ -48,7 +49,7 @@ class AmxSummary:
 
         return g
 
-    def get_effective_values(self, target_amx_id: int) -> tuple[int, AmxData]:
+    def get_effective_values(self, target_amx_id: int, tree: nx.DiGraph = None) -> tuple[int, AmxData]:
         target_amx = self.actormixers.get(target_amx_id)
         if not target_amx:
             logger.warning(
@@ -56,7 +57,9 @@ class AmxSummary:
             )
             return 0, AmxData(target_amx_id, 0)
 
-        tree = self.tree
+        if tree is None:
+            tree = self.tree
+
         root = target_amx_id
         while parents := list(tree.predecessors(root)):
             root = parents[0]
@@ -114,7 +117,7 @@ class AmxSummary:
 
 def build_actormixer_summary(bnk: Soundbank) -> AmxSummary:
     amx_data: dict[int, AmxData] = {}
-    all_amx = bnk.query("type=ActorMixer")
+    all_amx = bnk.query(node_type=ActorMixer)
     amx: ActorMixer
 
     for amx in all_amx:

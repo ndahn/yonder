@@ -226,7 +226,8 @@ class create_area_bgm_dialog(DpgItem):
         valid_msc_arg_hash = calc_hash("BgmPlaceType")
         return list(
             self.bnk.query(
-                f"type=MusicSwitchContainer arguments:*/group_id={valid_msc_arg_hash} {filt}"
+                f"arguments:*/group_id={valid_msc_arg_hash} {filt}",
+                node_type=MusicSwitchContainer,
             )
         )
 

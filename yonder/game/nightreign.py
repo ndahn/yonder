@@ -1,6 +1,5 @@
 from .game import Game, GameObjects, EnumWithUnknown
-from .collectors.actormixer_summary import load_actormixer_summary
-from .collectors.gamestate_summary import load_gamestate_summary
+from .data import load_actormixer_summary, load_gamestate_summary
 
 
 # Presumably the same as in ER?

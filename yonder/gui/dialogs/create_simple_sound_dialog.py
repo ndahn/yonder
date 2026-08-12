@@ -14,12 +14,11 @@ from yonder.gui.localization import µ
 from yonder.gui.widgets import (
     DpgItem,
     add_properties_table,
-    add_select_node,
+    add_select_actormixer,
     add_player_table,
     add_paragraphs,
     yay,
 )
-from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 
 
 class create_simple_sound_dialog(DpgItem):
@@ -93,12 +92,10 @@ class create_simple_sound_dialog(DpgItem):
             )
 
             # Actor mixer selector
-            add_select_node(
-                self._bnk.query,
+            add_select_actormixer(
+                self._bnk,
                 µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
-                node_type=ActorMixer,
-                get_node_details=ActorMixerDetailProvider(self._bnk),
                 tag=self._t("actor_mixer"),
             )
 

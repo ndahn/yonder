@@ -12,7 +12,7 @@ from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator, yay
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
-from .select_nodes_dialog import select_nodes_of_type
+from .select_nodes_dialog import select_nodes_dialog
 
 
 class mass_transfer_dialog(DpgItem):
@@ -51,9 +51,8 @@ class mass_transfer_dialog(DpgItem):
             return
 
         self.show_message()
-        select_nodes_of_type(
-            self._src_bnk,
-            Event,
+        select_nodes_dialog(
+            lambda s: self._src_bnk.query(s, node_type=Event),
             self._on_nodes_selected,
             get_node_label=lambda n: n.get_name(f"#{n.id}"),
             multiple=True,

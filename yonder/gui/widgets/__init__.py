@@ -1,4 +1,16 @@
 from .dpg_item import DpgItem
+from .table_tree_nodes import (
+    add_table_tree_node,
+    table_tree_node,
+    table_tree_leaf,
+    add_lazy_table_tree_node,
+    set_foldable_row_status,
+    is_foldable_row_expanded,
+    get_foldable_row_descriptor,
+    is_row_visible,
+    push_table_tree_level,
+    pop_table_tree_level,
+)
 from .draw_curve import draw_curve
 from .editable_table import (
     add_widget_table,
@@ -16,20 +28,11 @@ from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
 from .loading_indicator import loading_indicator
 from .node_widgets import create_node_widgets
-from .select_node import add_select_node
+from .select_node import add_select_node, add_select_actormixer
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
 from .section_widgets import create_section_widgets
 from .splash import add_splash
 from .wav_player import add_wav_player
 from .properties_table import add_properties_table
-from .table_tree_nodes import (
-    table_tree_node,
-    table_tree_leaf,
-    add_lazy_table_tree_node,
-    set_foldable_row_status,
-    is_foldable_row_expanded,
-    get_foldable_row_descriptor,
-    is_row_visible,
-)
 from .transition_matrix import add_transition_matrix
 from .yay import yay

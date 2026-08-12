@@ -68,8 +68,8 @@ class create_boss_track_dialog(DpgItem):
         return f"Heatup {phase}" if phase > 0 else "Normal"
 
     def _get_music_switch_containers(self, filt: str) -> list[MusicSwitchContainer]:
-        filt = f"type=MusicSwitchContainer arguments:*/group_id={self.bgm_enemy_type_hash} {filt}"
-        return list(self.bnk.query(filt))
+        filt = f"arguments:*/group_id={self.bgm_enemy_type_hash} {filt}"
+        return list(self.bnk.query(filt, node_type=MusicSwitchContainer))
 
     def _edit_state_path(self) -> None:
         if not self.msc:

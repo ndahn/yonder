@@ -1390,7 +1390,7 @@ class BanksOfYonder(DpgItem):
         dpg.delete_item(self._t("events_table"), children_only=True, slot=1)
         self.event_map.clear()
 
-        all_events: list[Event] = list(self.bnk.query("type=Event"))
+        all_events: list[Event] = list(self.bnk.query(node_type=Event))
 
         filt: str = dpg.get_value(self._t("events_filter")).strip()
         if filt:

@@ -2,61 +2,12 @@ from __future__ import annotations
 from typing import Any, Callable, Type, Iterable
 from dearpygui import dearpygui as dpg
 
-from yonder import HIRCNode, get_selected_game
-from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
+from yonder import HIRCNode
+from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
 from yonder.hash import lookup_name
-from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
+from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog, select_actormixer
 from .dpg_item import DpgItem
-
-
-class ActorMixerDetailProvider:
-    def __init__(self, bnk: Soundbank):
-        self.bnk = bnk
-
-    # TODO should create a proper popup with nicer layout and additional info
-    # TODO AMX should use some of the summary data in their labels
-    def __call__(self, amx: ActorMixer) -> list[str]:
-        game_data = get_selected_game()
-
-        # TODO need to expand the summary with the current bank's info
-        root, info = game_data.amx_summary.get_effective_values(amx.id)
-
-        if root <= 0:
-            return ["<no data>"]
-
-        def name(key: int) -> str:
-            return lookup_name(key, f"#{key}")
-
-        lines = []
-
-        # TODO show bank the AMX is defined in
-
-        root_bus = game_data.amx_summary.actormixers[root].bus
-        if root_bus != info.bus:
-            lines.append(f"Bus: {name(info.bus)} ({name(root_bus)})")
-        else:
-            lines.append(f"Bus: {name(info.bus)}")
-
-        if info.has_aux():
-            for aux in info.aux1, info.aux2, info.aux3, info.aux4:
-                if aux > 0:
-                    lines.append(f"-> {name(aux)}")
-
-        if info.properties:
-            lines.append("#Properties")
-            lines.extend([f"{p.name} = {v}" for p, v in info.properties.items()])
-
-        # TODO RTPCs, states
-        if info.rtpcs:
-            lines.append("#RTPCs")
-
-        if info.states:
-            lines.append("#States")
-
-        return lines
-        #return [self._t("stage")]
 
 
 def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
@@ -228,3 +179,47 @@ class add_select_node(DpgItem):
             node = int(node)
 
         dpg.set_value(self.tag, node)
+
+
+class add_select_actormixer(add_select_node):
+    def __init__(
+        self,
+        bnk: Soundbank,
+        label: str,
+        callback: Callable[[str, ActorMixer | list[ActorMixer], Any], None],
+        *,
+        jump_to: Callable[[str, HIRCNode, Any], None] = None,
+        create_new: Callable[[], ActorMixer] = None,
+        multiple: bool = False,
+        default: ActorMixer = None,
+        node_filter: Callable[[ActorMixer], bool] = None,
+        readonly: bool = True,
+        textbox_width: int = 0,
+        parent: str = 0,
+        tag: str = 0,
+        user_data: Any = None,
+    ) -> str:
+        super().__init__(
+            bnk.query,
+            label,
+            callback,
+            jump_to=jump_to,
+            create_new=create_new,
+            multiple=multiple,
+            default=default,
+            node_type=ActorMixer,
+            node_filter=node_filter,
+            readonly=readonly,
+            textbox_width=textbox_width,
+            parent=parent,
+            tag=tag,
+            user_data=user_data,
+        )
+
+    def _select_node(self):
+        select_actormixer(
+            self._get_nodes,
+            self._on_node_selected,
+            multiple=self._multiple,
+            user_data=self._user_data,
+        )

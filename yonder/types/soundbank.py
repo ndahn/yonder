@@ -140,7 +140,7 @@ class Soundbank:
         hash_val = calc_hash(new_id) if isinstance(new_id, str) else new_id
         action: Action
 
-        for action in self.query("type=Action"):
+        for action in self.query(node_type=Action):
             if getattr(action.params, "bank_id", None) == old_id:
                 action.params.bank_id = hash_val
 
@@ -167,10 +167,10 @@ class Soundbank:
         sound: Sound
         track: MusicTrack
 
-        for sound in self.query("type=Sound"):
+        for sound in self.query(node_type=Sound):
             source_ids.append((sound.source_id, sound.bank_source_data.source_type))
 
-        for track in self.query("type=MusicTrack"):
+        for track in self.query(node_type=MusicTrack):
             source_ids.extend(
                 [(src.source_ids, src.source_type) for src in track.sources]
             )
@@ -497,15 +497,20 @@ class Soundbank:
 
         return upchain
 
-    def query(self, query: str) -> Generator[HIRCNode, None, None]:
-        if re.match(r"type=\w+", query):
-            # Pure type queries don't need the full query machinery
-            query_type = query.split("=")[1]
-            for nid, data in self._tree.nodes(data=True):
-                if data["type"] == query_type:
-                    yield self[nid]
+    def query(self, query: str = None, node_type: str | type = None) -> Generator[HIRCNode, None, None]:
+        if node_type:
+            if isinstance(node_type, type):
+                node_type = node_type.__name__
+
+            node_type = node_type.lower()
+            candidates = [n for n in self.hirc.objects if n.type_name.lower() == node_type]
         else:
-            yield from query_nodes(self.hirc.objects, query)
+            candidates = self.hirc.objects
+
+        if query:
+            yield from query_nodes(candidates, query)
+        else:
+            yield from candidates
 
     def query_one(self, query: str, default: Any = None) -> HIRCNode:
         return next(self.query(query), default)
@@ -539,7 +544,7 @@ class Soundbank:
     def find_events(
         self, action_type: ActionType = ActionType.Play
     ) -> Generator[HIRCNode, None, None]:
-        events: list[Event] = list(self.query("type=Event"))
+        events: list[Event] = list(self.query(node_type=Event))
         for evt in events:
             for aid in evt.actions:
                 action: Action = self[aid]
@@ -556,7 +561,7 @@ class Soundbank:
             return
 
         # TODO cache nodes by type
-        events: list[Event] = list(self.query("type=Event"))
+        events: list[Event] = list(self.query(node_type=Event))
         g = self.tree
 
         for evt in events:
@@ -610,6 +615,10 @@ class Soundbank:
     def verify(self) -> int:
         severity = 0
         discovered_ids = {0}
+
+        for cycle in nx.simple_cycles(self.tree):
+            logger.error(f"Found cycle in graph: {cycle}")
+            severity = 2
 
         def _verify_hirc_node(node: HIRCNode):
             nonlocal severity

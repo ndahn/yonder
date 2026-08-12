@@ -1,12 +1,18 @@
-from typing import Any, Callable, Iterable, Type, TypeVar
+from typing import Any, Callable, Iterable
+import networkx as nx
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode
+from yonder import HIRCNode, lookup_name
+from yonder.types import ActorMixer
+from yonder.game import get_selected_game
+from yonder.game.data import AmxData
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem
-
-
-_T = TypeVar("_T", bound=Type[HIRCNode])
+from yonder.gui.widgets import (
+    DpgItem,
+    add_table_tree_node,
+    push_table_tree_level,
+    pop_table_tree_level,
+)
 
 
 class select_nodes_dialog(DpgItem):
@@ -27,7 +33,7 @@ class select_nodes_dialog(DpgItem):
         super().__init__(tag)
 
         if not get_node_label:
-            get_node_label = str
+            get_node_label = lambda n: n.get_name(f"#{n.id}")
 
         self._items: dict[str, HIRCNode] = {}
         self._get_items = get_items
@@ -52,19 +58,16 @@ class select_nodes_dialog(DpgItem):
             (100, 149, 237, 80) if selected else (0, 0, 0, 0),
         )
 
-    def _rebuild_table(self) -> None:
+    def regenerate(self) -> None:
         self._row_tags.clear()
         self._selected_keys.clear()
+        dpg.delete_item(self._t("table"), children_only=True, slot=1)
 
-        # Remove all existing rows
-        for child in dpg.get_item_children(self._t("table"), slot=1) or []:
-            dpg.delete_item(child)
-
-        for key, node in self._items.items():
+        for label, node in self._items.items():
             with dpg.table_row(parent=self._t("table")) as row:
-                self._row_tags[row] = key
+                self._row_tags[row] = label
                 dpg.add_selectable(
-                    label=key,
+                    label=label,
                     span_columns=True,
                     callback=self._on_row_clicked,
                     user_data=row,
@@ -75,8 +78,8 @@ class select_nodes_dialog(DpgItem):
                 if details:
                     with dpg.tooltip(dpg.last_item()):
                         for line in details:
-                            if line.startswith("#"):
-                                dpg.add_separator(label=line[1:])
+                            if line.startswith("# "):
+                                dpg.add_separator(label=line[2:])
                             else:
                                 dpg.add_text(line)
 
@@ -123,7 +126,7 @@ class select_nodes_dialog(DpgItem):
                 if i < self._max_items
             }
         )
-        self._rebuild_table()
+        self.regenerate()
 
     def _on_okay(self) -> None:
         if not self._selected_keys:
@@ -163,18 +166,22 @@ class select_nodes_dialog(DpgItem):
                 tag=self._t("filter"),
             )
 
-            with dpg.table(
-                tag=self._t("table"),
-                header_row=False,
-                scrollY=True,
-                freeze_rows=1,
-                height=300,
-                policy=dpg.mvTable_SizingStretchProp,
+            with dpg.child_window(
+                autosize_x=True,
+                auto_resize_y=True,
+                border=False,
             ):
-                dpg.add_table_column(
-                    label=µ("Node (id)"),
-                    width_stretch=True,
-                )
+                with dpg.table(
+                    tag=self._t("table"),
+                    header_row=False,
+                    scrollY=True,
+                    height=300,
+                    policy=dpg.mvTable_SizingStretchProp,
+                ):
+                    dpg.add_table_column(
+                        label=µ("Node (id)"),
+                        width_stretch=True,
+                    )
 
             if self._multiple:
                 dpg.add_text(
@@ -201,36 +208,165 @@ class select_nodes_dialog(DpgItem):
         self._on_filter_changed(self._t("filter"), "", None)
 
 
-class select_nodes_of_type(DpgItem):
+class select_actormixer(select_nodes_dialog):
     def __init__(
         self,
-        bnk: Soundbank,
-        node_type: _T,
-        on_node_selected: Callable[[str, list[_T] | list[str], Any], None],
+        get_items: Callable[[str], Iterable[ActorMixer]],
+        on_nodes_selected: Callable[[str, list[ActorMixer] | list[str], Any], None],
         *,
-        get_node_details: Callable[[HIRCNode], list[str]] = None,
-        get_node_label: Callable[[HIRCNode], str] = str,
         multiple: bool = False,
         return_labels: bool = False,
+        max_items: int = 200,
+        title: str = "Select ActorMixer",
         tag: str = 0,
         user_data: Any = None,
     ) -> str:
-        super().__init__(tag)
-
-        self._candidates = list(bnk.query(f"type={node_type.__name__}"))
-        self._dialog = select_nodes_dialog(
-            self._get_nodes,
-            on_node_selected,
-            get_node_details=get_node_details,
-            get_node_label=get_node_label,
+        super().__init__(
+            get_items,
+            on_nodes_selected,
+            get_node_details=None,
+            get_node_label=str,
             multiple=multiple,
             return_labels=return_labels,
+            max_items=max_items,
+            title=title,
             tag=tag,
             user_data=user_data,
         )
 
-    def _get_nodes(self, filt: str) -> list[_T]:
-        if not filt:
-            return self._candidates
+    def regenerate(self) -> None:
+        table_tag = self._t("table")
 
-        return [n for n in self._candidates if filt in str(n)]
+        self._row_tags.clear()
+        self._selected_keys.clear()
+        dpg.delete_item(table_tag, children_only=True, slot=1)
+
+        summary = get_selected_game().amx_summary
+        tree = summary.tree
+
+        bank_map: dict[str, list[AmxData]] = {}
+        for amx in summary.actormixers.values():
+            if amx.bank:
+                bank_map.setdefault(amx.bank, []).append(amx)
+
+        def name(key: int) -> str:
+            return lookup_name(key, f"#{key}")
+
+        def make_row(label: str, amx_id: int, leaf: bool) -> None:
+            callback = self._on_row_clicked if amx_id >= 0 else None
+
+            add_table_tree_node(
+                label,
+                table=table_tag,
+                leaf=leaf,
+                on_click_callback=callback,
+                user_data=amx_id,
+            )
+
+            if amx_id > 0:
+                self._row_tags[amx_id] = label
+                details = self._get_amx_details(amx_id)
+                if details:
+                    with dpg.tooltip(dpg.last_item()):
+                        for line in details:
+                            if line.startswith("# "):
+                                dpg.add_separator(label=line[2:])
+                            else:
+                                dpg.add_text(line)
+
+        def descend_amx(amx_id: int, graph: nx.DiGraph) -> None:
+            is_leaf = not bool(list(graph.successors(amx_id)))
+            make_row(name(amx_id), amx_id, is_leaf)
+            push_table_tree_level(table_tag)
+
+            for child_id in graph.successors(amx_id):
+                descend_amx(child_id, graph)
+
+            pop_table_tree_level(table_tag)
+
+        def place_bank_amx(bank: str, bank_amx: list[AmxData]) -> None:
+            make_row(bank, 0, False)
+            bank_graph = tree.subgraph([a.nid for a in bank_amx])
+            roots = sorted(n for n in bank_graph if bank_graph.in_degree(n) == 0)
+
+            push_table_tree_level(table_tag)
+
+            for root_id in roots:
+                descend_amx(root_id, bank_graph)
+
+            pop_table_tree_level(table_tag)
+
+        # TODO
+        # Place the current bank first, then main, then the rest
+        # current_bank_amx = bank_map.pop(self.bnk.name)
+        # if current_bank_amx:
+        #    place_bank_amx(self.bnk.name, current_bank_amx)
+
+        for category, pattern in [
+            (µ("Main"), "cs_main"),
+            (µ("Hero"), "Hero"),
+            (µ("Character"), "cs_c"),
+            (µ("Map"), "cs_m"),
+            (µ("Asset"), "aeg"),
+            (µ("Cutscene"), "cs_s"),
+            (µ("Other"), ""),
+        ]:
+            banks = sorted(b for b in bank_map if b.lower().startswith(pattern))
+            if not banks:
+                continue
+
+            make_row(category, 0, False)
+            push_table_tree_level(table_tag)
+
+            for bnk in banks:
+                place_bank_amx(bnk, bank_map[bnk])
+
+            pop_table_tree_level(table_tag)
+            bank_map = {k: v for k, v in bank_map.items() if k not in banks}
+
+    def _get_amx_details(self, amx_id: int) -> list[str]:
+        game_data = get_selected_game()
+
+        # TODO need to expand the summary with the current bank's info
+        root, info = game_data.amx_summary.get_effective_values(amx_id)
+
+        if root <= 0:
+            return ["<no data>"]
+
+        def name(key: int) -> str:
+            return lookup_name(key, f"#{key}")
+
+        lines = []
+
+        # TODO show bank the AMX is defined in, group amx by bank
+
+        root_bus = game_data.amx_summary.actormixers[root].bus
+        if root_bus != info.bus:
+            lines.append(f"Bus: {name(info.bus)} ({name(root_bus)})")
+        else:
+            lines.append(f"Bus: {name(info.bus)}")
+
+        if info.has_aux():
+            for aux in info.aux1, info.aux2, info.aux3, info.aux4:
+                if aux > 0:
+                    lines.append(f"-> {name(aux)}")
+
+        if info.properties:
+            lines.append("# Properties")
+            lines.extend([f"{p.name} = {v}" for p, v in info.properties.items()])
+
+        if info.rtpcs:
+            lines.append("# RTPCs")
+            for rtpc, val in info.rtpcs.items():
+                param = game_data.rtpc_params(val[1])
+                lines.append(f"{name(rtpc)} -> {param.name}")
+
+        if info.states:
+            lines.append("# States")
+            for group, states in info.states.items():
+                lines.append(name(group))
+                props = sorted({p for s in states.values() for p in s})
+                for p in props:
+                    lines.append(f"  {p.name}")
+
+        return lines

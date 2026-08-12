@@ -20,12 +20,11 @@ from yonder.gui.widgets import (
     add_widget_table,
     add_properties_table,
     add_player_table_compact,
-    add_select_node,
+    add_select_actormixer,
     add_paragraphs,
     loading_indicator,
     yay,
 )
-from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 from .file_dialog import open_multiple_dialog
 
 
@@ -56,11 +55,11 @@ class create_batch_sound_builder_dialog(DpgItem):
         self._callback = callback
         self._groups: list[BatchGroup] = []
         self._selected_group: int = 0
-        self._actormixers: list[ActorMixer] = list(bnk.query("type=ActorMixer"))
+        self._actormixers: list[ActorMixer] = list(bnk.query(node_type=ActorMixer))
         self._title = title
 
         self._w_groups: add_widget_table = None
-        self._w_actormixer: add_select_node = None
+        self._w_actormixer: add_select_actormixer = None
         self._w_soundfiles: add_player_table_compact = None
         self._w_properties: add_properties_table = None
 
@@ -476,11 +475,12 @@ class create_batch_sound_builder_dialog(DpgItem):
 
                     dpg.add_spacer(height=4)
 
-                    self._w_actormixer = add_select_node(
-                        lambda f: query_nodes(self._actormixers, f),
+                    from yonder.gui.widgets.select_node import add_select_actormixer
+
+                    self._w_actormixer = add_select_actormixer(
+                        self._bnk,
                         "ActorMixer",
                         self._make_setter("actormixer", lambda n: n.id),
-                        get_node_details=ActorMixerDetailProvider(self._bnk),
                         tag=self._t("actormixer"),
                     )
 
