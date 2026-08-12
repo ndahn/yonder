@@ -4,6 +4,7 @@ from typing import ClassVar
 
 from yonder.hash import Hash
 from yonder.enums import CurveParameters
+from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
 
@@ -42,6 +43,15 @@ class Attenuation(HIRCNode):
     def validate(self) -> None:
         if len(self.curves_to_use) != 7:
             raise ValueError("Curves to use must be exactly 7 elements")
+
+        bad_curves = []
+        for idx, curve in enumerate(self.curves):
+            if len(curve.points) > 1:
+                if not all(curve.points[i].from_ > curve.points[i-1].from_ for i in range(1, len(curve.points))):
+                    bad_curves.append(idx)
+
+        if bad_curves:
+            logger.warning(f"{self} has non-monotonic curves {bad_curves}")
 
     @property
     def rtpcs(self) -> list[RTPC]:

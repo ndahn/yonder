@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import Hash
-from yonder.enums import PropID
+from yonder.enums import PropID, RtpcType
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -14,14 +14,17 @@ from .base_types import (
     PropBundle,
     RTPC,
     StateChunk,
+    RTPCGraphPoint,
 )
 from .mixins import PropertyMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
 class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
-    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
-    
+    wwise_link: ClassVar[str] = (
+        "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
+    )
+
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -72,12 +75,40 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
     def states(self) -> StateChunk:
         return self.node_base_params.state_chunk
 
-    def add_layer(self, nodes: list[int]) -> Layer:
-        self.layers.append(
-            Layer(associated_children=[AssociatedChildData(int(nid)) for nid in nodes])
-        )
-        for nid in nodes:
+    def add_layer(
+        self,
+        layer_id: int,
+        nodes: list[int | HIRCNode],
+        rtpc_id: int = 0,
+        rtpc_type: RtpcType = RtpcType.GameParameter,
+        curves: dict[int, list[RTPCGraphPoint]] = None,
+    ) -> Layer:
+        """Add a blend track covering all `nodes`.
+
+        A layer is a crossfade group, and each node in the group will get their own fade curve driven by a single RTPC. Children that merely play together don't need a layer.
+        """
+        if any(l.layer_id == layer_id for l in self.layers):
+            raise ValueError(f"layer_id {layer_id} is already used in this container")
+
+        curves = curves or {}
+        assoc = []
+
+        for node in nodes:
+            nid = node.id if isinstance(node, HIRCNode) else int(node)
+            pts = list(curves.get(nid, []))
+            assoc.append(AssociatedChildData(nid, len(pts), pts))
             self.children.add(nid)
+
+        layer = Layer(
+            layer_id=layer_id,
+            rtpc_id=rtpc_id,
+            rtpc_type=rtpc_type,
+            associated_childen_count=len(assoc),
+            associated_children=assoc,
+        )
+
+        self.layers.append(layer)
+        return layer
 
     def get_layer(self, child: HIRCNode | int) -> bool:
         if isinstance(child, HIRCNode):
@@ -93,7 +124,7 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
 
         return None
 
-    def attach(self, other: int | HIRCNode, custom: bool = True) -> None:
+    def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -102,10 +133,7 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
             other.parent = self.id
             other = other.id
 
-        if custom:
-            self.add_layer([int(other)])
-        else:
-            self.children.add(int(other))
+        self.children.add(int(other))
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -114,5 +142,15 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
         if other in self.children:
             self.children.remove(other)
             for layer in self.layers:
-                if other in layer.associated_children:
-                    layer.associated_children.remove(other)
+                layer.associated_children = [
+                    a
+                    for a in layer.associated_children
+                    if a.associated_child_id != other
+                ]
+
+    def validate(self) -> None:
+        for layer in self.layers:
+            if layer.layer_id == 0:
+                raise ValueError(
+                    f"{self}: corrupted layers found, you probably want to remove those"
+                )
