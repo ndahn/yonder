@@ -14,6 +14,7 @@ from yonder.gui.widgets import (
     pop_table_tree_level,
     get_foldable_row_descriptor,
 )
+from yonder.gui.icons import Icons
 
 
 class select_nodes_dialog(DpgItem):
@@ -226,7 +227,7 @@ class select_actormixer(select_nodes_dialog):
             get_items,
             on_nodes_selected,
             get_node_details=None,
-            get_node_label=str,
+            get_node_label=None,
             multiple=multiple,
             return_labels=return_labels,
             max_items=max_items,
@@ -238,7 +239,7 @@ class select_actormixer(select_nodes_dialog):
     def _build(self, title: str) -> None:
         super()._build(title)
         dpg.add_table_column(
-            label="Marks",
+            label="Hints",
             width=80,
             width_fixed=True,
             no_resize=True,
@@ -275,23 +276,35 @@ class select_actormixer(select_nodes_dialog):
                 user_data=amx_id,
             )
 
-            with dpg.group(horizontal=True, parent=row.row):
+            with dpg.group(horizontal=True, horizontal_spacing=0, parent=row.row):
                 info = summary.actormixers.get(amx_id)
-                hints = ""
 
                 if info:
                     if info.bus:
-                        hints += "B"
-                    if info.has_aux():
-                        hints += "X"
-                    if info.properties:
-                        hints += "P"
-                    if info.rtpcs:
-                        hints += "R"
-                    if info.states:
-                        hints += "S"
+                        dpg.add_image(Icons.bus16)
+                    else:
+                        dpg.add_spacer(width=16)
 
-                dpg.add_text(hints)
+                    if info.has_aux():
+                        dpg.add_image(Icons.aux16)
+                    else:
+                        dpg.add_spacer(width=16)
+
+                    if info.properties:
+                        dpg.add_image(Icons.properties16)
+                    else:
+                        dpg.add_spacer(width=16)
+
+                    if info.rtpcs:
+                        dpg.add_image(Icons.rtpc16)
+                    else:
+                        dpg.add_spacer(width=16)
+
+                    if info.states:
+                        dpg.add_image(Icons.states16)
+                    else:
+                        dpg.add_spacer(width=16)
+
                 dpg.add_spacer(width=3)
 
             if amx_id > 0:
@@ -335,11 +348,12 @@ class select_actormixer(select_nodes_dialog):
 
         for category, pattern in [
             (µ("Main"), "cs_main"),
-            (µ("Hero"), "Hero"),
+            (µ("Hero"), "hero"),
             (µ("Character"), "cs_c"),
+            (µ("Dialog"), "vc"),
             (µ("Map"), "cs_m"),
             (µ("Asset"), "aeg"),
-            (µ("Cutscene"), "cs_s"),
+            (µ("Cutscene"), ("cs_s", "s")),
             (µ("Other"), ""),
         ]:
             banks = sorted(b for b in bank_map if b.lower().startswith(pattern))
