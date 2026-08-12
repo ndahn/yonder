@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import json
@@ -33,6 +34,50 @@ class AmxData:
     def has_aux(self) -> bool:
         return sum([self.aux1, self.aux2, self.aux3, self.aux4]) > 0
 
+    @classmethod
+    def from_actormixer(cls, bnk: Soundbank | str, amx: ActorMixer) -> AmxData:
+        if isinstance(bnk, Soundbank):
+            bnk = bnk.get_name()
+
+        data = AmxData(
+            amx.id,
+            bnk,
+            amx.parent,
+            amx.node_base_params.override_bus_id,
+            amx.node_base_params.aux_params.aux1,
+            amx.node_base_params.aux_params.aux2,
+            amx.node_base_params.aux_params.aux3,
+            amx.node_base_params.aux_params.aux4,
+            {p.prop_enum: p.value for p in amx.properties},
+            {r.id: (r.rtpc_type, r.param_id) for r in amx.rtpcs},
+        )
+
+        if amx.states.state_group_chunks:
+            state_props: list[PropID] = [
+                p.property for p in amx.states.state_property_info
+            ]
+
+            for chunk in amx.states.state_group_chunks:
+                effects: dict[int, dict[PropID, float]] = {}
+
+                for state in chunk.states:
+                    obj: State = bnk.get(state.state_instance_id)
+                    # Need the state object to see what values are applied
+                    if obj:
+                        state_props: dict[PropID, float] = {}
+                        for idx, prop in enumerate(state_props):
+                            val = obj.get_param(idx)
+                            if val is not None:
+                                state_props[prop] = val
+
+                        if state_props:
+                            effects[state.state_id] = state_props
+
+                if effects:
+                    data.states[chunk.state_group_id] = effects
+
+        return data
+
 
 @dataclass(frozen=True)
 class AmxSummary:
@@ -49,7 +94,13 @@ class AmxSummary:
 
         return g
 
-    def get_effective_values(self, target_amx_id: int, tree: nx.DiGraph = None) -> tuple[int, AmxData]:
+    def merge_bank_data(self, bnk: Soundbank) -> AmxSummary:
+        summary = build_bank_actormixer_summary(bnk)
+        return AmxSummary(self.actormixers | summary)
+
+    def get_effective_values(
+        self, target_amx_id: int, tree: nx.DiGraph = None
+    ) -> tuple[int, AmxData]:
         target_amx = self.actormixers.get(target_amx_id)
         if not target_amx:
             logger.warning(
@@ -115,52 +166,13 @@ class AmxSummary:
         return (root, result)
 
 
-def build_actormixer_summary(bnk: Soundbank) -> AmxSummary:
-    amx_data: dict[int, AmxData] = {}
-    all_amx = bnk.query(node_type=ActorMixer)
-    amx: ActorMixer
-
-    for amx in all_amx:
-        data = AmxData(
-            amx.id,
-            bnk.name,
-            amx.parent,
-            amx.node_base_params.override_bus_id,
-            amx.node_base_params.aux_params.aux1,
-            amx.node_base_params.aux_params.aux2,
-            amx.node_base_params.aux_params.aux3,
-            amx.node_base_params.aux_params.aux4,
-            {p.prop_enum: p.value for p in amx.properties},
-            {r.id: (r.rtpc_type, r.param_id) for r in amx.rtpcs},
-        )
-
-        if amx.states.state_group_chunks:
-            state_props: list[PropID] = [
-                p.property for p in amx.states.state_property_info
-            ]
-
-            for chunk in amx.states.state_group_chunks:
-                effects: dict[int, dict[PropID, float]] = {}
-
-                for state in chunk.states:
-                    obj: State = bnk.get(state.state_instance_id)
-                    # Need the state object to see what values are applied
-                    if obj:
-                        state_props: dict[PropID, float] = {}
-                        for idx, prop in enumerate(state_props):
-                            val = obj.get_param(idx)
-                            if val is not None:
-                                state_props[prop] = val
-
-                        if state_props:
-                            effects[state.state_id] = state_props
-
-                if effects:
-                    data.states[chunk.state_group_id] = effects
-
-        amx_data[amx.id] = data
-
-    return AmxSummary(amx_data)
+def build_bank_actormixer_summary(bnk: Soundbank) -> AmxSummary:
+    return AmxSummary(
+        {
+            amx.id: AmxData.from_actormixer(amx)
+            for amx in bnk.query(node_type=ActorMixer)
+        }
+    )
 
 
 def build_game_actormixer_summary(game_path: Path, bnk2json_exe: Path) -> AmxSummary:
@@ -179,7 +191,7 @@ def build_game_actormixer_summary(game_path: Path, bnk2json_exe: Path) -> AmxSum
                     unpacked = True
 
                 bnk = Soundbank.load(bnk_file)
-                summary |= build_actormixer_summary(bnk).actormixers
+                summary |= build_bank_actormixer_summary(bnk).actormixers
 
                 if unpacked:
                     shutil.rmtree(bnk_dir)
