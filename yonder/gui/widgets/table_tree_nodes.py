@@ -226,6 +226,7 @@ def add_table_tree_node(
     before: str = 0,
     on_click_callback: Callable[[str, bool, Any], None] = None,
     on_fold_callback: Callable[[str, bool, RowDescriptor], None] = None,
+    span_columns: bool = False,
     leaf: bool = False,
     user_data: Any = None,
 ) -> RowDescriptor:
@@ -272,6 +273,7 @@ def add_table_tree_node(
 
             dpg.add_selectable(
                 label=label,
+                span_columns=span_columns,
                 callback=on_click_callback,
                 tag=selectable,
                 user_data=user_data,

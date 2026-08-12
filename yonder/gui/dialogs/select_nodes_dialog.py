@@ -12,6 +12,7 @@ from yonder.gui.widgets import (
     add_table_tree_node,
     push_table_tree_level,
     pop_table_tree_level,
+    get_foldable_row_descriptor,
 )
 
 
@@ -234,6 +235,16 @@ class select_actormixer(select_nodes_dialog):
             user_data=user_data,
         )
 
+    def _build(self, title: str) -> None:
+        super()._build(title)
+        dpg.add_table_column(
+            label="Marks",
+            width=80,
+            width_fixed=True,
+            no_resize=True,
+            parent=self._t("table")
+        )
+
     def regenerate(self) -> None:
         table_tag = self._t("table")
 
@@ -255,19 +266,39 @@ class select_actormixer(select_nodes_dialog):
         def make_row(label: str, amx_id: int, leaf: bool) -> None:
             callback = self._on_row_clicked if amx_id >= 0 else None
 
-            add_table_tree_node(
+            row = add_table_tree_node(
                 label,
                 table=table_tag,
                 leaf=leaf,
+                span_columns=True,
                 on_click_callback=callback,
                 user_data=amx_id,
             )
+
+            with dpg.group(horizontal=True, parent=row.row):
+                info = summary.actormixers.get(amx_id)
+                hints = ""
+
+                if info:
+                    if info.bus:
+                        hints += "B"
+                    if info.has_aux():
+                        hints += "X"
+                    if info.properties:
+                        hints += "P"
+                    if info.rtpcs:
+                        hints += "R"
+                    if info.states:
+                        hints += "S"
+
+                dpg.add_text(hints)
+                dpg.add_spacer(width=3)
 
             if amx_id > 0:
                 self._row_tags[amx_id] = label
                 details = self._get_amx_details(amx_id)
                 if details:
-                    with dpg.tooltip(dpg.last_item()):
+                    with dpg.tooltip(row.selectable):
                         for line in details:
                             if line.startswith("# "):
                                 dpg.add_separator(label=line[2:])
@@ -370,3 +401,25 @@ class select_actormixer(select_nodes_dialog):
                     lines.append(f"  {p.name}")
 
         return lines
+
+    def _on_row_clicked(self, sender: int, value: bool, row_tag: int) -> None:
+        key = self._row_tags.get(row_tag)
+        if key is None:
+            return
+
+        if self._multiple:
+            if key in self._selected_keys:
+                self._selected_keys.discard(key)
+                dpg.set_value(sender, False)
+            else:
+                self._selected_keys.add(key)
+                dpg.set_value(sender, True)
+        else:
+            # Deselect all others first
+            for row in dpg.get_item_children(self._t("table"), slot=1):
+                descriptor = get_foldable_row_descriptor(row)
+                dpg.set_value(descriptor.selectable, False)
+
+            self._selected_keys.clear()
+            self._selected_keys.add(key)
+            dpg.set_value(sender, True)
