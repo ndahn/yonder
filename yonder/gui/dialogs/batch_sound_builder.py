@@ -480,7 +480,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     self._w_actormixer = add_select_actormixer(
                         self._bnk,
                         "ActorMixer",
-                        self._make_setter("actormixer", lambda n: n.id),
+                        self._make_setter("actormixer", lambda info: info.nid),
                         tag=self._t("actormixer"),
                     )
 

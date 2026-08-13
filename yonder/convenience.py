@@ -212,7 +212,7 @@ def create_simple_sound(
             actor_mixer = bnk.get(actor_mixer)
             if not actor_mixer:
                 logger.warning(
-                    f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, make sure to add the RSC's ID ({rsc.id}) to its children!"
+                    f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, consider adding the RSC's ID ({rsc.id}) to its children!"
                 )
 
     if isinstance(actor_mixer, HIRCNode):

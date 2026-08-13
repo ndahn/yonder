@@ -15,6 +15,9 @@ from yonder.gui.config import get_config
 from .select_nodes_dialog import select_nodes_dialog
 
 
+# TODO add option to skip known ActorMixers/busses per game
+
+
 class mass_transfer_dialog(DpgItem):
     def __init__(
         self,

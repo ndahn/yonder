@@ -5,7 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder import HIRCNode, lookup_name
 from yonder.types import ActorMixer
 from yonder.game import get_selected_game
-from yonder.game.data import AmxData
+from yonder.game.data import AmxData, AmxSummary
 from yonder.gui.localization import µ
 from yonder.gui.widgets import (
     DpgItem,
@@ -13,7 +13,9 @@ from yonder.gui.widgets import (
     push_table_tree_level,
     pop_table_tree_level,
     get_foldable_row_descriptor,
+    is_foldable_row_expanded,
 )
+from yonder.gui.widgets.table_tree_nodes import RowDescriptor
 from yonder.gui.icons import Icons
 
 
@@ -35,7 +37,7 @@ class select_nodes_dialog(DpgItem):
         super().__init__(tag)
 
         if not get_node_label:
-            get_node_label = lambda n: n.get_name(f"#{n.id}")
+            get_node_label = lambda n: n.get_name()
 
         self._items: dict[str, HIRCNode] = {}
         self._get_items = get_items
@@ -213,24 +215,25 @@ class select_nodes_dialog(DpgItem):
 class select_actormixer(select_nodes_dialog):
     def __init__(
         self,
-        get_items: Callable[[str], Iterable[ActorMixer]],
-        on_nodes_selected: Callable[[str, list[ActorMixer] | list[str], Any], None],
+        summary: AmxSummary,
+        on_nodes_selected: Callable[[str, list[AmxData] | list[str], Any], None],
         *,
+        highlight_banks: list[str] = None,
         multiple: bool = False,
-        return_labels: bool = False,
-        max_items: int = 200,
         title: str = "Select ActorMixer",
         tag: str = 0,
         user_data: Any = None,
     ) -> str:
+        self.summary = summary
+        self.amx_tree = summary.tree
+        self.highlight_banks = highlight_banks or []
+
         super().__init__(
-            get_items,
+            None,
             on_nodes_selected,
             get_node_details=None,
             get_node_label=None,
             multiple=multiple,
-            return_labels=return_labels,
-            max_items=max_items,
             title=title,
             tag=tag,
             user_data=user_data,
@@ -243,21 +246,29 @@ class select_actormixer(select_nodes_dialog):
             width=80,
             width_fixed=True,
             no_resize=True,
-            parent=self._t("table")
+            parent=self._t("table"),
         )
 
-    def regenerate(self) -> None:
+    def regenerate(self, amx_info: list[AmxData] = None) -> None:
         table_tag = self._t("table")
+
+        # TODO Still slightly janky, but works for now
+        unfolded = {
+            dpg.get_item_label(get_foldable_row_descriptor(r).selectable)
+            for r in dpg.get_item_children(table_tag, slot=1)
+            if is_foldable_row_expanded(r)
+        }
 
         self._row_tags.clear()
         self._selected_keys.clear()
         dpg.delete_item(table_tag, children_only=True, slot=1)
 
-        summary = get_selected_game().amx_summary
-        tree = summary.tree
-
         bank_map: dict[str, list[AmxData]] = {}
-        for amx in summary.actormixers.values():
+
+        if not amx_info:
+            amx_info = self.summary.actormixers.values()
+
+        for amx in amx_info:
             if amx.bank:
                 bank_map.setdefault(amx.bank, []).append(amx)
 
@@ -265,19 +276,22 @@ class select_actormixer(select_nodes_dialog):
             return lookup_name(key, f"#{key}")
 
         def make_row(label: str, amx_id: int, leaf: bool) -> None:
-            callback = self._on_row_clicked if amx_id >= 0 else None
+            callback = self._on_row_clicked if amx_id > 0 else None
 
             row = add_table_tree_node(
                 label,
                 table=table_tag,
                 leaf=leaf,
                 span_columns=True,
+                folded=label not in unfolded,
                 on_click_callback=callback,
                 user_data=amx_id,
             )
+            if amx_id > 0:
+                self._row_tags[amx_id] = row
 
             with dpg.group(horizontal=True, horizontal_spacing=0, parent=row.row):
-                info = summary.actormixers.get(amx_id)
+                info = self.summary.actormixers.get(amx_id)
 
                 if info:
                     if info.bus:
@@ -308,7 +322,6 @@ class select_actormixer(select_nodes_dialog):
                 dpg.add_spacer(width=3)
 
             if amx_id > 0:
-                self._row_tags[amx_id] = label
                 details = self._get_amx_details(amx_id)
                 if details:
                     with dpg.tooltip(row.selectable):
@@ -330,7 +343,7 @@ class select_actormixer(select_nodes_dialog):
 
         def place_bank_amx(bank: str, bank_amx: list[AmxData]) -> None:
             make_row(bank, 0, False)
-            bank_graph = tree.subgraph([a.nid for a in bank_amx])
+            bank_graph = self.amx_tree.subgraph([a.nid for a in bank_amx])
             roots = sorted(n for n in bank_graph if bank_graph.in_degree(n) == 0)
 
             push_table_tree_level(table_tag)
@@ -340,14 +353,18 @@ class select_actormixer(select_nodes_dialog):
 
             pop_table_tree_level(table_tag)
 
-        # TODO
-        # Place the current bank first, then main, then the rest
-        # current_bank_amx = bank_map.pop(self.bnk.name)
-        # if current_bank_amx:
-        #    place_bank_amx(self.bnk.name, current_bank_amx)
+        for bnk in self.highlight_banks + ["init", "cs_main"]:
+            banks = bank_map.pop(bnk, None)
+            if banks:
+                place_bank_amx(bnk, banks)
+
+        with dpg.table_row(parent=table_tag):
+            with dpg.group():
+                dpg.add_spacer(height=1)
+                dpg.add_separator()
+                dpg.add_spacer(height=1)
 
         for category, pattern in [
-            (µ("Main"), "cs_main"),
             (µ("Hero"), "hero"),
             (µ("Character"), "cs_c"),
             (µ("Dialog"), "vc"),
@@ -360,20 +377,18 @@ class select_actormixer(select_nodes_dialog):
             if not banks:
                 continue
 
+            # This one could be a laze table tree node
             make_row(category, 0, False)
             push_table_tree_level(table_tag)
 
             for bnk in banks:
-                place_bank_amx(bnk, bank_map[bnk])
+                place_bank_amx(bnk, bank_map.pop(bnk))
 
             pop_table_tree_level(table_tag)
-            bank_map = {k: v for k, v in bank_map.items() if k not in banks}
 
     def _get_amx_details(self, amx_id: int) -> list[str]:
-        game_data = get_selected_game()
-
         # TODO need to expand the summary with the current bank's info
-        root, info = game_data.amx_summary.get_effective_values(amx_id)
+        root, info = self.summary.get_effective_values(amx_id, self.amx_tree)
 
         if root <= 0:
             return ["<no data>"]
@@ -383,9 +398,7 @@ class select_actormixer(select_nodes_dialog):
 
         lines = []
 
-        # TODO show bank the AMX is defined in, group amx by bank
-
-        root_bus = game_data.amx_summary.actormixers[root].bus
+        root_bus = self.summary.actormixers[root].bus
         if root_bus != info.bus:
             lines.append(f"Bus: {name(info.bus)} ({name(root_bus)})")
         else:
@@ -402,8 +415,9 @@ class select_actormixer(select_nodes_dialog):
 
         if info.rtpcs:
             lines.append("# RTPCs")
+            rtpc_enum = get_selected_game().rtpc_params
             for rtpc, val in info.rtpcs.items():
-                param = game_data.rtpc_params(val[1])
+                param = rtpc_enum(val[1])
                 lines.append(f"{name(rtpc)} -> {param.name}")
 
         if info.states:
@@ -416,24 +430,127 @@ class select_actormixer(select_nodes_dialog):
 
         return lines
 
-    def _on_row_clicked(self, sender: int, value: bool, row_tag: int) -> None:
-        key = self._row_tags.get(row_tag)
-        if key is None:
+    def _on_row_clicked(self, sender: int, value: bool, amx_id: int) -> None:
+        if amx_id <= 0:
             return
 
         if self._multiple:
-            if key in self._selected_keys:
-                self._selected_keys.discard(key)
+            if amx_id in self._selected_keys:
+                self._selected_keys.discard(amx_id)
                 dpg.set_value(sender, False)
             else:
-                self._selected_keys.add(key)
+                self._selected_keys.add(amx_id)
                 dpg.set_value(sender, True)
         else:
             # Deselect all others first
             for row in dpg.get_item_children(self._t("table"), slot=1):
                 descriptor = get_foldable_row_descriptor(row)
-                dpg.set_value(descriptor.selectable, False)
+                if descriptor:
+                    dpg.set_value(descriptor.selectable, False)
 
             self._selected_keys.clear()
-            self._selected_keys.add(key)
+            self._selected_keys.add(amx_id)
             dpg.set_value(sender, True)
+
+    def _on_okay(self):
+        if not self._selected_keys:
+            return
+
+        if self._multiple:
+            result = [self.summary.actormixers[a] for a in sorted(self._selected_keys)]
+        else:
+            amx_id = next(iter(self._selected_keys))
+            result = self.summary.actormixers[amx_id]
+        
+        self._on_nodes_selected(self.tag, result, self._user_data)
+        dpg.delete_item(self.tag)
+
+    def _on_filter_changed(self, sender: int, filt: str, cb_user_data: Any) -> None:
+        if not filt:
+            self.regenerate()
+            return
+
+        parts = filt.split()
+        for part in parts:
+            if part == "=" or part.startswith("=") or part.endswith("="):
+                # Filter string is invalid, don't do anything
+                return
+
+        def check_id(id: int, val: str) -> bool:
+            if val.isdigit():
+                return str(id).startswith(val)
+
+            return lookup_name(id, "").startswith(val)
+
+        def eval_filter(info: AmxData, part: str) -> bool:
+            if "=" in part:
+                key, val = part.split("=")
+                val = val.removeprefix("#")
+
+                if key.startswith(("bank", "bnk")):
+                    return val == info.bank
+
+                if key.startswith("i"):
+                    return check_id(info.nid, val)
+
+                if key.startswith("b"):
+                    return check_id(info.bus, val)
+
+                if key.startswith(("a", "x")) and info.has_aux():
+                    if key[-1] in "1234":
+                        aux = getattr(info, f"aux{key[-1]}")
+                        return check_id(aux, val)
+                    else:
+                        for aux in (info.aux1, info.aux2, info.aux3, info.aux4):
+                            if check_id(aux, val):
+                                return True
+                        return False
+
+                if key.startswith("p"):
+                    for prop in info.properties:
+                        if prop.name.startswith(val):
+                            return True
+
+                if key.startswith("r"):
+                    for rtpc in info.rtpcs:
+                        if check_id(rtpc, val):
+                            return True
+                    return False
+
+                if key.startswith("s"):
+                    for state in info.states:
+                        if check_id(state, val):
+                            return True
+                    return False
+            else:
+                part = part.removeprefix("#")
+
+                if part.isdigit() and str(info.nid).startswith(part):
+                    return True
+
+                if lookup_name(info.nid, "").startswith(part):
+                    return True
+
+            return False
+
+        matching = set()
+
+        for info in self.summary.actormixers.values():
+            row = self._row_tags.get(info.nid)
+            if not row:
+                continue
+
+            if all(eval_filter(info, p) for p in parts):
+                matching.add(info.nid)
+
+        show = set(matching)
+        todo = list(matching)
+
+        while todo:
+            m = todo.pop()
+            pred = list(self.amx_tree.predecessors(m))
+            if pred and pred[0] not in show:
+                show.add(pred[0])
+                todo.append(pred[0])
+
+        self.regenerate([self.summary.actormixers.get(a) for a in sorted(show)])

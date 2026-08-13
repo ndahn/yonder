@@ -8,6 +8,7 @@ from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
 from yonder.enums import PropID, PlaybackMode, RandomMode
 from yonder.wem import wav2wem
+from yonder.game.data import AmxData
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.localization import µ
@@ -162,9 +163,9 @@ class create_simple_sound_dialog(DpgItem):
             return
         dpg.set_value(self._t("hash"), str(calc_hash(new_name)))
 
-    def _on_amx_selected(self, sender: str, amx: ActorMixer, ud: Any) -> None:
-        if amx:
-            dpg.set_value(self._t("actor_mixer"), amx.id)
+    def _on_amx_selected(self, sender: str, info: AmxData, ud: Any) -> None:
+        if info:
+            dpg.set_value(self._t("actor_mixer"), info.nid)
 
     def _on_properties_changed(
         self, sender: str, new_properties: dict[PropID, float], ud: Any

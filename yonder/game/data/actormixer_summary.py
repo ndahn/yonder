@@ -96,7 +96,7 @@ class AmxSummary:
 
     def merge_bank_data(self, bnk: Soundbank) -> AmxSummary:
         summary = build_bank_actormixer_summary(bnk)
-        return AmxSummary(self.actormixers | summary)
+        return AmxSummary(self.actormixers | summary.actormixers)
 
     def get_effective_values(
         self, target_amx_id: int, tree: nx.DiGraph = None
@@ -169,7 +169,7 @@ class AmxSummary:
 def build_bank_actormixer_summary(bnk: Soundbank) -> AmxSummary:
     return AmxSummary(
         {
-            amx.id: AmxData.from_actormixer(amx)
+            amx.id: AmxData.from_actormixer(bnk, amx)
             for amx in bnk.query(node_type=ActorMixer)
         }
     )

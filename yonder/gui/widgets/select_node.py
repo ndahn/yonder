@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Any, Callable, Type, Iterable
+from typing import Any, Callable, Type, Iterable, Literal
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
 from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
 from yonder.hash import lookup_name
+from yonder.game import get_selected_game
+from yonder.game.data import AmxData, build_bank_actormixer_summary
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog, select_actormixer
 from .dpg_item import DpgItem
@@ -17,7 +19,7 @@ def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
 
 
 def get_details_generic(node: HIRCNode) -> list[str]:
-    details = [node.get_name(f"#{node.id}")]
+    details = [node.get_name()]
 
     if hasattr(node, "children"):
         details.append(µ("Children: {num}").format(num=len(node.children)))
@@ -38,7 +40,7 @@ def get_details_generic(node: HIRCNode) -> list[str]:
 class add_select_node(DpgItem):
     def __init__(
         self,
-        get_items: Callable[[str], Iterable[HIRCNode]],
+        bnk: Soundbank,
         label: str,
         callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
         *,
@@ -49,6 +51,7 @@ class add_select_node(DpgItem):
         default: HIRCNode = None,
         node_type: Type[HIRCNode] = None,
         node_filter: Callable[[HIRCNode], bool] = None,
+        extra_query: str = None,
         readonly: bool = True,
         textbox_width: int = 0,
         parent: str = 0,
@@ -57,13 +60,14 @@ class add_select_node(DpgItem):
     ) -> str:
         super().__init__(tag)
 
-        self._get_items = get_items
-        self._node_filter = node_filter
+        self._bnk = bnk
         self._callback = callback
         self._user_data = user_data
         self._multiple = multiple
         self._readonly = readonly
         self._node_type = node_type
+        self._node_filter = node_filter
+        self._extra_query = extra_query
         self._get_node_details = get_node_details
         self._jump_to = jump_to
         self._create_new = create_new
@@ -131,7 +135,10 @@ class add_select_node(DpgItem):
             dpg.add_text(label)
 
     def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
-        for node in self._get_items(filt):
+        if self._extra_query:
+            filt += " " + self._extra_query
+
+        for node in self._bnk.query(filt, self._node_type):
             if self._node_type and not isinstance(node, self._node_type):
                 continue
 
@@ -186,13 +193,13 @@ class add_select_actormixer(add_select_node):
         self,
         bnk: Soundbank,
         label: str,
-        callback: Callable[[str, ActorMixer | list[ActorMixer], Any], None],
+        # TODO callback value type
+        callback: Callable[[str, AmxData | list[AmxData], Any], None],
         *,
-        jump_to: Callable[[str, HIRCNode, Any], None] = None,
-        create_new: Callable[[], ActorMixer] = None,
+        amx_filter: Callable[[ActorMixer], bool] = None,
+        current_bank_only: bool = False,
         multiple: bool = False,
-        default: ActorMixer = None,
-        node_filter: Callable[[ActorMixer], bool] = None,
+        default: ActorMixer | int = None,
         readonly: bool = True,
         textbox_width: int = 0,
         parent: str = 0,
@@ -200,15 +207,11 @@ class add_select_actormixer(add_select_node):
         user_data: Any = None,
     ) -> str:
         super().__init__(
-            bnk.query,
+            bnk,
             label,
             callback,
-            jump_to=jump_to,
-            create_new=create_new,
             multiple=multiple,
             default=default,
-            node_type=ActorMixer,
-            node_filter=node_filter,
             readonly=readonly,
             textbox_width=textbox_width,
             parent=parent,
@@ -216,10 +219,24 @@ class add_select_actormixer(add_select_node):
             user_data=user_data,
         )
 
+        self._amx_filter = amx_filter
+        self._current_bank_only = current_bank_only
+
     def _select_node(self):
+        if self._current_bank_only:
+            summary = build_bank_actormixer_summary(self._bnk)
+        else:
+            summary = get_selected_game().amx_summary.merge_bank_data(self._bnk)
+
         select_actormixer(
-            self._get_nodes,
+            summary,
             self._on_node_selected,
+            highlight_banks=[self._bnk.name],
             multiple=self._multiple,
             user_data=self._user_data,
         )
+
+    def _on_node_selected(self, sender: str, info: AmxData, user_data: Any) -> None:
+        dpg.set_value(self.tag, lookup_name(info.nid, f"#{info.nid}"))
+        if self._callback:
+            self._callback(self.tag, info, self._user_data)
