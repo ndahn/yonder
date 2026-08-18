@@ -1,10 +1,14 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import ClassVar
+import numpy
+import random
+from dataclasses import dataclass, field
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from yonder.util import logger
+from yonder.audio import PlayContext
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -97,6 +101,11 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         self.children.add(child_id)
         self.playlist.add(PlaylistItem(child_id))
 
+    def pick_random_child(self) -> int:
+        weights = [p.weight for p in self.playlist]
+        idx = random.choices(self.playlist, weights)
+        return self.playlist[idx].play_id
+
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
@@ -116,7 +125,7 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             self.children.remove(other)
 
             indices = []
-            for idx, item in enumerate((self.playlist)):
+            for idx, item in enumerate(self.playlist):
                 if item.play_id == other:
                     indices.append(idx)
 
@@ -130,3 +139,42 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     @property
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
+
+    def pyo(self, ctx: PlayContext) -> pyo.Mixer:
+        mixer = getattr(self, "_mixer", None)
+        if not mixer:
+            mixer = pyo.Mixer(outs=1, chnls=1)
+            self._active_child_idx: int = -1
+            self._mixer = mixer
+        
+        return mixer
+    
+    def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
+        if not self.playlist:
+            return
+
+        mixer = self.pyo(ctx)
+        
+        if force_playlist_idx >= 0:
+            idx = force_playlist_idx
+        else:
+            weights = [p.weight for p in self.playlist]
+            idx = random.choices(self.playlist, weights)
+
+        child = ctx.bank.get(self.playlist[idx].play_id)
+        if not child:
+            return
+        
+        mixer.addInput(idx, child.pyo(ctx))
+        if idx != self._active:
+            mixer.delInput(self._active)
+            self._active = idx
+
+        mixer.setAmp(idx, 0, 1)
+
+    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
+        if hasattr(self, "_mixer"):
+            self._mixer.stop()
+            self._active = -1
+            if reset:
+                self._mixer = None

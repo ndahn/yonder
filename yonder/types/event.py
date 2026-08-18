@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, ClassVar, TYPE_CHECKING
 import re
 from dataclasses import dataclass, field
-from typing import ClassVar, TYPE_CHECKING
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SoundType
+from yonder.audio import PlayContext
 from .hirc_node import HIRCNode
 from .action import Action, ActionType
 
@@ -24,6 +25,16 @@ class Event(HIRCNode):
     @classmethod
     def new(cls, nid: Hash, actions: list[int] = None) -> Event:
         return Event(nid, actions=actions or [])
+
+    def get_action_nodes(self, bnk: Soundbank) -> list[Action]:
+        ret = []
+
+        for aid in self.actions:
+            action = bnk.get(aid)
+            if action:
+                ret.append(action)
+
+        return ret
 
     def get_wwise_name(self, default: Any = None) -> str:
         name = self.name
@@ -112,6 +123,17 @@ class Event(HIRCNode):
 
         if other in self.actions:
             self.actions.remove(other)
+
+    def pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+        return sum(n.pyo(ctx) for n in self.get_action_nodes(ctx.bank))
+
+    def play(self, ctx: PlayContext) -> None:
+        for action in self.get_action_nodes(ctx.bank):
+            action.play(ctx)
+
+    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
+        for action in self.get_action_nodes(ctx.bank):
+            action.stop(ctx)
 
     def __str__(self) -> str:
         return super().__str__()

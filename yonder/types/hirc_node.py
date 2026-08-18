@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, ClassVar
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 
-from .mixins import DataNode
+from .mixins import DataNode, PyoNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
@@ -26,7 +26,7 @@ class HIRCNodeHeader:
 
 
 @dataclass(repr=False, eq=False)
-class HIRCNode(DataNode):
+class HIRCNode(DataNode, PyoNode):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
     id: InitVar[int]

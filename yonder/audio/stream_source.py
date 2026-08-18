@@ -3,6 +3,9 @@ import pyo
 from pyo import sndinfo
 
 from yonder.util import logger
+from yonder.types.base_types import ClipAutomation
+from yonder.enums import ClipAutomationType, CurveScaling
+from yonder.audio.audiomath import hpf_to_hz, lpf_to_hz, db_to_amp, make_envelope
 
 
 class StreamSource(pyo.PyoObject):
@@ -10,6 +13,11 @@ class StreamSource(pyo.PyoObject):
         self,
         path: Path | str,
         loop: bool = False,
+        gain_db: float = 0,
+        hpf_cents: float = 0,
+        lpf_cents: float = 0,
+        pitch_semitones: float = 0,
+        clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
         begin_trim: float = 0.0,
@@ -61,11 +69,110 @@ class StreamSource(pyo.PyoObject):
         # Our crossfaded sum becomes this object's audio stream
         self._trig = pyo.Trig()
         self._mix = self._players[0] + self._players[1]
-        self._base_objs = self._mix.getBaseObjects()
+        self._gain_ctrl = pyo.SigTo(db_to_amp(gain_db), time=0.05)
+        self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
+        self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
+        self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
+
+        self._chain = self._setup_property_controls(self._mix, clip_automations)
+        self._base_objs = sum(o.getBaseObjects() for o in self._chain)
+
+    def _setup_property_controls(
+        self,
+        source: pyo.PyoObject,
+        clip_automations: list[ClipAutomation],
+    ) -> list[pyo.PyoObject]:
+        envelopes = []
+
+        if not clip_automations:
+            clip_automations = []
+
+        for clip in clip_automations:
+            if clip.auto_type == ClipAutomationType.Volume:
+                env = make_envelope(clip.graph_points, CurveScaling.DB, db_to_amp)
+
+                # SigTo ──┐
+                #         ├─(×)──┐
+                # env1 ───┘      ├─(×)──> out signal
+                # env2 ──────────┘
+                self._gain_ctrl *= env
+                envelopes.append(env)
+
+            elif clip.auto_type in (
+                ClipAutomationType.FadeIn,
+                ClipAutomationType.FadeOut,
+            ):
+                # Fades are already normalized to 0..1, no conversion needed
+                env = make_envelope(clip.graph_points, CurveScaling.None_, None)
+                self._gain_ctrl *= env
+                envelopes.append(env)
+
+            elif clip.auto_type == ClipAutomationType.LPF:
+                # clip y-axis is percent (0-100), which interpolates linearly;
+                # the log-frequency behavior lives inside the percent->hz table
+                env = make_envelope(clip.graph_points, CurveScaling.None_, hpf_to_hz)
+                self._hpf_ctrl *= env
+                envelopes.append(env)
+
+            elif clip.auto_type == ClipAutomationType.HPF:
+                env = make_envelope(clip.graph_points, CurveScaling.None_, lpf_to_hz)
+                self._lpf_ctrl *= env
+                envelopes.append(env)
+
+            # NOTE: ClipAutomation and attenuation do not support pitch!
+
+        # transpo is in semitones; winsize balances latency vs. smearing
+        # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
+        pitch = pyo.Harmonizer(source, transpo=self._pitch_ctrl, winsize=0.1)
+
+        # fixed order for all voices: source -> pitch -> HPF -> LPF -> gain
+        hp = pyo.ButHP(pitch, freq=self._hpf_ctrl)
+        lp = pyo.ButLP(hp, freq=self._lpf_ctrl)
+
+        return [
+            source,
+            envelopes,
+            pitch,
+            hp,
+            lp,
+            self._gain_ctrl,
+        ]
 
     @property
     def path(self) -> Path:
         return self._path
+
+    @property
+    def volume(self) -> float:
+        return self._gain_ctrl.value
+
+    @volume.setter
+    def volume(self, gain: float) -> None:
+        self._gain_ctrl.value = gain
+
+    @property
+    def hpf(self) -> float:
+        return self._hpf_ctrl.value
+
+    @hpf.setter
+    def hpf(self, cents: float) -> None:
+        self._hpf_ctrl.value = cents
+
+    @property
+    def lpf(self) -> float:
+        return self._lpf_ctrl.value
+
+    @lpf.setter
+    def lpf(self, cents: float) -> None:
+        self._lpf_ctrl.value = cents
+
+    @property
+    def pitch(self) -> float:
+        return self._pitch_ctrl.value
+
+    @pitch.setter
+    def pitch(self, semitones: float) -> None:
+        self._pitch_ctrl.value = semitones
 
     @property
     def begin_trim(self) -> float:
@@ -215,7 +322,9 @@ class StreamSource(pyo.PyoObject):
         self._clock.reset()
         self._clock.phase = self._paused_pos / dur if dur else 0.0
         self._clock.play()
-        self._mix.play()
+        
+        for o in self._chain:
+            o.play(dur, delay)
 
         return pyo.PyoObject.play(self, dur, delay)
 
@@ -227,7 +336,8 @@ class StreamSource(pyo.PyoObject):
             self._envs[i].value = 0
 
         self._clock.stop()
-        self._mix.stop()
+        for o in self._chain:
+            o.stop(wait)
 
         return pyo.PyoObject.stop(self, wait)
 

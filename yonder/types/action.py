@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Type, ClassVar
+from typing import ClassVar
 from dataclasses import dataclass, field
 from enum import Enum
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import ValueMeaning
 from yonder.util import logger
+from yonder.audio import PlayContext
 from .base_types import PropBundle, PropRangedModifiers
 from .hirc_node import HIRCNode
 from .serialization import _serialize_value, _deserialize_fields
@@ -143,6 +145,95 @@ class Action(PropertyMixin, HIRCNode):
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
+
+    def pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+        node = ctx.bank.get(self.external_id)
+        if node:
+            return node.pyo(ctx)
+
+        return pyo.Sig(0)
+
+    def play(self, ctx: PlayContext) -> None:
+        if self.action_type_enum == ActionType.SetState:
+            params: ActionSetState = self.params
+            ctx.states[params.state_group_id] = params.target_state_id
+
+        elif self.action_type_enum == ActionType.SetSwitch:
+            params: ActionSetSwitch = self.params
+            ctx.states[params.switch_group_id] = params.switch_state_id
+
+        # game objects: something in-game which posted an event
+        # E: reference (global scope)
+        # EO: reference owned by calling game object (local scope)
+        # AE: everything except the global reference
+        # AEO: everything except the local reference
+        # ALL: all playing nodes?
+        # M: seems to have no meaning
+        elif self.action_type_enum in (
+            ActionType.SetVolumeM,
+            ActionType.SetVolumeO,
+            ActionType.ResetVolumeM,
+            ActionType.ResetVolumeO,
+            ActionType.ResetVolumeALL,
+            ActionType.SetPitchM,
+            ActionType.SetPitchO,
+            ActionType.ResetPitchM,
+            ActionType.ResetPitchO,
+            ActionType.ResetPitchALL,
+            ActionType.ResetPitchALLO,
+            ActionType.ResetPitchAE,
+            ActionType.ResetPitchAEO,
+            ActionType.SetLPFM,
+            ActionType.SetLPFO,
+            ActionType.ResetLPFM,
+            ActionType.ResetLPFO,
+            ActionType.ResetLPFALL,
+            ActionType.SetHPFM,
+            ActionType.SetHPFO,
+            ActionType.ResetHPFM,
+            ActionType.ResetHPFALL,
+            # Busses not simulated for now
+            #ActionType.SetBusVolumeM,
+            #ActionType.ResetBusVolumeM,
+            #ActionType.ResetBusVolumeALL,
+        ):
+            logger.warning(
+                f"Don't know how to handle action type {self.action_type_enum.name} yet:\n{self.json()}"
+            )
+
+        elif self.action_type_enum in (ActionType.Play, ActionType.PlayEvent):
+            node = ctx.bank.get(self.external_id)
+            if node:
+                node.play(ctx)
+
+        elif self.action_type_enum in (
+            ActionType.StopE,
+            ActionType.StopEO,
+            ActionType.StopAEO,
+            ActionType.StopEvent,
+        ):
+            node = ctx.bank.get(self.external_id)
+            if node:
+                node.stop(ctx)
+
+        elif self.action_type_enum in (
+            ActionType.SeekE,
+            ActionType.SeekEO,
+            ActionType.SeekAE,
+            ActionType.SeekAEO,
+            ActionType.SeekALL,
+            ActionType.SeekALLO,
+            ActionType.SetGameParameter,  # RTPC?
+            ActionType.SetGameParameterO,
+        ):
+            logger.warning(
+                f"Don't know how to handle action type {self.action_type_enum.name} yet:\n{self.json()}"
+            )
+
+    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
+        node = ctx.bank.get(self.external_id)
+        if node:
+            node.stop(ctx)
 
     def __str__(self) -> str:
         return f"[A] <{self.action_type_enum.name}> #{self.id}"
@@ -289,9 +380,9 @@ class ActionStop(ActionParams):
 
 class ActionType(Enum):
     type_id: int
-    params_cls: Type[ActionParams]
+    params_cls: type[ActionParams]
 
-    def __new__(cls, type_id: int, params_cls: Type[ActionParams]):
+    def __new__(cls, type_id: int, params_cls: type[ActionParams]):
         member = object.__new__(cls)
         member._value_ = type_id
         member.type_id = type_id
@@ -299,7 +390,7 @@ class ActionType(Enum):
         return member
 
     None_ = 0x0000, None
-    SetState = 0x1204, ActionSetSwitch
+    SetState = 0x1204, ActionSetState
     BypassFXM = 0x1A02, None
     BypassFXO = 0x1A03, None
     ResetBypassFXM = 0x1B02, None

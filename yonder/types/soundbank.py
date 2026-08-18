@@ -260,8 +260,7 @@ class Soundbank:
         search_paths = [self.bnk_dir, self.bnk_dir.parent / "wem"] + search_paths
         candidates = []
         for p in search_paths:
-            for f in Path(p).glob(f"**/{source_id}.wem"):
-                candidates.append(f)
+            candidates.extend(Path(p).glob(f"**/{source_id}.wem"))
 
         return max(candidates, key=lambda f: f.stat().st_size, default=None)
 

@@ -4,5 +4,7 @@ os.environ["PYO_GUI_WX"] = "0"
 del os
 
 from .player import Player
-from .voice import Voice
 from .equalizer import Equalizer, EQPresets
+from .play_context import PlayContext
+from .stream_source import StreamSource
+from .property_control import PropertyControl
