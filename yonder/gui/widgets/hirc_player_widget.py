@@ -2,7 +2,7 @@ from typing import Any
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
-from yonder.audio import Player
+from yonder.audio.hirc_player import HIRCPlayer
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
@@ -19,7 +19,7 @@ class add_hirc_player(DpgItem):
         parent: str = 0,
     ) -> None:
         super().__init__(tag)
-        self._player: Player = None
+        self._player: HIRCPlayer = None
         self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
@@ -43,7 +43,7 @@ class add_hirc_player(DpgItem):
         # few ms, but we can let this be handled by the GC in the background.
 
         cfg = get_config()
-        self._player = Player(
+        self._player = HIRCPlayer(
             bnk,
             entrypoint,
             cfg.locate_vgmstream(),

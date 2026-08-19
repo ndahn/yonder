@@ -66,7 +66,7 @@ from .loading_indicator import loading_indicator
 from .properties_table import add_properties_table
 from .rtpc_table import add_rtpc_table
 from .states_table import add_states_table
-from .wav_player import add_wav_player
+from .wav_player_widget import add_wav_player
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table, add_curves_table
 from .hash_widget import add_hash_widget

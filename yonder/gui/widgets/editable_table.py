@@ -553,7 +553,7 @@ class add_player_table(DpgItem):
         user_data: Any = None,
     ) -> None:
         from yonder.gui.dialogs.file_dialog import open_multiple_dialog
-        from .wav_player import add_wav_player as _wav_player
+        from .wav_player_widget import add_wav_player as _wav_player
 
         self._wav_player_cls = _wav_player
         self._open_multiple_dialog = open_multiple_dialog
@@ -722,7 +722,7 @@ class add_player_table_compact(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from .wav_player import add_wav_player
+        from .wav_player_widget import add_wav_player
 
         super().__init__(tag)
 

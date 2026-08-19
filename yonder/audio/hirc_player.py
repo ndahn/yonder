@@ -20,7 +20,7 @@ from .play_context import PlayContext
 # - guess steam directory for resolution
 
 
-class Player:
+class HIRCPlayer:
     def __init__(
         self,
         bnk: Soundbank,
@@ -44,7 +44,7 @@ class Player:
         self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
         self._equalizer = Equalizer(self._mixer[0])
         self._gate = pyo.SigTo(value=1.0, time=0.05)
-        
+
         # master chain: mixer -> gate -> dac
         self._master = self._equalizer * self._gate
         self._master.out()

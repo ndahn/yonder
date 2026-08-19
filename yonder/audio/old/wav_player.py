@@ -7,6 +7,7 @@ import sounddevice as sd
 from yonder.audio.old import PitchShifter
 
 
+# TODO create a global pyo singleton and use pyo as the backend instead
 class WavPlayer:
     def __init__(self, path: str):
         with wave.open(path, "rb") as f:
