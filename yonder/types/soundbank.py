@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generator, Iterator
+from typing import Any, Generator, Iterator, TYPE_CHECKING
 from pathlib import Path
 import re
 from random import randrange
@@ -11,25 +11,14 @@ import networkx as nx
 from yonder.hash import Hash, calc_hash, lookup_name
 from yonder.util import logger, resource_data
 from yonder.query import query_nodes
-from yonder.enums import SourceType
+from yonder.enums import SourceType, ActionType
 
 from .sections import Section, BKHDSection, HIRCSection, STIDSection
 from .hirc_node import HIRCNode
 from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
-from .action import ActionType
 
-from . import (
-    Action,
-    Event,
-    LayerContainer,
-    MusicRandomSequenceContainer,
-    MusicSwitchContainer,
-    MusicSegment,
-    MusicTrack,
-    RandomSequenceContainer,
-    Sound,
-    SwitchContainer,
-)
+if TYPE_CHECKING:
+    from yonder.types import Event
 
 
 class Soundbank:
@@ -141,9 +130,8 @@ class Soundbank:
     def rename_bank(self, new_id: str | int, rename_dir: bool) -> None:
         old_id = self.bank_id
         hash_val = calc_hash(new_id) if isinstance(new_id, str) else new_id
-        action: Action
 
-        for action in self.query(node_type=Action):
+        for action in self.query(node_type="Action"):
             if getattr(action.params, "bank_id", None) == old_id:
                 action.params.bank_id = hash_val
 
@@ -166,6 +154,8 @@ class Soundbank:
         return self.json_path.parent
 
     def sound_sources(self) -> list[tuple[int, SourceType]]:
+        from yonder.types import Sound, MusicTrack
+
         source_ids = []
         sound: Sound
         track: MusicTrack
@@ -416,6 +406,8 @@ class Soundbank:
         children_only: bool = True,
         include_external: bool = False,
     ) -> nx.DiGraph:
+        from yonder.types import Action, Event
+
         if isinstance(entrypoint, int):
             entrypoint = self[entrypoint]
 
@@ -518,8 +510,18 @@ class Soundbank:
         return next(self.query(query), default)
 
     def find_orphans(self) -> list[HIRCNode]:
-        g = self.tree
+        from yonder.types import (
+                LayerContainer,
+                MusicRandomSequenceContainer,
+                MusicSwitchContainer,
+                MusicSegment,
+                MusicTrack,
+                RandomSequenceContainer,
+                Sound,
+                SwitchContainer,
+        )
 
+        g = self.tree
         search_types = {
             c.__name__
             for c in (
@@ -546,6 +548,8 @@ class Soundbank:
     def find_events(
         self, action_type: ActionType = ActionType.Play
     ) -> Generator[HIRCNode, None, None]:
+        from yonder.types import Action, Event
+
         events: list[Event] = list(self.query(node_type=Event))
         for evt in events:
             for aid in evt.actions:
@@ -555,6 +559,8 @@ class Soundbank:
                     break
 
     def find_events_for(self, node: int | HIRCNode) -> Generator[Event, None, None]:
+        from yonder.types import Event
+
         if not isinstance(node, HIRCNode):
             node = self[node]
 
@@ -571,6 +577,8 @@ class Soundbank:
                 yield evt
 
     def solve(self) -> None:
+        from yonder.types import Action, Event
+
         g = self.tree
         objects = []
 
@@ -615,6 +623,8 @@ class Soundbank:
         self._regenerate_index_table()
 
     def verify(self) -> int:
+        from yonder.types import Action
+
         severity = 0
         discovered_ids = {0}
 

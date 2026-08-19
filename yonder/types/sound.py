@@ -2,12 +2,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from pathlib import Path
-import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SourceType, PropID
 from yonder.wem import get_wem_metadata, wem2wav
-from yonder.audio import PlayContext, StreamSource
+from yonder.audio import PlayContext
+from yonder.audio.stream_source import StreamSource
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,

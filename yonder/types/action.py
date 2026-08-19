@@ -5,7 +5,7 @@ from enum import Enum
 import pyo
 
 from yonder.hash import Hash
-from yonder.enums import ValueMeaning
+from yonder.enums import ValueMeaning, ActionType
 from yonder.util import logger
 from yonder.audio import PlayContext
 from .base_types import PropBundle, PropRangedModifiers
@@ -29,9 +29,9 @@ class Action(PropertyMixin, HIRCNode):
 
         if self.action_type == 0:
             if self.params == "PlayEvent":
-                self.action_type = ActionType.PlayEvent.type_id
+                self.action_type = ActionType.PlayEvent.value
             else:
-                self.action_type = self.params.action_type.type_id
+                self.action_type = self.params.action_type.value
 
         if self.action_type == ActionType.Unk2102:
             logger.warning(f"Found action with unknown type {self.action_type}: {self}")
@@ -110,9 +110,9 @@ class Action(PropertyMixin, HIRCNode):
         if new_type == ActionType.PlayEvent:
             params = "PlayEvent"
         else:
-            params = new_type.params_cls(new_type)
+            params = get_params_for_action(new_type)(new_type)
 
-        self.action_type = new_type.type_id
+        self.action_type = new_type.value
         self.params = params
 
     @property
@@ -251,7 +251,7 @@ class ActionParams:
     @classmethod
     def from_dict(cls, data: dict) -> ActionParams:
         action_type = ActionType[next(iter(data.keys()))]
-        param_cls = action_type.params_cls
+        param_cls = get_params_for_action(action_type)
         if not param_cls:
             raise KeyError(f"Action type {action_type} is not supported yet")
 
@@ -377,117 +377,109 @@ class ActionStop(ActionParams):
     except_: ActionParamsExcept = field(default_factory=ActionParamsExcept)
 
 
-class ActionType(Enum):
-    type_id: int
-    params_cls: type[ActionParams]
-
-    def __new__(cls, type_id: int, params_cls: type[ActionParams]):
-        member = object.__new__(cls)
-        member._value_ = type_id
-        member.type_id = type_id
-        member.params_cls = params_cls
-        return member
-
-    None_ = 0x0000, None
-    SetState = 0x1204, ActionSetState
-    BypassFXM = 0x1A02, None
-    BypassFXO = 0x1A03, None
-    ResetBypassFXM = 0x1B02, None
-    ResetBypassFXO = 0x1B03, None
-    ResetBypassFXALL = 0x1B04, None
-    ResetBypassFXALLO = 0x1B05, None
-    ResetBypassFXAE = 0x1B08, None
-    ResetBypassFXAEO = 0x1B09, None
-    SetSwitch = 0x1901, ActionSetSwitch
-    UseStateE = 0x1002, None
-    UnuseStateE = 0x1102, None
-    Play = 0x0403, ActionPlay
-    PlayAndContinue = 0x0503, None
-    StopE = 0x0102, ActionStop
-    StopEO = 0x0103, ActionStop
-    StopALL = 0x0104, None
-    StopALLO = 0x0105, None
-    StlopAE = 0x0108, None
-    StopAEO = 0x0109, None
-    PauseE = 0x0202, ActionPause
-    PauseEO = 0x0203, None
-    PauseALL = 0x0204, None
-    PauseALLO = 0x0205, None
-    PauseAE = 0x0208, None
-    PauseAEO = 0x0209, None
-    ResumeE = 0x0302, ActionResume
-    ResumeEO = 0x0303, None
-    ResumeALL = 0x0304, None
-    ResumeALLO = 0x0305, None
-    ResumeAE = 0x0308, None
-    ResumeAEO = 0x0309, None
-    BreakE = 0x1C02, None
-    BreakEO = 0x1C03, None
-    MuteM = 0x0602, ActionMute
-    MuteO = 0x0603, ActionMute
-    UnmuteM = 0x0702, ActionMute
-    UnmuteO = 0x0703, ActionMute
-    UnmuteALL = 0x0704, ActionMute
-    UnmuteALLO = 0x0705, ActionMute
-    UnmuteAE = 0x0708, ActionMute
-    UnmuteAEO = 0x0709, ActionMute
-    SetVolumeM = 0x0A02, ActionSetAkProp
-    SetVolumeO = 0x0A03, ActionSetAkProp
-    ResetVolumeM = 0x0B02, ActionSetAkProp
-    ResetVolumeO = 0x0B03, ActionSetAkProp
-    ResetVolumeALL = 0x0B04, ActionSetAkProp
-    ResetVolumeALLO = 0x0B05, None
-    ResetVolumeAE = 0x0B08, None
-    ResetVolumeAEO = 0x0B09, None
-    SetPitchM = 0x0802, ActionSetAkProp
-    SetPitchO = 0x0803, ActionSetAkProp
-    ResetPitchM = 0x0902, ActionSetAkProp
-    ResetPitchO = 0x0903, ActionSetAkProp
-    ResetPitchALL = 0x0904, ActionSetAkProp
-    ResetPitchALLO = 0x0905, ActionSetAkProp
-    ResetPitchAE = 0x0908, ActionSetAkProp
-    ResetPitchAEO = 0x0909, ActionSetAkProp
-    SetLPFM = 0x0E02, ActionSetAkProp
-    SetLPFO = 0x0E03, ActionSetAkProp
-    ResetLPFM = 0x0F02, ActionSetAkProp
-    ResetLPFO = 0x0F03, ActionSetAkProp
-    ResetLPFALL = 0x0F04, ActionSetAkProp
-    ResetLPFALLO = 0x0F05, None
-    ResetLPFAE = 0x0F08, None
-    ResetLPFAEO = 0x0F09, None
-    SetHPFM = 0x2002, ActionSetAkProp
-    SetHPFO = 0x2003, ActionSetAkProp
-    ResetHPFM = 0x3002, ActionSetAkProp
-    ResetHPFO = 0x3003, None
-    ResetHPFALL = 0x3004, ActionSetAkProp
-    ResetHPFALLO = 0x3005, None
-    ResetHPFAE = 0x3008, None
-    ResetHPFAEO = 0x3009, None
-    SetBusVolumeM = 0x0C02, ActionSetAkProp
-    SetBusVolumeO = 0x0C03, None
-    ResetBusVolumeM = 0x0D02, ActionSetAkProp
-    ResetBusVolumeO = 0x0D03, None
-    ResetBusVolumeALL = 0x0D04, ActionSetAkProp
-    ResetBusVolumeAE = 0x0D08, None
-    StopEvent = 0x1511, None
-    PauseEvent = 0x1611, None
-    ResumeEvent = 0x1711, None
-    Duck = 0x1820, None
-    Trigger = 0x1D00, None
-    TriggerO = 0x1D01, None
-    SeekE = 0x1E02, None
-    SeekEO = 0x1E03, ActionSeek
-    SeekALL = 0x1E04, None
-    SeekALLO = 0x1E05, None
-    SeekAE = 0x1E08, None
-    SeekAEO = 0x1E09, None
-    ResetPlaylistE = 0x2202, None
-    ResetPlaylistEO = 0x2203, None
-    SetGameParameter = 0x1302, ActionSetGameParameter
-    SetGameParameterO = 0x1303, None
-    ResetGameParameter = 0x1402, None
-    ResetGameParameterO = 0x1403, None
-    Release = 0x1F02, None
-    ReleaseO = 0x1F03, None
-    Unk2102 = 0x2102, None
-    PlayEvent = 0x2103, str
+def get_params_for_action(action_type: ActionType) -> type[ActionParams]:
+    return {
+        ActionType.None_: None,
+        ActionType.SetStat: ActionSetState,
+        ActionType.BypassFX: None,
+        ActionType.BypassFX: None,
+        ActionType.ResetBypassFX: None,
+        ActionType.ResetBypassFX: None,
+        ActionType.ResetBypassFXAL: None,
+        ActionType.ResetBypassFXALL: None,
+        ActionType.ResetBypassFXA: None,
+        ActionType.ResetBypassFXAE: None,
+        ActionType.SetSwitc: ActionSetSwitch,
+        ActionType.UseState: None,
+        ActionType.UnuseState: None,
+        ActionType.Pla: ActionPlay,
+        ActionType.PlayAndContinu: None,
+        ActionType.Stop: ActionStop,
+        ActionType.StopE: ActionStop,
+        ActionType.StopAL: None,
+        ActionType.StopALL: None,
+        ActionType.StlopA: None,
+        ActionType.StopAE: None,
+        ActionType.Pause: ActionPause,
+        ActionType.PauseE: None,
+        ActionType.PauseAL: None,
+        ActionType.PauseALL: None,
+        ActionType.PauseA: None,
+        ActionType.PauseAE: None,
+        ActionType.Resume: ActionResume,
+        ActionType.ResumeE: None,
+        ActionType.ResumeAL: None,
+        ActionType.ResumeALL: None,
+        ActionType.ResumeA: None,
+        ActionType.ResumeAE: None,
+        ActionType.Break: None,
+        ActionType.BreakE: None,
+        ActionType.Mute: ActionMute,
+        ActionType.Mute: ActionMute,
+        ActionType.Unmute: ActionMute,
+        ActionType.Unmute: ActionMute,
+        ActionType.UnmuteAL: ActionMute,
+        ActionType.UnmuteALL: ActionMute,
+        ActionType.UnmuteA: ActionMute,
+        ActionType.UnmuteAE: ActionMute,
+        ActionType.SetVolume: ActionSetAkProp,
+        ActionType.SetVolume: ActionSetAkProp,
+        ActionType.ResetVolume: ActionSetAkProp,
+        ActionType.ResetVolume: ActionSetAkProp,
+        ActionType.ResetVolumeAL: ActionSetAkProp,
+        ActionType.ResetVolumeALL: None,
+        ActionType.ResetVolumeA: None,
+        ActionType.ResetVolumeAE: None,
+        ActionType.SetPitch: ActionSetAkProp,
+        ActionType.SetPitch: ActionSetAkProp,
+        ActionType.ResetPitch: ActionSetAkProp,
+        ActionType.ResetPitch: ActionSetAkProp,
+        ActionType.ResetPitchAL: ActionSetAkProp,
+        ActionType.ResetPitchALL: ActionSetAkProp,
+        ActionType.ResetPitchA: ActionSetAkProp,
+        ActionType.ResetPitchAE: ActionSetAkProp,
+        ActionType.SetLPF: ActionSetAkProp,
+        ActionType.SetLPF: ActionSetAkProp,
+        ActionType.ResetLPF: ActionSetAkProp,
+        ActionType.ResetLPF: ActionSetAkProp,
+        ActionType.ResetLPFAL: ActionSetAkProp,
+        ActionType.ResetLPFALL: None,
+        ActionType.ResetLPFA: None,
+        ActionType.ResetLPFAE: None,
+        ActionType.SetHPF: ActionSetAkProp,
+        ActionType.SetHPF: ActionSetAkProp,
+        ActionType.ResetHPF: ActionSetAkProp,
+        ActionType.ResetHPF: None,
+        ActionType.ResetHPFAL: ActionSetAkProp,
+        ActionType.ResetHPFALL: None,
+        ActionType.ResetHPFA: None,
+        ActionType.ResetHPFAE: None,
+        ActionType.SetBusVolume: ActionSetAkProp,
+        ActionType.SetBusVolume: None,
+        ActionType.ResetBusVolume: ActionSetAkProp,
+        ActionType.ResetBusVolume: None,
+        ActionType.ResetBusVolumeAL: ActionSetAkProp,
+        ActionType.ResetBusVolumeA: None,
+        ActionType.StopEven: None,
+        ActionType.PauseEven: None,
+        ActionType.ResumeEven: None,
+        ActionType.Duc: None,
+        ActionType.Trigge: None,
+        ActionType.Trigger: None,
+        ActionType.Seek: None,
+        ActionType.SeekE: ActionSeek,
+        ActionType.SeekAL: None,
+        ActionType.SeekALL: None,
+        ActionType.SeekA: None,
+        ActionType.SeekAE: None,
+        ActionType.ResetPlaylist: None,
+        ActionType.ResetPlaylistE: None,
+        ActionType.SetGameParamete: ActionSetGameParameter,
+        ActionType.SetGameParameter: None,
+        ActionType.ResetGameParamete: None,
+        ActionType.ResetGameParameter: None,
+        ActionType.Releas: None,
+        ActionType.Release: None,
+        ActionType.Unk210: None,
+        ActionType.PlayEven: str,
+    }[action_type]

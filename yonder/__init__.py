@@ -1,6 +1,11 @@
 __author__ = "Nikolas Dahn"
 __version__ = "1.5.2"
 
+# suppress pyo warning about wxpython
+import os
+os.environ["PYO_GUI_WX"] = "0"
+del os
+
 from .types.soundbank import Soundbank
 from .types.hirc_node import HIRCNode
 from .hash import calc_hash, lookup_name, Hash

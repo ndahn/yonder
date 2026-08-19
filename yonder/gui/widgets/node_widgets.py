@@ -8,7 +8,6 @@ from yonder import Soundbank, HIRCNode, Hash
 from yonder.hash import lookup_name
 from yonder.types import (
     Action,
-    ActionType,
     ActorMixer,
     AudioDevice,
     AuxiliaryBus,
@@ -44,6 +43,7 @@ from yonder.types.base_types import (
     StateChunk,
 )
 from yonder.enums import (
+    ActionType,
     SourceType,
     CurveScaling,
     CurveParameters,

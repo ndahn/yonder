@@ -1,13 +1,15 @@
 from __future__ import annotations
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
-from yonder.audio import PlayContext
 from yonder.util import logger
 from .mixins import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
+
+if TYPE_CHECKING:
+    from yonder.audio import PlayContext
 
 
 @dataclass(slots=True)

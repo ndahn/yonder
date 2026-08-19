@@ -7,7 +7,7 @@ import atexit
 # pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 
-from yonder import Soundbank, HIRCNode
+from yonder.types import Soundbank, HIRCNode
 from yonder.util import logger
 from .equalizer import Equalizer
 from .play_context import PlayContext

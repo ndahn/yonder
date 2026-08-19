@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 import pyo
 
 from yonder.hash import Hash
-from yonder.enums import SoundType
+from yonder.enums import SoundType, ActionType
 from yonder.audio import PlayContext
 from .hirc_node import HIRCNode
-from .action import Action, ActionType
+from .action import Action
 
 if TYPE_CHECKING:
     from .soundbank import Soundbank
@@ -59,9 +59,9 @@ class Event(HIRCNode):
     def has_action_type(self, bnk: Soundbank, *types: ActionType | str | int) -> bool:
         for val in types:
             if isinstance(val, ActionType):
-                type_id = val.type_id
+                type_id = val.value
             elif isinstance(val, str):
-                type_id = ActionType[val].type_id
+                type_id = ActionType[val].value
             else:
                 type_id = val
 

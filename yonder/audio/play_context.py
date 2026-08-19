@@ -2,7 +2,8 @@ from __future__ import annotations
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from yonder import Soundbank, HIRCNode
+from yonder.types.soundbank import Soundbank
+from yonder.types.hirc_node import HIRCNode
 from yonder.types.mixins import PropertyMixin
 from yonder.enums import PropID
 

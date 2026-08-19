@@ -2,7 +2,8 @@ from pathlib import Path
 import shutil
 
 from yonder import Soundbank
-from yonder.types import Event, Action, ActionType, Sound, MusicTrack
+from yonder.types import Event, Action, Sound, MusicTrack
+from yonder.enums import ActionType
 from yonder.types.base_types import BankSourceData
 from yonder.util import logger
 

@@ -20,8 +20,8 @@ from yonder.types import (
     Section,
     HIRCSection,
     DataNode,
-    ActionType,
 )
+from yonder.enums import ActionType
 from yonder.types.serialization import serialize
 from yonder.hash import (
     load_lookup_table,
