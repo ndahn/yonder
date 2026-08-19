@@ -16,8 +16,10 @@ if TYPE_CHECKING:
 
 @dataclass(repr=False, eq=False)
 class Event(HIRCNode):
-    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
-    
+    wwise_link: ClassVar[str] = (
+        "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
+    )
+
     body_type: ClassVar[int] = 4
     action_count: int = 0
     actions: list[int] = field(default_factory=list)
@@ -84,7 +86,11 @@ class Event(HIRCNode):
                 # Play events reference another event
                 ret.add(act.external_id)
             # TODO not sure what E, EO, AEO, etc. stand for
-            elif act.action_type_enum in (ActionType.Play, ActionType.StopEO, ActionType.PauseEO):
+            elif act.action_type_enum in (
+                ActionType.Play,
+                ActionType.StopEO,
+                ActionType.PauseEO,
+            ):
                 # Collect other actions referencing the same target
                 edges = bnk.tree.in_edges(act.external_id)
                 for event_id, _ in edges:
@@ -92,7 +98,7 @@ class Event(HIRCNode):
                     if parent and isinstance(parent, Action):
                         actions.add(event_id)
 
-        # Get the events for the actions we found      
+        # Get the events for the actions we found
         for aid in actions:
             edges = bnk.tree.in_edges(aid)
             # Only events can hold actions
@@ -124,16 +130,16 @@ class Event(HIRCNode):
         if other in self.actions:
             self.actions.remove(other)
 
-    def pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
         return sum(n.pyo(ctx) for n in self.get_action_nodes(ctx.bank))
 
     def play(self, ctx: PlayContext) -> None:
+        ctx, my_pyo = self.pyo(ctx)
+        
         for action in self.get_action_nodes(ctx.bank):
             action.play(ctx)
 
-    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
-        for action in self.get_action_nodes(ctx.bank):
-            action.stop(ctx)
+        my_pyo.play()
 
     def __str__(self) -> str:
         return super().__str__()

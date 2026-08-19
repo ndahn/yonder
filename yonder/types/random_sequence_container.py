@@ -96,15 +96,16 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     def add_playlist_item(self, child_id: int | HIRCNode) -> None:
         if isinstance(child_id, HIRCNode):
             child_id = child_id.id
-        
+
         child_id = int(child_id)
         self.children.add(child_id)
         self.playlist.add(PlaylistItem(child_id))
 
-    def pick_random_child(self) -> int:
+    def pick_random_child(self) -> tuple[int, PlaylistItem]:
+        # TODO respect random mode, no repeats, etc
         weights = [p.weight for p in self.playlist]
         idx = random.choices(self.playlist, weights)
-        return self.playlist[idx].play_id
+        return (idx, self.playlist[idx])
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -140,41 +141,32 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
 
-    def pyo(self, ctx: PlayContext) -> pyo.Mixer:
-        mixer = getattr(self, "_mixer", None)
-        if not mixer:
-            mixer = pyo.Mixer(outs=1, chnls=1)
-            self._active_child_idx: int = -1
-            self._mixer = mixer
-        
-        return mixer
-    
+    def _build_pyo(self, ctx: PlayContext) -> pyo.Mixer:
+        return pyo.Mixer(outs=1, chnls=1)
+
     def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
         if not self.playlist:
             return
 
-        mixer = self.pyo(ctx)
-        
+        mixer: pyo.Mixer
+        ctx, mixer = self.pyo(ctx)
+
         if force_playlist_idx >= 0:
             idx = force_playlist_idx
+            playlist_item = self.playlist[force_playlist_idx]
         else:
-            weights = [p.weight for p in self.playlist]
-            idx = random.choices(self.playlist, weights)
+            idx, playlist_item = self.pick_random_child()
 
-        child = ctx.bank.get(self.playlist[idx].play_id)
+        child = ctx.bank.get(playlist_item.play_id)
         if not child:
+            mixer.clear()
             return
-        
+
+        keys = mixer.getKeys()
+        child.play(ctx)
         mixer.addInput(idx, child.pyo(ctx))
-        if idx != self._active:
-            mixer.delInput(self._active)
-            self._active = idx
+        if keys and keys[0] != idx:
+            mixer.delInput(keys[0])
 
         mixer.setAmp(idx, 0, 1)
-
-    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
-        if hasattr(self, "_mixer"):
-            self._mixer.stop()
-            self._active = -1
-            if reset:
-                self._mixer = None
+        mixer.play()

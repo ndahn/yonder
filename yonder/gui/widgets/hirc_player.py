@@ -106,7 +106,7 @@ class add_hirc_player(DpgItem):
         }
 
         dpg.push_container_stack(self._t("popup_states"))
-        
+
         if rtpcs:
             with dpg.tree_node(label=µ("RTPC"), default_open=True):
                 for r in rtpcs:
@@ -188,7 +188,7 @@ class add_hirc_player(DpgItem):
             self._player.set_muted(True)
         else:
             self._player.set_muted(False)
-            self._player.set_volume(amp)
+            self._player.set_master_volume(amp)
 
     def _on_set_speed(self, sender: str, speed: float, user_data: Any) -> None:
         self._player.set_speed(speed)

@@ -136,21 +136,7 @@ class AmxSummary:
                 result.aux4 = amx.aux4
 
             for prop, val in amx.properties.items():
-                if prop in (
-                    # Derived from the comments in wwiser's AkRTPC_ParameterID_135
-                    # https://github.com/bnnm/wwiser/blob/master/wwiser/parser/wdefs.py
-                    PropID.LFE,
-                    PropID.Pitch,
-                    PropID.LPF,
-                    PropID.HPF,
-                    PropID.BusVolume,
-                    PropID.InitialDelay,
-                    PropID.MakeUpGain,
-                    PropID.MidiTransposition,
-                    PropID.MidiVelocityOffset,
-                    PropID.PlaybackSpeed,
-                    PropID.MuteRatio,
-                ):
+                if prop.is_accumulating():
                     result.properties.setdefault(prop, 0.0)
                     result.properties[prop] += val
                 else:

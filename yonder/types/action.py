@@ -146,7 +146,7 @@ class Action(PropertyMixin, HIRCNode):
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 
-    def pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
         node = ctx.bank.get(self.external_id)
         if node:
             return node.pyo(ctx)
@@ -154,6 +154,8 @@ class Action(PropertyMixin, HIRCNode):
         return pyo.Sig(0)
 
     def play(self, ctx: PlayContext) -> None:
+        ctx, my_pyo = self.pyo(ctx)
+
         if self.action_type_enum == ActionType.SetState:
             params: ActionSetState = self.params
             ctx.states[params.state_group_id] = params.target_state_id
@@ -193,9 +195,9 @@ class Action(PropertyMixin, HIRCNode):
             ActionType.ResetHPFM,
             ActionType.ResetHPFALL,
             # Busses not simulated for now
-            #ActionType.SetBusVolumeM,
-            #ActionType.ResetBusVolumeM,
-            #ActionType.ResetBusVolumeALL,
+            # ActionType.SetBusVolumeM,
+            # ActionType.ResetBusVolumeM,
+            # ActionType.ResetBusVolumeALL,
         ):
             logger.warning(
                 f"Don't know how to handle action type {self.action_type_enum.name} yet:\n{self.json()}"
@@ -230,10 +232,7 @@ class Action(PropertyMixin, HIRCNode):
                 f"Don't know how to handle action type {self.action_type_enum.name} yet:\n{self.json()}"
             )
 
-    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
-        node = ctx.bank.get(self.external_id)
-        if node:
-            node.stop(ctx)
+        my_pyo.play()
 
     def __str__(self) -> str:
         return f"[A] <{self.action_type_enum.name}> #{self.id}"

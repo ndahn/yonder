@@ -6,7 +6,7 @@ import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SourceType, PropID
-from yonder.wem import get_wem_metadata
+from yonder.wem import get_wem_metadata, wem2wav
 from yonder.audio import PlayContext, StreamSource
 from .hirc_node import HIRCNode
 from .base_types import (
@@ -106,27 +106,63 @@ class Sound(StateMixin, PropertyMixin, HIRCNode):
             source_type=source_type,
             media_information=MediaInformation(int(source_id), media_size),
         )
-        self.stop()
 
-    def pyo(self, ctx: PlayContext) -> pyo.PyoObject:
-        path = ctx.bank.get_wem_path(self.source_id, self.source_type)
-        loop = any(PropID.Loop == p.prop_enum for p in self.properties)
+    def _build_pyo(self, ctx: PlayContext) -> StreamSource:
+        props = ctx.properties
+        path = ctx.bank.get_wem_path(self.source_id, self.source_type, ctx.wem_search_paths)
 
-        self._stream = StreamSource(
+        if path.suffix == ".wem":
+            path = wem2wav(ctx.vgmstream_exe, path)[0]
+
+        return StreamSource(
             path,
-            loop,
-            gain_db=ctx.properties.get(PropID.Volume, 0.0),
-            hpf_cents=ctx.properties.get(PropID.HPF, 0.0),
-            lpf_cents=ctx.properties.get(PropID.LPF, 0.0),
-            pitch_semitones=ctx.properties.get(PropID.Pitch, 0.0),
+            loop=(PropID.Loop in props),
+            gain_db=props.get(PropID.Volume, 0.0),
+            hpf_cents=props.get(PropID.HPF, 0.0),
+            lpf_cents=props.get(PropID.LPF, 0.0),
+            pitch_semitones=props.get(PropID.Pitch, 0.0),
         )
-        # TODO subscribe to param changes
-        return self._stream
 
     def play(self, ctx: PlayContext) -> None:
-        self.pyo(ctx).play()
+        _, stream = self.pyo(ctx)
+        stream.play()
 
-    def stop(self, ctx: PlayContext, reset: bool = False) -> None:
-        if hasattr(self, "_stream"):
-            self._stream.stop()
-            self._stream = None
+    def update_playback(self, ctx: PlayContext) -> None:
+        if not self.is_pyo_initialized():
+            return
+
+        stream: StreamSource
+        ctx, stream = self.pyo(ctx)
+        props = ctx.properties
+
+        stream.loop = PropID.Loop in props
+
+        loop_start = props.get(PropID.LoopStart, stream.loop_start)
+        loop_end = props.get(PropID.LoopEnd, stream.loop_end)
+        stream.set_loop_points(loop_start, loop_end)
+
+        begin_trim = props.get(PropID.TrimInTime, stream.begin_trim)
+        end_trim = props.get(PropID.TrimOutTime, stream.end_trim)
+        stream.set_trims(begin_trim, end_trim)
+
+        xfade = props.get(PropID.LoopCrossfadeDuration)
+        if xfade is not None:
+            stream.xfade = xfade
+
+        vol = props.get(PropID.Volume)
+        if vol is not None:
+            stream.volume = vol
+
+        hpf = props.get(PropID.HPF)
+        if hpf is not None:
+            stream.hpf = hpf
+
+        lpf = props.get(PropID.LPF)
+        if lpf is not None:
+            stream.lpf = lpf
+
+        pitch = props.get(PropID.Pitch)
+        if pitch is not None:
+            stream.pitch = pitch
+
+        super().update_playback(ctx)

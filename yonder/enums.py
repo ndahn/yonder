@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import IntEnum, StrEnum
 
 
@@ -154,6 +155,21 @@ class PropID(IntEnum):
     AttenuationID = 0x46
     PositioningTypeBlend = 0x47
     ReflectionBusVolume = 0x48
+
+    def is_accumulating(self) -> bool:
+        return self in (
+            PropID.LFE,
+            PropID.Pitch,
+            PropID.LPF,
+            PropID.HPF,
+            PropID.BusVolume,
+            PropID.InitialDelay,
+            PropID.MakeUpGain,
+            PropID.MidiTransposition,
+            PropID.MidiVelocityOffset,
+            PropID.PlaybackSpeed,
+            PropID.MuteRatio,
+        )
 
 
 # TODO these should be used by the TimeModulator instead of PropID

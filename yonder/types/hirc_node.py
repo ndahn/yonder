@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Any, ClassVar
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
+import pyo
 
-from .mixins import DataNode, PyoNode
+from yonder.audio import PlayContext
+from yonder.util import logger
+from .mixins import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
@@ -26,7 +29,7 @@ class HIRCNodeHeader:
 
 
 @dataclass(repr=False, eq=False)
-class HIRCNode(DataNode, PyoNode):
+class HIRCNode(DataNode):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
     id: InitVar[int]
@@ -137,6 +140,92 @@ class HIRCNode(DataNode, PyoNode):
             return ret
 
         return delve(self)
+
+    def pyo(self, ctx: PlayContext) -> tuple[PlayContext, pyo.PyoObject]:
+        ctx = ctx.merge(self)
+
+        my_pyo = getattr(self, "_pyo", None)
+        if my_pyo is None:
+            my_pyo = self._build_pyo(ctx)
+            self._pyo = my_pyo
+
+        return (ctx, my_pyo)
+
+    def is_pyo_initialized(self) -> bool:
+        return hasattr(self, "_pyo")
+
+    def reset_pyo(self, ctx: PlayContext) -> None:
+        # Don't merge, just forward
+        self.stop(ctx)
+
+        if hasattr(self, "_pyo"):
+            delattr(self, "_pyo")
+
+        # Don't call pyo here to avoid reinitializing the audio backend
+        ctx = ctx.merge(self)
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node:
+                node.reset_pyo(ctx)
+
+    def _build_pyo(ctx: PlayContext) -> pyo.PyoObject:
+        """Return a pyo object for this node. Must always return a valid, playable object - return `pyo.Sig(0)` if the node doesn't have anything to play.
+
+        This should be implemented by deriving classes.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The current playback context.
+
+        Returns
+        -------
+        pyo.PyoObject
+            Whatever signal this node wants to add into playback. In most cases this will be one of the children's pyo object, possibly with some filters applied.
+        """
+        return pyo.Sig(0)
+
+    def play(self, ctx: PlayContext) -> None:
+        """Initialize this node's audio backend and start playback. 
+
+        This should be implemented by deriving classes. The first call in the implementation should always go to `self.pyo` to initialize the backend and retrieve the updated context and pyo objects. The last call should go to `play` on the object's pyo object.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The current playback context.
+        """
+        logger.warning(f"Node {self} is not playable")
+
+    def stop(self, ctx: PlayContext) -> None:
+        if self.is_pyo_initialized():
+            ctx, my_pyo = self.pyo(ctx)
+            my_pyo.stop()
+        else:
+            ctx = ctx.merge(self)
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.is_pyo_initialized():
+                node.stop(ctx)
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        """Called when the context changed (properties, rtpcs, states, etc). 
+        
+        Deriving classes may override this to react to state changes, but should still call `super` to cascade down.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The updated playback context.
+        """
+        # Merge manually to avoid initializing pyo if we don't actually need it
+        ctx = ctx.merge(self)
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.is_pyo_initialized():
+                node.update_playback(ctx)
 
     def __hash__(self) -> int:
         return self.id

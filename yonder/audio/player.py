@@ -1,5 +1,4 @@
 from __future__ import annotations
-import networkx as nx
 from pathlib import Path
 import time
 import atexit
@@ -9,7 +8,6 @@ import atexit
 import pyo
 
 from yonder import Soundbank, HIRCNode
-from yonder.enums import PropID
 from yonder.util import logger
 from .equalizer import Equalizer
 from .play_context import PlayContext
@@ -29,30 +27,29 @@ class Player:
         entrypoint: HIRCNode,
         vgmstream_exe: Path | str,
         wem_search_paths: list[Path] = None,
-        full_tree: bool = True,
     ):
         if not isinstance(entrypoint, HIRCNode):
             entrypoint = bnk[entrypoint]
 
         self.bnk = bnk
         self.entrypoint = entrypoint
-        self.context: PlayContext = None
+        self.ctx = PlayContext(bnk, vgmstream_exe, wem_search_paths or [])
         self._playing = False
 
         # NOTE crashes on some systems with input enabled, but we don't need it
         self._server: pyo.Server = pyo.Server(duplex=0)
         self._server.deactivateMidi()
         self._server.boot()
-        # mixes the voice branches; time smooths per-voice amp changes
+
         self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
         self._equalizer = Equalizer(self._mixer[0])
-        # final volume adjustment
         self._gate = pyo.SigTo(value=1.0, time=0.05)
+        
         # master chain: mixer -> gate -> dac
         self._master = self._equalizer * self._gate
         self._master.out()
-
         self._server.start()
+
         # Important for proper exit
         atexit.register(self.close)
 
@@ -62,18 +59,8 @@ class Player:
         except Exception as e:
             logger.error("Failed to close player", exc_info=e)
 
-    def _make_ctx(
-        self,
-        properties: dict[PropID, float] = None,
-        rtpcs: dict[int, float] = None,
-        states: dict[int, int] = None,
-    ) -> PlayContext:
-        # TODO walk the entrypoint hierarchy, collect properties, rtpcs, states, set overrides, return
-        return PlayContext(self.bnk)
-
     def close(self) -> None:
-        ctx = self.context or PlayContext(self.bnk)
-        self.entrypoint.stop(ctx)
+        self.entrypoint.stop(self.ctx)
 
         if self._server.getIsStarted():
             self._server.stop()
@@ -97,15 +84,17 @@ class Player:
             return
 
         self._playing = True
-        self.context = self._make_ctx()
-        self.entrypoint.play(self.context)
+        node_out = self.entrypoint.pyo(self.ctx)
+        self.entrypoint.play(self.ctx)
+        self._mixer.clear()
+        self._mixer.addInput(0, node_out)
+        self._mixer.setAmp(0, 0, 1)
 
     def stop(self, wait: float = 0) -> None:
-        ctx = self.context or PlayContext(self.bnk)
-        self.entrypoint.stop(ctx)
+        self.entrypoint.stop(self.ctx)
         self._playing = False
 
-    def set_volume(self, vol: float, time: float = 0.05) -> None:
+    def set_master_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.time = time
         self._gate.value = vol
 
