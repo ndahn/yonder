@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import ClassVar
 from dataclasses import dataclass, field
-from enum import Enum
 import pyo
 
 from yonder.hash import Hash

@@ -17,11 +17,11 @@ from .base_types import (
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class Sound(StateMixin, PropertyMixin, HIRCNode):
+class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 2
     bank_source_data: BankSourceData = field(default_factory=BankSourceData)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)

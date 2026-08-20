@@ -1,7 +1,6 @@
 from typing import Any, Callable
 from pathlib import Path
 import numpy as np
-import weakref
 
 from dearpygui import dearpygui as dpg
 

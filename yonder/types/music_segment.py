@@ -15,11 +15,11 @@ from .base_types import (
     StateChunk,
 )
 from .music_track import MusicTrack
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
+class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0

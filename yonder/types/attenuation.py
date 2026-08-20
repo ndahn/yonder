@@ -7,10 +7,11 @@ from yonder.enums import CurveParameters
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
+from .mixins import RtpcMixin
 
 
 @dataclass(repr=False, eq=False)
-class Attenuation(HIRCNode):
+class Attenuation(RtpcMixin, HIRCNode):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0
     cone_params: ConeParams = field(default_factory=ConeParams)

@@ -6,10 +6,11 @@ from yonder.hash import Hash
 from yonder.enums import PropID
 from .hirc_node import HIRCNode
 from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
+from .mixins import PropertyMixin, RtpcMixin
 
 
 @dataclass(repr=False, eq=False)
-class TimeModulator(HIRCNode):
+class TimeModulator(RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 22
     # TODO use custom PropBundle with ModulatorPropID entries instead
     prop_bundle: list[PropBundle] = field(default_factory=list)

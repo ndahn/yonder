@@ -16,11 +16,11 @@ from .base_types import (
     StateChunk,
     RTPCGraphPoint,
 )
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
+class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     wwise_link: ClassVar[str] = (
         "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
     )
