@@ -28,6 +28,23 @@ class add_equalizer(DpgItem):
         self._on_values_changed = on_values_changed
         self._create_content(parent)
 
+    @property
+    def values(self) -> list[float]:
+        return list(self._values)
+
+    @values.setter
+    def values(self, values: list[float]) -> None:
+        if not len(values) == 10:
+            raise ValueError("Must pass exactly 10 values")
+
+        dpg.set_value(self._t("presets"), "")
+        for idx, val in enumerate(values):
+            dpg.set_value(self._t(f"boost_{idx}"), val)
+            self._values[idx] = val
+
+        if self._on_values_changed:
+            self._on_values_changed(self._tag, self._values, self._user_data)
+
     def _on_preset_selected(self, sender: str, preset: str, cb_user_data: Any) -> None:
         if preset == µ("Custom"):
             values = get_config().custom_eq
@@ -57,7 +74,7 @@ class add_equalizer(DpgItem):
 
     def _create_content(self, parent: str) -> None:
         with dpg.group(parent=parent):
-            presets = [µ(key) for key in EQPresets.keys()]
+            presets = [µ(key) for key in EQPresets]
             presets.insert(1, µ("Custom"))
             
             dpg.add_combo(

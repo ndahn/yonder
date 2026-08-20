@@ -8,6 +8,7 @@ import atexit
 import pyo
 
 from yonder.types import Soundbank, HIRCNode
+from yonder.types.mixins import StateMixin, RtpcMixin
 from yonder.util import logger
 from .equalizer import Equalizer
 from .play_context import PlayContext
@@ -75,6 +76,55 @@ class HIRCPlayer:
     @property
     def playing(self) -> bool:
         return self._playing
+
+    def collect_control_states(
+        self, active_only: bool
+    ) -> tuple[list[int], dict[int, set[int]]]:
+        rtpcs: list[int] = []
+        states: dict[int, set[int]] = {}
+        todo: list[HIRCNode] = [self.entrypoint]
+
+        while todo:
+            node = todo.pop()
+
+            if not active_only or node.is_pyo_initialized():
+                if isinstance(node, StateMixin):
+                    for group in node.states.state_group_chunks:
+                        group_states = states.setdefault(group.state_group_id, set())
+                        group_states.update([s.state_id for s in group.states])
+
+                if isinstance(node, RtpcMixin):
+                    for rtpc in node.rtpcs:
+                        rtpcs.append(rtpc.id)
+
+                for _, ref in node.get_references():
+                    child = self.bnk.get(ref)
+                    if child:
+                        todo.append(child)
+
+        return (states, rtpcs)
+
+    def collect_voices(self, active_only: bool) -> list[HIRCNode]:
+        from yonder.types import Sound, MusicTrack
+
+        sources = []
+        todo = [self.entrypoint]
+
+        while todo:
+            node = todo.pop()
+
+            if (not active_only or node.is_pyo_initialized()) and isinstance(
+                node, (Sound, MusicTrack)
+            ):
+                sources.append(node)
+
+        return sources
+
+    def apply_context(self, ctx: PlayContext = None) -> None:
+        if not ctx:
+            ctx = self.ctx
+
+        self.entrypoint.update_playback(ctx)
 
     def seek(self, pos: float) -> float:
         logger.error("Seek is not implemented yet")

@@ -17,6 +17,7 @@ class PlayContext:
     properties: dict[PropID, float] = field(default_factory=dict)
     rtpcs: dict[int, int] = field(default_factory=dict)
     states: dict[int, int] = field(default_factory=dict)
+    distance: float = 0.0
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         properties = dict(self.properties)

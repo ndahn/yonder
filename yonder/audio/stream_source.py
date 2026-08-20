@@ -121,6 +121,8 @@ class StreamSource(pyo.PyoObject):
 
             # NOTE: ClipAutomation and attenuation do not support pitch!
 
+            # TODO ATTENUATION
+
         # transpo is in semitones; winsize balances latency vs. smearing
         # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
         pitch = pyo.Harmonizer(source, transpo=self._pitch_ctrl, winsize=0.1)
