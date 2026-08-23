@@ -124,7 +124,7 @@ def _parse_value(target_type: Type, value: Any) -> Any:
             if issubclass(origin, StrEnum):
                 if value in origin:
                     return origin(value)
-            
+
             return origin[value]
         return origin(value)
 
@@ -190,6 +190,17 @@ def verify_values(obj, raise_on_error: bool) -> None:
 
         types = tuple(types)
 
+        if int in types and bool not in types and isinstance(val, bool):
+            return False
+
+        if (
+            bool in types
+            and int not in types
+            and not isinstance(val, bool)
+            and isinstance(val, int)
+        ):
+            return False
+
         if isinstance(val, float) and int in types:
             if val.is_integer():
                 return True
@@ -212,7 +223,7 @@ def verify_values(obj, raise_on_error: bool) -> None:
             if not has_valid_type(val, (origin, str, int)):
                 wrong_fields.append(f.name)
                 mismatches.append((origin, type(val)))
-            
+
             continue
 
         if origin is UnionType:
