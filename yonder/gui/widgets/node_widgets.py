@@ -47,7 +47,7 @@ from yonder.enums import (
     SourceType,
     CurveScaling,
     AttenuationDrivers,
-    AttenuationProperties,
+    AttenuationProperty,
     ClipAutomationType,
     PropID,
     DecisionTreeMode,
@@ -823,13 +823,10 @@ def _create_attributes_attenuation(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    def get_curve_label(idx: int) -> str:
-        return "-" if idx < 0 else AttenuationDrivers(idx).name
+    NO_CURVE_LABEL = "-"
 
-    def get_axis_labels(idx: int) -> tuple[str, str]:
-        driver = AttenuationDrivers(idx).name
-        unit = "m%%%%m"[idx] if 0 <= idx <= 5 else "?"
-        return (f"{driver} ({unit})", µ("Attenuation"))
+    def get_curve_label(idx: int) -> str:
+        return NO_CURVE_LABEL if idx < 0 else f"Curve #{idx}"
 
     def on_curves_changed(
         sender: str, curves: list[GraphCurve], cb_user_data: Any
@@ -849,14 +846,18 @@ def _create_attributes_attenuation(
 
         curve_items = [get_curve_label(i) for i in range(len(curves))]
         for i in range(len(node.curves_to_use)):
-            dpg.configure_item(
-                f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
-            )
+            tag = f"{base_tag}/attenuation/curve_param_{i}"
+            dpg.configure_item(tag, items=curve_items)
+
+            # Unset associated curves if they no longer exist
+            cur: str = dpg.get_value(tag)
+            if cur != NO_CURVE_LABEL and int(cur.split("#")[-1]) >= len(curves):
+                dpg.set_value(tag, NO_CURVE_LABEL)
 
         on_node_changed(base_tag, node, user_data)
 
     def on_curve_param_changed(sender: str, curve: str, param_idx: int) -> None:
-        if curve == "-":
+        if curve == NO_CURVE_LABEL:
             curve_idx = -1
         else:
             curve_idx = int(curve.split("#")[-1])
@@ -871,15 +872,16 @@ def _create_attributes_attenuation(
             span_full_width=True,
             tag=f"{base_tag}/attenuation/curves_to_use",
         ):
+            curve_labels = [get_curve_label(i) for i in range(len(node.curves))]
             for i, curve in enumerate(node.curves_to_use):
                 default_value = get_curve_label(curve)
                 dpg.add_combo(
-                    [get_curve_label(d.value) for d in AttenuationDrivers],
+                    curve_labels,
                     default_value=default_value,
-                    label=AttenuationProperties(i).name,
+                    label=AttenuationProperty(i).name,
                     callback=on_curve_param_changed,
                     user_data=i,
-                    tag=f"{base_tag}/atttenuation/curve_param_{i}",
+                    tag=f"{base_tag}/attenuation/curve_param_{i}",
                 )
 
             dpg.add_spacer(height=5)
@@ -887,8 +889,8 @@ def _create_attributes_attenuation(
                 [GraphCurve(c.curve_scaling.name, c.points) for c in node.curves],
                 sorted([s.name for s in CurveScaling]),
                 on_curves_changed,
-                get_curve_label=lambda i: AttenuationDrivers(i).name,
-                get_axis_labels=get_axis_labels,
+                get_curve_label=get_curve_label,
+                get_axis_labels=lambda i: (µ("Distance (m)"), µ("Attenuation")),
                 curve_type_label=µ("Scaling Type"),
             )
 

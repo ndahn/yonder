@@ -3,11 +3,14 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import Hash
-from yonder.enums import AttenuationDrivers
+from yonder.enums import AttenuationProperty
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
 from .mixins import RtpcMixin
+
+
+NO_CURVE = -1
 
 
 @dataclass(repr=False, eq=False)
@@ -15,9 +18,12 @@ class Attenuation(RtpcMixin, HIRCNode):
     body_type: ClassVar[int] = 14
     is_cone_enabled: int = 0
     cone_params: ConeParams = field(default_factory=ConeParams)
-    curves_to_use: list[int] = field(
-        default_factory=lambda: [AttenuationDrivers.None_.value] * 7
-    )
+    # NOTE Each of the 7 AttenuationProperties can have a custom distance-driven curve.
+    # Attenuation is also driven by obstruction, occlusion, diffraction and transmission, 
+    # however, these are project-wide settings and cannot be defined per attenuation object. 
+    # Obstruction and occlusion can be found in the ENV section of the init.bnk, while 
+    # diffraction and transmission are set throug the acoustic textures of the STMG section.
+    curves_to_use: list[int] = field(default_factory=lambda: [NO_CURVE] * 7)
     curve_count: int = 0
     curves: list[ConversionTable] = field(default_factory=list)
     initial_rtpc: InitialRTPC = field(default_factory=InitialRTPC)
@@ -26,7 +32,7 @@ class Attenuation(RtpcMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        curves_to_use: list[AttenuationDrivers],
+        curves_to_use: list[int],
         curves: list[ConversionTable],
         cone_params: ConeParams = None,
     ) -> Attenuation:
@@ -40,6 +46,13 @@ class Attenuation(RtpcMixin, HIRCNode):
             is_cone_enabled=bool(cone_params),
             cone_params=cone_params or ConeParams(),
         )
+
+    def get_curve(self, prop: AttenuationProperty) -> ConversionTable:
+        idx = self.curves_to_use[prop.value]
+        if idx == NO_CURVE:
+            return None
+
+        return self.curves[idx]
 
     def validate(self) -> None:
         if len(self.curves_to_use) != 7:

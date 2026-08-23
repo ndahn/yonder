@@ -177,24 +177,24 @@ class CurveScaling(IntEnum):
     DBToLin = 0x4
 
 
-class AttenuationProperties(IntEnum):
+# NOTE quite different in more recent versions of wwise, but ER and NR are using 2019.2 (v135)
+class AttenuationProperty(IntEnum):
     Volume = 0
-    AuxSendVolume = 1
-    LPF = 2
-    HPF = 3
-    DSF = 4  # https://www.audiokinetic.com/en/community/blog/wwise-2025.1-demystifying-the-dual-shelf-filter/
+    AuxSendGame = 1
+    AuxSendUser = 2
+    LPF = 3
+    HPF = 4
     Spread = 5
     Focus = 6
 
 
-class AttenuationDrivers(EnumWithUnknown):
-    None_ = -1
+# NOTE Unused for now, more meant for documentation purposes
+class AttenuationDrivers(IntEnum):
     Distance = 0
     Obstruction = 1
     Occlusion = 2
     Diffraction = 3
     Transmission = 4
-    Distance2 = 5  # Hopefully? Only rarely saw one in cs_main
 
 
 class RandomMode(IntEnum):
