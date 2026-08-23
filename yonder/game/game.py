@@ -4,25 +4,8 @@ import re
 from Crypto.Cipher import AES
 
 from yonder import Soundbank
-from yonder.enums import Game
+from yonder.enums import Game, EnumWithUnknown
 from .data.actormixer_summary import AmxSummary
-
-
-class EnumWithUnknown(IntEnum):
-    @classmethod
-    def _missing_(cls, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"{value} is not a valid {cls.__name__} value")
-
-        tmp = int.__new__(cls, value)
-        tmp._name_ = cls.UNKNOWN.name
-        tmp._value_ = value
-        return tmp
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, type(self)) and self.name == self.UNKNOWN.name:
-            return other.name == self.UNKNOWN.name
-        return super().__eq__(other)
 
 
 class GameObjects:
