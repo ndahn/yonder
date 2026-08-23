@@ -2,10 +2,27 @@ from __future__ import annotations
 from enum import IntEnum, StrEnum
 
 
+class EnumWithUnknown(IntEnum):
+    @classmethod
+    def _missing_(cls, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"{value} is not a valid {cls.__name__} value")
+
+        tmp = int.__new__(cls, value)
+        tmp._name_ = "UNKNOWN"
+        tmp._value_ = value
+        return tmp
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, type(self)) and self.name == "UNKNOWN":
+            return other.name == "UNKNOWN"
+        return super().__eq__(other)
+
+
 class Game(IntEnum):
     EldenRing = 0
     Nightreign = 1
-    #ArmoredCore6 = 2
+    # ArmoredCore6 = 2
 
 
 class SoundType(StrEnum):
@@ -160,15 +177,24 @@ class CurveScaling(IntEnum):
     DBToLin = 0x4
 
 
-class CurveParameters(IntEnum):
-    None_ = -1  # slot unused
-    VolumeDry = 0  # "Output Bus Volume" - the distance-volume curve
-    VolumeAuxGame = 1  # game-defined aux send volume
-    VolumeAuxUser = 2  # user-defined aux send volume
-    LPF = 3
-    HPF = 4
+class AttenuationProperties(IntEnum):
+    Volume = 0
+    AuxSendVolume = 1
+    LPF = 2
+    HPF = 3
+    DSF = 4  # https://www.audiokinetic.com/en/community/blog/wwise-2025.1-demystifying-the-dual-shelf-filter/
     Spread = 5
     Focus = 6
+
+
+class AttenuationDrivers(EnumWithUnknown):
+    None_ = -1
+    Distance = 0
+    Obstruction = 1
+    Occlusion = 2
+    Diffraction = 3
+    Transmission = 4
+    Distance2 = 5  # Hopefully? Only rarely saw one in cs_main
 
 
 class RandomMode(IntEnum):
