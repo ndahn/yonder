@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import Hash
-from yonder.enums import CurveParameters
+from yonder.enums import AttenuationDrivers
 from yonder.util import logger
 from .hirc_node import HIRCNode
 from .base_types import InitialRTPC, ConversionTable, ConeParams, RTPC
@@ -16,7 +16,7 @@ class Attenuation(RtpcMixin, HIRCNode):
     is_cone_enabled: int = 0
     cone_params: ConeParams = field(default_factory=ConeParams)
     curves_to_use: list[int] = field(
-        default_factory=lambda: [CurveParameters.None_.value] * 7
+        default_factory=lambda: [AttenuationDrivers.None_.value] * 7
     )
     curve_count: int = 0
     curves: list[ConversionTable] = field(default_factory=list)
@@ -26,7 +26,7 @@ class Attenuation(RtpcMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        curves_to_use: list[CurveParameters],
+        curves_to_use: list[AttenuationDrivers],
         curves: list[ConversionTable],
         cone_params: ConeParams = None,
     ) -> Attenuation:
@@ -48,7 +48,10 @@ class Attenuation(RtpcMixin, HIRCNode):
         bad_curves = []
         for idx, curve in enumerate(self.curves):
             if len(curve.points) > 1:
-                if not all(curve.points[i].from_ > curve.points[i-1].from_ for i in range(1, len(curve.points))):
+                if not all(
+                    curve.points[i].from_ > curve.points[i - 1].from_
+                    for i in range(1, len(curve.points))
+                ):
                     bad_curves.append(idx)
 
         if bad_curves:

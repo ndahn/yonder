@@ -44,6 +44,10 @@ class add_interpolation_curve(DpgItem):
         Curve to deep-copy as the starting state.
     on_curve_changed : callable, optional
         Fired as ``on_curve_changed(tag, curve, user_data)`` on any edit.
+    x_label : str, optional
+        Label of the x-axis.
+    y_label : str, optional 
+        Label of the y-axis.
     tag : int or str, optional
         Explicit tag; auto-generated if None.
     user_data : any
@@ -55,6 +59,8 @@ class add_interpolation_curve(DpgItem):
         initial_curve: GraphCurve,
         on_curve_changed: Callable[[str, GraphCurve, Any], None] = None,
         *,
+        x_label: str = "x",
+        y_label: str = "y",
         tag: str = None,
         user_data: Any = None,
     ) -> None:
@@ -62,6 +68,8 @@ class add_interpolation_curve(DpgItem):
 
         self._curve: GraphCurve = deepcopy(initial_curve)
         self._on_curve_changed = on_curve_changed
+        self._x_label = x_label
+        self._y_label = y_label
         self._user_data = user_data
 
         # Render state
@@ -88,8 +96,8 @@ class add_interpolation_curve(DpgItem):
         p0 = self._curve[0]
         with dpg.group(tag=self._tag):
             with dpg.plot(width=-1, tag=self._t("canvas")):
-                dpg.add_plot_axis(dpg.mvXAxis, label=µ("Time (s)"), tag=self._t("xaxis"))
-                dpg.add_plot_axis(dpg.mvYAxis, label=µ("Value"), tag=self._t("yaxis"))
+                dpg.add_plot_axis(dpg.mvXAxis, label=self._x_label, tag=self._t("xaxis"))
+                dpg.add_plot_axis(dpg.mvYAxis, label=self._y_label, tag=self._t("yaxis"))
 
             dpg.bind_item_theme(self._t("canvas"), style.themes.plot_fit_padding)
 

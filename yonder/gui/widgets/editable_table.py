@@ -829,6 +829,8 @@ class add_curves_table(DpgItem):
         Fired as ``on_curves_changed(tag, all_curves, user_data)``.
     label : str
         Text label rendered above the table.
+    get_curve_label : Callable[[int], str], optional
+        Function to retrieve a label for a curve at index x.
     add_item_label : str
         Label for the add button.
     curve_type_label : str
@@ -850,6 +852,8 @@ class add_curves_table(DpgItem):
         on_curves_changed: Callable[[str, list[GraphCurve], Any], None] = None,
         *,
         label: str = "Curves",
+        get_curve_label: Callable[[int], str] = None,
+        get_axis_labels: Callable[[int], tuple[str, str]] = None,
         add_item_label: str = "+ Add Curve",
         curve_type_label: str = "Type",
         show_clear: bool = False,
@@ -859,9 +863,17 @@ class add_curves_table(DpgItem):
     ) -> None:
         super().__init__(tag)
 
+        if not get_curve_label:
+            get_curve_label = lambda i: f"Curve #{i}"
+
+        if not get_axis_labels:
+            get_axis_labels = lambda i: ("x", "y")
+
         self._curves: list[GraphCurve] = list(initial_curves or [])
         self._curve_types = curve_types
         self._curve_type_label = curve_type_label
+        self._get_curve_label = get_curve_label
+        self._get_axis_labels = get_axis_labels
         self._on_curves_changed = on_curves_changed
         self._user_data = user_data
 
@@ -915,7 +927,9 @@ class add_curves_table(DpgItem):
     def _create_row(self, curve: GraphCurve, idx: int) -> None:
         from .interpolation_curve import add_interpolation_curve
 
-        with dpg.tree_node(label=f"Curve #{idx}", span_full_width=True):
+        label = self._get_curve_label(idx)
+        x_label, y_label = self._get_axis_labels(idx)
+        with dpg.tree_node(label=label, span_full_width=True):
             with dpg.group(horizontal=True):
                 if self._curve_types:
                     dpg.add_combo(
@@ -925,7 +939,14 @@ class add_curves_table(DpgItem):
                         callback=self._on_curve_type_changed,
                         user_data=idx,
                     )
-            add_interpolation_curve(curve, self._on_curve_changed, user_data=idx)
+
+            add_interpolation_curve(
+                curve,
+                self._on_curve_changed,
+                x_label=x_label,
+                y_label=y_label,
+                user_data=idx,
+            )
 
     # === Public ========================================================
 

@@ -46,7 +46,8 @@ from yonder.enums import (
     ActionType,
     SourceType,
     CurveScaling,
-    CurveParameters,
+    AttenuationDrivers,
+    AttenuationProperties,
     ClipAutomationType,
     PropID,
     DecisionTreeMode,
@@ -822,6 +823,14 @@ def _create_attributes_attenuation(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
+    def get_curve_label(idx: int) -> str:
+        return "-" if idx < 0 else AttenuationDrivers(idx).name
+
+    def get_axis_labels(idx: int) -> tuple[str, str]:
+        driver = AttenuationDrivers(idx).name
+        unit = "m%%%%m"[idx] if 0 <= idx <= 5 else "?"
+        return (f"{driver} ({unit})", µ("Attenuation"))
+
     def on_curves_changed(
         sender: str, curves: list[GraphCurve], cb_user_data: Any
     ) -> None:
@@ -838,9 +847,7 @@ def _create_attributes_attenuation(
             curve_type = CurveScaling[curve.curve_type]
             node.curves.append(ConversionTable(curve_type, points=curve.points))
 
-        curve_items = ["-"] + [
-            µ("Curve #{idx}").format(idx=i) for i in range(len(curves))
-        ]
+        curve_items = [get_curve_label(i) for i in range(len(curves))]
         for i in range(len(node.curves_to_use)):
             dpg.configure_item(
                 f"{base_tag}/attenuation/curve_param_{i}", items=curve_items
@@ -865,18 +872,11 @@ def _create_attributes_attenuation(
             tag=f"{base_tag}/attenuation/curves_to_use",
         ):
             for i, curve in enumerate(node.curves_to_use):
-                param = CurveParameters(i).name
-                default_value = (
-                    µ("Curve #{idx}").format(idx=curve) if curve >= 0 else "-"
-                )
-
+                default_value = get_curve_label(curve)
                 dpg.add_combo(
-                    ["-"]
-                    + [
-                        µ("Curve #{idx}").format(idx=i) for i in range(len(node.curves))
-                    ],
+                    [get_curve_label(d.value) for d in AttenuationDrivers],
                     default_value=default_value,
-                    label=param,
+                    label=AttenuationProperties(i).name,
                     callback=on_curve_param_changed,
                     user_data=i,
                     tag=f"{base_tag}/atttenuation/curve_param_{i}",
@@ -887,6 +887,8 @@ def _create_attributes_attenuation(
                 [GraphCurve(c.curve_scaling.name, c.points) for c in node.curves],
                 sorted([s.name for s in CurveScaling]),
                 on_curves_changed,
+                get_curve_label=lambda i: AttenuationDrivers(i).name,
+                get_axis_labels=get_axis_labels,
                 curve_type_label=µ("Scaling Type"),
             )
 
@@ -895,6 +897,8 @@ def _create_attributes_attenuation(
             span_full_width=True,
             tag=f"{base_tag}/atttenuation/cone_params",
         ):
+            # TODO cone widget
+
             dpg.add_checkbox(
                 label=µ("Cone enabled"),
                 default_value=(node.is_cone_enabled > 0),
@@ -908,7 +912,7 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.inside_degrees,
                 min_value=0.0,
                 min_clamped=True,
-                max_value=90.0,
+                max_value=360.0,
                 max_clamped=True,
                 callback=make_setter(
                     node, "inside_degrees", base_tag, on_node_changed, user_data
@@ -920,7 +924,7 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.outside_degrees,
                 min_value=0.0,
                 min_clamped=True,
-                max_value=90.0,
+                max_value=360.0,
                 max_clamped=True,
                 callback=make_setter(
                     node, "outside_degrees", base_tag, on_node_changed, user_data
@@ -944,8 +948,8 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.low_pass,
                 min_value=0.0,
                 min_clamped=True,
-                # max_value=90.0,
-                # max_clamped=True,
+                max_value=100.0,
+                max_clamped=True,
                 callback=make_setter(
                     node, "low_pass", base_tag, on_node_changed, user_data
                 ),
@@ -956,13 +960,14 @@ def _create_attributes_attenuation(
                 default_value=node.cone_params.high_pass,
                 min_value=0.0,
                 min_clamped=True,
-                # max_value=90.0,
-                # max_clamped=True,
+                max_value=100.0,
+                max_clamped=True,
                 callback=make_setter(
                     node, "high_pass", base_tag, on_node_changed, user_data
                 ),
                 tag=f"{base_tag}/atttenuation/high_pass",
             )
+            # TODO lpf/hpf unit hints
 
 
 def _create_attributes_event(
@@ -1832,7 +1837,9 @@ def _create_attributes_switchcontainer(
         node.group_type = GroupType[group_type].value
         on_node_changed(base_tag, node, user_data)
 
-    def on_groupid_changed(sender: str, info: tuple[Hash, str], cb_user_data: Any) -> None:
+    def on_groupid_changed(
+        sender: str, info: tuple[Hash, str], cb_user_data: Any
+    ) -> None:
         node.group_id = info[0]
         on_node_changed(base_tag, node, user_data)
 
@@ -1880,7 +1887,7 @@ def _create_attributes_switchcontainer(
                         else:
                             dpg.add_text(µ("#{node} (not found)").format(node=nid))
 
-        dpg.add_spacer(height=3)        
+        dpg.add_spacer(height=3)
         dpg.add_checkbox(
             label=µ("Show empty switches"),
             callback=on_show_empty_switches,
