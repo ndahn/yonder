@@ -109,7 +109,9 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     def _build_pyo(self, ctx: PlayContext) -> StreamSource:
         props = ctx.properties
-        path = ctx.bank.get_wem_path(self.source_id, self.source_type, ctx.wem_search_paths)
+        path = ctx.bank.get_wem_path(
+            self.source_id, self.source_type, ctx.wem_search_paths
+        )
 
         if path.suffix == ".wem":
             path = wem2wav(ctx.vgmstream_exe, path)[0]
@@ -117,7 +119,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return StreamSource(
             path,
             loop=(PropID.Loop in props),
-            gain_db=props.get(PropID.Volume, 0.0),
+            volume_db=props.get(PropID.Volume, 0.0),
             hpf_cents=props.get(PropID.HPF, 0.0),
             lpf_cents=props.get(PropID.LPF, 0.0),
             pitch_semitones=props.get(PropID.Pitch, 0.0),

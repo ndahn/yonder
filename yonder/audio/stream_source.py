@@ -11,6 +11,7 @@ from yonder.audio.audiomath import (
     hpf_to_hz,
     lpf_to_hz,
     db_to_amp,
+    amp_to_db,
     make_envelope,
     eval_curve,
 )
@@ -21,7 +22,7 @@ class StreamSource(pyo.PyoObject):
         self,
         path: Path | str,
         loop: bool = False,
-        gain_db: float = 0,
+        volume_db: float = 0,
         hpf_cents: float = 0,
         lpf_cents: float = 0,
         pitch_semitones: float = 0,
@@ -81,7 +82,7 @@ class StreamSource(pyo.PyoObject):
         # Our crossfaded sum becomes this object's audio stream
         # Always stereo, something like 7.1 would add a huge cpu cost otherwise
         self._mix = (self._players[0] + self._players[1]).mix(2)
-        self._gain_ctrl = pyo.SigTo(db_to_amp(gain_db), time=0.05)
+        self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
         self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
@@ -98,7 +99,7 @@ class StreamSource(pyo.PyoObject):
         self._att_lpf_curve: ConversionTable = None
         self._att_hpf_curve: ConversionTable = None
         self._cone_params: ConeParams = None
-        
+
         # Apply attenuation data
         if attenuation:
             self._att_volume_curve = attenuation.get_curve(AttenuationProperty.Volume)
@@ -206,7 +207,9 @@ class StreamSource(pyo.PyoObject):
         self._update_attenuation()
 
     def _update_attenuation(self) -> None:
-        def apply(curve: ConversionTable, ctrl: pyo.SigTo, conv: Callable[[float], float]) -> None:
+        def apply(
+            curve: ConversionTable, ctrl: pyo.SigTo, conv: Callable[[float], float]
+        ) -> None:
             if curve:
                 y = eval_curve(curve.points, self._distance, curve.curve_scaling)
                 ctrl.value = conv(y)
@@ -233,7 +236,7 @@ class StreamSource(pyo.PyoObject):
                 else:
                     # Outside outer cone, maximum attenuation
                     f = 1.0
-                
+
                 self._angle_ctrl_volume.value = db_to_amp(f * cone.outside_volume)
                 self._angle_ctrl_hpf.value = hpf_to_hz(f * cone.high_pass)
                 self._angle_ctrl_lpf.value = lpf_to_hz(f * cone.low_pass)
@@ -244,10 +247,18 @@ class StreamSource(pyo.PyoObject):
 
     @property
     def volume(self) -> float:
-        return self._gain_ctrl.value
+        return amp_to_db(self._gain_ctrl.value)
 
     @volume.setter
-    def volume(self, gain: float) -> None:
+    def volume(self, vol_db: float) -> None:
+        self._gain_ctrl.value = amp_to_db(vol_db)
+
+    @property
+    def gain(self) -> float:
+        return self._gain_ctrl.value
+
+    @gain.setter
+    def gain(self, gain: float) -> None:
         self._gain_ctrl.value = gain
 
     @property

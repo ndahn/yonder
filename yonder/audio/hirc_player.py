@@ -7,7 +7,7 @@ import atexit
 # pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 
-from yonder.types import Soundbank, HIRCNode
+from yonder.types import Soundbank, HIRCNode, Sound, MusicTrack
 from yonder.types.mixins import StateMixin, RtpcMixin
 from yonder.util import logger
 from .equalizer import Equalizer
@@ -33,7 +33,8 @@ class HIRCPlayer:
 
         self.bnk = bnk
         self.entrypoint = entrypoint
-        self.ctx = PlayContext(bnk, vgmstream_exe, wem_search_paths or [])
+        self.context = PlayContext(bnk, vgmstream_exe, wem_search_paths or [])
+        self._voice_gains: dict[int, float] = {}
         self._playing = False
 
         # NOTE crashes on some systems with input enabled, but we don't need it
@@ -60,7 +61,7 @@ class HIRCPlayer:
             logger.error("Failed to close player", exc_info=e)
 
     def close(self) -> None:
-        self.entrypoint.stop(self.ctx)
+        self.entrypoint.stop(self.context)
 
         if self._server.getIsStarted():
             self._server.stop()
@@ -103,9 +104,7 @@ class HIRCPlayer:
 
         return (states, rtpcs)
 
-    def collect_voices(self, active_only: bool) -> list[HIRCNode]:
-        from yonder.types import Sound, MusicTrack
-
+    def collect_voices(self, active_only: bool) -> list[Sound | MusicTrack]:
         sources = []
         todo = [self.entrypoint]
 
@@ -119,11 +118,33 @@ class HIRCPlayer:
 
         return sources
 
+    def set_volume(self, voice_id: int | None, vol_db: float) -> None:
+        if voice_id is None:
+            for node in self.collect_voices(True):
+                self.set_volume(node.id, vol_db)
+        else:
+            node = self.bnk[voice_id]
+            node.pyo(self.context)[1].volume = vol_db
+
+    def set_muted(self, voice_id: int | None, muted: bool) -> None:
+        if voice_id is None:
+            for node in self.collect_voices(True):
+                self.set_muted(node.id, muted)
+        else:
+            _, voice = node.pyo(self.context)
+            if muted:
+                if voice.gain > 0:
+                    self._voice_gains[node.id] = voice.gain
+                    voice.gain = 0
+            else:
+                voice.gain = self._voice_gains.get(node.id, 1.0)
+
     def apply_context(self, ctx: PlayContext = None) -> None:
         if not ctx:
-            ctx = self.ctx
+            ctx = self.context
 
         self.entrypoint.update_playback(ctx)
+        self.context = ctx
 
     def seek(self, pos: float) -> float:
         logger.error("Seek is not implemented yet")
@@ -133,14 +154,14 @@ class HIRCPlayer:
             return
 
         self._playing = True
-        node_out = self.entrypoint.pyo(self.ctx)
-        self.entrypoint.play(self.ctx)
+        node_out = self.entrypoint.pyo(self.context)
+        self.entrypoint.play(self.context)
         self._mixer.clear()
         self._mixer.addInput(0, node_out)
         self._mixer.setAmp(0, 0, 1)
 
     def stop(self, wait: float = 0) -> None:
-        self.entrypoint.stop(self.ctx)
+        self.entrypoint.stop(self.context)
         self._playing = False
 
     def set_master_volume(self, vol: float, time: float = 0.05) -> None:

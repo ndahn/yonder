@@ -68,10 +68,10 @@ class add_hirc_player(DpgItem):
             style.pink.but(a=162), style.light_red.but(a=162), 10
         )
 
-        # TODO UI for states and rtpcs
+        # Individual voice settings
+        dpg.push_container_stack(self._t("voice_settings"))
         voices = self._player.collect_voices(True)
 
-        dpg.push_container_stack(self._t("voice_settings"))
         for idx, voice in enumerate(voices):
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(
@@ -99,42 +99,86 @@ class add_hirc_player(DpgItem):
 
         dpg.pop_container_stack()
 
-        # TODO enable/disable attenuation
+        # Attenuation
+        # dpg.push_container_stack(self._t("popup_attenuation"))
+        # TODO attenuation popup
+        # dpg.pop_container_stack()
+
+        # RTPC & States
+        dpg.push_container_stack(self._t("popup_states"))
 
         all_rtpcs, all_states = self._player.collect_control_states(False)
         active_rtpcs, active_states = self._player.collect_control_states(True)
 
         if all_rtpcs:
             with dpg.tree_node(label=µ("RTPC"), default_open=True):
-                for rtpc in all_rtpcs:
-                    self._player.ctx.rtpcs.setdefault(rtpc, 0.0)
 
-                    dpg.add_slider_double(
-                        label=rtpc,
-                        default_value=0.0,
-                        height=15,
-                        callback=self._on_set_rtpc,
-                        user_data=rtpc,
-                    )
-                    # TODO adjust theme if not active
-        
+                def toggle_rtpcs_active_only(
+                    sender: str, enabled: bool, cb_user_data: Any
+                ) -> None:
+                    active_rtpcs, _ = self._player.collect_control_states(True)
+                    for child in dpg.get_item_children(self._t("rtpcs_group"), slot=1):
+                        ud = dpg.get_item_user_data(child)
+                        if ud is not None:
+                            show = not enabled or ud in active_rtpcs
+                            dpg.configure_item(child, show=show)
+
+                dpg.add_checkbox(
+                    label=µ("For active nodes only"),
+                    default_value=True,
+                    callback=toggle_rtpcs_active_only,
+                    tag=self._t("states_active_only"),
+                )
+
+                with dpg.group(tag=self._t("rtpcs_group")):
+                    for rtpc in all_rtpcs:
+                        self._player.context.rtpcs.setdefault(rtpc, 0.0)
+
+                        dpg.add_slider_double(
+                            label=rtpc,
+                            default_value=0.0,
+                            height=15,
+                            callback=self._on_set_rtpc,
+                            user_data=rtpc,
+                            show=rtpc in active_rtpcs,
+                        )
+                        # TODO adjust theme if not active
+
         if all_states:
             with dpg.tree_node(label=µ("States"), default_open=True):
-                for group, states in all_states.items():
-                    group_name = lookup_name(group, f"#{group}")
-                    state_names = sorted(lookup_name(s, f"#{s}") for s in states)
-                    self._player.ctx.states[group, calc_hash(state_names[0])]
 
-                    dpg.add_combo(
-                        state_names,
-                        default_value=state_names[0],
-                        label=group_name,
-                        callback=self._on_set_state,
-                        user_data=group,
-                    )
-                    # TODO adjust theme if not active
+                def toggle_states_active_only(
+                    sender: str, enabled: bool, cb_user_data: Any
+                ) -> None:
+                    _, active_states = self._player.collect_control_states(True)
+                    for child in dpg.get_item_children(self._t("states_group"), slot=1):
+                        ud = dpg.get_item_user_data(child)
+                        if ud is not None:
+                            show = not enabled or ud in active_states
+                            dpg.configure_item(child, show=show)
 
-        dpg.push_container_stack(self._t("popup_states"))
+                dpg.add_checkbox(
+                    label=µ("For active nodes only"),
+                    default_value=True,
+                    callback=toggle_states_active_only,
+                    tag=self._t("states_active_only"),
+                )
+
+                with dpg.group(tag=self._t("states_group")):
+                    for group, states in all_states.items():
+                        group_name = lookup_name(group, f"#{group}")
+                        state_names = sorted(lookup_name(s, f"#{s}") for s in states)
+                        self._player.context.states[group, calc_hash(state_names[0])]
+
+                        dpg.add_combo(
+                            state_names,
+                            default_value=state_names[0],
+                            label=group_name,
+                            callback=self._on_set_state,
+                            user_data=group,
+                            show=group in active_states,
+                        )
+                        # TODO adjust theme if not active
 
         if not all_rtpcs and not all_states:
             dpg.add_text(µ("(no RTPCs/states)"), color=style.light_grey)
@@ -189,7 +233,7 @@ class add_hirc_player(DpgItem):
 
         if self._player:
             # TODO maintain our own play context to persist values across player instances
-            self._player.ctx.rtpcs[h] = value
+            self._player.context.rtpcs[h] = value
             self._player.apply_context()
 
     def _on_set_state(self, sender: str, state: str, group: str) -> None:
@@ -198,7 +242,7 @@ class add_hirc_player(DpgItem):
         self._states[g] = s
 
         if self._player:
-            self._player.ctx.states[g] = s
+            self._player.context.states[g] = s
             self._player.apply_context()
 
     def _on_eqboost_changed(
@@ -223,25 +267,19 @@ class add_hirc_player(DpgItem):
 
     def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:
         if self._player:
-            node = self._player.bnk.get(voice_id)
-            stream: StreamSource = node.pyo(ctx)
-            stream.volume = amp
+            self._player.set_volume(voice_id, amp)
 
-    def _toggle_voice(self, sender: str, enabled: bool, voice_id: int) -> None:
+    def _toggle_voice(self, sender: str, muted: bool, voice_id: int) -> None:
         if not self._player:
             return
 
+        self._player.set_muted(voice_id, muted)
         tag = self._t(f"voice_volume_{voice_id}")
-        node = self._player.bnk.get(voice_id)
-        stream: StreamSource = node.pyo(ctx)
 
-        if enabled:
+        if muted:
             dpg.enable_item(tag)
-            amp = dpg.get_value(tag)
-            stream.volume = amp
         else:
             dpg.disable_item(tag)
-            stream.volume = 0.0
 
     def _setup_content(
         self,
@@ -293,12 +331,12 @@ class add_hirc_player(DpgItem):
                     user_data=self._t("popup_states"),
                 )
                 # TODO
-                #dpg.add_image_button(
+                # dpg.add_image_button(
                 #    Icons.attenuation,
                 #    callback=self._open_ctrl_popup,
                 #    tint_color=style.light_grey,
                 #    user_data=self._t("popup_attenuation"),
-                #)
+                # )
                 dpg.add_image_button(
                     Icons.equalizer,
                     callback=self._open_ctrl_popup,
