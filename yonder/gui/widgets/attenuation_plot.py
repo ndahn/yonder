@@ -12,7 +12,7 @@ from .dpg_item import DpgItem
 class add_attenuation_plot(DpgItem):
     def __init__(
         self,
-        attenuation: Attenuation,
+        attenuations: Attenuation | list[Attenuation] = None,
         on_position_changed: Callable[[str, tuple[float, float], Any], None] = None,
         *,
         distance: float = 0.0,
@@ -26,7 +26,12 @@ class add_attenuation_plot(DpgItem):
         super().__init__(tag)
         self._user_data = user_data
 
-        self._attenuation = attenuation
+        if not attenuations:
+            attenuations = []
+        elif isinstance(attenuations, Attenuation):
+            attenuations = [attenuations]
+
+        self._attenuations: list[Attenuation] = attenuations
         self._on_position_changed = on_position_changed
         self._rotation_offset = rotation_offset
         self._allow_position_change = allow_position_change
@@ -105,31 +110,58 @@ class add_attenuation_plot(DpgItem):
 
         dpg.delete_item(sender, children_only=True, slot=2)
         dpg.push_container_stack(sender)
-
         dpg.draw_circle(center, radius, thickness=1)
 
-        if self._attenuation.is_cone_enabled:
-            cone = self._attenuation.cone_params
-            offset = self._rotation_offset
-            draw_circle_segment(
-                center,
-                radius,
-                offset - cone.outside_degrees / 2,
-                offset + cone.outside_degrees / 2,
-                fill=(255, 255, 255, 96),
-            )
-            draw_circle_segment(
-                center,
-                radius,
-                offset - cone.inside_degrees / 2,
-                offset + cone.inside_degrees / 2,
-                fill=(255, 255, 255, 96),
-                thickness=2,
-            )
+        offset = self._rotation_offset
+        px, py = dpg.get_value(self._t("drag_point"))
+        # dist = math.sqrt(px*px + py*py)
+        angle = math.degrees(math.atan2(py, px))
+        alpha_per_cone = 96 / len(self._attenuations) if self._attenuations else 96
+
+        for att in self._attenuations:
+            if att.is_cone_enabled:
+                cone = att.cone_params
+                inner_half = cone.inside_degrees / 2
+                outer_half = cone.outside_degrees
+                inner_alpha = (
+                    255 if -inner_half <= angle <= inner_half else alpha_per_cone
+                )
+                outer_alpha = (
+                    255 if -outer_half <= angle <= outer_half else alpha_per_cone
+                )
+
+                draw_circle_segment(
+                    center,
+                    radius,
+                    offset - cone.outside_degrees / 2,
+                    offset + cone.outside_degrees / 2,
+                    fill=(255, 255, 255, inner_alpha),
+                )
+                draw_circle_segment(
+                    center,
+                    radius,
+                    offset - cone.inside_degrees / 2,
+                    offset + cone.inside_degrees / 2,
+                    fill=(255, 255, 255, outer_alpha),
+                    thickness=2,
+                )
 
         dpg.pop_container_stack()
 
     # === Public ========================================================
+
+    def add_attenuation(self, attenuation: Attenuation) -> int:
+        self._attenuations.append(attenuation)
+        self._dirty = True
+        return len(self._attenuations) - 1
+
+    def remove_attenuation(self, idx: int) -> None:
+        self._attenuations.pop(idx)
+        self._dirty = True
+
+    def clear_attenuations(self) -> None:
+        self._attenuations.clear()
+        self._dirty = True
 
     def set_distance_angle(
         self, dist: float, angle: float, fire_callback: bool = True
@@ -143,3 +175,7 @@ class add_attenuation_plot(DpgItem):
 
     def reset(self, fire_callback: bool = True) -> None:
         self.set_distance_angle(0, 0, fire_callback)
+
+    def destroy(self):
+        self._attenuations.clear()
+        return super().destroy()

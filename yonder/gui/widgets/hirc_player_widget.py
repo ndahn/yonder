@@ -3,6 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
 from yonder.audio.hirc_player import HIRCPlayer
+from yonder.audio.play_context import PlayContext
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
@@ -28,6 +29,7 @@ class add_hirc_player(DpgItem):
         self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
+        self._angle: float = 0.0
         self._setup_content(parent)
         self.set_enabled(False)
 
@@ -46,12 +48,17 @@ class add_hirc_player(DpgItem):
         # few ms, but we can let this be handled by the GC in the background.
 
         cfg = get_config()
-        self._player = HIRCPlayer(
+        ctx = PlayContext(
             bnk,
-            entrypoint,
             cfg.locate_vgmstream(),
             cfg.bankdirs,
+            rtpcs=dict(self._rtpcs),
+            states=dict(self._states),
+            distance=self._distance,
+            angle=self._angle,
         )
+
+        self._player = HIRCPlayer(bnk, entrypoint, ctx)
         self._player.set_equalizer(self._equalizer.values)
 
         dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
@@ -71,9 +78,9 @@ class add_hirc_player(DpgItem):
 
         # Individual voice settings
         dpg.push_container_stack(self._t("voice_settings"))
-        voices = self._player.collect_voices(True)
+        active_voices = self._player.collect_voices(True)
 
-        for idx, voice in enumerate(voices):
+        for idx, voice in enumerate(active_voices):
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(
                     default_value=True,
@@ -102,8 +109,16 @@ class add_hirc_player(DpgItem):
 
         # Attenuation
         dpg.push_container_stack(self._t("popup_attenuation"))
-        # TODO there may be multiple attenuations at the same time
-        #add_attenuation_plot(self._player.)
+        attenuation_plot = add_attenuation_plot(None, self._on_set_distance_angle)
+
+        # there may be multiple attenuations at the same time
+        context_map = self._player.collect_effective_contexts(True)
+        for voice in active_voices:
+            ctx = context_map[voice.id]
+            att = ctx.attenuation
+            if att:
+                attenuation_plot.add_attenuation(att)
+
         dpg.pop_container_stack()
 
         # RTPC & States
@@ -229,6 +244,16 @@ class add_hirc_player(DpgItem):
         size = tuple(dpg.get_item_rect_size(tag))
         dpg.set_item_pos(tag, (pos[0], pos[1] - size[1] - 6))
 
+    def _on_set_distance_angle(
+        self, sender: str, value: tuple, cb_user_data: Any
+    ) -> None:
+        self._distance, self._angle = value
+
+        if self._player:
+            self._player.context.distance = self._distance
+            self._player.context.angle = self._angle
+            self._player.apply_context()
+
     def _on_set_rtpc(self, sender: str, value: float, rtpc: str) -> None:
         h = int(rtpc[1:]) if rtpc.startswith("#") else calc_hash(rtpc)
         self._rtpcs[h] = value
@@ -339,10 +364,10 @@ class add_hirc_player(DpgItem):
                     user_data=self._t("popup_states"),
                 )
                 dpg.add_image_button(
-                   Icons.spatial3d,
-                   callback=self._open_ctrl_popup,
-                   tint_color=style.light_grey,
-                   user_data=self._t("popup_attenuation"),
+                    Icons.spatial3d,
+                    callback=self._open_ctrl_popup,
+                    tint_color=style.light_grey,
+                    user_data=self._t("popup_attenuation"),
                 )
                 dpg.add_image_button(
                     Icons.sliders,

@@ -25,15 +25,14 @@ class HIRCPlayer:
         self,
         bnk: Soundbank,
         entrypoint: HIRCNode,
-        vgmstream_exe: Path | str,
-        wem_search_paths: list[Path] = None,
+        context: PlayContext,
     ):
         if not isinstance(entrypoint, HIRCNode):
             entrypoint = bnk[entrypoint]
 
         self.bnk = bnk
         self.entrypoint = entrypoint
-        self.context = PlayContext(bnk, vgmstream_exe, wem_search_paths or [])
+        self.context = context
         self._voice_gains: dict[int, float] = {}
         self._playing = False
 
@@ -115,8 +114,31 @@ class HIRCPlayer:
                 node, (Sound, MusicTrack)
             ):
                 sources.append(node)
+                
+                for _, ref in node.get_references():
+                    child = self.bnk.get(ref)
+                    if child:
+                        todo.append(child)
 
         return sources
+
+    def collect_effective_contexts(self, active_only: bool = True) -> dict[int, PlayContext]:
+        ret = {}
+        todo = [(self.entrypoint, self.context)]
+
+        while todo:
+            node, ctx = todo.pop()
+
+            if (not active_only or node.is_pyo_initialized()):
+                node_ctx = ctx.merge(node)
+                ret[node.id] = node_ctx
+
+                for _, ref in node.get_references():
+                    child = self.bnk.get(ref)
+                    if child:
+                        todo.append((child, node_ctx))
+
+        return ret
 
     def set_volume(self, voice_id: int | None, vol_db: float) -> None:
         if voice_id is None:
