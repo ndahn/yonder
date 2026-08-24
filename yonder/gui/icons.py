@@ -46,6 +46,7 @@ class Icons:
     sound = "tex_icon_sound"
     sound_reset = "tex_icon_sound_reset"
     soundbank = "tex_icon_soundbank"
+    spatial3d = "tex_icon_spatial3d"
     states = "tex_icon_states"
     states16 = "tex_icon_states16"
     stop = "tex_icon_stop"

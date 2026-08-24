@@ -11,7 +11,7 @@ from .table_tree_nodes import (
     push_table_tree_level,
     pop_table_tree_level,
 )
-from .draw_curve import draw_curve
+from .dpg_draw import draw_curve
 from .editable_table import (
     add_widget_table,
     add_filepaths_table,

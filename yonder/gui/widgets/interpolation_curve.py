@@ -7,12 +7,11 @@ from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.helpers import GraphCurve
-from .draw_curve import draw_curve
+from .dpg_draw import draw_curve
 from .dpg_item import DpgItem
 
 
-# Module-level color map — shared across all instances
-interpolation_colors: dict[CurveInterpolation, style.RGBA] = {
+interpolation_colors = {
     CurveInterpolation.Constant: style.light_grey,
     CurveInterpolation.Linear: style.white,
     CurveInterpolation.SCurve: style.light_green,
@@ -232,8 +231,6 @@ class add_interpolation_curve(DpgItem):
             self.select_point(self._hovered)
 
     def _render_curve(self, sender: str, series_data: list, ud: Any) -> None:
-        # NOTE this will crash if breakpoints are set anywhere in here!
-
         # Save some cpu cycles when no updates are needed
         if not (
             self._dirty

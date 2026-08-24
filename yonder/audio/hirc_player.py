@@ -139,6 +139,13 @@ class HIRCPlayer:
             else:
                 voice.gain = self._voice_gains.get(node.id, 1.0)
 
+    def set_master_volume(self, vol: float, time: float = 0.05) -> None:
+        self._gate.time = time
+        self._gate.value = vol
+
+    def set_equalizer(self, values: list[float] = None) -> None:
+        self._equalizer.set_values(values)
+
     def apply_context(self, ctx: PlayContext = None) -> None:
         if not ctx:
             ctx = self.context
@@ -163,14 +170,3 @@ class HIRCPlayer:
     def stop(self, wait: float = 0) -> None:
         self.entrypoint.stop(self.context)
         self._playing = False
-
-    def set_master_volume(self, vol: float, time: float = 0.05) -> None:
-        self._gate.time = time
-        self._gate.value = vol
-
-    def set_muted(self, muted: bool) -> None:
-        self._gate.time = 0.05
-        self._gate.value = 0.0 if muted else 1.0
-
-    def set_equalizer(self, values: list[float] = None) -> None:
-        self._equalizer.set_values(values)

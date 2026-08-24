@@ -9,6 +9,7 @@ from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 from .equalizer_widget import add_equalizer
+from .attenuation_plot import add_attenuation_plot
 
 if TYPE_CHECKING:
     from yonder.audio.stream_source import StreamSource
@@ -100,9 +101,10 @@ class add_hirc_player(DpgItem):
         dpg.pop_container_stack()
 
         # Attenuation
-        # dpg.push_container_stack(self._t("popup_attenuation"))
-        # TODO attenuation popup
-        # dpg.pop_container_stack()
+        dpg.push_container_stack(self._t("popup_attenuation"))
+        # TODO there may be multiple attenuations at the same time
+        #add_attenuation_plot(self._player.)
+        dpg.pop_container_stack()
 
         # RTPC & States
         dpg.push_container_stack(self._t("popup_states"))
@@ -325,23 +327,22 @@ class add_hirc_player(DpgItem):
                 dpg.add_text("|")
 
                 dpg.add_image_button(
+                    Icons.equalizer,
+                    callback=self._open_ctrl_popup,
+                    tint_color=style.light_grey,
+                    user_data=self._t("popup_equalizer"),
+                )
+                dpg.add_image_button(
                     Icons.states,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_states"),
                 )
-                # TODO
-                # dpg.add_image_button(
-                #    Icons.attenuation,
-                #    callback=self._open_ctrl_popup,
-                #    tint_color=style.light_grey,
-                #    user_data=self._t("popup_attenuation"),
-                # )
                 dpg.add_image_button(
-                    Icons.equalizer,
-                    callback=self._open_ctrl_popup,
-                    tint_color=style.light_grey,
-                    user_data=self._t("popup_equalizer"),
+                   Icons.spatial3d,
+                   callback=self._open_ctrl_popup,
+                   tint_color=style.light_grey,
+                   user_data=self._t("popup_attenuation"),
                 )
                 dpg.add_image_button(
                     Icons.sliders,
