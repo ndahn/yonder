@@ -16,7 +16,6 @@ from .play_context import PlayContext
 
 # TODO
 # - fix playback
-# - use S/MT duration instead of file info?
 # - attenuation distance handling
 # - guess steam directory for resolution
 

@@ -292,6 +292,13 @@ class add_hirc_player(DpgItem):
                     tint_color=style.light_grey,
                     user_data=self._t("popup_states"),
                 )
+                # TODO
+                #dpg.add_image_button(
+                #    Icons.attenuation,
+                #    callback=self._open_ctrl_popup,
+                #    tint_color=style.light_grey,
+                #    user_data=self._t("popup_attenuation"),
+                #)
                 dpg.add_image_button(
                     Icons.equalizer,
                     callback=self._open_ctrl_popup,
@@ -311,6 +318,15 @@ class add_hirc_player(DpgItem):
             show=False,
             tag=self._t("popup_states"),
         )
+
+        with dpg.window(
+            popup=True,
+            min_size=(200, 200),
+            show=False,
+            tag=self._t("popup_attenuation"),
+        ):
+            # TODO attenuation plot
+            pass
 
         with dpg.window(
             popup=True,

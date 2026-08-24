@@ -121,6 +121,9 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             hpf_cents=props.get(PropID.HPF, 0.0),
             lpf_cents=props.get(PropID.LPF, 0.0),
             pitch_semitones=props.get(PropID.Pitch, 0.0),
+            attenuation=ctx.attenuation,
+            distance=ctx.distance,
+            angle=ctx.angle,
         )
 
     def play(self, ctx: PlayContext) -> None:

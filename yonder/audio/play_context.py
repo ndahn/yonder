@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, field
 
@@ -6,6 +7,9 @@ from yonder.types.soundbank import Soundbank
 from yonder.types.hirc_node import HIRCNode
 from yonder.types.mixins import PropertyMixin
 from yonder.enums import PropID
+
+if TYPE_CHECKING:
+    from yonder.types import Attenuation
 
 
 @dataclass
@@ -18,6 +22,12 @@ class PlayContext:
     rtpcs: dict[int, int] = field(default_factory=dict)
     states: dict[int, int] = field(default_factory=dict)
     distance: float = 0.0
+    angle: float = 0.0
+
+    @property
+    def attenuation(self) -> Attenuation:
+        nid = int(self.properties.get(PropID.AttenuationID, 0))
+        return self.bank.get(nid)
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         properties = dict(self.properties)

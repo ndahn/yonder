@@ -1,11 +1,19 @@
+from typing import Callable
 from pathlib import Path
 import pyo
 from pyo import sndinfo
 
 from yonder.util import logger
-from yonder.types.base_types import ClipAutomation
-from yonder.enums import ClipAutomationType, CurveScaling
-from yonder.audio.audiomath import hpf_to_hz, lpf_to_hz, db_to_amp, make_envelope
+from yonder.types import Attenuation
+from yonder.types.base_types import ClipAutomation, ConversionTable, ConeParams
+from yonder.enums import ClipAutomationType, CurveScaling, AttenuationProperty
+from yonder.audio.audiomath import (
+    hpf_to_hz,
+    lpf_to_hz,
+    db_to_amp,
+    make_envelope,
+    eval_curve,
+)
 
 
 class StreamSource(pyo.PyoObject):
@@ -17,6 +25,9 @@ class StreamSource(pyo.PyoObject):
         hpf_cents: float = 0,
         lpf_cents: float = 0,
         pitch_semitones: float = 0,
+        distance: float = 0.0,
+        angle: float = 0.0,
+        attenuation: Attenuation = None,
         clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
@@ -62,20 +73,45 @@ class StreamSource(pyo.PyoObject):
         self._clock = pyo.Phasor()
         self._pre_wrap = pyo.Thresh(self._clock)
         self._swapper = pyo.TrigFunc(self._pre_wrap, self._swap)
+        self._trig = pyo.Trig()
 
         self.set_trims(begin_trim, end_trim)
         self.set_loop_points(loop_start, loop_end)
 
         # Our crossfaded sum becomes this object's audio stream
-        self._trig = pyo.Trig()
-        self._mix = self._players[0] + self._players[1]
+        # Always stereo, something like 7.1 would add a huge cpu cost otherwise
+        self._mix = (self._players[0] + self._players[1]).mix(2)
         self._gain_ctrl = pyo.SigTo(db_to_amp(gain_db), time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
         self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
 
+        self._distance = distance
+        self._angle = angle
+        self._dist_ctrl_volume = pyo.SigTo(db_to_amp(0), time=0.05)
+        self._dist_ctrl_lpf = pyo.SigTo(lpf_to_hz(0), time=0.05)
+        self._dist_ctrl_hpf = pyo.SigTo(hpf_to_hz(0), time=0.05)
+        self._angle_ctrl_volume = pyo.SigTo(db_to_amp(0), time=0.05)
+        self._angle_ctrl_lpf = pyo.SigTo(lpf_to_hz(0), time=0.05)
+        self._angle_ctrl_hpf = pyo.SigTo(hpf_to_hz(0), time=0.05)
+        self._att_volume_curve: ConversionTable = None
+        self._att_lpf_curve: ConversionTable = None
+        self._att_hpf_curve: ConversionTable = None
+        self._cone_params: ConeParams = None
+        
+        # Apply attenuation data
+        if attenuation:
+            self._att_volume_curve = attenuation.get_curve(AttenuationProperty.Volume)
+            self._att_lpf_curve = attenuation.get_curve(AttenuationProperty.LPF)
+            self._att_hpf_curve = attenuation.get_curve(AttenuationProperty.HPF)
+
+            if attenuation.is_cone_enabled:
+                self._cone_params = attenuation.cone_params
+
         self._chain = self._setup_property_controls(self._mix, clip_automations)
         self._base_objs = sum(o.getBaseObjects() for o in self._chain)
+
+        self._update_attenuation()
 
     def _setup_property_controls(
         self,
@@ -121,24 +157,86 @@ class StreamSource(pyo.PyoObject):
 
             # NOTE: ClipAutomation and attenuation do not support pitch!
 
-            # TODO ATTENUATION
-
-        # transpo is in semitones; winsize balances latency vs. smearing
-        # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
-        pitch = pyo.Harmonizer(source, transpo=self._pitch_ctrl, winsize=0.1)
+        signal_in = self._dist_ctrl_volume * self._angle_ctrl_volume * source
 
         # fixed order for all voices: source -> pitch -> HPF -> LPF -> gain
-        hp = pyo.ButHP(pitch, freq=self._hpf_ctrl)
-        lp = pyo.ButLP(hp, freq=self._lpf_ctrl)
+        # transpo is in semitones; winsize balances latency vs. smearing
+        # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
+        pitch = pyo.Harmonizer(signal_in, transpo=self._pitch_ctrl, winsize=0.1)
+
+        # distance attenuation
+        hp_base = pyo.ButHP(pitch, freq=self._hpf_ctrl)
+        hp_dist = pyo.ButHP(hp_base, freq=self._dist_ctrl_hpf)
+        hp_angle = pyo.ButHP(hp_dist, freq=self._angle_ctrl_hpf)
+
+        # cone params
+        lp_base = pyo.ButLP(hp_angle, freq=self._lpf_ctrl)
+        lp_dist = pyo.ButLP(lp_base, freq=self._dist_ctrl_lpf)
+        lp_angle = pyo.ButLP(lp_dist, freq=self._angle_ctrl_lpf)
 
         return [
             source,
             envelopes,
             pitch,
-            hp,
-            lp,
+            hp_base,
+            hp_dist,
+            hp_angle,
+            lp_base,
+            lp_dist,
+            lp_angle,
             self._gain_ctrl,
         ]
+
+    @property
+    def distance(self) -> float:
+        return self._distance
+
+    @distance.setter
+    def distance(self, dist: float) -> None:
+        self._distance = dist
+        self._update_attenuation()
+
+    @property
+    def angle(self) -> float:
+        return self._angle
+
+    @angle.setter
+    def angle(self, phi: float) -> None:
+        self._angle = phi
+        self._update_attenuation()
+
+    def _update_attenuation(self) -> None:
+        def apply(curve: ConversionTable, ctrl: pyo.SigTo, conv: Callable[[float], float]) -> None:
+            if curve:
+                y = eval_curve(curve.points, self._distance, curve.curve_scaling)
+                ctrl.value = conv(y)
+
+        apply(self._att_volume_curve, self._dist_ctrl_volume, db_to_amp)
+        apply(self._att_hpf_curve, self._dist_ctrl_hpf, hpf_to_hz)
+        apply(self._att_lpf_curve, self._dist_ctrl_lpf, lpf_to_hz)
+
+        if self._cone_params:
+            cone = self._cone_params
+            # TODO match to cone positioning angle
+            # For 0 to 360: min(self._angle % 360, 360 - self._angle % 360)
+            angle = abs((self._angle + 180) % 360 - 180)
+            inner_half = cone.inside_degrees / 2
+            outer_half = cone.outside_degrees / 2
+
+            if angle <= inner_half:
+                # Within the inner cone, no additional attenuation
+                pass
+            elif outer_half > inner_half:
+                if angle <= outer_half:
+                    # Transition zone
+                    f = (angle - inner_half) / (outer_half - inner_half)
+                else:
+                    # Outside outer cone, maximum attenuation
+                    f = 1.0
+                
+                self._angle_ctrl_volume.value = db_to_amp(f * cone.outside_volume)
+                self._angle_ctrl_hpf.value = hpf_to_hz(f * cone.high_pass)
+                self._angle_ctrl_lpf.value = lpf_to_hz(f * cone.low_pass)
 
     @property
     def path(self) -> Path:
@@ -324,7 +422,7 @@ class StreamSource(pyo.PyoObject):
         self._clock.reset()
         self._clock.phase = self._paused_pos / dur if dur else 0.0
         self._clock.play()
-        
+
         for o in self._chain:
             o.play(dur, delay)
 
