@@ -26,6 +26,7 @@ class add_hirc_player(DpgItem):
         super().__init__(tag)
         self._player: HIRCPlayer = None
         self._equalizer: add_equalizer = None
+        self._attenuation_plot: add_attenuation_plot = None
         self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
@@ -41,7 +42,7 @@ class add_hirc_player(DpgItem):
         self.set_enabled(False)
 
         if self._player:
-            self._player.stop()
+            self._player.close()
 
         # Removing pyo objects from a running pyo server tends to cause segfaults, so better
         # to recreate the player each time the structure changes. Closing the server takes a
@@ -68,6 +69,7 @@ class add_hirc_player(DpgItem):
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
         dpg.delete_item(self._t("popup_states"), children_only=True)
+        self._attenuation_plot.clear_attenuations()
 
         grad1 = style.RGBA.create_gradient(
             style.light_blue.but(a=162), style.light_orange.but(a=162), 10
@@ -109,7 +111,6 @@ class add_hirc_player(DpgItem):
 
         # Attenuation
         dpg.push_container_stack(self._t("popup_attenuation"))
-        attenuation_plot = add_attenuation_plot(None, self._on_set_distance_angle)
 
         # there may be multiple attenuations at the same time
         context_map = self._player.collect_effective_contexts(True)
@@ -117,7 +118,7 @@ class add_hirc_player(DpgItem):
             ctx = context_map[voice.id]
             att = ctx.attenuation
             if att:
-                attenuation_plot.add_attenuation(att)
+                self._attenuation_plot.add_attenuation(att)
 
         dpg.pop_container_stack()
 
@@ -139,6 +140,7 @@ class add_hirc_player(DpgItem):
                         if ud is not None:
                             show = not enabled or ud in active_rtpcs
                             dpg.configure_item(child, show=show)
+                            # TODO adjust theme if not active
 
                 dpg.add_checkbox(
                     label=µ("For active nodes only"),
@@ -159,7 +161,6 @@ class add_hirc_player(DpgItem):
                             user_data=rtpc,
                             show=rtpc in active_rtpcs,
                         )
-                        # TODO adjust theme if not active
 
         if all_states:
             with dpg.tree_node(label=µ("States"), default_open=True):
@@ -173,6 +174,7 @@ class add_hirc_player(DpgItem):
                         if ud is not None:
                             show = not enabled or ud in active_states
                             dpg.configure_item(child, show=show)
+                            # TODO adjust theme if not active
 
                 dpg.add_checkbox(
                     label=µ("For active nodes only"),
@@ -195,7 +197,6 @@ class add_hirc_player(DpgItem):
                             user_data=group,
                             show=group in active_states,
                         )
-                        # TODO adjust theme if not active
 
         if not all_rtpcs and not all_states:
             dpg.add_text(µ("(no RTPCs/states)"), color=style.light_grey)
@@ -259,7 +260,6 @@ class add_hirc_player(DpgItem):
         self._rtpcs[h] = value
 
         if self._player:
-            # TODO maintain our own play context to persist values across player instances
             self._player.context.rtpcs[h] = value
             self._player.apply_context()
 
@@ -271,6 +271,8 @@ class add_hirc_player(DpgItem):
         if self._player:
             self._player.context.states[g] = s
             self._player.apply_context()
+            # This may cause the active nodes to change
+            self.regenerate()
 
     def _on_eqboost_changed(
         self, sender: str, values: list[float], user_data: Any
@@ -287,10 +289,6 @@ class add_hirc_player(DpgItem):
         else:
             self._player.set_muted(False)
             self._player.set_master_volume(amp)
-
-    def _on_set_speed(self, sender: str, speed: float, user_data: Any) -> None:
-        if self._player:
-            self._player.set_speed(speed)
 
     def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:
         if self._player:
@@ -357,24 +355,35 @@ class add_hirc_player(DpgItem):
                     tint_color=style.light_grey,
                     user_data=self._t("popup_equalizer"),
                 )
+                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                #    dpg.add_text(µ("Equalizer"))
+                    
                 dpg.add_image_button(
                     Icons.states,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_states"),
                 )
+                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                #    dpg.add_text(µ("RTPC & States"))
+                                
                 dpg.add_image_button(
                     Icons.spatial3d,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_attenuation"),
                 )
+                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                #    dpg.add_text(µ("3D Positioning"))
+                                
                 dpg.add_image_button(
                     Icons.sliders,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_voices"),
                 )
+                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                #    dpg.add_text(µ("Voices"))
 
         dpg.add_window(
             popup=True,
@@ -389,8 +398,9 @@ class add_hirc_player(DpgItem):
             show=False,
             tag=self._t("popup_attenuation"),
         ):
-            # TODO attenuation plot
-            pass
+            self._attenuation_plot = add_attenuation_plot(
+                None, self._on_set_distance_angle
+            )
 
         with dpg.window(
             popup=True,
@@ -410,15 +420,6 @@ class add_hirc_player(DpgItem):
                 callback=self._on_set_volume,
                 default_value=1.0,
                 min_value=0.1,
-                max_value=2.0,
-                clamped=True,
-                width=280,
-            )
-            dpg.add_slider_float(
-                label=µ("Speed"),
-                callback=self._on_set_speed,
-                default_value=1.0,
-                min_value=0.0,
                 max_value=2.0,
                 clamped=True,
                 width=280,

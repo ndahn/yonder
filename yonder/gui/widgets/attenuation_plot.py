@@ -43,22 +43,49 @@ class add_attenuation_plot(DpgItem):
         self._max_distance = max_distance
 
         self._build()
-        self.regenerate()
-        dpg.split_frame()
 
     # === Build =========================================================
 
     def _build(self) -> None:
         with dpg.group(tag=self._tag):
-            with dpg.plot(width=-1, tag=self._t("canvas")):
-                dpg.add_plot_axis(dpg.mvXAxis, no_label=True, tag=self._t("xaxis"))
-                dpg.add_plot_axis(dpg.mvYAxis, no_label=True, tag=self._t("yaxis"))
+            with dpg.plot(
+                width=240, 
+                height=240,
+                no_box_select=True,
+                no_frame=True,
+                no_inputs=True,
+                #no_menus=True,
+                #no_title=True,
+                equal_aspects=True,
+                tag=self._t("canvas"),
+            ):
+                dpg.add_plot_axis(
+                    dpg.mvXAxis,
+                    no_label=True,
+                    no_menus=True,
+                    no_tick_labels=True,
+                    tag=self._t("xaxis"),
+                )
+                dpg.set_axis_limits(
+                    dpg.last_item(), -self._max_distance, self._max_distance
+                )
+                dpg.add_plot_axis(
+                    dpg.mvYAxis,
+                    no_label=True,
+                    no_menus=True,
+                    no_tick_labels=True,
+                    tag=self._t("yaxis"),
+                )
+                dpg.set_axis_limits(
+                    dpg.last_item(), -self._max_distance, self._max_distance
+                )
 
                 dpg.add_custom_series(
-                    [0.0, self._max_distance],
-                    [0.0, self._max_distance],
+                    [0.0, self._max_distance, self._max_distance * 2],
+                    [0.0, self._max_distance, self._max_distance * 2],
                     2,
                     callback=self._render_background,
+                    parent=self._t("xaxis"),
                     tag=self._t("background_series"),
                 )
 
@@ -74,21 +101,24 @@ class add_attenuation_plot(DpgItem):
                     )
 
             dpg.bind_item_theme(self._t("canvas"), style.themes.plot_fit_padding)
-            dpg.add_text("", tag=self._t("info_text"))
+            dpg.add_text("0m / 0°", tag=self._t("info_text"))
 
     # === DPG callbacks =================================================
 
     def _on_point_moved(self, sender: str, app_data: Any, cb_user_data: Any) -> None:
         x, y = dpg.get_value(sender)
-        x = max(-self._max_distance, min(self._max_distance, x))
-        y = max(-self._max_distance, min(self._max_distance, y))
         dist = math.sqrt(x * x + y * y)
-        phi = math.degrees(math.atan2(y, x))
+        phi = math.atan2(y, x)
+
+        if dist > self._max_distance:
+            x = self._max_distance * math.cos(phi)
+            y = self._max_distance * math.sin(phi)
+            dpg.set_value(sender, (x, y))
+
+        dpg.set_value(self._t("info_text"), f"{dist:.1f}m / {math.degrees(phi):.0f}°")
 
         if self._on_position_changed:
-            self._on_position_changed(self._tag, (dist, phi), self._user_data)
-
-        dpg.set_value(sender, (x, y))
+            self._on_position_changed(self._tag, (dist, math.degrees(phi)), self._user_data)
 
     def _render_background(self, sender: str, series_data: list, ud: Any) -> None:
         # Save some cpu cycles when no updates are needed
@@ -106,7 +136,7 @@ class add_attenuation_plot(DpgItem):
         transformed_x = series_data[1]
         transformed_y = series_data[2]
         center = (transformed_x[0], transformed_y[0])
-        radius = transformed_x[1]
+        radius = self._max_distance
 
         dpg.delete_item(sender, children_only=True, slot=2)
         dpg.push_container_stack(sender)
@@ -123,11 +153,12 @@ class add_attenuation_plot(DpgItem):
                 cone = att.cone_params
                 inner_half = cone.inside_degrees / 2
                 outer_half = cone.outside_degrees
+                # TODO only highlight most narrow cone
                 inner_alpha = (
-                    255 if -inner_half <= angle <= inner_half else alpha_per_cone
+                    127 if -inner_half <= angle <= inner_half else alpha_per_cone
                 )
                 outer_alpha = (
-                    255 if -outer_half <= angle <= outer_half else alpha_per_cone
+                    127 if -outer_half <= angle <= outer_half else alpha_per_cone
                 )
 
                 draw_circle_segment(
@@ -142,7 +173,7 @@ class add_attenuation_plot(DpgItem):
                     radius,
                     offset - cone.inside_degrees / 2,
                     offset + cone.inside_degrees / 2,
-                    fill=(255, 255, 255, outer_alpha),
+                    fill=(192, 192, 192, outer_alpha),
                     thickness=2,
                 )
 
