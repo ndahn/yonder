@@ -1,10 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
+import pyo
 
 from yonder.hash import Hash, calc_hash
-from yonder.enums import PropID, SWITCH_GROUP_IDS
+from yonder.enums import PropID
 from yonder.util import logger
+from yonder.audio import PlayContext
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -36,21 +38,40 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        switch_groups: list[list[int]],
+        switch_group: str | int,
+        switch_states: dict[str | int, int | HIRCNode | list[int | HIRCNode]],
+        default_state: str | int = None,
         props: dict[PropID, float] = None,
+        xfade: float | tuple[float, float] = 1.0,
         parent: int | HIRCNode = 0,
     ) -> SwitchContainer:
         obj = cls(nid)
+        obj.group_id = calc_hash(switch_group)
+        obj.default_switch = calc_hash(default_state or 0)
+        first_node = None
 
-        if switch_groups:
-            for idx, nodes in enumerate(switch_groups):
-                obj.switch_groups.append(
-                    # TODO almost certainly wrong
-                    SwitchPackage(
-                        switch_id=calc_hash(SWITCH_GROUP_IDS[idx]),
-                        nodes=nodes,
-                    )
-                )
+        for state, nodes in switch_states.items():
+            state = calc_hash(state)
+
+            if isinstance(nodes, (int, HIRCNode)):
+                nodes = [nodes]
+
+            if not first_node and nodes:
+                first_node = nodes[0]
+
+            node_ids = [n.id if isinstance(n, HIRCNode) else n for n in nodes]
+            obj.switch_groups.append(SwitchPackage(state, node_ids))
+
+        if isinstance(xfade, float):
+            xfade = (xfade, xfade)
+
+        obj.switch_params.append(
+            SwitchNodeParams(
+                first_node,  # Seems like the first one serves as the default?
+                fade_out_time=int(xfade[0] / 1000),
+                fade_in_time=int(xfade[1] / 1000),
+            )
+        )
 
         if props:
             for prop, val in props.items():
@@ -81,7 +102,16 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def states(self) -> StateChunk:
         return self.node_base_params.state_chunk
 
-    def attach(self, other: int | HIRCNode) -> None:
+    def get_nodes_for_switch(self, switch_state: str | int) -> list[int]:
+        switch_state = calc_hash(switch_state)
+
+        for group in self.switch_groups:
+            if group.switch_id == switch_state:
+                return group.nodes
+
+        return []
+
+    def attach(self, other: int | HIRCNode, switch: str | int = None) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -90,11 +120,101 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             other.parent = self.id
             other = other.id
 
+        if switch is None:
+            switch = self.default_switch
+
+        switch = calc_hash(switch)
+        for group in self.switch_groups:
+            if group.switch_id == switch:
+                if other not in group.nodes:
+                    group.nodes.append(other)
+
+                break
+        else:
+            self.switch_groups.append(SwitchPackage(switch, 1, [other]))
+
         self.children.add(other)
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             other = other.id
 
+        for group in self.switch_groups:
+            if other in group.nodes:
+                group.nodes.remove(other)
+
         if other in self.children:
             self.children.remove(other)
+
+    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+        return pyo.InputFader(pyo.Sig(0))
+
+    def play(self, ctx: PlayContext) -> None:
+        if not self.switch_groups:
+            return
+
+        switch_state = ctx.states.get(self.group_id, self.default_switch)
+        node_ids = self.get_nodes_for_switch(switch_state)
+
+        # Play the nodes first, then update this container
+        for nid in node_ids:
+            n = ctx.bank.get(nid)
+            if n:
+                n.play(ctx)
+
+        self.update_playback(ctx)
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        fader: pyo.InputFader
+        ctx, fader = self.pyo(ctx)
+
+        switch_state = ctx.states.get(self.group_id, self.default_switch)
+
+        # Make sure the nodes can update their state even if we have nothing to do
+        node_ids = self.get_nodes_for_switch(switch_state)
+        nodes: list[HIRCNode] = []
+        for nid in node_ids:
+            n = ctx.bank.get(nid)
+            if n:
+                n.update_playback(ctx)
+                nodes.append(n)
+
+        if switch_state == getattr(self, "_active_switch", None):
+            # Switch already active, nothing to do
+            return
+
+        # Setup the new input signal source
+        if not nodes:
+            input_sig = pyo.Sig(0)
+        elif len(nodes) == 1:
+            input_sig = nodes[0].pyo(ctx)[1]
+        else:
+            input_sig = pyo.Mixer(outs=1, chnls=1)
+            for n in nodes:
+                input_sig.addInput(n.id, n.pyo(ctx)[1])
+                input_sig.setAmp(n.id, 1)
+        
+        # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways
+        xfade = 0.05
+        for nid in node_ids:
+            for params in self.switch_params:
+                if nid == params.node_id:
+                    xfade = max((params.fade_out_time, params.fade_in_time, xfade))
+
+        fader.setInput(input_sig, xfade)
+
+        # Cleanup old inputs
+        # TODO might have to wait for the fade to finish
+        prev_state = getattr(self, "_active_switch", None)
+        old_ids = self.get_nodes_for_switch(prev_state)
+        for oid in old_ids:
+            if oid not in node_ids:
+                n = ctx.bank.get(oid)
+                if n:
+                    n.reset_pyo(ctx)
+
+        self._active_switch = switch_state
+
+    def reset_pyo(self, ctx: PlayContext) -> None:
+        self._active_switch = None
+        super().reset_pyo(ctx)

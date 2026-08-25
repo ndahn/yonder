@@ -824,7 +824,7 @@ class SwitchNodeParams:
     unk13: bool = False
     unk14: bool = False
     unk15: bool = False
-    unk16: bool = False
+    unk16: bool = True
     fade_out_time: int = 0
     fade_in_time: int = 0
 

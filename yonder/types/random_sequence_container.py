@@ -164,9 +164,8 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         keys = mixer.getKeys()
         child.play(ctx)
-        mixer.addInput(idx, child.pyo(ctx))
+        mixer.addInput(idx, child.pyo(ctx)[1])
         if keys and keys[0] != idx:
             mixer.delInput(keys[0])
 
         mixer.setAmp(idx, 0, 1)
-        mixer.play()
