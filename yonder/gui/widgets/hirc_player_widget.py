@@ -48,10 +48,13 @@ class add_hirc_player(DpgItem):
         # to recreate the player each time the structure changes. Closing the server takes a
         # few ms, but we can let this be handled by the GC in the background.
 
+        # TODO what to do when this fails?
         cfg = get_config()
+        vgmstream = cfg.locate_vgmstream()
+
         ctx = PlayContext(
             bnk,
-            cfg.locate_vgmstream(),
+            vgmstream,
             cfg.bankdirs,
             rtpcs=dict(self._rtpcs),
             states=dict(self._states),
