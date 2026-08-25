@@ -1,8 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum, StrEnum
 
-from yonder.game.effects_data import EffectPlugin, EffectPluginType
-
 
 class EnumWithUnknown(IntEnum):
     @classmethod
@@ -500,6 +498,113 @@ class SourceType(IntEnum):
     Embedded = 0x0
     PrefetchStreaming = 0x1
     Streaming = 0x2
+
+
+class EffectPlugin(IntEnum):
+    None_ = 0x00000000
+    BANK = 0x00000001
+    PCM = 0x00010001
+    ADPCM = 0x00020001
+    XMA = 0x00030001
+    VORBIS = 0x00040001
+    WIIADPCM = 0x00050001
+    PCMEX = 0x00070001
+    EXTERNALSOURCE = 0x00080001
+    XWMA = 0x00090001
+    AAC = 0x000A0001
+    FILEPACKAGE = 0x000B0001
+    ATRAC9 = 0x000C0001
+    VAGHEVAG = 0x000D0001
+    PROFILERCAPTURE = 0x000E0001
+    ANALYSISFILE = 0x000F0001
+    MIDI = 0x00100001
+    OPUSNX = 0x00110001
+    CAF = 0x00120001
+    OPUS = 0x00130001
+    OPUSWEM1 = 0x00140001
+    OPUSWEM2 = 0x00150001
+    SONY360 = 0x00160001
+    WwiseSine = 0x00640002
+    WwiseSilence = 0x00650002
+    WwiseToneGenerator = 0x00660002
+    WwiseUnk1 = 0x00670003
+    WwiseUnk2 = 0x00680003
+    WwiseParametricEQ = 0x00690003
+    WwiseDelay = 0x006A0003
+    WwiseCompressor = 0x006C0003
+    WwiseExpander = 0x006D0003
+    WwisePeakLimiter = 0x006E0003
+    WwiseUnk3 = 0x006F0003
+    WwiseUnk4 = 0x00700003
+    WwiseMatrixReverb = 0x00730003
+    SoundSeedImpact = 0x00740003
+    WwiseRoomVerb = 0x00760003
+    SoundSeedAirWind = 0x00770002
+    SoundSeedAirWoosh = 0x00780002
+    WwiseFlanger = 0x007D0003
+    WwiseGuitarDistortion = 0x007E0003
+    WwiseConvolutionReverb = 0x007F0003
+    WwiseMeter = 0x00810003
+    WwiseTimeStretch = 0x00820003
+    WwiseTremolo = 0x00830003
+    WwiseRecorder = 0x00840003
+    WwiseStereoDelay = 0x00870003
+    WwisePitchShifter = 0x00880003
+    WwiseHarmonizer = 0x008A0003
+    WwiseGain = 0x008B0003
+    WwiseSynthOne = 0x00940002
+    WwiseReflect = 0x00AB0003
+    System = 0x00AE0007
+    Communication = 0x00B00007
+    ControllerHeadphones = 0x00B10007
+    ControllerSpeaker = 0x00B30007
+    NoOutput = 0x00B50007
+    WwiseSystemOutputSettings = 0x03840009
+    SoundSeedGrain = 0x00B70002
+    MasteringSuite = 0x00BA0003
+    WwiseAudioInput = 0x00C80002
+    WwiseMotionGenerator1 = 0x01950002
+    WwiseMotionGenerator2 = 0x01950005
+    WwiseMotionSource1 = 0x01990002
+    WwiseMotionSource2 = 0x01990005
+    WwiseMotion = 0x01FB0007
+    AuroHeadphone = 0x044C1073
+    McDSPML1 = 0x00671003
+    McDSPFutzBox = 0x006E1003
+    IZotopeHybridReverb = 0x00021033
+    IZotopeTrashDistortion = 0x00031033
+    IZotopeTrashDelay = 0x00041033
+    IZotopeTrashDynamicsMono = 0x00051033
+    IZotopeTrashFilters = 0x00061033
+    IZotopeTrashBoxModeler = 0x00071033
+    IZotopeTrashMultibandDistortion = 0x00091033
+    PlatinumMatrixSurroundMk2 = 0x006E0403
+    PlatinumLoudnessMeter = 0x006F0403
+    PlatinumSpectrumViewer = 0x00710403
+    PlatinumEffectCollection = 0x00720403
+    PlatinumMeterWithFilter = 0x00730403
+    PlatinumSimple3D = 0x00740403
+    PlatinumUpmixer = 0x00750403
+    PlatinumReflection = 0x00760403
+    PlatinumDownmixer = 0x00770403
+    PlatinumFlex = 0x00780403
+    CodemastersEffect = 0x00020403
+    Ubisoft = 0x00640332
+    UbisoftEffect1 = 0x04F70803
+    UbisoftMixer = 0x04F80806
+    UbisoftEffect2 = 0x04F90803
+    MicrosoftSpatialSound = 0x00AA1137
+    CPRimpleDelay = 0x000129A3
+    CPRVoiceBroadcastReceive1 = 0x000229A2
+    CPRVoiceBroadcastSend1 = 0x000329A3
+    CPRVoiceBroadcastReceive2 = 0x000429A2
+    CPRVoiceBroadcastSend2 = 0x000529A3
+    CrankcaseREVModelPlayer = 0x01A01052
+
+
+class EffectPluginType(EnumWithUnknown):
+    Source = 2
+    Effect = 3
 
 
 class MarkerId(IntEnum):

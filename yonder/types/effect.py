@@ -3,8 +3,9 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from yonder.hash import Hash
+from yonder.enums import EffectPlugin
 from yonder.types.mixins import StateMixin, RtpcMixin
-from yonder.game.effects_data import EffectPlugin
+from yonder.game.effects_data import EffectInfo
 from .hirc_node import HIRCNode
 from .base_types import FxBaseInitialValues, RTPC, StateChunk
 
@@ -24,9 +25,13 @@ class _EffectBase(StateMixin, RtpcMixin, HIRCNode):
         return EffectPlugin(self.fx_base_initial_values.fx_id)
 
     @property
+    def info(self) -> EffectInfo:
+        return EffectInfo.get(self.plugin)
+
+    @property
     def params(self) -> dict[str, int | float]:
         # Store trailing bytes we were not able to decode yet
-        params, self._trailing = self.plugin.decode_params(
+        params, self._trailing = self.info.decode_params(
             self.fx_base_initial_values.params
         )
         return params
@@ -34,7 +39,7 @@ class _EffectBase(StateMixin, RtpcMixin, HIRCNode):
     @params.setter
     def params(self, values: dict | list) -> None:
         trailing = getattr(self, "_trailing", bytes())
-        self.fx_base_initial_values.params = self.plugin.encode_params(values, trailing)
+        self.fx_base_initial_values.params = self.info.encode_params(values, trailing)
 
     @property
     def rtpcs(self) -> list[RTPC]:

@@ -7,8 +7,9 @@ import networkx as nx
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-from yonder import Soundbank
-from yonder.types import ActorMixer, State
+from yonder.types.soundbank import Soundbank
+from yonder.types.actor_mixer import ActorMixer
+from yonder.types.state import State
 from yonder.enums import PropID, RtpcType, Game
 from yonder.util import unpack_soundbank, resource_dir, logger
 

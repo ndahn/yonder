@@ -4,8 +4,9 @@ from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 import shutil
 
-from yonder import Soundbank, lookup_name
+from yonder.hash import lookup_name
 from yonder.enums import Game
+from yonder.types.soundbank import Soundbank
 from yonder.types.base_types import StateChunk, DecisionTreeNode
 from yonder.util import unpack_soundbank, resource_dir
 

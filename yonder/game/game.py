@@ -1,9 +1,8 @@
 from typing import ClassVar
-from enum import IntEnum
 import re
 from Crypto.Cipher import AES
 
-from yonder import Soundbank
+from yonder.types.soundbank import Soundbank
 from yonder.enums import Game, EnumWithUnknown
 from .data.actormixer_summary import AmxSummary
 
