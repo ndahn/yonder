@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from yonder.hash import Hash
+from yonder.hash import Hash, calc_hash
 from yonder.enums import PropID, SWITCH_GROUP_IDS
 from yonder.util import logger
 from .hirc_node import HIRCNode
@@ -45,8 +45,9 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if switch_groups:
             for idx, nodes in enumerate(switch_groups):
                 obj.switch_groups.append(
+                    # TODO almost certainly wrong
                     SwitchPackage(
-                        switch_id=SWITCH_GROUP_IDS[idx],
+                        switch_id=calc_hash(SWITCH_GROUP_IDS[idx]),
                         nodes=nodes,
                     )
                 )
