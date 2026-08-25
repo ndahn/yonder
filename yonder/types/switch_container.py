@@ -195,13 +195,13 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 input_sig.setAmp(n.id, 1)
         
         # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways
-        xfade = 0.05
+        xfade = 50
         for nid in node_ids:
             for params in self.switch_params:
                 if nid == params.node_id:
                     xfade = max((params.fade_out_time, params.fade_in_time, xfade))
 
-        fader.setInput(input_sig, xfade)
+        fader.setInput(input_sig, xfade / 1000)
 
         # Cleanup old inputs
         # TODO might have to wait for the fade to finish
