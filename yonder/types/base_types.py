@@ -19,7 +19,7 @@ from yonder.enums import (
     RtpcType,
     CurveScaling,
     SourceType,
-    PluginId,
+    EffectPlugin,
     RandomSequenceMode,
 )
 
@@ -30,7 +30,7 @@ _T = TypeVar("_T")
 @dataclass(slots=True)
 class _ItemContainer(Generic[_T]):
     items: list[_T]
-    
+
     def add(self, item: _T) -> None:
         from .hirc_node import HIRCNode
 
@@ -284,12 +284,14 @@ class ClipAutomation:
     clip_index: int = 0
     auto_type: ClipAutomationType = ClipAutomationType.Volume
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
 
 @dataclass(slots=True)
 class IAkPlugin:
-    plugin_id: PluginId = PluginId.VORBIS
+    plugin_id: EffectPlugin = EffectPlugin.VORBIS
     dll_name_length: int = 0
     dll_name: str = ""
 
@@ -539,7 +541,9 @@ class RTPC:
     curve_id: int = 0
     curve_scaling: CurveScaling = CurveScaling.None_
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
     def get_name(self, default: Any = None) -> str:
         if default is None:
@@ -686,7 +690,7 @@ class MediaInformation:
 
 @dataclass(slots=True)
 class BankSourceData:
-    plugin: PluginId = PluginId.VORBIS
+    plugin: EffectPlugin = EffectPlugin.VORBIS
     source_type: SourceType = SourceType.Embedded
     media_information: MediaInformation = field(
         default_factory=lambda: MediaInformation(source_id=0)
@@ -876,7 +880,9 @@ class DecisionTreeNode:
 class AssociatedChildData:
     associated_child_id: int = 0
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("associated_child_id", self.associated_child_id)]

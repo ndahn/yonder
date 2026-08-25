@@ -3,7 +3,6 @@ from typing import Any, ClassVar, TYPE_CHECKING
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
-from yonder.util import logger
 from .mixins import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
@@ -197,7 +196,7 @@ class HIRCNode(DataNode):
         ctx : PlayContext
             The current playback context.
         """
-        logger.warning(f"Node {self} is not playable")
+        pass
 
     def stop(self, ctx: PlayContext) -> None:
         if self.is_pyo_initialized():
