@@ -64,6 +64,10 @@ class HIRCNode(DataNode):
     def type_name(self) -> str:
         return type(self).__name__
 
+    @property
+    def type_name_short(self) -> str:
+        return "".join(s for s in self.type_name if s.isupper())
+
     def get_name(self, default: str = None) -> str:
         if default is None:
             default = f"#{self.id}"
@@ -240,11 +244,11 @@ class HIRCNode(DataNode):
         return self.id < other.id
 
     def __str__(self) -> str:
-        label = "".join(s for s in self.type_name if s.isupper())
+        type_name = self.type_name_short
         name = self.get_name("")
         if name:
-            return f"[{label}] {name} #{self.id}"
-        return f"[{label}] #{self.id}"
+            return f"[{type_name}] {name} #{self.id}"
+        return f"[{type_name}] #{self.id}"
 
     def __repr__(self) -> str:
         name = self.get_name("<?>")

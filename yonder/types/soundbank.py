@@ -491,13 +491,17 @@ class Soundbank:
 
         return upchain
 
-    def query(self, query: str = None, node_type: str | type = None) -> Generator[HIRCNode, None, None]:
+    def query(
+        self, query: str = None, node_type: str | type = None
+    ) -> Generator[HIRCNode, None, None]:
         if node_type:
             if isinstance(node_type, type):
                 node_type = node_type.__name__
 
             node_type = node_type.lower()
-            candidates = [n for n in self.hirc.objects if n.type_name.lower() == node_type]
+            candidates = [
+                n for n in self.hirc.objects if n.type_name.lower() == node_type
+            ]
         else:
             candidates = self.hirc.objects
 
@@ -511,14 +515,14 @@ class Soundbank:
 
     def find_orphans(self) -> list[HIRCNode]:
         from yonder.types import (
-                LayerContainer,
-                MusicRandomSequenceContainer,
-                MusicSwitchContainer,
-                MusicSegment,
-                MusicTrack,
-                RandomSequenceContainer,
-                Sound,
-                SwitchContainer,
+            LayerContainer,
+            MusicRandomSequenceContainer,
+            MusicSwitchContainer,
+            MusicSegment,
+            MusicTrack,
+            RandomSequenceContainer,
+            Sound,
+            SwitchContainer,
         )
 
         g = self.tree
@@ -544,6 +548,57 @@ class Soundbank:
                     ret.append(n)
 
         return ret
+
+    def get_branch_root(self, node: int | HIRCNode) -> HIRCNode:
+        from . import Event, Action
+
+        if isinstance(node, HIRCNode):
+            node = node.id
+
+        n = self.get(node)
+        if not n:
+            return None
+
+        # Search an event for a play or stop action
+        if isinstance(n, Event):
+            for aid in n.actions:
+                action: Action = self.get(aid)
+                if action and action.action_type_enum in (
+                    ActionType.Play,
+                    ActionType.StopE,
+                    ActionType.StopEO,
+                ):
+                    return self.get(action.external_id)
+            else:
+                # Not an event that actually plays anything
+                return None
+        # Check if the action can be played
+        elif isinstance(n, Action):
+            if n.action_type_enum in (
+                ActionType.Play,
+                ActionType.StopE,
+                ActionType.StopEO,
+            ):
+                return self.get(n.external_id)
+            else:
+                return None
+
+        # Not an event or action, go up the chain until we find the root
+        root = node
+        while True:
+            parent_ids = list(self.tree.predecessors(root))
+            if not parent_ids:
+                return root
+
+            parent = parent_ids[0]
+            if parent <= 0 or parent not in self:
+                return root
+
+            parent_node = self.get(parent)
+            if parent_node and parent_node.type_name == "ActorMixer":
+                return root
+
+            root = parent
 
     def find_events(
         self, action_type: ActionType = ActionType.Play
@@ -743,7 +798,9 @@ class Soundbank:
 
         return severity
 
-    def check_conflicts(self, other: Soundbank, soft: bool = False) -> list[tuple[int, type, type]]:
+    def check_conflicts(
+        self, other: Soundbank, soft: bool = False
+    ) -> list[tuple[int, type, type]]:
         conflicts = []
 
         for node in self:

@@ -23,6 +23,7 @@ class RowDescriptor:
 def get_foldable_row_descriptor(row: str) -> RowDescriptor:
     if not dpg.does_item_exist(row):
         return None
+
     data = dpg.get_item_user_data(row)
     return data if isinstance(data, RowDescriptor) else None
 
@@ -74,6 +75,9 @@ def is_row_index_visible(table, row_level: int, row_idx: int = -1) -> bool:
 def is_row_visible(table: str, row: str | int) -> bool:
     if not is_foldable_row(row):
         return True
+
+    if isinstance(row, str):
+        row = dpg.get_alias_id(row)
 
     desc = get_foldable_row_descriptor(row)
     rows = dpg.get_item_children(table, slot=1)

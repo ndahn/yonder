@@ -90,6 +90,7 @@ class BanksOfYonder(DpgItem):
         self.bnk: Soundbank = None
         self.event_map: dict[int, str] = {}
         self.globals_map: dict[int, str] = {}
+        self._graph_widget: add_graph_widget = None
         self._hirc_player: add_hirc_player = None
         self._selected_root: str = None
         self._selected_node: HIRCNode = None
@@ -436,7 +437,7 @@ class BanksOfYonder(DpgItem):
                 tag=self._t("events_window"),
             ):
                 with dpg.child_window(border=True, resizable_y=True, height=500):
-                    with dpg.tab_bar(tag=self._t("tabs")):
+                    with dpg.tab_bar(tag=self._t("bank_tabs")):
                         with dpg.tab(label=µ("Events"), tag=self._t("tab_events")):
                             with dpg.group(horizontal=True):
                                 dpg.add_input_text(
@@ -633,29 +634,40 @@ class BanksOfYonder(DpgItem):
                 autosize_y=True,
                 border=False,
             ):
-                dpg.add_input_text(
-                    multiline=True,
-                    width=-1,
-                    height=-30,
-                    callback=lambda s, a, u: self._set_json_highlight(True),
-                    tag=self._t("json"),
-                )
-                with dpg.group(horizontal=True):
-                    dpg.add_button(
-                        label=µ("Apply", "button"),
-                        callback=self.apply_json,
-                        tag=self._t("json_apply"),
-                    )
-                    dpg.add_button(
-                        label=µ("Reload Json", "button"),
-                        callback=self.update_json_panel,
-                        tag=self._t("json_reload"),
-                    )
-                    dpg.add_button(
-                        label=µ("Reset Node", "button"),
-                        callback=self.reset_from_json,
-                        tag=self._t("json_reset"),
-                    )
+                with dpg.tab_bar(tag=self._t("info_tabs")):
+                    with dpg.tab(label=µ("Graph"), tag=self._t("graph_tab")):
+                        self._graph_widget = add_graph_widget(
+                            self.bnk,
+                            None,
+                            lambda s, a, u: self.jump_to_node(a),
+                            width=-1,
+                            height=-1,
+                        )
+
+                    with dpg.tab(label=µ("Json"), tag=self._t("json_tab")):
+                        dpg.add_input_text(
+                            multiline=True,
+                            width=-1,
+                            height=-30,
+                            callback=lambda s, a, u: self._set_json_highlight(True),
+                            tag=self._t("json"),
+                        )
+                        with dpg.group(horizontal=True):
+                            dpg.add_button(
+                                label=µ("Apply", "button"),
+                                callback=self.apply_json,
+                                tag=self._t("json_apply"),
+                            )
+                            dpg.add_button(
+                                label=µ("Reload Json", "button"),
+                                callback=self.update_json_panel,
+                                tag=self._t("json_reload"),
+                            )
+                            dpg.add_button(
+                                label=µ("Reset Node", "button"),
+                                callback=self.reset_from_json,
+                                tag=self._t("json_reset"),
+                            )
 
         # Shown now, but will be positioned properly by the welcome message
         with dpg.window(
@@ -688,11 +700,6 @@ class BanksOfYonder(DpgItem):
             no_saved_settings=True,
             tag=self._t("context_menu"),
         ):
-            dpg.add_menu_item(
-                label=µ("Show Graph", "menu"),
-                callback=self._open_node_graph,
-                tag=self._t("context/show_graph"),
-            )
             dpg.add_menu_item(
                 label=µ("Pin", "menu"),
                 callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
@@ -778,6 +785,7 @@ class BanksOfYonder(DpgItem):
             no_resize=True,
             no_background=True,
             no_title_bar=True,
+            min_size=(30, 30),
             tag=self._t("kofi"),
         ) as kofi:
             add_kofi_button()
@@ -796,11 +804,11 @@ class BanksOfYonder(DpgItem):
                 self._open_new_soundbank_dialog()
             elif key == dpg.mvKey_F:
                 # Focus the search bar
-                tab = dpg.get_item_alias(dpg.get_value(self._t("tabs")))
+                tab = dpg.get_item_alias(dpg.get_value(self._t("bank_tabs")))
                 if tab == self._t("tab_globals"):
                     dpg.focus_item(self._t("globals_filter"))
                 else:
-                    dpg.set_value(self._t("tabs"), self._t("tab_events"))
+                    dpg.set_value(self._t("bank_tabs"), self._t("tab_events"))
                     dpg.focus_item(self._t("events_filter"))
 
             # elif key == dpg.mvKey_Q:
@@ -1339,6 +1347,29 @@ class BanksOfYonder(DpgItem):
 
         return root_row.row
 
+    def is_node_row_visible(self, node: int | HIRCNode) -> bool:
+        if isinstance(node, HIRCNode):
+            node = node.id
+
+        tag = self._t(f"node_{node}")
+        if not dpg.does_item_exist(tag):
+            return False
+
+        try:
+            if is_row_visible(self._t("events_table"), tag):
+                return True
+        except ValueError:
+            # not in list
+            pass
+
+        try:
+            if is_row_visible(self._t("globals_table"), tag):
+                return True
+        except ValueError:
+            pass
+
+        return False
+
     def _next_events_page(self) -> None:
         if not self.bnk:
             return
@@ -1531,7 +1562,7 @@ class BanksOfYonder(DpgItem):
         sender = None
         if section:
             # Jump to sections tab
-            dpg.set_value(self._t("tabs"), self._t("tab_sections"))
+            dpg.set_value(self._t("bank_tabs"), self._t("tab_sections"))
             sec_name = section if isinstance(section, str) else section.name
             sender = self._t(f"sections_{sec_name}")
 
@@ -1626,7 +1657,7 @@ class BanksOfYonder(DpgItem):
             self._backup = node.copy()
             dpg.set_value(self._t("json"), node.json())
             # TODO enable player once ready
-            #self._hirc_player.load(self.bnk, node)
+            # self._hirc_player.load(self.bnk, node)
         else:
             self._backup = None
             dpg.set_value(self._t("json"), "")
@@ -1634,8 +1665,18 @@ class BanksOfYonder(DpgItem):
         self._selected_node = node
         self._selected_section = None
         self._set_json_highlight(False)
+        
+        # TODO this would be nicer, but it's difficult to decide which action/event
+        # to include in the graph and jump to when selected
+        # events = self.bnk.find_events_for(node)
+        # for evt in events:
+        #     if self.is_node_row_visible(evt):
+        #         root = evt.id
+        #         break
+        root = self.bnk.get_branch_root(node)
+        self._graph_widget.regenerate(self.bnk, root, node)
 
-        # Ppups and windows are root-level containers and may keep other objects alive through
+        # Popups and windows are root-level containers and may keep other objects alive through
         # closures. To avoid this we can either:
         # v1) pass callback for registering items for cleanup -> messy
         # v2) return list of items to explicitly cleanup -> messy
@@ -1680,7 +1721,7 @@ class BanksOfYonder(DpgItem):
             table = self._t("globals_table")
 
             # Switch to globals tab
-            dpg.set_value(self._t("tabs"), self._t("tab_globals"))
+            dpg.set_value(self._t("bank_tabs"), self._t("tab_globals"))
 
             # Unfold the category
             # FIXME: make sure the node row actually exists despite count limits!
@@ -1691,7 +1732,7 @@ class BanksOfYonder(DpgItem):
             table = self._t("events_table")
 
             # Switch to events tab
-            dpg.set_value(self._t("tabs"), self._t("tab_events"))
+            dpg.set_value(self._t("bank_tabs"), self._t("tab_events"))
 
             if not isinstance(node, Event):
                 evt = None
@@ -2092,31 +2133,6 @@ class BanksOfYonder(DpgItem):
 
         dpg.split_frame()
         center_window(tag)
-
-    def _open_node_graph(self) -> None:
-        node = self._selected_node
-        if not node:
-            return
-
-        tag = self._t(f"node_graph_{node.id}")
-        if dpg.does_item_exist(tag):
-            dpg.show_item(tag)
-            dpg.focus_item(tag)
-            return
-
-        def on_graph_node_click(
-            sender: str, node: int | HIRCNode, user_data: Any
-        ) -> None:
-            if node in self.bnk:
-                self.jump_to_node(node)
-
-        with dpg.window(
-            label=f"{node}",
-            width=400,
-            height=400,
-            on_close=lambda: dpg.delete_item(window),
-        ) as window:
-            add_graph_widget(self.bnk, node, on_graph_node_click, width=-1, height=-1)
 
     def _open_bank_rename_dialog(self) -> None:
         tag = self._t("rename_bank_dialog")
