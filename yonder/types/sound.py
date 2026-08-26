@@ -1,14 +1,15 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import ClassVar, Callable
 from pathlib import Path
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SourceType, PropID
 from yonder.wem import get_wem_metadata, wem2wav
 from yonder.audio import PlayContext
 from yonder.audio.stream_source import StreamSource
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
     BankSourceData,
@@ -107,7 +108,9 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             media_information=MediaInformation(int(source_id), media_size),
         )
 
-    def _build_pyo(self, ctx: PlayContext) -> StreamSource:
+    def _build_pyo(self, my_pyo: PyoState) -> StreamSource:
+        ctx = my_pyo.ctx
+
         props = ctx.properties
         path = ctx.bank.get_wem_path(
             self.source_id, self.source_type, ctx.wem_search_paths
@@ -129,15 +132,15 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         )
 
     def play(self, ctx: PlayContext) -> None:
-        _, stream = self.pyo(ctx)
-        stream.play()
+        self.pyo(ctx).play()
 
     def update_playback(self, ctx: PlayContext) -> None:
         if not self.is_pyo_initialized():
             return
 
-        stream: StreamSource
-        ctx, stream = self.pyo(ctx)
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        stream: StreamSource = my_pyo.pyo_playback
         props = ctx.properties
 
         stream.loop = PropID.Loop in props
@@ -171,3 +174,12 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             stream.pitch = pitch
 
         super().update_playback(ctx)
+
+    def register_end_trigger(
+        self, ctx: PlayContext, callback: Callable[[PlayContext], None]
+    ) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        stream: StreamSource = my_pyo.pyo_playback
+        triggers = my_pyo.cache.setdefault("triggers", [])
+        triggers.append(pyo.TrigFunc(stream["trig"], callback, ctx))

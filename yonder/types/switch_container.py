@@ -7,7 +7,7 @@ from yonder.hash import Hash, calc_hash
 from yonder.enums import PropID
 from yonder.util import logger
 from yonder.audio import PlayContext
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -146,7 +146,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if other in self.children:
             self.children.remove(other)
 
-    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
         return pyo.InputFader(pyo.Sig(0))
 
     def play(self, ctx: PlayContext) -> None:
@@ -165,8 +165,9 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.update_playback(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:
-        fader: pyo.InputFader
-        ctx, fader = self.pyo(ctx)
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.pyo_playback
 
         switch_state = ctx.states.get(self.group_id, self.default_switch)
 
@@ -179,7 +180,8 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 n.update_playback(ctx)
                 nodes.append(n)
 
-        if switch_state == getattr(self, "_active_switch", None):
+        active_state = my_pyo.cache.get("active_switch")
+        if switch_state == active_state:
             # Switch already active, nothing to do
             return
 
@@ -205,16 +207,12 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         # Cleanup old inputs
         # TODO might have to wait for the fade to finish
-        prev_state = getattr(self, "_active_switch", None)
-        old_ids = self.get_nodes_for_switch(prev_state)
-        for oid in old_ids:
-            if oid not in node_ids:
-                n = ctx.bank.get(oid)
-                if n:
-                    n.reset_pyo(ctx)
+        if active_state is not None:
+            old_ids = self.get_nodes_for_switch(active_state)
+            for oid in old_ids:
+                if oid not in node_ids:
+                    n = ctx.bank.get(oid)
+                    if n:
+                        n.reset_pyo(ctx)
 
-        self._active_switch = switch_state
-
-    def reset_pyo(self, ctx: PlayContext) -> None:
-        self._active_switch = None
-        super().reset_pyo(ctx)
+        my_pyo.cache["active_state"] = switch_state

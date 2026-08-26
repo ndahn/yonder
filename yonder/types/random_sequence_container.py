@@ -9,7 +9,7 @@ from yonder.hash import Hash
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from yonder.util import logger
 from yonder.audio import PlayContext
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -141,31 +141,35 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
 
-    def _build_pyo(self, ctx: PlayContext) -> pyo.Mixer:
-        return pyo.Mixer(outs=1, chnls=1)
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+        return pyo.InputFader(pyo.Sig(0))
 
     def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
         if not self.playlist:
             return
 
-        mixer: pyo.Mixer
-        ctx, mixer = self.pyo(ctx)
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.pyo_playback
 
         if force_playlist_idx >= 0:
-            idx = force_playlist_idx
             playlist_item = self.playlist[force_playlist_idx]
         else:
-            idx, playlist_item = self.pick_random_child()
+            # TODO need to keep state depending on random mode
+            _, playlist_item = self.pick_random_child()
 
         child = ctx.bank.get(playlist_item.play_id)
         if not child:
-            mixer.clear()
+            fader.setInput(pyo.Sig(0), 0.5)
             return
 
-        keys = mixer.getKeys()
         child.play(ctx)
-        mixer.addInput(idx, child.pyo(ctx)[1])
-        if keys and keys[0] != idx:
-            mixer.delInput(keys[0])
-
-        mixer.setAmp(idx, 0, 1)
+        xfade = max(
+            [
+                ctx.properties.get(PropID.FadeOutTime, 0.0),
+                ctx.properties.get(PropID.FadeInTime, 0.0),
+                0.05,
+            ]
+        )
+        # TODO stop/reset child once the fade has finished
+        fader.setInput(child.pyo(ctx).pyo_playback, xfade)

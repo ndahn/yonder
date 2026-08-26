@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, Callable, TYPE_CHECKING
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
@@ -9,6 +9,21 @@ from .object_id import ObjectId
 
 if TYPE_CHECKING:
     from yonder.audio import PlayContext
+
+
+@dataclass
+class PyoState:
+    ctx: PlayContext
+    pyo_playback: pyo.PyoObject = None
+    cache: dict = field(default_factory=dict)
+
+    def play(self, dur: int = 0, delay: int = 0) -> None:
+        for obj in self.cache:
+            obj.play(dur, delay)
+
+    def stop(self, wait: int = 0) -> None:
+        for obj in self.cache:
+            obj.stop(wait)
 
 
 @dataclass(slots=True)
@@ -146,15 +161,17 @@ class HIRCNode(DataNode):
 
         return delve(self)
 
-    def pyo(self, ctx: PlayContext) -> tuple[PlayContext, pyo.PyoObject]:
+    def pyo(self, ctx: PlayContext) -> PyoState:
         ctx = ctx.merge(self)
 
         my_pyo = getattr(self, "_pyo", None)
         if my_pyo is None:
-            my_pyo = self._build_pyo(ctx)
+            obj = self._build_pyo(my_pyo)
+            my_pyo = PyoState(ctx, obj)
             self._pyo = my_pyo
 
-        return (ctx, my_pyo)
+        my_pyo.ctx = ctx
+        return my_pyo
 
     def is_pyo_initialized(self) -> bool:
         return hasattr(self, "_pyo")
@@ -173,15 +190,15 @@ class HIRCNode(DataNode):
             if node:
                 node.reset_pyo(ctx)
 
-    def _build_pyo(ctx: PlayContext) -> pyo.PyoObject:
-        """Return a pyo object for this node. Must always return a valid, playable object - return `pyo.Sig(0)` if the node doesn't have anything to play.
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
 
-        This should be implemented by deriving classes.
+        This should be implemented by deriving classes. Note that this must always return a valid pyo object. Return `pyo.Sig(0)` if you have nothing to play.
 
         Parameters
         ----------
-        ctx : PlayContext
-            The current playback context.
+        my_pyo: PyoState
+            Object for storing pyo objects until they are released and additional data as needed.
 
         Returns
         -------
@@ -191,7 +208,7 @@ class HIRCNode(DataNode):
         return pyo.Sig(0)
 
     def play(self, ctx: PlayContext) -> None:
-        """Initialize this node's audio backend and start playback. 
+        """Initialize this node's audio backend and start playback.
 
         This should be implemented by deriving classes. The first call in the implementation should always go to `self.pyo` to initialize the backend and retrieve the updated context and pyo objects. The last call should go to `play` on the object's pyo object.
 
@@ -204,8 +221,9 @@ class HIRCNode(DataNode):
 
     def stop(self, ctx: PlayContext) -> None:
         if self.is_pyo_initialized():
-            ctx, my_pyo = self.pyo(ctx)
+            my_pyo = self.pyo(ctx)
             my_pyo.stop()
+            ctx = my_pyo.ctx
         else:
             ctx = ctx.merge(self)
 
@@ -215,8 +233,8 @@ class HIRCNode(DataNode):
                 node.stop(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:
-        """Called when the context changed (properties, rtpcs, states, etc). 
-        
+        """Called when the context changed (properties, rtpcs, states, etc).
+
         Deriving classes may override this to react to state changes, but should still call `super` to cascade down.
 
         Parameters
@@ -231,6 +249,16 @@ class HIRCNode(DataNode):
             node = ctx.bank.get(ref)
             if node and node.is_pyo_initialized():
                 node.update_playback(ctx)
+
+    def register_end_trigger(
+        self, ctx: PlayContext, callback: Callable[[PlayContext], None]
+    ) -> None:
+        ctx = ctx.merge(self)
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.is_pyo_initialized():
+                node.register_end_trigger(ctx)
 
     def __hash__(self) -> int:
         return self.id

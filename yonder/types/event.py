@@ -7,7 +7,7 @@ import pyo
 from yonder.hash import Hash
 from yonder.enums import SoundType, ActionType
 from yonder.audio import PlayContext
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, PyoState
 from .action import Action
 
 if TYPE_CHECKING:
@@ -130,12 +130,13 @@ class Event(HIRCNode):
         if other in self.actions:
             self.actions.remove(other)
 
-    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
-        return sum(n.pyo(ctx) for n in self.get_action_nodes(ctx.bank))
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        return sum(n.pyo(my_pyo.ctx) for n in self.get_action_nodes(my_pyo.ctx.bank))
 
     def play(self, ctx: PlayContext) -> None:
-        ctx, my_pyo = self.pyo(ctx)
-        
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+
         for action in self.get_action_nodes(ctx.bank):
             action.play(ctx)
 

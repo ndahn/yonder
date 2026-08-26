@@ -938,7 +938,7 @@ class MusicRanSeqPlaylistItem:
     segment_id: int = 0
     playlist_item_id: int = 0
     child_count: int = 0
-    ers_type: int = 0xFFFFFFFF
+    ers_type: int = RandomSequenceMode.Inherit.value
     loop_base: int = 0
     loop_min: int = 0
     loop_max: int = 0

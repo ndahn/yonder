@@ -8,7 +8,7 @@ from yonder.enums import ValueMeaning, ActionType
 from yonder.util import logger
 from yonder.audio import PlayContext
 from .base_types import PropBundle, PropRangedModifiers
-from .hirc_node import HIRCNode
+from .hirc_node import HIRCNode, PyoState
 from .serialization import _serialize_value, _deserialize_fields
 from .mixins import PropertyMixin
 
@@ -145,15 +145,16 @@ class Action(PropertyMixin, HIRCNode):
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 
-    def _build_pyo(self, ctx: PlayContext) -> pyo.PyoObject:
-        node = ctx.bank.get(self.external_id)
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        node = my_pyo.ctx.bank.get(self.external_id)
         if node:
-            return node.pyo(ctx)
+            return node.pyo(my_pyo.ctx)
 
         return pyo.Sig(0)
 
     def play(self, ctx: PlayContext) -> None:
-        ctx, my_pyo = self.pyo(ctx)
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
 
         if self.action_type_enum == ActionType.SetState:
             # TODO mistake in rewwise

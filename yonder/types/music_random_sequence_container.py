@@ -1,12 +1,15 @@
 from __future__ import annotations
 from typing import ClassVar
+import random
 from dataclasses import dataclass, field
 import networkx as nx
+import pyo
 
 from yonder.hash import global_id_generator, Hash
 from yonder.enums import PropID, CurveInterpolation, SyncType, RandomSequenceMode
 from yonder.util import logger
-from .hirc_node import HIRCNode
+from yonder.audio import PlayContext
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
@@ -19,6 +22,123 @@ from .base_types import (
     StateChunk,
 )
 from .mixins import PropertyMixin, RtpcMixin, StateMixin
+
+
+@dataclass
+class PlaylistState:
+    playlist: nx.DiGraph
+    current: int = None
+    finished: bool = False
+    repeats: int = 0
+    cache: dict = field(default_factory=dict)
+
+    def get_playlist_item(self, item_id: int) -> MusicRanSeqPlaylistItem:
+        return self.playlist[item_id]["item"]
+
+    @property
+    def current_item(self) -> MusicRanSeqPlaylistItem:
+        if self.finished or self.current is None:
+            return None
+        
+        return self.get_playlist_item(self.current)
+
+    def get_ers_type(self, item: int | MusicRanSeqPlaylistItem) -> RandomSequenceMode:
+        if isinstance(item, MusicRanSeqPlaylistItem):
+            item = item.playlist_item_id
+
+        item = self.get_playlist_item(item)
+
+        while item.ers_type_enum == RandomSequenceMode.Inherit:
+            item = next(self.playlist.predecessors(item))
+            item = self.get_playlist_item(item)
+
+        return item.ers_type_enum
+
+    def get_next_item(self) -> MusicRanSeqPlaylistItem:
+        if self.finished:
+            return None
+
+        g = self.playlist
+
+        def descend(node: int) -> int:
+            """Go down a branch until we reach a leave."""
+            succ = list(g.successors(node))
+            if not succ:
+                return node
+
+            ers = self.get_ers_type(node)
+
+            if ers in (RandomSequenceMode.StepSequence, RandomSequenceMode.ContinuousSequence):
+                return descend(succ[0])
+            else:
+                cohort_history = self.cache.setdefault(node, [])
+                if self.get_playlist_item(node).shuffle:
+                    allowed = set(succ) - set(cohort_history)
+                else:
+                    allowed = succ
+
+                # TODO weights, avoid repeats, loop count, etc
+                selected = random.choice(allowed)
+                cohort_history.append(selected)
+                return descend(selected)
+
+        def ascend(node: int) -> int:
+            """Move to the next sibling or ascend to the parent if the node's cohort is finished."""
+            parents = list(g.predecessors(node))
+            if not parents:
+                return None
+
+            parent_id = parents[0]
+            cohort = list(g.successors(parent_id))
+            ers = self.get_ers_type(parent_id)
+
+            if ers in (RandomSequenceMode.StepSequence, RandomSequenceMode.ContinuousSequence):
+                idx = cohort.index(node)
+                
+                if idx < len(cohort) - 1:
+                    # Play next in sequence
+                    node = cohort[idx + 1]
+                    return descend(node)
+                else:
+                    # cohort finished, recurse and continue with the parent's siblings
+                    # TODO Check for looping
+                    return ascend(parent_id)
+            else:
+                # Random modes
+                cohort_history = self.cache.setdefault(node, [])
+                if len(cohort_history) < len(cohort):
+                    parent = self.get_playlist_item(parent_id)
+                    if parent.shuffle:
+                        allowed = set(cohort) - set(cohort_history)
+                    else:
+                        allowed = cohort
+
+                    # TODO weights, avoid repeats, loop count, etc
+                    selected = random.choice(allowed)
+                    cohort_history.append(selected)
+                    return descend(selected)
+                else:
+                    # cohort finished, recurse into parent
+                    return ascend(parent_id)
+
+        if self.current is None:
+            # First playback
+            node = next(n for n in g if g.in_degree(n) == 0)
+            self.current = node
+            selected = descend(node)
+            return self.get_playlist_item(selected)
+
+        selected = ascend(self.current)
+        if not selected:
+            self.finished = True
+
+        self.current = selected
+        return self.get_playlist_item(selected)
+
+    def reset(self) -> None:
+        self.finished = None
+        self.repeats = 0
+        self.cache.clear()
 
 
 @dataclass(repr=False, eq=False)
@@ -359,3 +479,51 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             ]
 
         return ret
+
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+        return pyo.InputFader(pyo.Sig(0))
+
+    def play(self, ctx: PlayContext) -> None:
+        if not self.playlist_items:
+            return
+
+        self._play_next(ctx)
+
+    def _play_next(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.pyo_playback
+
+        state: PlaylistState = my_pyo.cache.get("playlist_state")
+        if not state:
+            playlist = self.get_playlist_tree()
+            state = PlaylistState(playlist)
+            my_pyo.cache["playlist_state"] = state
+
+        item = state.current_item
+        prev_node = None
+        if item:
+            prev_node = ctx.bank.get(item.segment_id)
+
+        while not state.finished:
+            item = state.get_next_item()
+            if not item:
+                break
+
+            node = ctx.bank.get(item.segment_id)
+            if node:
+                # TODO transition rule
+                node.register_end_trigger(ctx, self._play_next)
+                node.play(ctx)
+                fader.setInput(node.pyo(ctx).pyo_playback, 1)
+
+                # Probably have to wait for the fader
+                if prev_node:
+                    prev_node.reset_pyo(ctx)
+
+                break
+            else:
+                logger.warning(f"Segment {item.segment_id} not found, skipping")
+
+        if state.finished:
+            fader.setInput(pyo.Sig(0))
