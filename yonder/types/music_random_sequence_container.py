@@ -66,12 +66,15 @@ class PlaylistState:
             if not succ:
                 return node
 
+            cohort_history = self.cache.setdefault(node, [])
             ers = self.get_ers_type(node)
 
             if ers in (RandomSequenceMode.StepSequence, RandomSequenceMode.ContinuousSequence):
-                return descend(succ[0])
+                selected = succ[len(cohort_history)]
+                cohort_history.append(selected)
+                return descend(selected)
             else:
-                cohort_history = self.cache.setdefault(node, [])
+                # Random
                 if self.get_playlist_item(node).shuffle:
                     allowed = set(succ) - set(cohort_history)
                 else:
@@ -104,8 +107,9 @@ class PlaylistState:
                     # TODO Check for looping
                     return ascend(parent_id)
             else:
-                # Random modes
-                cohort_history = self.cache.setdefault(node, [])
+                # Random
+                cohort_history = self.cache.setdefault(parent_id, [])
+
                 if len(cohort_history) < len(cohort):
                     parent = self.get_playlist_item(parent_id)
                     if parent.shuffle:
