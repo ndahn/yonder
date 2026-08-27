@@ -142,7 +142,9 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return RandomMode(self.random_mode)
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
-        return pyo.InputFader(pyo.Sig(0))
+        sig = pyo.Sig(0)
+        my_pyo.cache["pyo_placeholder"] = sig
+        return pyo.InputFader(sig)
 
     def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
         if not self.playlist:
@@ -151,6 +153,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.pyo_playback
+        prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
 
         if force_playlist_idx >= 0:
             playlist_item = self.playlist[force_playlist_idx]
@@ -159,17 +162,21 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             _, playlist_item = self.pick_random_child()
 
         child = ctx.bank.get(playlist_item.play_id)
-        if not child:
-            fader.setInput(pyo.Sig(0), 0.5)
-            return
+        if child:
+            xfade = max(
+                [
+                    ctx.properties.get(PropID.FadeOutTime, 0.0),
+                    ctx.properties.get(PropID.FadeInTime, 0.0),
+                    50,
+                ]
+            ) / 1000
 
-        child.play(ctx)
-        xfade = max(
-            [
-                ctx.properties.get(PropID.FadeOutTime, 0.0),
-                ctx.properties.get(PropID.FadeInTime, 0.0),
-                0.05,
-            ]
-        )
-        # TODO stop/reset child once the fade has finished
-        fader.setInput(child.pyo(ctx).pyo_playback, xfade)
+            child.play(ctx)
+            fader.setInput(child.pyo(ctx).pyo_playback, xfade)
+            my_pyo.cache["prev_node"] = child.id
+        else:
+            xfade = 0.5
+            fader.setInput(my_pyo.cache["pyo_placeholder"], xfade)
+
+        if prev_node:
+            prev_node.release_pyo(ctx, xfade + 0.1)

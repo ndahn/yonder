@@ -343,7 +343,9 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return ret
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
-        return pyo.InputFader(pyo.Sig(0))
+        sig = pyo.Sig(0)
+        my_pyo.cache["pyo_placeholder"] = sig
+        return pyo.InputFader(sig)
 
     def play(self, ctx: PlayContext) -> None:
         if not self.children:
@@ -368,19 +370,19 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         xfade = max(
             rule.source_transition_rule.transition_time,
             rule.destination_transition_rule.transition_time,
-            0.05,
-        )
+            50,
+        ) / 1000
 
         if node:
             node.play(ctx)
             fader.setInput(node.pyo(ctx).pyo_playback, xfade)
         else:
-            fader.setInput(pyo.Sig(0), xfade)
+            fader.setInput(my_pyo.cache["pyo_placeholder"], xfade)
 
-        # Probably have to wait for the fader
+        # Wait for the fader to finish
         if prev_node:
-            prev_node.reset_pyo(ctx)
+            prev_node.release_pyo(ctx, xfade + 0.1)
 
         my_pyo.cache["prev_node"] = node.id if node else -1
-        
+
         super().update_playback(ctx)

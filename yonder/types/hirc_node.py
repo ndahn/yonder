@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any, ClassVar, Callable, TYPE_CHECKING
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
+from threading import Thread
+import time
 import pyo
 
 from .mixins import DataNode
@@ -176,19 +178,27 @@ class HIRCNode(DataNode):
     def is_pyo_initialized(self) -> bool:
         return hasattr(self, "_pyo")
 
-    def reset_pyo(self, ctx: PlayContext) -> None:
-        # Don't merge, just forward
-        self.stop(ctx)
+    def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
+        """Release all pyo objects created by this node, if any. Called after a user-defined delay to give pyo enough time to finish processing the object."""
+        def release():
+            nonlocal ctx
 
-        if hasattr(self, "_pyo"):
-            delattr(self, "_pyo")
+            # Don't merge, just forward
+            self.stop(ctx)
 
-        # Don't call pyo here to avoid reinitializing the audio backend
-        ctx = ctx.merge(self)
-        for _, ref in self.get_references():
-            node = ctx.bank.get(ref)
-            if node:
-                node.reset_pyo(ctx)
+            if hasattr(self, "_pyo"):
+                delattr(self, "_pyo")
+
+            # Don't call pyo() here to avoid reinitializing the audio backend
+            ctx = ctx.merge(self)
+            for _, ref in self.get_references():
+                node = ctx.bank.get(ref)
+                if node:
+                    # Don't forward the delay
+                    node.release_pyo(ctx, 0.1)
+
+        # TODO verify this doesn't need a reference to stick around
+        pyo.CallAfter(release, delay)
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
         """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.

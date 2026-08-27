@@ -147,7 +147,9 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             self.children.remove(other)
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
-        return pyo.InputFader(pyo.Sig(0))
+        sig = pyo.Sig(0)
+        my_pyo.cache["pyo_placeholder"] = sig
+        return pyo.InputFader(sig)
 
     def play(self, ctx: PlayContext) -> None:
         if not self.switch_groups:
@@ -187,15 +189,15 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         # Setup the new input signal source
         if not nodes:
-            input_sig = pyo.Sig(0)
+            input_sig = my_pyo.cache["pyo_placeholder"]
         elif len(nodes) == 1:
-            input_sig = nodes[0].pyo(ctx)[1]
+            input_sig = nodes[0].pyo(ctx).pyo_playback
         else:
             input_sig = pyo.Mixer(outs=1, chnls=1)
             for n in nodes:
-                input_sig.addInput(n.id, n.pyo(ctx)[1])
+                input_sig.addInput(n.id, n.pyo(ctx).pyo_playback)
                 input_sig.setAmp(n.id, 1)
-        
+
         # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways
         xfade = 50
         for nid in node_ids:
@@ -203,16 +205,17 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 if nid == params.node_id:
                     xfade = max((params.fade_out_time, params.fade_in_time, xfade))
 
-        fader.setInput(input_sig, xfade / 1000)
+        xfade /= 1000
+        fader.setInput(input_sig, xfade)
 
-        # Cleanup old inputs
-        # TODO might have to wait for the fade to finish
+        # Cleanup old inputs; wait for the fader to finish
         if active_state is not None:
             old_ids = self.get_nodes_for_switch(active_state)
             for oid in old_ids:
                 if oid not in node_ids:
                     n = ctx.bank.get(oid)
                     if n:
-                        n.reset_pyo(ctx)
+                        n.release_pyo(ctx, xfade + 0.1)
 
+        my_pyo.cache["input_sig"] = input_sig
         my_pyo.cache["active_state"] = switch_state

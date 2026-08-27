@@ -296,7 +296,9 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         return ret
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
-        return pyo.InputFader(pyo.Sig(0))
+        sig = pyo.Sig(0)
+        my_pyo.cache["pyo_placeholder"] = sig
+        return pyo.InputFader(sig)
 
     def play(self, ctx: PlayContext) -> None:
         if not self.playlist_items:
@@ -329,10 +331,15 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             if node:
                 # Full transition support is maybe a bit much for yonder
                 rule = self.music_trans_node_params.get_transition_rule(prev_node, node)
-                xfade = max(
-                    rule.source_transition_rule.transition_time,
-                    rule.destination_transition_rule.transition_time,
-                    0.05,
+                xfade = (
+                    max(
+                        [
+                            rule.source_transition_rule.transition_time,
+                            rule.destination_transition_rule.transition_time,
+                            50,
+                        ]
+                    )
+                    / 1000
                 )
 
                 # TODO this is too late, need to react xfade seconds before the end
@@ -340,13 +347,13 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                 node.play(ctx)
                 fader.setInput(node.pyo(ctx).pyo_playback, xfade)
 
-                # Probably have to wait for the fader
+                # Wait for the fader to finish
                 if prev_node:
-                    prev_node.reset_pyo(ctx)
+                    prev_node.release_pyo(ctx, xfade + 0.1)
 
                 break
             else:
                 logger.warning(f"Segment {item.segment_id} not found, skipping")
 
         if state.finished:
-            fader.setInput(pyo.Sig(0))
+            fader.setInput(my_pyo.cache["pyo_placeholder"])
