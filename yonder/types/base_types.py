@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator, TypeVar, Generic
+from typing import Any, Iterator, TypeVar, Generic, TYPE_CHECKING
 from dataclasses import dataclass, field
 
 from yonder.hash import Hash, lookup_name, calc_hash
@@ -22,6 +22,9 @@ from yonder.enums import (
     EffectPlugin,
     RandomSequenceMode,
 )
+
+if TYPE_CHECKING:
+    from .hirc_node import HIRCNode
 
 
 _T = TypeVar("_T")
@@ -931,6 +934,117 @@ class MusicTransNodeParams:
         # Should not be empty
         default_factory=lambda: [MusicTransitionRule()]
     )
+
+    def add_transition_rule(
+        self,
+        source_ids: int | list[int] = -1,
+        dest_ids: int | list[int] = -1,
+        sync_type: SyncType = SyncType.Immediate,
+        source_transition_time: int = 0,
+        source_fade_offset: int = 0,
+        source_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        source_play_post_exit: bool = False,
+        dest_transition_time: int = 0,
+        dest_fade_offset: int = 0,
+        dest_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        dest_play_pre_entry: bool = False,
+        transition_segment: int = 0,
+    ) -> MusicTransitionRule:
+        """Add a transition rule between segments.
+
+        Parameters
+        ----------
+        source_ids : int | list[int], default = -1
+            Source segment IDs (-1 = any).
+        dest_ids : int | list[int], default = -1
+            Destination segment IDs (-1 = any).
+        source_transition_time : int, default=0
+            Source fade out time in ms.
+        source_fade_offset : int, default=0
+            Delay in ms before the source starts fading out.
+        source_fade_curve : str, default=CurveInterpolation.Linear
+            Source fade out curve type.
+        sync_type : SyncType, default=SyncType.Immediate
+            Marker sync type.
+        dest_transition_time : int, default=0
+            Destination fade out time in ms.
+        dest_fade_offset : int, default=0
+            Delay in ms before the destination starts fading in.
+        dest_fade_curve : str, default=CurveInterpolation.Linear
+            Destination fade in curve type.
+        transition_segment: int | Node, default=0
+            A MusicSegment to play during the transition.
+        """
+        if isinstance(source_ids, int):
+            source_ids = [source_ids]
+
+        if isinstance(dest_ids, int):
+            dest_ids = [dest_ids]
+
+        rule = MusicTransitionRule(
+            source_ids=source_ids,
+            destination_ids=dest_ids,
+            source_transition_rule=MusicTransSrcRule(
+                transition_time=source_transition_time,
+                fade_curve=source_fade_curve,
+                fade_offet=source_fade_offset,
+                sync_type=sync_type,
+                play_post_exit=1 if source_play_post_exit else 0,
+            ),
+            destination_transition_rule=MusicTransDstRule(
+                transition_time=dest_transition_time,
+                fade_curve=dest_fade_curve,
+                fade_offet=dest_fade_offset,
+                play_pre_entry=1 if dest_play_pre_entry else 0,
+            ),
+        )
+
+        if transition_segment:
+            rule.transition_object.segment_id = transition_segment
+
+        self.transition_rules.append(rule)
+        return rule
+
+    def get_transition_rule(
+        self, src: int | HIRCNode = None, dst: int | HIRCNode = None
+    ) -> MusicTransitionRule:
+        """Return the most specific matching transition rule.
+
+        Specificity: exact+exact > exact+wildcard > wildcard+exact > wildcard+wildcard. First encountered wins among equal scores.
+        """
+        from .hirc_node import HIRCNode
+
+        if isinstance(src, HIRCNode):
+            src = src.id
+
+        if isinstance(dst, HIRCNode):
+            dst = dst.id
+
+        best_rule = None
+        best_score = -1
+
+        for rule in self.transition_rules:
+            src_match = src in rule.source_ids
+            dst_match = dst in rule.destination_ids
+            src_wild = -1 in rule.source_ids
+            dst_wild = -1 in rule.destination_ids
+
+            if src_match and dst_match:
+                score = 3
+            elif src_match and dst_wild:
+                score = 2
+            elif src_wild and dst_match:
+                score = 1
+            elif src_wild and dst_wild:
+                score = 0
+            else:
+                continue
+
+            if score > best_score:
+                best_score = score
+                best_rule = rule
+
+        return best_rule
 
 
 @dataclass(slots=True)

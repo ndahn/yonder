@@ -2,13 +2,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 from random import randint
+import pyo
 
-from yonder.hash import calc_hash, Hash
+from yonder.hash import Hash, calc_hash, lookup_name
 from yonder.enums import GroupType, DecisionTreeMode, PropID
 from yonder.util import logger, get_key_hash, parse_state_path
-from .hirc_node import HIRCNode
+from yonder.audio import PlayContext
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     MusicTransNodeParams,
+    MusicTransitionRule,
     GameSync,
     DecisionTreeNode,
     PropBundle,
@@ -57,6 +60,10 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         obj.parent = parent
         return obj
+
+    @property
+    def transition_rules(self) -> list[MusicTransitionRule]:
+        return self.music_trans_node_params.transition_rules
 
     @property
     def parent(self) -> int:
@@ -264,6 +271,40 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         parent.children.remove(branch)
         return branch
 
+    def select_child(self, values: list[int | str]) -> DecisionTreeNode:
+        if len(values) != len(self.arguments):
+            raise ValueError(
+                f"Args must match tree depth (expected {len(self.arguments)}, got {len(values)})"
+            )
+
+        node = self.tree
+
+        for idx, val in enumerate(values):
+            wildcard: DecisionTreeNode = None
+            val = calc_hash(val)
+
+            for child in node.children:
+                if child.key == 0:
+                    wildcard = child
+
+                if child.key == val:
+                    node = child
+                    break
+            else:
+                if not wildcard:
+                    arg_name = lookup_name(
+                        self.arguments[idx].group_id, f"#{self.arguments[idx].group_id}"
+                    )
+                    val_name = lookup_name(val, f"#{val}")
+                    raise ValueError(
+                        f"Decision tree has no node at level {idx} ({arg_name}) to match {val} ({val_name})"
+                    )
+
+                # No matching child, use the wildcard node
+                node = wildcard
+
+        return node
+
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
             raise ValueError(
@@ -301,4 +342,45 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         return ret
 
-    # TODO transition rule helper
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+        return pyo.InputFader(pyo.Sig(0))
+
+    def play(self, ctx: PlayContext) -> None:
+        if not self.children:
+            return
+
+        self.update_playback(ctx)
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.pyo_playback
+
+        values = [ctx.states.get(arg.group_id, 0) for arg in self.arguments]
+        selected = self.select_child(values)
+        node = ctx.bank.get(selected.node_id) if selected else None
+        prev_node = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
+
+        if node == prev_node:
+            return
+
+        rule = self.music_trans_node_params.get_transition_rule(prev_node, node)
+        xfade = max(
+            rule.source_transition_rule.transition_time,
+            rule.destination_transition_rule.transition_time,
+            0.05,
+        )
+
+        if node:
+            node.play(ctx)
+            fader.setInput(node.pyo(ctx).pyo_playback, xfade)
+        else:
+            fader.setInput(pyo.Sig(0), xfade)
+
+        # Probably have to wait for the fader
+        if prev_node:
+            prev_node.reset_pyo(ctx)
+
+        my_pyo.cache["prev_node"] = node.id if node else -1
+        
+        super().update_playback(ctx)
