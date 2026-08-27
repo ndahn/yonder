@@ -320,6 +320,45 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         self.music_trans_node_params.transition_rules.append(rule)
         return rule
 
+    def get_transition_rule(
+        self, src: int | HIRCNode = None, dst: int | HIRCNode = None
+    ) -> MusicTransitionRule:
+        """Return the most specific matching transition rule.
+
+        Specificity: exact+exact > exact+wildcard > wildcard+exact > wildcard+wildcard. First encountered wins among equal scores.
+        """
+        if isinstance(src, HIRCNode):
+            src = src.id
+
+        if isinstance(dst, HIRCNode):
+            dst = dst.id
+
+        best_rule = None
+        best_score = -1
+
+        for rule in self.music_trans_node_params.transition_rules:
+            src_match = src in rule.source_ids
+            dst_match = dst in rule.destination_ids
+            src_wild = -1 in rule.source_ids
+            dst_wild = -1 in rule.destination_ids
+
+            if src_match and dst_match:
+                score = 3
+            elif src_match and dst_wild:
+                score = 2
+            elif src_wild and dst_match:
+                score = 1
+            elif src_wild and dst_wild:
+                score = 0
+            else:
+                continue
+
+            if score > best_score:
+                best_score = score
+                best_rule = rule
+
+        return best_rule
+
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
@@ -395,10 +434,18 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
             node = ctx.bank.get(item.segment_id)
             if node:
-                # TODO transition rule
+                # Full transition support is maybe a bit much for yonder
+                rule = self.get_transition_rule(prev_node, node)
+                xfade = max(
+                    rule.source_transition_rule.transition_time,
+                    rule.destination_transition_rule.transition_time,
+                    0.05,
+                )
+
+                # TODO this is too late, need to react xfade seconds before the end
                 node.register_end_trigger(ctx, self._play_next)
                 node.play(ctx)
-                fader.setInput(node.pyo(ctx).pyo_playback, 1)
+                fader.setInput(node.pyo(ctx).pyo_playback, xfade)
 
                 # Probably have to wait for the fader
                 if prev_node:

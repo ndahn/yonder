@@ -127,8 +127,7 @@ class add_transition_matrix(DpgItem):
     ) -> tuple[int, MusicTransitionRule]:
         """Return ``(index, rule)`` of the most specific matching rule.
 
-        Specificity: exact+exact > exact+wildcard > wildcard+exact >
-        wildcard+wildcard. First encountered wins among equal scores.
+        Specificity: exact+exact > exact+wildcard > wildcard+exact > wildcard+wildcard. First encountered wins among equal scores.
         """
         best_idx = -1
         best_rule = None
