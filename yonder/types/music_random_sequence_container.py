@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import ClassVar
 import random
+import math
 from dataclasses import dataclass, field
 import networkx as nx
 import pyo
@@ -29,7 +30,6 @@ class PlaylistState:
     playlist: nx.DiGraph
     current: int = None
     finished: bool = False
-    repeats: int = 0
     cache: dict = field(default_factory=dict)
 
     def get_playlist_item(self, item_id: int) -> MusicRanSeqPlaylistItem:
@@ -39,7 +39,7 @@ class PlaylistState:
     def current_item(self) -> MusicRanSeqPlaylistItem:
         if self.finished or self.current is None:
             return None
-        
+
         return self.get_playlist_item(self.current)
 
     def get_ers_type(self, item: int | MusicRanSeqPlaylistItem) -> RandomSequenceMode:
@@ -58,91 +58,141 @@ class PlaylistState:
         if self.finished:
             return None
 
-        g = self.playlist
-
-        def descend(node: int) -> int:
-            """Go down a branch until we reach a leave."""
-            succ = list(g.successors(node))
-            if not succ:
-                return node
-
-            cohort_history = self.cache.setdefault(node, [])
-            ers = self.get_ers_type(node)
-
-            if ers in (RandomSequenceMode.StepSequence, RandomSequenceMode.ContinuousSequence):
-                selected = succ[len(cohort_history)]
-                cohort_history.append(selected)
-                return descend(selected)
-            else:
-                # Random
-                if self.get_playlist_item(node).shuffle:
-                    allowed = set(succ) - set(cohort_history)
-                else:
-                    allowed = succ
-
-                # TODO weights, avoid repeats, loop count, etc
-                selected = random.choice(allowed)
-                cohort_history.append(selected)
-                return descend(selected)
-
-        def ascend(node: int) -> int:
-            """Move to the next sibling or ascend to the parent if the node's cohort is finished."""
-            parents = list(g.predecessors(node))
-            if not parents:
-                return None
-
-            parent_id = parents[0]
-            cohort = list(g.successors(parent_id))
-            ers = self.get_ers_type(parent_id)
-
-            if ers in (RandomSequenceMode.StepSequence, RandomSequenceMode.ContinuousSequence):
-                idx = cohort.index(node)
-                
-                if idx < len(cohort) - 1:
-                    # Play next in sequence
-                    node = cohort[idx + 1]
-                    return descend(node)
-                else:
-                    # cohort finished, recurse and continue with the parent's siblings
-                    # TODO Check for looping
-                    return ascend(parent_id)
-            else:
-                # Random
-                cohort_history = self.cache.setdefault(parent_id, [])
-
-                if len(cohort_history) < len(cohort):
-                    parent = self.get_playlist_item(parent_id)
-                    if parent.shuffle:
-                        allowed = set(cohort) - set(cohort_history)
-                    else:
-                        allowed = cohort
-
-                    # TODO weights, avoid repeats, loop count, etc
-                    selected = random.choice(allowed)
-                    cohort_history.append(selected)
-                    return descend(selected)
-                else:
-                    # cohort finished, recurse into parent
-                    return ascend(parent_id)
-
         if self.current is None:
-            # First playback
-            node = next(n for n in g if g.in_degree(n) == 0)
-            self.current = node
-            selected = descend(node)
+            node = next(n for n in self.playlist if self.playlist.in_degree(n) == 0)
+            selected = self._descend(node)
+            self.current = selected
             return self.get_playlist_item(selected)
 
-        selected = ascend(self.current)
-        if not selected:
+        selected = self._advance(self.current)
+        if selected is None:
             self.finished = True
+            self.current = None
+            return None
 
         self.current = selected
         return self.get_playlist_item(selected)
 
     def reset(self) -> None:
-        self.finished = None
-        self.repeats = 0
+        self.current = None
+        self.finished = False
         self.cache.clear()
+
+    def _roll_budget(self, node: int) -> float:
+        """how many units (plays/child-picks/passes) this node gets before yielding to its parent."""
+        item = self.get_playlist_item(node)
+        count = (
+            random.randint(item.loop_min, item.loop_max)
+            if item.loop_min or item.loop_max
+            else item.loop_base
+        )
+        return math.inf if count <= 0 else count
+
+    def _enter(self, node: int) -> None:
+        """(re)roll a node's repeat budget on every fresh entry; history persists across entries."""
+        state = self.cache.setdefault(node, {"history": []})
+        state["repeats_left"] = self._roll_budget(node)
+        state["pass_pos"] = 0
+
+    def _weighted_pick(self, candidates: list[int]) -> int:
+        weights = [
+            self.get_playlist_item(c).weight
+            for c in candidates
+        ]
+        return random.choices(candidates, weights=weights, k=1)[0]
+
+    def _avoid_repeats(
+        self, item: MusicRanSeqPlaylistItem, pool: list[int], history: list[int]
+    ) -> list[int]:
+        if not item.avoid_repeat_count:
+            return pool
+
+        recent = set(history[-item.avoid_repeat_count :])
+        filtered = [c for c in pool if c not in recent]
+        return filtered or pool
+
+    def _pick_child(self, node: int) -> int:
+        """select the next child per ers_type, tracking position/pool history for later picks."""
+        item = self.get_playlist_item(node)
+        ers = self.get_ers_type(node)
+        succ = list(self.playlist.successors(node))
+        state = self.cache[node]
+        history = state["history"]
+
+        if ers in (
+            RandomSequenceMode.StepSequence,
+            RandomSequenceMode.ContinuousSequence,
+        ):
+            selected = succ[len(history) % len(succ)]
+        else:
+            pool = (
+                [c for c in succ if c not in history[-len(succ) :]]
+                if item.shuffle
+                else succ
+            )
+            pool = pool or succ
+            pool = self._avoid_repeats(item, pool, history)
+            if item.use_weight:
+                selected = self._weighted_pick(pool)
+            else:
+                selected = random.choice(pool)
+
+        history.append(selected)
+        state["pass_pos"] += 1
+        return selected
+
+    def _descend(self, node: int) -> int:
+        """enter a node and go down until we reach a leaf."""
+        succ = list(self.playlist.successors(node))
+        self._enter(node)
+        if not succ:
+            return node
+
+        selected = self._pick_child(node)
+        return self._descend(selected)
+
+    def _advance(self, node: int) -> int:
+        """node's own activation just finished; repeat it (leaf) or bubble to its parent."""
+        if self.playlist.out_degree(node) == 0:
+            state = self.cache[node]
+            state["repeats_left"] -= 1
+            if state["repeats_left"] > 0:
+                return node  # replay the same leaf
+
+        parents = list(self.playlist.predecessors(node))
+        if not parents:
+            return None
+
+        return self._advance_group(parents[0])
+
+    def _advance_group(self, node: int) -> int:
+        """one of node's children just finished; continue its pass/pick or close out its unit."""
+        succ = list(self.playlist.successors(node))
+        ers = self.get_ers_type(node)
+        continuous = ers in (
+            RandomSequenceMode.ContinuousSequence,
+            RandomSequenceMode.ContinuousRandom,
+        )
+        state = self.cache[node]
+
+        if continuous and state["pass_pos"] < len(succ):
+            # mid-pass: more children owed before this counts as one unit
+            selected = self._pick_child(node)
+            return self._descend(selected)
+
+        # one unit complete: one child (step) or one full pass (continuous)
+        state["repeats_left"] -= 1
+        parents = list(self.playlist.predecessors(node))
+
+        if state["repeats_left"] > 0:
+            state["pass_pos"] = 0
+            selected = self._pick_child(node)
+            return self._descend(selected)
+
+        if not parents:
+            return None
+
+        return self._advance_group(parents[0])
 
 
 @dataclass(repr=False, eq=False)
@@ -234,7 +284,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         while idx < len(self.playlist_items):
             item = self.playlist_items[idx]
             g.add_node(item.playlist_item_id, item=item)
-            
+
             for child in self.playlist_items[idx + 1 : idx + 1 + item.child_count]:
                 g.add_node(child.playlist_item_id, item=child)
                 g.add_edge(
