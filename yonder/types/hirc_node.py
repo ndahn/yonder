@@ -180,6 +180,11 @@ class HIRCNode(DataNode):
 
     def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
         """Release all pyo objects created by this node, if any. Called after a user-defined delay to give pyo enough time to finish processing the object."""
+        if hasattr(self, "_release_cb"):
+            from yonder.util import logger
+            logger.warning(f"### Double free of {self}")
+            return
+
         def release():
             nonlocal ctx
 
@@ -195,10 +200,11 @@ class HIRCNode(DataNode):
                 node = ctx.bank.get(ref)
                 if node:
                     # Don't forward the delay
-                    node.release_pyo(ctx, 0.1)
+                    node.release_pyo(ctx, 0)
 
-        # TODO verify this doesn't need a reference to stick around
-        pyo.CallAfter(release, delay)
+            del self._release_cb
+
+        self._release_cb = pyo.CallAfter(release, delay)
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
         """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
