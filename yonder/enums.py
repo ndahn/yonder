@@ -215,6 +215,14 @@ class PlaybackMode(IntEnum):
     Sequence = 1
 
 
+class MusicTrackType(EnumWithUnknown):
+    Normal = 0
+    # Expected to also contain the following modes:
+    # - RandomStep
+    # - SequenceStep
+    # - Switch
+
+
 class PropID(IntEnum):
     Volume = 0x00
     LFE = 0x01

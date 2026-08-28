@@ -119,7 +119,8 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if path.suffix == ".wem":
             path = wem2wav(ctx.vgmstream_exe, path)[0]
 
-        return StreamSource(
+        return StreamSource.from_paths(
+            ctx.bank,
             path,
             loop=(PropID.Loop in props),
             volume_db=props.get(PropID.Volume, 0.0),
@@ -132,7 +133,9 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         )
 
     def play(self, ctx: PlayContext) -> None:
-        self.pyo(ctx).play()
+        my_pyo = self.pyo(ctx)
+        self.update_playback(ctx)
+        my_pyo.play()
 
     def update_playback(self, ctx: PlayContext) -> None:
         if not self.is_pyo_initialized():
@@ -209,7 +212,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         else:
             # Trigger when the stream is only x seconds away from its end
             th = (stream.duration - abs(before)) / stream.duration
-            trigger_signal = pyo.Thresh(stream._clock, threshold=th)
+            trigger_signal = pyo.Thresh(stream._overall_clock, threshold=th)
             cb_objects.append(trigger_signal)
 
         cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))

@@ -1,13 +1,16 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import ClassVar, Callable
 from pathlib import Path
+import pyo
 
 from yonder.hash import Hash
 from yonder.wem import get_wem_metadata
-from yonder.enums import ClipAutomationType, PropID, SourceType
+from yonder.enums import ClipAutomationType, PropID, SourceType, MusicTrackType
 from yonder.util import logger
-from .hirc_node import HIRCNode
+from yonder.audio import PlayContext
+from yonder.audio.stream_source import StreamSource
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
     BankSourceData,
@@ -34,7 +37,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     clip_item_count: int = 0
     clip_items: list[ClipAutomation] = field(default_factory=list)
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
-    track_type: int = 0
+    track_type: int = MusicTrackType.Normal.value
     look_ahead_time: int = 0
 
     @classmethod
@@ -91,7 +94,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             wem_id = int(wem.stem)
         except ValueError:
             raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
-        
+
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
         duration = meta["duration"] * 1000
@@ -99,7 +102,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         media = self.sources[idx]
         media.source_id = wem_id
         media.media_information.in_memory_media_size = size
-        
+
         item = self.playlist[idx]
         item.source_id = wem_id
         item.source_duration = duration
@@ -116,7 +119,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             wem_id = int(wem.stem)
         except ValueError:
             raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
-        
+
         meta = get_wem_metadata(wem)
         size = meta["in_memory_size"]
         duration = meta["duration"] * 1000
@@ -142,10 +145,14 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         source_type: SourceType = SourceType.Embedded,
     ) -> BankSourceData:
         if duration_ms < 500.0:
-            logger.warning(f"{self}: duration of new source {source_id} is very short, not in ms?")
+            logger.warning(
+                f"{self}: duration of new source {source_id} is very short, not in ms?"
+            )
 
         if self.playlist and not event:
-            logger.warning(f"{self}: additional tracks should have an event ID associated")
+            logger.warning(
+                f"{self}: additional tracks should have an event ID associated"
+            )
 
         if isinstance(event, HIRCNode):
             event = event.id
@@ -163,6 +170,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.playlist.append(
             TrackSrcInfo(
                 # track_id is always 0
+                track_id=0,
                 source_id=source_id,
                 event_id=event,
                 play_at=-begin_trim,
@@ -201,3 +209,109 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.playlist[idx].begin_trim_offset = begin_trim
         self.playlist[idx].play_at = -begin_trim
         self.playlist[idx].end_trim_offset = end_trim
+
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        ctx = my_pyo.ctx
+        props = ctx.properties
+
+        return StreamSource(
+            ctx.bank,
+            list(self.playlist),
+            loop=(PropID.Loop in props),
+            volume_db=props.get(PropID.Volume, 0.0),
+            hpf_cents=props.get(PropID.HPF, 0.0),
+            lpf_cents=props.get(PropID.LPF, 0.0),
+            pitch_semitones=props.get(PropID.Pitch, 0.0),
+            attenuation=ctx.attenuation,
+            distance=ctx.distance,
+            angle=ctx.angle,
+        )
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        self.update_playback(ctx)
+        my_pyo.play()
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        if not self.is_pyo_initialized():
+            return
+
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        stream: StreamSource = my_pyo.pyo_playback
+        props = ctx.properties
+
+        stream.loop = PropID.Loop in props
+
+        loop_start = props.get(PropID.LoopStart, stream.loop_start)
+        loop_end = props.get(PropID.LoopEnd, stream.loop_end)
+        stream.set_loop_points(loop_start, loop_end)
+
+        begin_trim = props.get(PropID.TrimInTime, stream.begin_trim)
+        end_trim = props.get(PropID.TrimOutTime, stream.end_trim)
+        stream.set_trims(begin_trim, end_trim)
+
+        xfade = props.get(PropID.LoopCrossfadeDuration)
+        if xfade is not None:
+            stream.xfade = xfade
+
+        vol = props.get(PropID.Volume)
+        if vol is not None:
+            stream.volume = vol
+
+        hpf = props.get(PropID.HPF)
+        if hpf is not None:
+            stream.hpf = hpf
+
+        lpf = props.get(PropID.LPF)
+        if lpf is not None:
+            stream.lpf = lpf
+
+        pitch = props.get(PropID.Pitch)
+        if pitch is not None:
+            stream.pitch = pitch
+
+        super().update_playback(ctx)
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+    ) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        stream: StreamSource = my_pyo.pyo_playback
+        cb_objects: list[pyo.PyoObject] = []
+        num_trig = 0
+
+        def on_trigger(ctx: PlayContext) -> None:
+            nonlocal num_trig
+
+            callback(ctx)
+            num_trig += 1
+
+            # Cleanup the trigger objects if we've been triggered enough times
+            if max_triggers > 0 and num_trig >= max_triggers:
+                cache = self.pyo(ctx).cache
+                objects = cache.get(storage_key, [])
+
+                for obj in objects:
+                    obj.stop()
+
+                del cache[storage_key]
+
+        if before == 0:
+            trigger_signal = stream["trig"]
+        else:
+            # Trigger when the stream is only x seconds away from its end
+            th = (stream.duration - abs(before)) / stream.duration
+            trigger_signal = pyo.Thresh(stream._overall_clock, threshold=th)
+            cb_objects.append(trigger_signal)
+
+        cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
+
+        storage: dict = my_pyo.cache.setdefault("triggers", {})
+        storage_key = max(storage.keys(), 0) + 1
+        storage[storage_key] = cb_objects

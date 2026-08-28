@@ -235,7 +235,7 @@ class Soundbank:
             return target
 
     def get_wem_path(
-        self, source_id: int, source_type: SourceType, search_paths: list[Path] = None
+        self, source_id: int, source_type: SourceType = None, search_paths: list[Path] = None
     ) -> Path:
         wem = self.bnk_dir / f"{source_id}.wem"
         if source_type == SourceType.Embedded:

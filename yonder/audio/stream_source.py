@@ -3,9 +3,17 @@ from pathlib import Path
 import pyo
 from pyo import sndinfo
 
-from yonder.util import logger
+from yonder import Soundbank
 from yonder.types import Attenuation
-from yonder.types.base_types import ClipAutomation, ConversionTable, ConeParams
+
+# assumes TrackSrcInfo lives alongside the other playback types - move the
+# import if it's declared elsewhere in the project
+from yonder.types.base_types import (
+    ClipAutomation,
+    ConversionTable,
+    ConeParams,
+    TrackSrcInfo,
+)
 from yonder.enums import ClipAutomationType, CurveScaling, AttenuationProperty
 from yonder.audio.audiomath import (
     hpf_to_hz,
@@ -18,9 +26,21 @@ from yonder.audio.audiomath import (
 
 
 class StreamSource(pyo.PyoObject):
+    """
+    Plays a track built from one or more clips laid out on a timeline. Two players alternate and crossfade at clip boundaries.
+
+    Two clocks track time because a track's clips can have different
+    lengths and gaps between them:
+      - clip clock: progress through the *current* clip, fires the swap
+        to the next clip shortly before it ends
+      - overall clock: progress through the whole track/loop region,
+        used for reporting position and unaffected by per-clip timing
+    """
+
     def __init__(
         self,
-        path: Path | str,
+        bank: Soundbank,
+        playlist: list[TrackSrcInfo],
         loop: bool = False,
         volume_db: float = 0,
         hpf_cents: float = 0,
@@ -32,24 +52,21 @@ class StreamSource(pyo.PyoObject):
         clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
-        begin_trim: float = 0.0,
-        end_trim: float = 0.0,
         xfade: float = 0.05,
         mul: float = 1,
         add: float = 0,
     ):
         pyo.PyoObject.__init__(self, mul, add)
 
-        begin_trim = abs(begin_trim)
-        end_trim = abs(end_trim)
+        if not playlist:
+            raise ValueError("playlist must contain at least one clip")
 
-        self._path = Path(path)
-        self._raw_duration = sndinfo(str(path))[1]
-        self._begin_trim = begin_trim
-        self._end_trim = end_trim
+        self._playlist = sorted(playlist, key=lambda c: c.play_at)
+        self._bank = bank
+        self._track_duration = max(self._clip_end(c) for c in self._playlist)
 
         if loop_end == 0.0:
-            loop_end = self.duration
+            loop_end = self._track_duration
 
         self._loop_start = loop_start
         self._loop_end = loop_end
@@ -58,29 +75,31 @@ class StreamSource(pyo.PyoObject):
         self.loop = loop
         self.speed = pyo.SigTo(1.0, 0.05)
 
-        # Two players that crossfade between each other when looping to allow
-        # looping at arbitrary samples (SfPlayer only support looping at end)
+        # two players alternate clips and crossfade at the boundary
+        # needed for looping at arbitrary points
+        first_path = str(self._bank.get_wem_path(self._playlist[0].source_id))
         self._envs = [pyo.SigTo(0, xfade), pyo.SigTo(0, xfade)]
         self._players = [
-            pyo.SfPlayer(
-                str(self._path), speed=self.speed, loop=False, mul=self._envs[i]
-            )
+            pyo.SfPlayer(first_path, speed=self.speed, loop=False, mul=self._envs[i])
             for i in range(2)
         ]
-        self._active = 0
+        self._active_player = 0
+        self._clip_index = 0
 
-        # Clock gives the position of playback in 0..1, threshold switches to 1
-        # shortly before the stream ends and triggers the player swap
-        self._clock = pyo.Phasor()
-        self._pre_wrap = pyo.Thresh(self._clock)
-        self._swapper = pyo.TrigFunc(self._pre_wrap, self._swap)
+        # clip clock: fires just before the current clip ends
+        self._clip_clock = pyo.Phasor()
+        self._pre_wrap = pyo.Thresh(self._clip_clock)
+        self._swapper = pyo.TrigFunc(self._pre_wrap, self._advance)
         self._trig = pyo.Trig()
 
-        self.set_trims(begin_trim, end_trim)
-        self.set_loop_points(loop_start, loop_end)
+        # overall clock: constant-rate progress across the whole track
+        self._overall_clock = pyo.Phasor()
 
-        # Our crossfaded sum becomes this object's audio stream
-        # Always stereo, something like 7.1 would add a huge cpu cost otherwise
+        self._update_clip_clock()
+        self._update_overall_clock()
+
+        # our crossfaded sum becomes this object's audio stream
+        # always stereo, something like 7.1 would add a huge cpu cost otherwise
         self._mix = (self._players[0] + self._players[1]).mix(2)
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
@@ -100,7 +119,7 @@ class StreamSource(pyo.PyoObject):
         self._att_hpf_curve: ConversionTable = None
         self._cone_params: ConeParams = None
 
-        # Apply attenuation data
+        # apply attenuation data
         if attenuation:
             self._att_volume_curve = attenuation.get_curve(AttenuationProperty.Volume)
             self._att_lpf_curve = attenuation.get_curve(AttenuationProperty.LPF)
@@ -110,9 +129,76 @@ class StreamSource(pyo.PyoObject):
                 self._cone_params = attenuation.cone_params
 
         self._chain = self._setup_property_controls(self._mix, clip_automations)
+        self._update_attenuation()
+
         self._base_objs = sum(o.getBaseObjects() for o in self._chain)
 
-        self._update_attenuation()
+    @classmethod
+    def from_paths(
+        cls,
+        bnk: Soundbank,
+        paths: str | Path | list[Path | str],
+        loop: bool = False,
+        volume_db: float = 0,
+        hpf_cents: float = 0,
+        lpf_cents: float = 0,
+        pitch_semitones: float = 0,
+        distance: float = 0.0,
+        angle: float = 0.0,
+        attenuation: Attenuation = None,
+        clip_automations: list[ClipAutomation] = None,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        loop_start: float = 0.0,
+        loop_end: float = 0.0,
+        xfade: float = 0.05,
+        mul: float = 1,
+        add: float = 0,
+    ) -> "StreamSource":
+        """build a playlist from plain files, for sounds with no track/playlist data"""
+        if isinstance(paths, (str, Path)):
+            paths = [Path(paths)]
+
+        paths = [Path(p) for p in paths]
+        playlist = []
+        cursor = 0.0
+        last = len(paths) - 1
+
+        for i, p in enumerate(paths):
+            p = Path(p)
+            raw_dur = sndinfo(str(p))[1]
+            b_trim = begin_trim if i == 0 else 0.0
+            e_trim = end_trim if i == last else 0.0
+
+            playlist.append(
+                TrackSrcInfo(
+                    source_id=i,
+                    play_at=cursor,
+                    begin_trim_offset=b_trim,
+                    end_trim_offset=e_trim,
+                    source_duration=raw_dur,
+                )
+            )
+            cursor += raw_dur - b_trim - e_trim
+
+        return cls(
+            bnk,
+            playlist=playlist,
+            loop=loop,
+            volume_db=volume_db,
+            hpf_cents=hpf_cents,
+            lpf_cents=lpf_cents,
+            pitch_semitones=pitch_semitones,
+            distance=distance,
+            angle=angle,
+            attenuation=attenuation,
+            clip_automations=clip_automations,
+            loop_start=loop_start,
+            loop_end=loop_end,
+            xfade=xfade,
+            mul=mul,
+            add=add,
+        )
 
     def _setup_property_controls(
         self,
@@ -139,7 +225,7 @@ class StreamSource(pyo.PyoObject):
                 ClipAutomationType.FadeIn,
                 ClipAutomationType.FadeOut,
             ):
-                # Fades are already normalized to 0..1, no conversion needed
+                # fades are already normalized to 0..1, no conversion needed
                 env = make_envelope(clip.graph_points, CurveScaling.None_, None)
                 self._gain_ctrl *= env
                 envelopes.append(env)
@@ -227,27 +313,19 @@ class StreamSource(pyo.PyoObject):
             outer_half = cone.outside_degrees / 2
 
             if angle <= inner_half:
-                # Within the inner cone, no additional attenuation
+                # within the inner cone, no additional attenuation
                 pass
             elif outer_half > inner_half:
                 if angle <= outer_half:
-                    # Transition zone
+                    # transition zone
                     f = (angle - inner_half) / (outer_half - inner_half)
                 else:
-                    # Outside outer cone, maximum attenuation
+                    # outside outer cone, maximum attenuation
                     f = 1.0
 
                 self._angle_ctrl_volume.value = db_to_amp(f * cone.outside_volume)
                 self._angle_ctrl_hpf.value = hpf_to_hz(f * cone.high_pass)
                 self._angle_ctrl_lpf.value = lpf_to_hz(f * cone.low_pass)
-
-    @property
-    def path(self) -> Path:
-        return self._path
-
-    @property
-    def progress(self) -> float:
-        return self._clock.get()
 
     @property
     def volume(self) -> float:
@@ -290,47 +368,55 @@ class StreamSource(pyo.PyoObject):
         self._pitch_ctrl.value = semitones
 
     @property
-    def begin_trim(self) -> float:
-        return self._begin_trim
+    def playlist(self) -> list[TrackSrcInfo]:
+        return self._playlist
 
     @property
-    def end_trim(self) -> float:
-        return self._end_trim
+    def clip_index(self) -> int:
+        return self._clip_index
 
-    def set_trims(
-        self,
-        from_start: float,
-        from_end: float,
-        keep_loop_marks_stationary: bool = False,
-    ) -> None:
-        from_start = abs(from_start)
-        from_end = abs(from_end)
+    @property
+    def current_clip(self) -> TrackSrcInfo:
+        return self._playlist[self._clip_index]
 
-        # This won't work for prefetch streaming items since we're using the file duration
-        # TODO resolve to the proper sound file, and ignore end_trim
-        if from_start >= self.raw_duration - from_end:
-            logger.warning(
-                "Trims would result in play duration <= 0, ignoring end_trim for playback"
-            )
-            from_end = 0.0
+    @property
+    def current_path(self) -> Path:
+        return self._bank.get_wem_path(self.current_clip.source_id)
 
-        if keep_loop_marks_stationary:
-            # negative if trim reduced, positive if increased
-            begin_diff = self._begin_trim - from_start
-            self._loop_start = max(0.0, self._loop_start - begin_diff)
+    def _clip_duration(self, clip: TrackSrcInfo) -> float:
+        return clip.source_duration - clip.begin_trim_offset - clip.end_trim_offset
 
-            # positive if trim reduced, negative if increased
-            end_diff = self._end_trim - from_end
-            self._loop_end = min(self._raw_duration, self._loop_end - end_diff)
+    def _clip_end(self, clip: TrackSrcInfo) -> float:
+        return clip.play_at + self._clip_duration(clip)
 
-        # In wwise, trims are set from the beginning/end of the track
-        self._begin_trim = from_start
-        self._end_trim = from_end
-        self._update()
+    def _clip_for_position(self, pos: float) -> tuple[int, float]:
+        """find which clip covers an overall-timeline position, and the
+        offset into its source file that corresponds to it"""
+        for i, clip in enumerate(self._playlist):
+            if pos < self._clip_end(clip):
+                offset = clip.begin_trim_offset + max(0.0, pos - clip.play_at)
+                return (i, offset)
+
+        last = len(self._playlist) - 1
+        clip = self._playlist[last]
+        offset = clip.source_duration - clip.end_trim_offset
+        return (last, offset)
+
+    def _update_clip_clock(self) -> None:
+        dur = max(self._clip_duration(self.current_clip), 1e-6)
+        self._clip_clock.freq = self.speed / dur
+        self._pre_wrap.threshold = 1.0 - self._xfade / dur
+
+    def _update_overall_clock(self) -> None:
+        span = max(self._loop_end - self._loop_start, 1e-6)
+        self._overall_clock.freq = self.speed / span
+
+    @property
+    def duration(self) -> float:
+        return self._track_duration
 
     @property
     def loop_start(self) -> float:
-        # In wwise loop_start is relative to begin_trim
         return self._loop_start
 
     @property
@@ -338,7 +424,7 @@ class StreamSource(pyo.PyoObject):
         return self._loop_end
 
     def set_loop_points(self, start: float, end: float) -> None:
-        if start < 0.0 or end < 0.0:
+        if start < 0.0:
             raise ValueError("loop points must be >= 0")
 
         if end <= start:
@@ -346,15 +432,7 @@ class StreamSource(pyo.PyoObject):
 
         self._loop_start = start
         self._loop_end = end
-        self._update()
-
-    @property
-    def duration(self) -> float:
-        return self._raw_duration - self._begin_trim - self._end_trim
-
-    @property
-    def raw_duration(self) -> float:
-        return self._raw_duration
+        self._update_overall_clock()
 
     @property
     def play_duration(self) -> float:
@@ -365,78 +443,119 @@ class StreamSource(pyo.PyoObject):
 
     @property
     def play_begin(self) -> float:
-        return self.loop_start
+        return self._loop_start
 
     @property
     def play_end(self) -> float:
-        return min(self.loop_end, self.duration)
+        return min(self._loop_end, self.duration)
 
     @property
     def xfade(self) -> float:
         return self._xfade
 
     @xfade.setter
-    def xfade(self, val: float) -> float:
+    def xfade(self, val: float) -> None:
         self._xfade = val
-        self._update()
+        self._update_clip_clock()
 
-    def _update(self) -> None:
-        dur = self.play_duration
-        self._clock.freq = self.speed / dur
-        self._pre_wrap.threshold = 1.0 - self._xfade / dur
+    def _advance(self) -> None:
+        """move on to the next clip, or loop back, or stop at the end"""
+        current_item = self._playlist[self._clip_index]
+        next_idx = self._clip_index + 1
 
-    def _swap(self) -> None:
-        if not self.loop:
+        if next_idx < len(self._playlist):
+            next_item = self._playlist[next_idx]
+            offset = next_item.begin_trim_offset
+            # silence for any gap left between clips, no crossfade needed
+            delay = max(0.0, next_item.play_at - self._clip_end(current_item))
+        elif self.loop:
+            next_idx, offset = self._clip_for_position(self._loop_start)
+            delay = 0.0
+        else:
+            # end of playlist
             self.stop()
             self._trig.play()
             return
 
-        # Start the second player which will take over
-        nxt = 1 - self._active
-        playback_start = self._begin_trim + self._loop_start
-        self._players[nxt].setOffset(playback_start)
-        self._players[nxt].play()
+        player = 1 - self._active_player
+        path = self._bank.get_wem_path(self._playlist[next_idx].source_id)
+        self._players[player].setSound(str(path))
+        self._players[player].setOffset(offset)
+        self._players[player].play(delay=delay * 1000)
 
-        # Let the envelopes handle the crossfade
-        self._envs[nxt].value = 1
-        self._envs[self._active].value = 0
-        self._active = nxt
+        self._envs[player].value = 1
+        self._envs[self._active_player].value = 0
+        self._active_player = player
+        self._clip_index = next_idx
+        self._update_clip_clock()
+
+    @property
+    def progress(self) -> float:
+        return self._overall_clock.get()
+
+    @property
+    def clip_progress(self) -> float:
+        return self._clip_clock.get()
 
     @property
     def pos(self) -> float:
-        return self._clock.get() * self.duration
+        return self._loop_start + self.progress * (self._loop_end - self._loop_start)
 
     def seek(self, pos: float) -> None:
-        dur = self.duration
-        clamped = max(0.0, min(pos, dur - 1e-6))
+        span = self._loop_end - self._loop_start
+        clamped = max(self._loop_start, min(pos, self._loop_start + span - 1e-6))
         self._paused_pos = clamped
 
         if not self.isPlaying():
-            # Only store position for next playback
+            # only store position for next playback
             return
 
-        t = self._begin_trim + clamped
-        player = self._players[self._active]
-        player.setOffset(t)
-        # Apply offset
+        idx, offset = self._clip_for_position(clamped)
+        clip = self._playlist[idx]
+
+        if idx != self._clip_index:
+            path = self._bank.get_wem_path(clip.source_id)
+            self._players[self._active_player].setSound(str(path))
+            self._clip_index = idx
+            self._update_clip_clock()
+
+        player = self._players[self._active_player]
+        player.setOffset(offset)
         player.play()
 
-        # Phase is only what to add, not the internal value
-        self._clock.reset()
-        self._clock.phase = clamped / dur
+        clip_dur = max(self._clip_duration(clip), 1e-6)
+        self._clip_clock.reset()
+        self._clip_clock.phase = (offset - clip.begin_trim_offset) / clip_dur
+
+        self._overall_clock.reset()
+        self._overall_clock.phase = (clamped - self._loop_start) / span
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
-        self._players[0].setOffset(self._begin_trim)
+        idx, offset = self._clip_for_position(self._paused_pos)
+        clip = self._playlist[idx]
+        path = str(self._bank.get_wem_path(clip.source_id))
+
+        self._players[0].setSound(path)
+        self._players[0].setOffset(offset)
         self._players[0].play()
         self._players[1].stop()
         self._envs[0].value = 1
         self._envs[1].value = 0
-        self._active = 0
 
-        dur = self.duration
-        self._clock.reset()
-        self._clock.phase = self._paused_pos / dur if dur else 0.0
-        self._clock.play()
+        self._active_player = 0
+        self._clip_index = idx
+        self._update_clip_clock()
+        self._update_overall_clock()
+
+        clip_dur = max(self._clip_duration(clip), 1e-6)
+        self._clip_clock.reset()
+        self._clip_clock.phase = (offset - clip.begin_trim_offset) / clip_dur
+        self._clip_clock.play()
+
+        span = self._loop_end - self._loop_start
+        self._overall_clock.reset()
+        self._overall_clock.phase = (self._paused_pos - self._loop_start) / span
+        self._overall_clock.play()
 
         for o in self._chain:
             o.play(dur, delay)
@@ -450,7 +569,9 @@ class StreamSource(pyo.PyoObject):
             self._players[i].stop()
             self._envs[i].value = 0
 
-        self._clock.stop()
+        self._clip_clock.stop()
+        self._overall_clock.stop()
+
         for o in self._chain:
             o.stop(wait)
 

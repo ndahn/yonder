@@ -304,10 +304,18 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         if not self.playlist_items:
             return
 
+        self.pyo(ctx).cache["playing"] = True
         self._play_next(ctx)
+
+    def stop(self, ctx: PlayContext) -> None:
+        self.pyo(ctx).cache["playing"] = False
+        super().stop(ctx)
 
     def _play_next(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
+        if not my_pyo.cache.get("playing"):
+            return
+
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.pyo_playback
 
