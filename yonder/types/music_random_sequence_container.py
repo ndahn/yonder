@@ -329,7 +329,8 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
             node = ctx.bank.get(item.segment_id)
             if node:
-                # Full transition support is maybe a bit much for yonder
+                # Full transition support is a bit much for yonder, but we can do crossfades
+                # TODO crossfade curves if we want to be fancy
                 rule = self.music_trans_node_params.get_transition_rule(prev_node, node)
                 xfade = (
                     max(
@@ -342,8 +343,8 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                     / 1000
                 )
 
-                # TODO this is too late, need to react xfade seconds before the end
-                node.register_end_trigger(ctx, self._play_next)
+                # TODO Not respecting Step modes, but should be fine for now
+                node.register_end_trigger(ctx, self._play_next, xfade, 1)
                 node.play(ctx)
                 fader.setInput(node.pyo(ctx).pyo_playback, xfade)
 

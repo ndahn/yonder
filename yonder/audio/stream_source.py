@@ -246,6 +246,10 @@ class StreamSource(pyo.PyoObject):
         return self._path
 
     @property
+    def progress(self) -> float:
+        return self._clock.get()
+
+    @property
     def volume(self) -> float:
         return amp_to_db(self._gain_ctrl.value)
 

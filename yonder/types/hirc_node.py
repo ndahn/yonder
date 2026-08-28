@@ -182,6 +182,7 @@ class HIRCNode(DataNode):
         """Release all pyo objects created by this node, if any. Called after a user-defined delay to give pyo enough time to finish processing the object."""
         if hasattr(self, "_release_cb"):
             from yonder.util import logger
+
             logger.warning(f"### Double free of {self}")
             return
 
@@ -267,14 +268,18 @@ class HIRCNode(DataNode):
                 node.update_playback(ctx)
 
     def register_end_trigger(
-        self, ctx: PlayContext, callback: Callable[[PlayContext], None]
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        triggers: int = 1,
     ) -> None:
         ctx = ctx.merge(self)
 
         for _, ref in self.get_references():
             node = ctx.bank.get(ref)
             if node and node.is_pyo_initialized():
-                node.register_end_trigger(ctx)
+                node.register_end_trigger(ctx, callback, before=before, triggers=triggers)
 
     def __hash__(self) -> int:
         return self.id

@@ -155,15 +155,6 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not self.switch_groups:
             return
 
-        switch_state = ctx.states.get(self.group_id, self.default_switch)
-        node_ids = self.get_nodes_for_switch(switch_state)
-
-        # Play the nodes first, then update this container
-        for nid in node_ids:
-            n = ctx.bank.get(nid)
-            if n:
-                n.play(ctx)
-
         self.update_playback(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:
@@ -179,6 +170,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         for nid in node_ids:
             n = ctx.bank.get(nid)
             if n:
+                n.play(ctx)
                 n.update_playback(ctx)
                 nodes.append(n)
 

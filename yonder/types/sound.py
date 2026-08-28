@@ -176,10 +176,44 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         super().update_playback(ctx)
 
     def register_end_trigger(
-        self, ctx: PlayContext, callback: Callable[[PlayContext], None]
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
     ) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         stream: StreamSource = my_pyo.pyo_playback
-        triggers = my_pyo.cache.setdefault("triggers", [])
-        triggers.append(pyo.TrigFunc(stream["trig"], callback, ctx))
+        cb_objects: list[pyo.PyoObject] = []
+        num_trig = 0
+
+        def on_trigger(ctx: PlayContext) -> None:
+            nonlocal num_trig
+
+            callback(ctx)
+            num_trig += 1
+
+            # Cleanup the trigger objects if we've been triggered enough times
+            if max_triggers > 0 and num_trig >= max_triggers:
+                cache = self.pyo(ctx).cache
+                objects = cache.get(storage_key, [])
+
+                for obj in objects:
+                    obj.stop()
+
+                del cache[storage_key]
+
+        if before == 0:
+            trigger_signal = stream["trig"]
+        else:
+            # Trigger when the stream is only x seconds away from its end
+            th = (stream.duration - abs(before)) / stream.duration
+            trigger_signal = pyo.Thresh(stream._clock, threshold=th)
+            cb_objects.append(trigger_signal)
+
+        cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
+
+        storage: dict = my_pyo.cache.setdefault("triggers", {})
+        storage_key = max(storage.keys(), 0) + 1
+        storage[storage_key] = cb_objects
