@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 @dataclass
 class PyoState:
     ctx: PlayContext
+    playing: bool = False
     playback: pyo.PyoObject = None
     cache: dict = field(default_factory=dict)
 
@@ -238,6 +239,7 @@ class HIRCNode(DataNode):
         if self.is_pyo_initialized():
             my_pyo = self.pyo(ctx)
             my_pyo.stop()
+            my_pyo.playing = False
             ctx = my_pyo.ctx
         else:
             ctx = ctx.merge(self)
@@ -270,7 +272,7 @@ class HIRCNode(DataNode):
         ctx: PlayContext,
         callback: Callable[[PlayContext], None],
         before: float = 0,
-        triggers: int = 1,
+        max_triggers: int = 1,
     ) -> None:
         ctx = ctx.merge(self)
 
@@ -278,7 +280,7 @@ class HIRCNode(DataNode):
             node = ctx.bank.get(ref)
             if node and node.is_pyo_initialized():
                 node.register_end_trigger(
-                    ctx, callback, before=before, triggers=triggers
+                    ctx, callback, before=before, max_triggers=max_triggers
                 )
 
     def __hash__(self) -> int:

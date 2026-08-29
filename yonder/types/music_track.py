@@ -242,8 +242,19 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def play(self, ctx: PlayContext) -> None:
         # TODO Once we support different track_types we will have to do this differently
         my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
         self.update_playback(ctx)
+        self.register_end_trigger(ctx, self._on_track_end, 0, 0)
         my_pyo.play()
+
+    def _on_track_end(self, ctx: PlayContext) -> None:
+        self.stop(ctx)
+        self.seek(0)
+
+    def seek(self, ctx: PlayContext, pos: float) -> None:
+        self.pyo(ctx).playback.seek(pos)
 
     def update_playback(self, ctx: PlayContext) -> None:
         if not self.is_pyo_initialized():
@@ -293,6 +304,9 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         before: float = 0,
         max_triggers: int = 1,
     ) -> None:
+        if not self.is_pyo_initialized():
+            return
+
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         stream: MultiTrackStream = my_pyo.playback
@@ -326,7 +340,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
 
         storage: dict = my_pyo.cache.setdefault("triggers", {})
-        storage_key = max(storage.keys(), 0) + 1
+        storage_key = max(storage.keys(), default=-1) + 1
         storage[storage_key] = cb_objects
 
     def release_pyo(self, ctx: PlayContext) -> None:

@@ -134,8 +134,19 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
         self.update_playback(ctx)
+        self.register_end_trigger(ctx, self._on_sound_end, 0, 0)
         my_pyo.play()
+
+    def _on_sound_end(self, ctx: PlayContext) -> None:
+        self.stop(ctx)
+        self.seek(0)
+
+    def seek(self, ctx: PlayContext, pos: float) -> None:
+        self.pyo(ctx).playback.seek(pos)
 
     def update_playback(self, ctx: PlayContext) -> None:
         if not self.is_pyo_initialized():
@@ -218,7 +229,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
 
         storage: dict = my_pyo.cache.setdefault("triggers", {})
-        storage_key = max(storage.keys(), 0) + 1
+        storage_key = max(storage.keys(), default=-1) + 1
         storage[storage_key] = cb_objects
 
     def release_pyo(self, ctx: PlayContext) -> None:

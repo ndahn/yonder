@@ -1,11 +1,13 @@
 from __future__ import annotations
+from typing import ClassVar, Callable
 from dataclasses import dataclass, field
-from typing import ClassVar
+import pyo
 
 from yonder.hash import calc_hash, Hash
 from yonder.enums import PropID, MarkerId
 from yonder.util import logger
-from .hirc_node import HIRCNode
+from yonder.audio import PlayContext
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     MusicNodeParams,
     PropBundle,
@@ -155,3 +157,106 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         if not missing_ok:
             raise ValueError(f"Marker {mid} not found")
+
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        ctx = my_pyo.ctx
+        out = []
+
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child:
+                out.append(child.pyo(ctx).playback)
+
+        my_pyo.cache["clock"] = pyo.Phasor(1000 / self.duration).stop()
+        return sum(out)
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        my_pyo.playing = True
+        ctx = my_pyo.ctx
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node:
+                node.play(ctx)
+
+        # segments have a fixed duration independent from their tracks' duration
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        offset = my_pyo.cache.get("pause_time", 0.0)
+        clock.freq = 1000 / self.duration
+        clock.phase = offset
+
+        self.register_end_trigger(ctx, self._on_segment_end, 0, 0)
+
+        clock.play()
+        my_pyo.play()
+
+    def _on_segment_end(self, ctx: PlayContext) -> None:
+        # TODO this will probably cause a gap, but we'll have to change the 
+        # source/control design to fix this
+        self.stop(ctx)
+        self.pyo(ctx).cache["pause_time"] = 0.0
+        loop = ctx.properties.get(PropID.Loop)
+
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child and hasattr(child, "seek"):
+                child.seek(0)
+        
+        if loop is not None:
+            self.play(ctx)
+
+    def stop(self, ctx: PlayContext) -> None:
+        if not self.is_pyo_initialized():
+            return
+
+        super().stop(ctx)
+
+        my_pyo = self.pyo(ctx)
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        my_pyo.cache["pause_time"] = clock.get()
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+    ):
+        if not self.is_pyo_initialized():
+            return
+         
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        cb_objects: list[pyo.PyoObject] = []
+        num_trig = 0
+
+        def on_trigger(ctx: PlayContext) -> None:
+            nonlocal num_trig
+
+            callback(ctx)
+            num_trig += 1
+
+            # Cleanup the trigger objects if we've been triggered enough times
+            if max_triggers > 0 and num_trig >= max_triggers:
+                cache = self.pyo(ctx).cache
+                objects = cache.get(storage_key, [])
+
+                for obj in objects:
+                    obj.stop()
+
+                del cache[storage_key]
+
+        # Trigger when this segment is only x seconds away from its end
+        th = (self.duration - abs(before)) / self.duration
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        trigger_signal = pyo.Thresh(clock, threshold=th)
+        cb_objects.append(trigger_signal)
+        cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
+
+        storage: dict = my_pyo.cache.setdefault("triggers", {})
+        storage_key = max(storage.keys(), default=-1) + 1
+        storage[storage_key] = cb_objects
