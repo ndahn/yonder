@@ -103,18 +103,27 @@ class HIRCPlayer:
 
         return (states, rtpcs)
 
-    def collect_voices(self, active_only: bool) -> list[Sound | MusicTrack]:
+    def collect_voices(
+        self, active_only: bool, start_from: int | HIRCNode = None
+    ) -> list[Sound | MusicTrack]:
+        if not start_from:
+            start_from = self.entrypoint.id
+
         sources = []
-        todo = [self.entrypoint]
+        todo = [start_from]
 
         while todo:
-            node = todo.pop()
+            node_id = todo.pop()
+            node = self.bnk.get(node_id)
+
+            if not node:
+                continue
 
             if (not active_only or node.is_pyo_initialized()) and isinstance(
                 node, (Sound, MusicTrack)
             ):
                 sources.append(node)
-                
+
                 for _, ref in node.get_references():
                     child = self.bnk.get(ref)
                     if child:
@@ -122,14 +131,23 @@ class HIRCPlayer:
 
         return sources
 
-    def collect_effective_contexts(self, active_only: bool = True) -> dict[int, PlayContext]:
+    def collect_effective_contexts(
+        self, active_only: bool = True, start_from: int | HIRCNode = None
+    ) -> dict[int, PlayContext]:
+        if not start_from:
+            start_from = self.entrypoint.id
+
         ret = {}
-        todo = [(self.entrypoint, self.context)]
+        todo = [(start_from, self.context)]
 
         while todo:
-            node, ctx = todo.pop()
+            node_id, ctx = todo.pop()
+            node = self.bnk.get(node_id)
 
-            if (not active_only or node.is_pyo_initialized()):
+            if not node:
+                continue
+
+            if not active_only or node.is_pyo_initialized():
                 node_ctx = ctx.merge(node)
                 ret[node.id] = node_ctx
 
@@ -140,22 +158,12 @@ class HIRCPlayer:
 
         return ret
 
-    def set_volume(self, voice_id: int | None, vol_db: float) -> None:
-        if voice_id is None:
-            for node in self.collect_voices(True):
-                self.set_volume(node.id, vol_db)
-        else:
-            node = self.bnk[voice_id]
-            # TODO need to collect the voices from the node
-            node.pyo(self.context)[1].volume = vol_db
+    def set_volume(self, node_id: int | None, vol_db: float) -> None:
+        for node in self.collect_voices(True, node_id):
+            node.pyo(self.context).playback.volume = vol_db
 
-    def set_muted(self, voice_id: int | None, muted: bool) -> None:
-        if voice_id is None:
-            for node in self.collect_voices(True):
-                self.set_muted(node.id, muted)
-        else:
-            node = self.bnk[voice_id]
-            # TODO need to collect the voices from the node
+    def set_muted(self, node_id: int | None, muted: bool) -> None:
+        for node in self.collect_voices(True, node_id):
             voice = node.pyo(self.context).playback
             if muted:
                 if voice.gain > 0:
