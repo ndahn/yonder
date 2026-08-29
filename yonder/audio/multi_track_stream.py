@@ -25,7 +25,7 @@ from yonder.audio.audiomath import (
 )
 
 
-class StreamSource(pyo.PyoObject):
+class MultiTrackStream(pyo.PyoObject):
     """
     Plays a track built from one or more clips laid out on a timeline. Two players alternate and crossfade at clip boundaries.
 
@@ -154,7 +154,7 @@ class StreamSource(pyo.PyoObject):
         xfade: float = 0.05,
         mul: float = 1,
         add: float = 0,
-    ) -> "StreamSource":
+    ) -> "MultiTrackStream":
         """build a playlist from plain files, for sounds with no track/playlist data"""
         if isinstance(paths, (str, Path)):
             paths = [Path(paths)]

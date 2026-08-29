@@ -13,7 +13,7 @@ from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
 
 if TYPE_CHECKING:
-    from yonder.audio.stream_source import StreamSource
+    from yonder.audio.multi_track_stream import MultiTrackStream
 
 
 class add_hirc_player(DpgItem):
@@ -358,34 +358,34 @@ class add_hirc_player(DpgItem):
                     tint_color=style.light_grey,
                     user_data=self._t("popup_equalizer"),
                 )
-                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("Equalizer"))
-                    
+
                 dpg.add_image_button(
                     Icons.states,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_states"),
                 )
-                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("RTPC & States"))
-                                
+
                 dpg.add_image_button(
                     Icons.spatial3d,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_attenuation"),
                 )
-                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("3D Positioning"))
-                                
+
                 dpg.add_image_button(
                     Icons.sliders,
                     callback=self._open_ctrl_popup,
                     tint_color=style.light_grey,
                     user_data=self._t("popup_voices"),
                 )
-                #with dpg.tooltip(dpg.last_item(), delay=.3):
+                # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("Voices"))
 
         dpg.add_window(

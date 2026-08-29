@@ -9,7 +9,7 @@ from yonder.wem import get_wem_metadata
 from yonder.enums import ClipAutomationType, PropID, SourceType, MusicTrackType
 from yonder.util import logger
 from yonder.audio import PlayContext
-from yonder.audio.stream_source import StreamSource
+from yonder.audio.multi_track_stream import MultiTrackStream
 from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
@@ -226,7 +226,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         ctx = my_pyo.ctx
         props = ctx.properties
 
-        return StreamSource(
+        return MultiTrackStream(
             ctx.bank,
             list(self.playlist),
             loop=(PropID.Loop in props),
@@ -251,7 +251,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.playback
+        stream: MultiTrackStream = my_pyo.playback
         props = ctx.properties
 
         stream.loop = PropID.Loop in props
@@ -295,7 +295,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     ) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.playback
+        stream: MultiTrackStream = my_pyo.playback
         cb_objects: list[pyo.PyoObject] = []
         num_trig = 0
 
