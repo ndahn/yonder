@@ -6,7 +6,7 @@ import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SourceType, PropID
-from yonder.wem import get_wem_metadata, wem2wav
+from yonder.wem import get_wem_metadata
 from yonder.audio import PlayContext
 from yonder.audio.multi_track_stream import MultiTrackStream
 from .hirc_node import HIRCNode, PyoState
@@ -110,20 +110,11 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     def _build_pyo(self, my_pyo: PyoState) -> MultiTrackStream:
         ctx = my_pyo.ctx
-
         props = ctx.properties
-        path = ctx.bank.get_wem_path(
-            self.source_id, self.source_type, ctx.wem_search_paths
-        )
 
-        if path.suffix == ".wem":
-            path = wem2wav(ctx.vgmstream_exe, path)[0]
-
-        # TODO save wem search paths in bank, pass vgmstream_exe to MultiTrackStream
-
-        return MultiTrackStream.from_paths(
-            ctx.bank,
-            path,
+        return MultiTrackStream.from_source_ids(
+            self.source_id,
+            ctx.get_wav_for_source,
             loop=(PropID.Loop in props),
             volume_db=props.get(PropID.Volume, 0.0),
             hpf_cents=props.get(PropID.HPF, 0.0),

@@ -5,7 +5,7 @@ import numpy as np
 from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name, Hash
-from yonder.util import logger
+from yonder.util import logger, get_temp_dir
 from yonder.interpolation import interpolate
 from yonder.wem import wem2wav
 from yonder.audio.old.wav_player import WavPlayer
@@ -13,7 +13,7 @@ from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
 from yonder.gui.config import get_config
-from yonder.gui.helpers import get_temp_dir, shorten_path
+from yonder.gui.helpers import shorten_path
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 from .dpg_item import DpgItem

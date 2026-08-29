@@ -3,11 +3,7 @@ from pathlib import Path
 import pyo
 from pyo import sndinfo
 
-from yonder import Soundbank
 from yonder.types import Attenuation
-
-# assumes TrackSrcInfo lives alongside the other playback types - move the
-# import if it's declared elsewhere in the project
 from yonder.types.base_types import (
     ClipAutomation,
     ConversionTable,
@@ -39,8 +35,9 @@ class MultiTrackStream(pyo.PyoObject):
 
     def __init__(
         self,
-        bank: Soundbank,
         playlist: list[TrackSrcInfo],
+        resolve_source: Callable[[int], Path],
+        *,
         loop: bool = False,
         volume_db: float = 0,
         hpf_cents: float = 0,
@@ -62,7 +59,7 @@ class MultiTrackStream(pyo.PyoObject):
             raise ValueError("playlist must contain at least one clip")
 
         self._playlist = sorted(playlist, key=lambda c: c.play_at)
-        self._bank = bank
+        self._resolve_source = resolve_source
         self._track_duration = max(self._clip_end(c) for c in self._playlist)
 
         if loop_end == 0.0:
@@ -77,7 +74,7 @@ class MultiTrackStream(pyo.PyoObject):
 
         # two players alternate clips and crossfade at the boundary
         # needed for looping at arbitrary points
-        first_path = str(self._bank.get_wem_path(self._playlist[0].source_id))
+        first_path = str(resolve_source(self._playlist[0].source_id))
         self._envs = [pyo.SigTo(0, xfade), pyo.SigTo(0, xfade)]
         self._players = [
             pyo.SfPlayer(first_path, speed=self.speed, loop=False, mul=self._envs[i])
@@ -134,10 +131,11 @@ class MultiTrackStream(pyo.PyoObject):
         self._base_objs = sum(o.getBaseObjects() for o in self._chain)
 
     @classmethod
-    def from_paths(
+    def from_source_ids(
         cls,
-        bnk: Soundbank,
-        paths: str | Path | list[Path | str],
+        sources: int | list[int],
+        resolve_source: Callable[[int], Path],
+        *,
         loop: bool = False,
         volume_db: float = 0,
         hpf_cents: float = 0,
@@ -156,22 +154,22 @@ class MultiTrackStream(pyo.PyoObject):
         add: float = 0,
     ) -> "MultiTrackStream":
         """build a playlist from plain files, for sounds with no track/playlist data"""
-        if isinstance(paths, (str, Path)):
-            paths = [Path(paths)]
+        if isinstance(sources, (int)):
+            sources = [sources]
 
         playlist = []
         cursor = 0.0
-        last = len(paths) - 1
+        last = len(sources) - 1
 
-        for i, p in enumerate(paths):
-            p = Path(p)
-            raw_dur = sndinfo(str(p))[1]
+        for i, sid in enumerate(sources):
+            path = resolve_source(sid)
+            raw_dur = sndinfo(str(path))[1]
             b_trim = begin_trim if i == 0 else 0.0
             e_trim = end_trim if i == last else 0.0
 
             playlist.append(
                 TrackSrcInfo(
-                    source_id=p.stem,
+                    source_id=sid,
                     play_at=cursor,
                     begin_trim_offset=b_trim,
                     end_trim_offset=e_trim,
@@ -181,8 +179,8 @@ class MultiTrackStream(pyo.PyoObject):
             cursor += raw_dur - b_trim - e_trim
 
         return cls(
-            bnk,
-            playlist=playlist,
+            playlist,
+            resolve_source,
             loop=loop,
             volume_db=volume_db,
             hpf_cents=hpf_cents,
@@ -380,7 +378,7 @@ class MultiTrackStream(pyo.PyoObject):
 
     @property
     def current_path(self) -> Path:
-        return self._bank.get_wem_path(self.current_clip.source_id)
+        return self._resolve_source(self.current_clip.source_id)
 
     def _clip_duration(self, clip: TrackSrcInfo) -> float:
         return clip.source_duration - clip.begin_trim_offset - clip.end_trim_offset
@@ -477,7 +475,7 @@ class MultiTrackStream(pyo.PyoObject):
             return
 
         player = 1 - self._active_player
-        path = self._bank.get_wem_path(self._playlist[next_idx].source_id)
+        path = self._resolve_source(self._playlist[next_idx].source_id)
         self._players[player].setSound(str(path))
         self._players[player].setOffset(offset)
         self._players[player].play(delay=delay * 1000)
@@ -513,7 +511,7 @@ class MultiTrackStream(pyo.PyoObject):
         clip = self._playlist[idx]
 
         if idx != self._clip_index:
-            path = self._bank.get_wem_path(clip.source_id)
+            path = self._resolve_source(clip.source_id)
             self._players[self._active_player].setSound(str(path))
             self._clip_index = idx
             self._update_clip_clock()
@@ -532,7 +530,7 @@ class MultiTrackStream(pyo.PyoObject):
     def play(self, dur: int = 0, delay: int = 0) -> None:
         idx, offset = self._clip_for_position(self._paused_pos)
         clip = self._playlist[idx]
-        path = str(self._bank.get_wem_path(clip.source_id))
+        path = str(self._resolve_source(clip.source_id))
 
         self._players[0].setSound(path)
         self._players[0].setOffset(offset)

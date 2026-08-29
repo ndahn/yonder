@@ -7,6 +7,8 @@ from yonder.types.soundbank import Soundbank
 from yonder.types.hirc_node import HIRCNode
 from yonder.types.mixins import PropertyMixin
 from yonder.enums import PropID
+from yonder.util import get_temp_dir, logger
+from yonder.wem import wem2wav
 
 if TYPE_CHECKING:
     from yonder.types import Attenuation
@@ -28,6 +30,20 @@ class PlayContext:
     def attenuation(self) -> Attenuation:
         nid = int(self.properties.get(PropID.AttenuationID, 0))
         return self.bank.get(nid)
+
+    def get_wav_for_source(self, source_id: int) -> Path:
+        tmp = get_temp_dir()
+        wav = tmp / f"{source_id}.wav"
+
+        if not wav.is_file():
+            wem = self.bank.get_wem_path(source_id, search_paths=self.wem_search_paths)
+            if not wem:
+                logger.warning(f"Could not locate wem for {source_id}")
+                return None
+
+            wav = wem2wav(self.vgmstream_exe, wem, tmp)[0]
+
+        return wav
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         properties = dict(self.properties)
@@ -63,8 +79,8 @@ class PlayContext:
             bank=self.bank,
             vgmstream_exe=self.vgmstream_exe,
             wem_search_paths=self.wem_search_paths,
-            properties=properties, 
-            rtpcs=rtpcs, 
+            properties=properties,
+            rtpcs=rtpcs,
             states=states,
             distance=self.distance,
             angle=self.angle,

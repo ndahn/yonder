@@ -29,11 +29,11 @@ from yonder.hash import (
     get_bank_lookup_table_path,
     get_active_lookup_table,
 )
-from yonder.util import logger, unpack_soundbank, repack_soundbank
+from yonder.util import logger, unpack_soundbank, repack_soundbank, get_temp_dir
 from yonder.query import query_nodes
 from yonder.game import set_game, guess_game
 from .config import Config, get_config
-from .helpers import center_window, shorten_path, get_temp_dir
+from .helpers import center_window, shorten_path
 from .widgets import (
     DpgItem,
     create_node_widgets,

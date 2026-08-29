@@ -22,6 +22,7 @@ from .mixins import PropertyMixin, RtpcMixin, StateMixin
 @dataclass(repr=False, eq=False)
 class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     """Layers containers are used to define RTPC-driven blending between different playback elements."""
+
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)

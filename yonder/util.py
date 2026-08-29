@@ -11,6 +11,8 @@ import builtins
 import logging
 import subprocess
 import shutil
+import atexit
+import tempfile
 import networkx as nx
 
 from yonder.enums import SoundType
@@ -29,6 +31,9 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger("yonder")
+
+
+_tmp_dir: Path = None
 
 
 def resource_dir() -> Path:
@@ -50,6 +55,18 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     if binary:
         return res.read_bytes()
     return res.read_text(encoding="utf8")
+
+
+def get_temp_dir() -> Path:
+    global _tmp_dir
+
+    if _tmp_dir is None:
+        _tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
+        _tmp_dir.mkdir(parents=True, exist_ok=True)
+        atexit.register(lambda t: t.is_dir() and shutil.rmtree(t), _tmp_dir)
+        logger.info(f"Temporary files will be stored in {_tmp_dir}")
+
+    return _tmp_dir
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:

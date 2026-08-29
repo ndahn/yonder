@@ -227,8 +227,8 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         props = ctx.properties
 
         return MultiTrackStream(
-            ctx.bank,
             list(self.playlist),
+            ctx.get_wav_for_source,
             loop=(PropID.Loop in props),
             volume_db=props.get(PropID.Volume, 0.0),
             hpf_cents=props.get(PropID.HPF, 0.0),
