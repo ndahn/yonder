@@ -161,9 +161,8 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 )
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
-        mixer = pyo.Mixer(outs=1, chnls=1)
-        my_pyo["controls"] = {}
-        return mixer
+        my_pyo.cache["controls"] = {}
+        return pyo.Mixer(outs=1, chnls=1)
 
     # TODO each layer has an InitialRTPC object that should be merged with the context
 
@@ -179,9 +178,12 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         mixer: pyo.Mixer = my_pyo.playback
+        controls = my_pyo.cache["controls"]
 
         for layer in self.layers:
+            #rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
             x = ctx.rtpcs.get(layer.rtpc_id)
+
 
             for child_info in layer.associated_children:
                 child = ctx.bank.get(child_info.associated_child_id)
@@ -189,7 +191,16 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                     # TODO not sure how to use the layer.initial_rtpc data here
                     child.play(ctx)
                     y = eval_curve(child_info.graph_points, x)
-                    mixer.addInput(layer.layer_id, child.pyo(ctx).playback)
-                    mixer.setAmp(layer.layer_id, y)
+                    ctrl: pyo.SigTo = controls.get(child.id)
+
+                    if ctrl is None:
+                        # Use a control to smooth out transitions
+                        ctrl = pyo.SigTo(y)
+                        child_pyo = child.pyo(ctx).playback
+                        mixer.addInput(child.id, ctrl * child_pyo)
+                        mixer.setAmp(child.id, 0, 1)
+                        controls[child.id] = ctrl
+                    else:
+                        ctrl.value = y
 
         super().update_playback(ctx)

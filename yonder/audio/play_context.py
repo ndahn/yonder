@@ -21,7 +21,7 @@ class PlayContext:
     wem_search_paths: list[Path] = field(default_factory=list)
 
     properties: dict[PropID, float] = field(default_factory=dict)
-    rtpcs: dict[int, int] = field(default_factory=dict)
+    rtpcs: dict[int, float] = field(default_factory=dict)
     states: dict[int, int] = field(default_factory=dict)
     distance: float = 0.0
     angle: float = 0.0
@@ -47,8 +47,10 @@ class PlayContext:
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         properties = dict(self.properties)
-        rtpcs = dict(self.rtpcs)
-        states = dict(self.states)
+        
+        # RTPCs and States are global and do not need to be copied, we just track their values
+        rtpcs = self.rtpcs
+        states = self.states
 
         if isinstance(node, HIRCNode):
             if isinstance(node, PropertyMixin):
@@ -69,8 +71,8 @@ class PlayContext:
                 else:
                     properties[prop] = val
 
-            rtpcs = self.rtpcs | node.rtpcs
-            states = self.states | node.states
+            rtpcs |= node.rtpcs
+            states |= node.states
 
         else:
             raise TypeError(f"Invalid merge object {node}")

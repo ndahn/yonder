@@ -241,6 +241,7 @@ class MultiTrackStream(pyo.PyoObject):
 
             # NOTE: ClipAutomation and attenuation do not support pitch!
 
+        # TODO rtpcs not handled yet
         signal_in = self._dist_ctrl_volume * self._angle_ctrl_volume * source
 
         # fixed order for all voices: source -> pitch -> HPF -> LPF -> gain
