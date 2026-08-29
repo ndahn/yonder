@@ -84,6 +84,10 @@ class HIRCNode(DataNode):
     def type_name_short(self) -> str:
         return "".join(s for s in self.type_name if s.isupper())
 
+    @property
+    def wwise_link(self) -> str:
+        return None
+
     def get_name(self, default: str = None) -> str:
         if default is None:
             default = f"#{self.id}"

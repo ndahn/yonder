@@ -128,16 +128,17 @@ def create_node_widgets(
                         if doc.long_description:
                             add_paragraphs(doc.long_description)
 
-                if hasattr(type(node), "wwise_link"):
+                link = node.wwise_link
+                if link:
                     dpg.add_button(
                         label="?",
                         small=True,
                         callback=lambda s, a, u: webbrowser.open(u),
-                        user_data=node.wwise_link,
+                        user_data=link,
                     )
                     # dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
                     with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text("Open type documentation")
+                        dpg.add_text("Open documentation")
 
             with dpg.group(horizontal=True):
                 dpg.add_text("#")

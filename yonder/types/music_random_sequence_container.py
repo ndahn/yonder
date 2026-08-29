@@ -59,6 +59,10 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=defining_playback_behavior_of_music_playlist_containers"
+
+    @property
     def transition_rules(self) -> list[MusicTransitionRule]:
         return self.music_trans_node_params.transition_rules
 

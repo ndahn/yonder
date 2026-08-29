@@ -16,9 +16,8 @@ if TYPE_CHECKING:
 
 @dataclass(repr=False, eq=False)
 class Event(HIRCNode):
-    wwise_link: ClassVar[str] = (
-        "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
-    )
+    """Events are signals wwise uses to start, stop or change audio playback.
+    """
 
     body_type: ClassVar[int] = 4
     action_count: int = 0
@@ -37,6 +36,10 @@ class Event(HIRCNode):
                 ret.append(action)
 
         return ret
+
+    @property
+    def wwise_link(self):
+        return "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
 
     def get_wwise_name(self, default: Any = None) -> str:
         name = self.name

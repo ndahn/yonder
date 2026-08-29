@@ -22,6 +22,9 @@ from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 @dataclass(repr=False, eq=False)
 class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
+    """Segments are playback elements of determined length that contain one or more music tracks. A segment's tracks will play in parallel, while each track's clips will (usually) play in sequence.
+    """
+
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
@@ -54,7 +57,11 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         obj.parent = parent
         return obj
-
+    
+    @property
+    def wwise_link(self):
+        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=what_is_music_segment"
+    
     @property
     def parent(self) -> int:
         return self.music_node_params.node_base_params.direct_parent_id
