@@ -154,3 +154,5 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 raise ValueError(
                     f"{self}: corrupted layers found, you probably want to remove those"
                 )
+
+    # TODO playback

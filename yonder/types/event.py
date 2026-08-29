@@ -135,6 +135,9 @@ class Event(HIRCNode):
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
         ctx = my_pyo.ctx
 
         for action in self.get_action_nodes(ctx.bank):

@@ -155,6 +155,9 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not self.switch_groups:
             return
 
+        if self.pyo(ctx).playing:
+            return
+
         self.update_playback(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:

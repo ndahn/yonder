@@ -151,6 +151,9 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             return
 
         my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.playback
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
