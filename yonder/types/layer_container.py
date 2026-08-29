@@ -1,11 +1,14 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import PropID, RtpcType
 from yonder.util import logger
-from .hirc_node import HIRCNode
+from yonder.audio import PlayContext
+from yonder.audio.audiomath import eval_curve
+from .hirc_node import HIRCNode, PyoState
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -21,7 +24,7 @@ from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 @dataclass(repr=False, eq=False)
 class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
-    """Layers containers are used to define RTPC-driven blending between different playback elements."""
+    """Manages transitions between crossfade groups (layers), where each node in a group will get their own fade curve driven by a single RTPC."""
 
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
@@ -89,16 +92,16 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         A layer is a crossfade group, and each node in the group will get their own fade curve driven by a single RTPC. Children that merely play together don't need a layer.
         """
-        if any(l.layer_id == layer_id for l in self.layers):
-            raise ValueError(f"layer_id {layer_id} is already used in this container")
+        if any(layer.layer_id == layer_id for layer in self.layers):
+            raise ValueError(f"layer_id {layer_id} is already used")
 
         curves = curves or {}
         assoc = []
 
         for node in nodes:
             nid = node.id if isinstance(node, HIRCNode) else int(node)
-            pts = list(curves.get(nid, []))
-            assoc.append(AssociatedChildData(nid, len(pts), pts))
+            points = list(curves.get(nid, []))
+            assoc.append(AssociatedChildData(nid, len(points), points))
             self.children.add(nid)
 
         layer = Layer(
@@ -157,4 +160,36 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                     f"{self}: corrupted layers found, you probably want to remove those"
                 )
 
-    # TODO playback
+    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+        mixer = pyo.Mixer(outs=1, chnls=1)
+        my_pyo["controls"] = {}
+        return mixer
+
+    # TODO each layer has an InitialRTPC object that should be merged with the context
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        my_pyo.playing = True
+        self.update_playback(ctx)
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        mixer: pyo.Mixer = my_pyo.playback
+
+        for layer in self.layers:
+            x = ctx.rtpcs.get(layer.rtpc_id)
+
+            for child_info in layer.associated_children:
+                child = ctx.bank.get(child_info.associated_child_id)
+                if child:
+                    # TODO not sure how to use the layer.initial_rtpc data here
+                    child.play(ctx)
+                    y = eval_curve(child_info.graph_points, x)
+                    mixer.addInput(layer.layer_id, child.pyo(ctx).playback)
+                    mixer.setAmp(layer.layer_id, y)
+
+        super().update_playback(ctx)
