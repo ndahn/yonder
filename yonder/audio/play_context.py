@@ -3,15 +3,13 @@ from typing import TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from yonder.types.soundbank import Soundbank
-from yonder.types.hirc_node import HIRCNode
 from yonder.types.mixins import PropertyMixin
 from yonder.enums import PropID
 from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav
 
 if TYPE_CHECKING:
-    from yonder.types import Attenuation
+    from yonder.types import Attenuation, HIRCNode, Soundbank
 
 
 @dataclass
@@ -46,6 +44,8 @@ class PlayContext:
         return wav
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
+        from yonder.types.hirc_node import HIRCNode
+
         properties = dict(self.properties)
         
         # RTPCs and States are global and do not need to be copied, we just track their values

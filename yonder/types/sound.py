@@ -7,9 +7,9 @@ import pyo
 from yonder.hash import Hash
 from yonder.enums import SourceType, PropID
 from yonder.wem import get_wem_metadata
-from yonder.audio import PlayContext
+from yonder.audio import PlayContext, PlaybackState
 from yonder.audio.multi_track_stream import MultiTrackStream
-from .hirc_node import HIRCNode, PyoState
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     BankSourceData,
@@ -108,7 +108,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             media_information=MediaInformation(int(source_id), media_size),
         )
 
-    def _build_pyo(self, my_pyo: PyoState) -> MultiTrackStream:
+    def _build_pyo(self, my_pyo: PlaybackState) -> MultiTrackStream:
         ctx = my_pyo.ctx
         props = ctx.properties
 
@@ -140,7 +140,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.seek(ctx, 0)
 
     def seek(self, ctx: PlayContext, pos: float) -> None:
-        self.pyo(ctx).playback.seek(pos)
+        self.pyo(ctx).output.seek(pos)
 
     def update_playback(self, ctx: PlayContext) -> None:
         if not self.is_pyo_initialized():
@@ -148,7 +148,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: MultiTrackStream = my_pyo.playback
+        stream: MultiTrackStream = my_pyo.output
         props = ctx.properties
 
         stream.loop = PropID.Loop in props
@@ -192,7 +192,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     ) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: MultiTrackStream = my_pyo.playback
+        stream: MultiTrackStream = my_pyo.output
         cb_objects: list[pyo.PyoObject] = []
         num_trig = 0
 

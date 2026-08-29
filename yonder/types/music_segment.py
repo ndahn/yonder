@@ -6,8 +6,8 @@ import pyo
 from yonder.hash import calc_hash, Hash
 from yonder.enums import PropID, MarkerId
 from yonder.util import logger
-from yonder.audio import PlayContext
-from .hirc_node import HIRCNode, PyoState
+from yonder.audio import PlayContext, PlaybackState
+from .hirc_node import HIRCNode
 from .base_types import (
     MusicNodeParams,
     PropBundle,
@@ -22,8 +22,7 @@ from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 @dataclass(repr=False, eq=False)
 class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
-    """Segments are playback elements of determined length that contain one or more music tracks. A segment's tracks will play in parallel, while each track's clips will (usually) play in sequence.
-    """
+    """Segments are playback elements of determined length that contain one or more music tracks. A segment's tracks will play in parallel, while each track's clips will (usually) play in sequence."""
 
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
@@ -57,11 +56,11 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         obj.parent = parent
         return obj
-    
+
     @property
     def wwise_link(self):
         return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=what_is_music_segment"
-    
+
     @property
     def parent(self) -> int:
         return self.music_node_params.node_base_params.direct_parent_id
@@ -165,14 +164,14 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not missing_ok:
             raise ValueError(f"Marker {mid} not found")
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         ctx = my_pyo.ctx
         out = []
 
         for child_id in self.children.items:
             child = ctx.bank.get(child_id)
             if child:
-                out.append(child.pyo(ctx).playback)
+                out.append(child.pyo(ctx).output)
 
         my_pyo.cache["clock"] = pyo.Phasor(1000 / self.duration).stop()
         if out:
@@ -205,7 +204,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         my_pyo.play()
 
     def _on_segment_end(self, ctx: PlayContext) -> None:
-        # TODO this will probably cause a gap, but we'll have to change the 
+        # TODO this will probably cause a gap, but we'll have to change the
         # source/control design to fix this
         self.stop(ctx)
         self.pyo(ctx).cache["pause_time"] = 0.0
@@ -215,7 +214,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             child = ctx.bank.get(child_id)
             if child and hasattr(child, "seek"):
                 child.seek(ctx, 0)
-        
+
         if loop is not None:
             self.play(ctx)
 
@@ -238,7 +237,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     ):
         if not self.is_pyo_initialized():
             return
-         
+
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         cb_objects: list[pyo.PyoObject] = []

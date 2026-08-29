@@ -6,8 +6,8 @@ import pyo
 
 from yonder.hash import Hash
 from yonder.enums import SoundType, ActionType
-from yonder.audio import PlayContext
-from .hirc_node import HIRCNode, PyoState
+from yonder.audio import PlayContext, PlaybackState
+from .hirc_node import HIRCNode
 from .action import Action
 
 if TYPE_CHECKING:
@@ -16,8 +16,7 @@ if TYPE_CHECKING:
 
 @dataclass(repr=False, eq=False)
 class Event(HIRCNode):
-    """Events are signals wwise uses to start, stop or change audio playback.
-    """
+    """Events are signals wwise uses to start, stop or change audio playback."""
 
     body_type: ClassVar[int] = 4
     action_count: int = 0
@@ -133,9 +132,9 @@ class Event(HIRCNode):
         if other in self.actions:
             self.actions.remove(other)
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         ctx = my_pyo.ctx
-        return sum(n.pyo(ctx).playback for n in self.get_action_nodes(ctx.bank))
+        return sum(n.pyo(ctx).output for n in self.get_action_nodes(ctx.bank))
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)

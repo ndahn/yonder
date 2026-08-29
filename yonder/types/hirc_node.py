@@ -3,26 +3,13 @@ from typing import Any, ClassVar, Callable, TYPE_CHECKING
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
+from yonder.audio.playback_state import PlaybackState
 from .mixins import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
 if TYPE_CHECKING:
-    from yonder.audio import PlayContext
-
-
-@dataclass
-class PyoState:
-    ctx: PlayContext
-    playing: bool = False
-    playback: pyo.PyoObject = None
-    cache: dict = field(default_factory=dict)
-
-    def play(self, dur: int = 0, delay: int = 0) -> None:
-        self.playback.play(dur, delay)
-
-    def stop(self, wait: int = 0) -> None:
-        self.playback.stop(wait)
+    from yonder.audio.play_context import PlayContext
 
 
 @dataclass(slots=True)
@@ -164,13 +151,15 @@ class HIRCNode(DataNode):
 
         return delve(self)
 
-    def pyo(self, ctx: PlayContext) -> PyoState:
+    def pyo(self, ctx: PlayContext) -> PlaybackState:
+        # TODO the repetitive merging seems unwarranted, maybe only do it in
+        # update_playback and return the stored context from PyoState instead?
         ctx = ctx.merge(self)
 
         my_pyo = getattr(self, "_pyo", None)
         if my_pyo is None:
-            my_pyo = PyoState(ctx)
-            my_pyo.playback = self._build_pyo(my_pyo)
+            my_pyo = PlaybackState(ctx)
+            my_pyo.output = self._build_pyo(my_pyo)
             self._pyo = my_pyo
 
         my_pyo.ctx = ctx
@@ -208,7 +197,7 @@ class HIRCNode(DataNode):
 
         self._release_cb = pyo.CallAfter(release, delay)
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
 
         This should be implemented by deriving classes. Note that this must always return a valid pyo object. Return `pyo.Sig(0)` if you have nothing to play.

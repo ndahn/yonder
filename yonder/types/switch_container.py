@@ -6,8 +6,8 @@ import pyo
 from yonder.hash import Hash, calc_hash
 from yonder.enums import PropID
 from yonder.util import logger
-from yonder.audio import PlayContext
-from .hirc_node import HIRCNode, PyoState
+from yonder.audio import PlayContext, PlaybackState
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -146,7 +146,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if other in self.children:
             self.children.remove(other)
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         sig = pyo.Sig(0)
         my_pyo.cache["pyo_placeholder"] = sig
         return pyo.InputFader(sig)
@@ -165,7 +165,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.playback
+        fader: pyo.InputFader = my_pyo.output
 
         switch_state = ctx.states.get(self.group_id, self.default_switch)
 
@@ -188,11 +188,11 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not nodes:
             input_sig = my_pyo.cache["pyo_placeholder"]
         elif len(nodes) == 1:
-            input_sig = nodes[0].pyo(ctx).playback
+            input_sig = nodes[0].pyo(ctx).output
         else:
             input_sig = pyo.Mixer(outs=1, chnls=1)
             for n in nodes:
-                input_sig.addInput(n.id, n.pyo(ctx).playback)
+                input_sig.addInput(n.id, n.pyo(ctx).output)
                 input_sig.setAmp(n.id, 1)
 
         # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways

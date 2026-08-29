@@ -5,11 +5,11 @@ import networkx as nx
 import pyo
 
 from yonder.hash import global_id_generator, Hash
-from yonder.enums import PropID, CurveInterpolation, SyncType, RandomSequenceMode
+from yonder.enums import PropID, RandomSequenceMode
 from yonder.util import logger
-from yonder.audio import PlayContext
+from yonder.audio import PlayContext, PlaybackState
 from yonder.audio.mrsc_playlist_state import PlaylistState
-from .hirc_node import HIRCNode, PyoState
+from .hirc_node import HIRCNode
 from .base_types import (
     MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
@@ -299,7 +299,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
         return ret
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
         sig = pyo.Sig(0)
         my_pyo.cache["pyo_placeholder"] = sig
         return pyo.InputFader(sig)
@@ -321,7 +321,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             return
 
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.playback
+        fader: pyo.InputFader = my_pyo.output
 
         state: PlaylistState = my_pyo.cache.get("playlist_state")
         if not state:
@@ -358,7 +358,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                 # TODO Not respecting Step modes, but should be fine for now
                 node.register_end_trigger(ctx, self._play_next, xfade, 1)
                 node.play(ctx)
-                fader.setInput(node.pyo(ctx).playback, xfade)
+                fader.setInput(node.pyo(ctx).output, xfade)
 
                 # Wait for the fader to finish
                 if prev_node:

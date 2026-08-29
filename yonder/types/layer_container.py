@@ -6,9 +6,9 @@ import pyo
 from yonder.hash import Hash
 from yonder.enums import PropID, RtpcType
 from yonder.util import logger
-from yonder.audio import PlayContext
+from yonder.audio import PlayContext, PlaybackState
 from yonder.audio.audiomath import eval_curve
-from .hirc_node import HIRCNode, PyoState
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -160,7 +160,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                     f"{self}: corrupted layers found, you probably want to remove those"
                 )
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         my_pyo.cache["controls"] = {}
         return pyo.Mixer(outs=1, chnls=1)
 
@@ -177,13 +177,12 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        mixer: pyo.Mixer = my_pyo.playback
+        mixer: pyo.Mixer = my_pyo.output
         controls = my_pyo.cache["controls"]
 
         for layer in self.layers:
-            #rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
+            # rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
             x = ctx.rtpcs.get(layer.rtpc_id)
-
 
             for child_info in layer.associated_children:
                 child = ctx.bank.get(child_info.associated_child_id)
@@ -196,7 +195,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                     if ctrl is None:
                         # Use a control to smooth out transitions
                         ctrl = pyo.SigTo(y)
-                        child_pyo = child.pyo(ctx).playback
+                        child_pyo = child.pyo(ctx).output
                         mixer.addInput(child.id, ctrl * child_pyo)
                         mixer.setAmp(child.id, 0, 1)
                         controls[child.id] = ctrl

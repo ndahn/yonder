@@ -7,8 +7,8 @@ import pyo
 from yonder.hash import Hash, calc_hash, lookup_name
 from yonder.enums import GroupType, DecisionTreeMode, PropID
 from yonder.util import logger, get_key_hash, parse_state_path
-from yonder.audio import PlayContext
-from .hirc_node import HIRCNode, PyoState
+from yonder.audio import PlayContext, PlaybackState
+from .hirc_node import HIRCNode
 from .base_types import (
     MusicTransNodeParams,
     MusicTransitionRule,
@@ -342,7 +342,7 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         return ret
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
         sig = pyo.Sig(0)
         my_pyo.cache["pyo_placeholder"] = sig
         return pyo.InputFader(sig)
@@ -361,7 +361,7 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.playback
+        fader: pyo.InputFader = my_pyo.output
 
         values = [ctx.states.get(arg.group_id, 0) for arg in self.arguments]
         selected = self.select_child(values)
@@ -383,7 +383,7 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         if node:
             node.play(ctx)
-            fader.setInput(node.pyo(ctx).playback, xfade)
+            fader.setInput(node.pyo(ctx).output, xfade)
         else:
             fader.setInput(my_pyo.cache["pyo_placeholder"], xfade)
 

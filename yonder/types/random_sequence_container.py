@@ -8,8 +8,8 @@ import pyo
 from yonder.hash import Hash
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from yonder.util import logger
-from yonder.audio import PlayContext
-from .hirc_node import HIRCNode, PyoState
+from yonder.audio import PlayContext, PlaybackState
+from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     Children,
@@ -141,7 +141,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.InputFader:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
         sig = pyo.Sig(0)
         my_pyo.cache["pyo_placeholder"] = sig
         return pyo.InputFader(sig)
@@ -156,7 +156,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo.playing = True
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.playback
+        fader: pyo.InputFader = my_pyo.output
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
 
         if force_playlist_idx >= 0:
@@ -179,7 +179,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             )
 
             child.play(ctx)
-            fader.setInput(child.pyo(ctx).playback, xfade)
+            fader.setInput(child.pyo(ctx).output, xfade)
             my_pyo.cache["prev_node"] = child.id
         else:
             xfade = 0.5

@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 import time
 import atexit
 
@@ -160,11 +159,11 @@ class HIRCPlayer:
 
     def set_volume(self, node_id: int | None, vol_db: float) -> None:
         for node in self.collect_voices(True, node_id):
-            node.pyo(self.context).playback.volume = vol_db
+            node.pyo(self.context).output.volume = vol_db
 
     def set_muted(self, node_id: int | None, muted: bool) -> None:
         for node in self.collect_voices(True, node_id):
-            voice = node.pyo(self.context).playback
+            voice = node.pyo(self.context).output
             if muted:
                 if voice.gain > 0:
                     self._voice_gains[node.id] = voice.gain
@@ -194,7 +193,7 @@ class HIRCPlayer:
             return
 
         self._playing = True
-        node_out = self.entrypoint.pyo(self.context).playback
+        node_out = self.entrypoint.pyo(self.context).output
         self.entrypoint.play(self.context)
         self._mixer.clear()
         self._mixer.addInput(0, node_out)

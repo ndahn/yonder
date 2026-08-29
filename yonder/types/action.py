@@ -6,9 +6,9 @@ import pyo
 from yonder.hash import Hash
 from yonder.enums import ValueMeaning, ActionType
 from yonder.util import logger
-from yonder.audio import PlayContext
+from yonder.audio import PlayContext, PlaybackState
 from .base_types import PropBundle, PropRangedModifiers
-from .hirc_node import HIRCNode, PyoState
+from .hirc_node import HIRCNode
 from .serialization import _serialize_value, _deserialize_fields
 from .mixins import PropertyMixin
 
@@ -145,10 +145,10 @@ class Action(PropertyMixin, HIRCNode):
     def get_references(self) -> list[tuple[str, int]]:
         return [("external_id", self.external_id)]
 
-    def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         node = my_pyo.ctx.bank.get(self.external_id)
         if node:
-            return node.pyo(my_pyo.ctx).playback
+            return node.pyo(my_pyo.ctx).output
 
         return pyo.Sig(0)
 
