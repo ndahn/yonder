@@ -159,7 +159,6 @@ class MultiTrackStream(pyo.PyoObject):
         if isinstance(paths, (str, Path)):
             paths = [Path(paths)]
 
-        paths = [Path(p) for p in paths]
         playlist = []
         cursor = 0.0
         last = len(paths) - 1
@@ -172,7 +171,7 @@ class MultiTrackStream(pyo.PyoObject):
 
             playlist.append(
                 TrackSrcInfo(
-                    source_id=i,
+                    source_id=p.stem,
                     play_at=cursor,
                     begin_trim_offset=b_trim,
                     end_trim_offset=e_trim,

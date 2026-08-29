@@ -146,6 +146,7 @@ class HIRCPlayer:
                 self.set_volume(node.id, vol_db)
         else:
             node = self.bnk[voice_id]
+            # TODO need to collect the voices from the node
             node.pyo(self.context)[1].volume = vol_db
 
     def set_muted(self, voice_id: int | None, muted: bool) -> None:
@@ -153,7 +154,9 @@ class HIRCPlayer:
             for node in self.collect_voices(True):
                 self.set_muted(node.id, muted)
         else:
-            _, voice = node.pyo(self.context)
+            node = self.bnk[voice_id]
+            # TODO need to collect the voices from the node
+            voice = node.pyo(self.context).playback
             if muted:
                 if voice.gain > 0:
                     self._voice_gains[node.id] = voice.gain
@@ -183,7 +186,7 @@ class HIRCPlayer:
             return
 
         self._playing = True
-        node_out = self.entrypoint.pyo(self.context)
+        node_out = self.entrypoint.pyo(self.context).playback
         self.entrypoint.play(self.context)
         self._mixer.clear()
         self._mixer.addInput(0, node_out)

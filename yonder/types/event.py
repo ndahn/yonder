@@ -131,13 +131,15 @@ class Event(HIRCNode):
             self.actions.remove(other)
 
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
-        return sum(n.pyo(my_pyo.ctx) for n in self.get_action_nodes(my_pyo.ctx.bank))
+        ctx = my_pyo.ctx
+        return sum(n.pyo(ctx).playback for n in self.get_action_nodes(ctx.bank))
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         if my_pyo.playing:
             return
 
+        my_pyo.playing = True
         ctx = my_pyo.ctx
 
         for action in self.get_action_nodes(ctx.bank):

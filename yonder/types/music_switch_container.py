@@ -351,9 +351,11 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not self.children:
             return
 
-        if self.pyo(ctx).playing:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
             return
 
+        my_pyo.playing = True
         self.update_playback(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:

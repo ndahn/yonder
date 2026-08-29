@@ -119,6 +119,8 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if path.suffix == ".wem":
             path = wem2wav(ctx.vgmstream_exe, path)[0]
 
+        # TODO save wem search paths in bank, pass vgmstream_exe to MultiTrackStream
+
         return MultiTrackStream.from_paths(
             ctx.bank,
             path,
@@ -137,13 +139,14 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
+        my_pyo.playing = True
         self.update_playback(ctx)
         self.register_end_trigger(ctx, self._on_sound_end, 0, 0)
         my_pyo.play()
 
     def _on_sound_end(self, ctx: PlayContext) -> None:
         self.stop(ctx)
-        self.seek(0)
+        self.seek(ctx, 0)
 
     def seek(self, ctx: PlayContext, pos: float) -> None:
         self.pyo(ctx).playback.seek(pos)
@@ -232,10 +235,11 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         storage_key = max(storage.keys(), default=-1) + 1
         storage[storage_key] = cb_objects
 
-    def release_pyo(self, ctx: PlayContext) -> None:
+    def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
         if self.is_pyo_initialized():
             my_pyo = self.pyo(ctx)
-            for obj in my_pyo.cache.get("triggers", []):
-                obj.stop()
+            for cb_objects in my_pyo.cache.get("triggers", {}).values():
+                for obj in cb_objects:
+                    obj.stop()
 
-        super().release_pyo(ctx)
+        super().release_pyo(ctx, delay)

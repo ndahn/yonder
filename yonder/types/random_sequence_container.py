@@ -104,7 +104,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def pick_random_child(self) -> tuple[int, PlaylistItem]:
         # TODO respect random mode, no repeats, etc
         weights = [p.weight for p in self.playlist]
-        idx = random.choices(self.playlist, weights)
+        idx = random.choices(range(len(self.playlist)), weights)[0]
         return (idx, self.playlist[idx])
 
     def attach(self, other: int | HIRCNode) -> None:
@@ -154,6 +154,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
+        my_pyo.playing = True
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.playback
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))

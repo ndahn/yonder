@@ -167,8 +167,8 @@ class HIRCNode(DataNode):
 
         my_pyo = getattr(self, "_pyo", None)
         if my_pyo is None:
-            obj = self._build_pyo(my_pyo)
-            my_pyo = PyoState(ctx, obj)
+            my_pyo = PyoState(ctx)
+            my_pyo.playback = self._build_pyo(my_pyo)
             self._pyo = my_pyo
 
         my_pyo.ctx = ctx

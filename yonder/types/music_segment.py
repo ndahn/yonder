@@ -168,7 +168,10 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 out.append(child.pyo(ctx).playback)
 
         my_pyo.cache["clock"] = pyo.Phasor(1000 / self.duration).stop()
-        return sum(out)
+        if out:
+            return sum(out)
+
+        return pyo.Sig(0)
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
@@ -204,7 +207,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         for child_id in self.children.items:
             child = ctx.bank.get(child_id)
             if child and hasattr(child, "seek"):
-                child.seek(0)
+                child.seek(ctx, 0)
         
         if loop is not None:
             self.play(ctx)

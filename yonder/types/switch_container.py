@@ -155,9 +155,11 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not self.switch_groups:
             return
 
-        if self.pyo(ctx).playing:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
             return
 
+        my_pyo.playing = True
         self.update_playback(ctx)
 
     def update_playback(self, ctx: PlayContext) -> None:
@@ -177,8 +179,8 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 n.update_playback(ctx)
                 nodes.append(n)
 
-        active_state = my_pyo.cache.get("active_switch")
-        if switch_state == active_state:
+        active_switch = my_pyo.cache.get("active_switch")
+        if switch_state == active_switch:
             # Switch already active, nothing to do
             return
 
@@ -204,8 +206,8 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         fader.setInput(input_sig, xfade)
 
         # Cleanup old inputs; wait for the fader to finish
-        if active_state is not None:
-            old_ids = self.get_nodes_for_switch(active_state)
+        if active_switch is not None:
+            old_ids = self.get_nodes_for_switch(active_switch)
             for oid in old_ids:
                 if oid not in node_ids:
                     n = ctx.bank.get(oid)
@@ -213,4 +215,4 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                         n.release_pyo(ctx, xfade + 0.1)
 
         my_pyo.cache["input_sig"] = input_sig
-        my_pyo.cache["active_state"] = switch_state
+        my_pyo.cache["active_switch"] = switch_state

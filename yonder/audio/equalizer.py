@@ -58,13 +58,13 @@ class Equalizer(pyo.PyoObject):
         self._ctrl[pow_or_freq].value = boost
 
     def play(self, dur: float = 0, delay: float = 0) -> pyo.PyoObject:
-        for eq in self._eq:
+        for eq in self._eq.values():
             eq.play(dur, delay)
 
         return pyo.PyoObject.play(self, dur, delay)
 
     def stop(self, wait: int = 0) -> pyo.PyoObject:
-        for eq in self._eq:
+        for eq in self._eq.values():
             eq.stop(wait)
 
         return pyo.PyoObject.stop(self, wait)

@@ -53,10 +53,19 @@ class PlayContext:
                 else:
                     properties[prop] = val
 
-            rtpcs = dict(self.rtpcs).update(node.rtpcs)
-            states = dict(self.states).update(node.states)
+            rtpcs = self.rtpcs | node.rtpcs
+            states = self.states | node.states
 
         else:
             raise TypeError(f"Invalid merge object {node}")
 
-        return PlayContext(self.bank, properties, rtpcs, states)
+        return PlayContext(
+            bank=self.bank,
+            vgmstream_exe=self.vgmstream_exe,
+            wem_search_paths=self.wem_search_paths,
+            properties=properties, 
+            rtpcs=rtpcs, 
+            states=states,
+            distance=self.distance,
+            angle=self.angle,
+        )
