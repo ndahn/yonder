@@ -25,7 +25,7 @@ def _parse_plain(scheme: str) -> list[tuple[int, str]]:
 @dataclass
 class EffectInfo:
     fxid: int
-    decoder_scheme: str
+    byte_pattern: str
     fields: list[str]
     description: str = ""
 
@@ -57,19 +57,16 @@ class EffectInfo:
         return EffectPluginType(self.fxid & 0xF)
 
     def decode_params(self, data: str) -> tuple[dict, bytes]:
-        """decode a base64 params blob according to self.decoder_scheme.
+        """Decode a base64 params blob according to self.byte_pattern.
 
-        scheme grammar:
+        Pattern grammar:
           <count><type>       plain group, e.g. "4f" = 4 float32, "i" = 1 int32
-          (<sub>)*<ref>       repeat group: <sub> is a plain scheme (e.g. "1i3f") repeated
+          (<sub>)*<ref>       repeat group: <sub> is a plain pattern (e.g. "1i3f") repeated
                                either a literal number of times ("(1i3f)*4") or a number of
                                times equal to an earlier field's first value
-                               ("(1i3f)*@0" repeats scheme[0] times)
+                               ("(1i3f)*@0" repeats pattern[0] times)
 
-        one entry is appended to `values` per top-level token, zipped against `self.fields`,
-        so a repeat group counts as a single field whose value is a list oF values.
-        leftover bytes that don't fill a full word, or aren't consumed by the scheme, are
-        kept in `self.trailing_bytes` rather than silently dropped.
+        One entry is appended to `values` per top-level token, zipped against `self.fields`, so a repeat group counts as a single field whose value is a list oF values. Leftover bytes that don't fill a full word, or aren't consumed by the pattern, are returned as the second tuple element.
         """
         # our soundbank jsons never contain base64 padding, so we need to restore it
         padding = "=" * (-len(data) % 4)
@@ -79,7 +76,7 @@ class EffectInfo:
         values = []
         word = 0
 
-        for m in _TOKEN_RE.finditer(self.decoder_scheme):
+        for m in _TOKEN_RE.finditer(self.byte_pattern):
             if m.group("sub") is not None:
                 sub_tokens = _parse_plain(m.group("sub"))
                 ref = m.group("ref")
@@ -136,11 +133,11 @@ class EffectInfo:
         return params, trailing_bytes
 
     def encode_params(self, params: dict | list, trailing: bytes = bytes()) -> str:
-        """inverse of decode_params. re-packs field values back into a base64 params blob.
+        """Inverse of decode_params. Re-packs field values back into a base64 params blob.
 
         `params` can be the dict decode_params returns (field_name -> values/rows), or a plain or a plain list of the same values in `self.fields` order. `trailing` is any bytes that didn't fill a full word (e.g. `self.trailing_bytes` from a prior decode) and is appended verbatim after the packed data.
         """
-        if not self.decoder_scheme or not self.fields:
+        if not self.byte_pattern or not self.fields:
             raise ValueError(f"{self.name} has no known decoder scheme yet")
 
         if isinstance(params, dict):
@@ -159,7 +156,7 @@ class EffectInfo:
         chunks = []
         value_iter = iter(values)
 
-        for m in _TOKEN_RE.finditer(self.decoder_scheme):
+        for m in _TOKEN_RE.finditer(self.byte_pattern):
             value = next(value_iter)
 
             if m.group("sub") is not None:
