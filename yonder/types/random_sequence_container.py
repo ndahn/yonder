@@ -152,7 +152,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.pyo_playback
+        fader: pyo.InputFader = my_pyo.playback
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
 
         if force_playlist_idx >= 0:
@@ -163,16 +163,19 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         child = ctx.bank.get(playlist_item.play_id)
         if child:
-            xfade = max(
-                [
-                    ctx.properties.get(PropID.FadeOutTime, 0.0),
-                    ctx.properties.get(PropID.FadeInTime, 0.0),
-                    50,
-                ]
-            ) / 1000
+            xfade = (
+                max(
+                    [
+                        ctx.properties.get(PropID.FadeOutTime, 0.0),
+                        ctx.properties.get(PropID.FadeInTime, 0.0),
+                        50,
+                    ]
+                )
+                / 1000
+            )
 
             child.play(ctx)
-            fader.setInput(child.pyo(ctx).pyo_playback, xfade)
+            fader.setInput(child.pyo(ctx).playback, xfade)
             my_pyo.cache["prev_node"] = child.id
         else:
             xfade = 0.5

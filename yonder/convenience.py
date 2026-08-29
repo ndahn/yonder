@@ -268,7 +268,7 @@ def _setup_bgm(
                 mt.set_property(prop, val)
 
             if bgm.fadein > 0:
-                mt.add_clip(
+                mt.add_clip_automation(
                     ClipAutomationType.FadeIn,
                     [
                         RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),
@@ -327,7 +327,7 @@ def _setup_bgm(
 
         # Pronounced fade in for the track
         if intro_length == 0.0 and bgm.fadein > 0.0:
-            mt.add_clip(
+            mt.add_clip_automation(
                 ClipAutomationType.FadeIn,
                 [
                     RTPCGraphPoint(0.0, 0.0, CurveInterpolation.Sine),

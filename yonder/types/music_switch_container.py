@@ -356,7 +356,7 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.pyo_playback
+        fader: pyo.InputFader = my_pyo.playback
 
         values = [ctx.states.get(arg.group_id, 0) for arg in self.arguments]
         selected = self.select_child(values)
@@ -367,15 +367,18 @@ class MusicSwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             return
 
         rule = self.music_trans_node_params.get_transition_rule(prev_node, node)
-        xfade = max(
-            rule.source_transition_rule.transition_time,
-            rule.destination_transition_rule.transition_time,
-            50,
-        ) / 1000
+        xfade = (
+            max(
+                rule.source_transition_rule.transition_time,
+                rule.destination_transition_rule.transition_time,
+                50,
+            )
+            / 1000
+        )
 
         if node:
             node.play(ctx)
-            fader.setInput(node.pyo(ctx).pyo_playback, xfade)
+            fader.setInput(node.pyo(ctx).playback, xfade)
         else:
             fader.setInput(my_pyo.cache["pyo_placeholder"], xfade)
 

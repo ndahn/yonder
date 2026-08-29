@@ -16,16 +16,14 @@ if TYPE_CHECKING:
 @dataclass
 class PyoState:
     ctx: PlayContext
-    pyo_playback: pyo.PyoObject = None
+    playback: pyo.PyoObject = None
     cache: dict = field(default_factory=dict)
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
-        for obj in self.cache:
-            obj.play(dur, delay)
+        self.playback.play(dur, delay)
 
     def stop(self, wait: int = 0) -> None:
-        for obj in self.cache:
-            obj.stop(wait)
+        self.playback.stop(wait)
 
 
 @dataclass(slots=True)
@@ -279,7 +277,9 @@ class HIRCNode(DataNode):
         for _, ref in self.get_references():
             node = ctx.bank.get(ref)
             if node and node.is_pyo_initialized():
-                node.register_end_trigger(ctx, callback, before=before, triggers=triggers)
+                node.register_end_trigger(
+                    ctx, callback, before=before, triggers=triggers
+                )
 
     def __hash__(self) -> int:
         return self.id

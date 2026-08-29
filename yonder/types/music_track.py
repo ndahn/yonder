@@ -64,6 +64,18 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def track_type_enum(self) -> MusicTrackType:
+        return MusicTrackType(self.track_type)
+
+    @property
+    def duration(self) -> float:
+        # TODO depends on the music track type
+        return sum(
+            x.play_at + x.source_duration - x.begin_trim_offset - x.end_trim_offset
+            for x in self.playlist
+        )
+
+    @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
 
@@ -173,14 +185,14 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 track_id=0,
                 source_id=source_id,
                 event_id=event,
-                play_at=-begin_trim,
+                play_at=-begin_trim,  # TODO is play_at global?
                 begin_trim_offset=begin_trim,
                 end_trim_offset=-abs(end_trim),
                 source_duration=duration_ms,
             )
         )
 
-    def add_clip(
+    def add_clip_automation(
         self,
         clip_type: ClipAutomationType,
         points: list[RTPCGraphPoint],
@@ -228,6 +240,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         )
 
     def play(self, ctx: PlayContext) -> None:
+        # TODO Once we support different track_types we will have to do this differently
         my_pyo = self.pyo(ctx)
         self.update_playback(ctx)
         my_pyo.play()
@@ -238,7 +251,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.pyo_playback
+        stream: StreamSource = my_pyo.playback
         props = ctx.properties
 
         stream.loop = PropID.Loop in props
@@ -282,7 +295,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     ) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.pyo_playback
+        stream: StreamSource = my_pyo.playback
         cb_objects: list[pyo.PyoObject] = []
         num_trig = 0
 
@@ -315,3 +328,11 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         storage: dict = my_pyo.cache.setdefault("triggers", {})
         storage_key = max(storage.keys(), 0) + 1
         storage[storage_key] = cb_objects
+
+    def release_pyo(self, ctx: PlayContext) -> None:
+        if self.is_pyo_initialized():
+            my_pyo = self.pyo(ctx)
+            for obj in my_pyo.cache.get("triggers", []):
+                obj.stop()
+
+        super().release_pyo(ctx)

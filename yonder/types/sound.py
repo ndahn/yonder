@@ -143,7 +143,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.pyo_playback
+        stream: StreamSource = my_pyo.playback
         props = ctx.properties
 
         stream.loop = PropID.Loop in props
@@ -187,7 +187,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     ) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        stream: StreamSource = my_pyo.pyo_playback
+        stream: StreamSource = my_pyo.playback
         cb_objects: list[pyo.PyoObject] = []
         num_trig = 0
 
@@ -220,3 +220,11 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         storage: dict = my_pyo.cache.setdefault("triggers", {})
         storage_key = max(storage.keys(), 0) + 1
         storage[storage_key] = cb_objects
+
+    def release_pyo(self, ctx: PlayContext) -> None:
+        if self.is_pyo_initialized():
+            my_pyo = self.pyo(ctx)
+            for obj in my_pyo.cache.get("triggers", []):
+                obj.stop()
+
+        super().release_pyo(ctx)

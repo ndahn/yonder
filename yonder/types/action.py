@@ -148,7 +148,7 @@ class Action(PropertyMixin, HIRCNode):
     def _build_pyo(self, my_pyo: PyoState) -> pyo.PyoObject:
         node = my_pyo.ctx.bank.get(self.external_id)
         if node:
-            return node.pyo(my_pyo.ctx).pyo_playback
+            return node.pyo(my_pyo.ctx).playback
 
         return pyo.Sig(0)
 

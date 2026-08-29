@@ -160,7 +160,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.pyo_playback
+        fader: pyo.InputFader = my_pyo.playback
 
         switch_state = ctx.states.get(self.group_id, self.default_switch)
 
@@ -183,11 +183,11 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if not nodes:
             input_sig = my_pyo.cache["pyo_placeholder"]
         elif len(nodes) == 1:
-            input_sig = nodes[0].pyo(ctx).pyo_playback
+            input_sig = nodes[0].pyo(ctx).playback
         else:
             input_sig = pyo.Mixer(outs=1, chnls=1)
             for n in nodes:
-                input_sig.addInput(n.id, n.pyo(ctx).pyo_playback)
+                input_sig.addInput(n.id, n.pyo(ctx).playback)
                 input_sig.setAmp(n.id, 1)
 
         # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways

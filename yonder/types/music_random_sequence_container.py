@@ -317,7 +317,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             return
 
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.pyo_playback
+        fader: pyo.InputFader = my_pyo.playback
 
         state: PlaylistState = my_pyo.cache.get("playlist_state")
         if not state:
@@ -354,7 +354,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                 # TODO Not respecting Step modes, but should be fine for now
                 node.register_end_trigger(ctx, self._play_next, xfade, 1)
                 node.play(ctx)
-                fader.setInput(node.pyo(ctx).pyo_playback, xfade)
+                fader.setInput(node.pyo(ctx).playback, xfade)
 
                 # Wait for the fader to finish
                 if prev_node:
