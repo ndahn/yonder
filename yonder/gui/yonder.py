@@ -1670,7 +1670,7 @@ class BanksOfYonder(DpgItem):
         self._selected_node = node
         self._selected_section = None
         self._set_json_highlight(False)
-        
+
         # TODO this would be nicer, but it's difficult to decide which action/event
         # to include in the graph and jump to when selected
         # events = self.bnk.find_events_for(node)
@@ -1700,30 +1700,30 @@ class BanksOfYonder(DpgItem):
         delve(self._t("attributes"))
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
 
-        def on_node_changed(sender: str, node: HIRCNode, user_data: Any) -> None:
-            self._hirc_player.player.update_context()
-            self.update_json_panel()
-
-        def on_structure_changed() -> None:
-            self._hirc_player.player.stop()
-            self.regenerate()
-            self._hirc_player.load(self.bnk, self._selected_node)
-
         if node:
             dpg.split_frame()
             create_node_widgets(
                 self.bnk,
                 node,
-                on_node_changed,
+                lambda s, a, u: self._on_node_changed(a),
                 lambda s, a, u: self.jump_to_node(a),
-                on_structure_changed,
+                self._on_structure_changed,
                 tag=self._t("attributes_"),
                 parent=self._t("attributes"),
             )
 
+    def _on_node_changed(self, node: HIRCNode) -> None:
+        self._hirc_player.player.update_context()
+        self.update_json_panel()
+
+    def _on_structure_changed(self) -> None:
+        self._hirc_player.player.stop()
+        self.regenerate()
+        self._hirc_player.load(self.bnk, self._selected_node)
+
     def jump_to_node(self, node: int | HIRCNode) -> None:
         self._hirc_player.player.stop()
-        
+
         if node in (0, "", None):
             return
 
