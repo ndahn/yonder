@@ -46,7 +46,6 @@ from yonder.enums import (
     ActionType,
     SourceType,
     CurveScaling,
-    AttenuationDrivers,
     AttenuationProperty,
     ClipAutomationType,
     PropID,
