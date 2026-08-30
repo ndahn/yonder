@@ -89,7 +89,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
 
         meta = get_wem_metadata(wem)
-        size = meta["in_memory_size"]
+        size = meta["filesize"]
 
         self.set_source(
             wem_id,

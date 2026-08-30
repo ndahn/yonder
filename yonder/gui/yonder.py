@@ -1657,7 +1657,12 @@ class BanksOfYonder(DpgItem):
             self._backup = node.copy()
             dpg.set_value(self._t("json"), node.json())
             # TODO enable player once ready
-            self._hirc_player.load(self.bnk, node)
+            try:
+                self._hirc_player.load(self.bnk, node)
+                self._hirc_player.set_enabled(True)
+            except ValueError as e:
+                logger.error(f"HIRC player failed to load: {e}")
+                self._hirc_player.set_enabled(False)
         else:
             self._backup = None
             dpg.set_value(self._t("json"), "")

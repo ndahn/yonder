@@ -11,7 +11,8 @@ from yonder.types.base_types import (
     TrackSrcInfo,
 )
 from yonder.enums import ClipAutomationType, CurveScaling, AttenuationProperty
-from yonder.audio.audiomath import (
+from yonder.util import logger
+from .audiomath import (
     hpf_to_hz,
     lpf_to_hz,
     db_to_amp,
@@ -21,7 +22,84 @@ from yonder.audio.audiomath import (
 )
 
 
+# TODO play silence if wem files not found
+
+
 class MultiTrackStream(pyo.PyoObject):
+    @classmethod
+    def from_source_ids(
+        cls,
+        sources: int | list[int],
+        resolve_source: Callable[[int], Path],
+        *,
+        loop: bool = False,
+        volume_db: float = 0,
+        hpf_cents: float = 0,
+        lpf_cents: float = 0,
+        pitch_semitones: float = 0,
+        distance: float = 0.0,
+        angle: float = 0.0,
+        attenuation: Attenuation = None,
+        clip_automations: list[ClipAutomation] = None,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        loop_start: float = 0.0,
+        loop_end: float = 0.0,
+        xfade: float = 0.05,
+        mul: float = 1,
+        add: float = 0,
+    ) -> "MultiTrackStream":
+        """build a playlist from plain files, for sounds with no track/playlist data"""
+        if isinstance(sources, (int)):
+            sources = [sources]
+
+        playlist = []
+        cursor = 0.0
+        last = len(sources) - 1
+
+        for i, sid in enumerate(sources):
+            path = resolve_source(sid)
+            if not path:
+                logger.warning(f"Failed to resolve wem for source {sid}")
+                continue
+
+            raw_dur = sndinfo(str(path))[1]
+            b_trim = begin_trim if i == 0 else 0.0
+            e_trim = end_trim if i == last else 0.0
+
+            playlist.append(
+                TrackSrcInfo(
+                    source_id=sid,
+                    play_at=cursor,
+                    begin_trim_offset=b_trim,
+                    end_trim_offset=e_trim,
+                    source_duration=raw_dur,
+                )
+            )
+            cursor += raw_dur - b_trim - e_trim
+
+        if not playlist:
+            playlist.append(TrackSrcInfo())
+
+        return cls(
+            playlist,
+            resolve_source,
+            loop=loop,
+            volume_db=volume_db,
+            hpf_cents=hpf_cents,
+            lpf_cents=lpf_cents,
+            pitch_semitones=pitch_semitones,
+            distance=distance,
+            angle=angle,
+            attenuation=attenuation,
+            clip_automations=clip_automations,
+            loop_start=loop_start,
+            loop_end=loop_end,
+            xfade=xfade,
+            mul=mul,
+            add=add,
+        )
+
     """
     Plays a track built from one or more clips laid out on a timeline. Two players alternate and crossfade at clip boundaries.
 
@@ -129,73 +207,6 @@ class MultiTrackStream(pyo.PyoObject):
         self._update_attenuation()
 
         self._base_objs = sum(o.getBaseObjects() for o in self._chain)
-
-    @classmethod
-    def from_source_ids(
-        cls,
-        sources: int | list[int],
-        resolve_source: Callable[[int], Path],
-        *,
-        loop: bool = False,
-        volume_db: float = 0,
-        hpf_cents: float = 0,
-        lpf_cents: float = 0,
-        pitch_semitones: float = 0,
-        distance: float = 0.0,
-        angle: float = 0.0,
-        attenuation: Attenuation = None,
-        clip_automations: list[ClipAutomation] = None,
-        begin_trim: float = 0.0,
-        end_trim: float = 0.0,
-        loop_start: float = 0.0,
-        loop_end: float = 0.0,
-        xfade: float = 0.05,
-        mul: float = 1,
-        add: float = 0,
-    ) -> "MultiTrackStream":
-        """build a playlist from plain files, for sounds with no track/playlist data"""
-        if isinstance(sources, (int)):
-            sources = [sources]
-
-        playlist = []
-        cursor = 0.0
-        last = len(sources) - 1
-
-        for i, sid in enumerate(sources):
-            path = resolve_source(sid)
-            raw_dur = sndinfo(str(path))[1]
-            b_trim = begin_trim if i == 0 else 0.0
-            e_trim = end_trim if i == last else 0.0
-
-            playlist.append(
-                TrackSrcInfo(
-                    source_id=sid,
-                    play_at=cursor,
-                    begin_trim_offset=b_trim,
-                    end_trim_offset=e_trim,
-                    source_duration=raw_dur,
-                )
-            )
-            cursor += raw_dur - b_trim - e_trim
-
-        return cls(
-            playlist,
-            resolve_source,
-            loop=loop,
-            volume_db=volume_db,
-            hpf_cents=hpf_cents,
-            lpf_cents=lpf_cents,
-            pitch_semitones=pitch_semitones,
-            distance=distance,
-            angle=angle,
-            attenuation=attenuation,
-            clip_automations=clip_automations,
-            loop_start=loop_start,
-            loop_end=loop_end,
-            xfade=xfade,
-            mul=mul,
-            add=add,
-        )
 
     def _setup_property_controls(
         self,

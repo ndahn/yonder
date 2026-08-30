@@ -64,6 +64,10 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=defining_playback_behavior_for_music_tracks"
+
+    @property
     def track_type_enum(self) -> MusicTrackType:
         return MusicTrackType(self.track_type)
 
@@ -108,7 +112,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
 
         meta = get_wem_metadata(wem)
-        size = meta["in_memory_size"]
+        size = meta["filesize"]
         duration = meta["duration"] * 1000
 
         media = self.sources[idx]
@@ -133,7 +137,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             raise ValueError(f"Invalid sound filename {wem.stem}, must be numbers only")
 
         meta = get_wem_metadata(wem)
-        size = meta["in_memory_size"]
+        size = meta["filesize"]
         duration = meta["duration"] * 1000
 
         self.add_source(

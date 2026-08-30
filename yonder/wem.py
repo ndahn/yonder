@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from yonder import Soundbank
 
 
+WWISE_VORBIS_TAG = 0xFFFF        # wwise's private "packed vorbis" marker
+WAVE_FORMAT_EXTENSIBLE = 0xFFFE  # standard ms tag; real codec is the subformat guid
+PCM_SUBFORMAT_GUID = bytes([1, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xAA, 0, 0x38, 0x9B, 0x71])
+
+
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
     from yonder import HIRCNode
     from yonder.types.base_types import MediaInformation
@@ -62,88 +67,92 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
                         media_info.in_memory_media_size = wem_size
 
 
-def get_wem_metadata(wem: Path) -> float:
-    # Graciously taken from https://github.com/hcs64/ww2ogg/blob/master/src/wwriff.cpp
+def get_wem_metadata(wem: Path) -> dict:
     filesize = wem.stat().st_size
+    
     with wem.open("rb") as f:
-        data: bytes = f.read(4)
-        if data.decode() != "RIFF":
-            raise ValueError(f"Unexpected RIFF header {data}")
+        if f.read(4) != b"RIFF":
+            raise ValueError("Unexpected RIFF header")
 
-        # File size
         riff_size = int.from_bytes(f.read(4), "little") + 8
-        if riff_size > filesize:
-            # Truncated file, but we don't really care as long as we can get the metadata
-            pass
+        if f.read(4) != b"WAVE":
+            raise ValueError("Unexpected WAVE header")
 
-        data = f.read(4)
-        if data.decode() != "WAVE":
-            raise ValueError(f"Unexpected WAVE header {data}")
-
+        # locate fmt and data chunks (data needed to size pcm streams)
+        fmt_offset = fmt_len = -1
+        data_offset = data_len = -1
         offset = 12
-        fmt_section = -1
-        fmt_len = 0
 
         while offset < riff_size:
             f.seek(offset)
-            data = f.read(4)
+            chunk_id = f.read(4)
             chunk_size = int.from_bytes(f.read(4), "little")
 
-            if data.decode() == "fmt ":
-                fmt_section = offset + 8
-                fmt_len = chunk_size
-                break
+            if chunk_id == b"fmt ":
+                fmt_offset, fmt_len = offset + 8, chunk_size
+            elif chunk_id == b"data":
+                data_offset, data_len = offset + 8, chunk_size
 
             offset += 8 + chunk_size
 
-        if fmt_section < 0:
+        if fmt_offset < 0:
             raise ValueError("Could not locate fmt section")
 
-        f.seek(fmt_section)
-
-        data = int.from_bytes(f.read(2), "little")
-        if data != 0xFFFF:
-            raise ValueError(f"Expected 0xffff marker, got {data}")
-
+        f.seek(fmt_offset)
+        codec_tag = int.from_bytes(f.read(2), "little")
         channels = int.from_bytes(f.read(2), "little")
         sample_rate = int.from_bytes(f.read(4), "little")
         avg_bps = int.from_bytes(f.read(4), "little")
+        block_align = int.from_bytes(f.read(2), "little")
+        bits_per_sample = int.from_bytes(f.read(2), "little")
 
-        data = int.from_bytes(f.read(4), "little")
-        if data != 0x0:
-            raise ValueError(f"Expected 0x0000, got {data}")
+        if codec_tag == WWISE_VORBIS_TAG:
+            # wwise's packed-vorbis layout, sample count lives in the following vorb chunk;
+            # block_align and bit_per_sample are not used in this case
+            if block_align != 0 or bits_per_sample != 0:
+                raise ValueError("Expected zeroed block align / bits per sample")
 
-        fmt_extra_len = int.from_bytes(f.read(2), "little")
-        if fmt_len - 0x12 != fmt_extra_len:
-            raise ValueError(f"Bad fmt extra length {fmt_extra_len}")
+            fmt_extra_len = int.from_bytes(f.read(2), "little")
 
-        if fmt_len - 0x12 >= 2:
-            # unk
-            f.read(2)
-            if fmt_len - 0x12 >= 6:
-                # subtype
-                f.read(4)
+            if fmt_len - 0x12 != fmt_extra_len:
+                raise ValueError(f"Bad fmt extra length {fmt_extra_len}")
 
-        if fmt_len == 0x28:
-            data = f.read(16)
-            signature = bytearray(data)
-            if signature != bytes(
-                [1, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xAA, 0, 0x38, 0x9B, 0x71]
-            ):
-                raise ValueError(f"Expected signature not found, got {signature}")
+            if fmt_extra_len >= 2:
+                f.read(2)  # unk
+                if fmt_extra_len >= 6:
+                    f.read(4)  # subtype
 
-        samples = int.from_bytes(f.read(4), "little")
+            if fmt_len == 0x28:
+                signature = f.read(16)
+                if signature != PCM_SUBFORMAT_GUID:
+                    raise ValueError(f"Expected signature not found, got {signature!r}")
 
-    meta = {
+            samples = int.from_bytes(f.read(4), "little")
+            codec = "vorbis"
+
+        elif codec_tag == WAVE_FORMAT_EXTENSIBLE:
+            # standard extensible pcm layout, duration comes from the data chunk size
+            if data_offset < 0:
+                raise ValueError("Could not locate data section")
+
+            if block_align == 0 or bits_per_sample == 0:
+                raise ValueError("Unexpected zeroed block align / bits per sample")
+
+            samples = data_len // block_align
+            codec = "pcm"
+
+        else:
+            raise ValueError(f"Unexpected format tag {codec_tag:#06x}")
+
+    return {
         "channels": channels,
         "sample_rate": sample_rate,
         "avg_bps": avg_bps,
         "samples": samples,
         "duration": samples / sample_rate,
         "filesize": filesize,
-        "in_memory_size": len(wem.read_bytes()),
+        "codec": codec,
     }
-    return meta
 
 
 def set_volume(wav: Path, volume: float, *, out_file: Path = None) -> Path:
