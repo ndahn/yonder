@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from yonder.types.mixins import PropertyMixin
-from yonder.enums import PropID
+from yonder.types.mixins import PropertyMixin, RtpcMixin
+from yonder.enums import PropID, AttenuationProperty
+from yonder.game import get_selected_game
 from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav
 
@@ -47,29 +48,43 @@ class PlayContext:
         from yonder.types.hirc_node import HIRCNode
 
         properties = dict(self.properties)
-        
+
         # RTPCs and States are global and do not need to be copied, we just track their values
         rtpcs = self.rtpcs
         states = self.states
 
+        def merge_properties(prop: PropID, val: float) -> None:
+            if prop.is_accumulating():
+                properties.setdefault(prop, 0.0)
+                properties[prop] += prop.value
+            else:
+                properties[prop] = prop.value
+
         if isinstance(node, HIRCNode):
             if isinstance(node, PropertyMixin):
                 for prop in node.properties:
-                    if prop.prop_enum.is_accumulating():
-                        properties.setdefault(prop.prop_enum, 0.0)
-                        properties[prop.prop_enum] += prop.value
-                    else:
-                        properties[prop.prop_enum] = prop.value
+                    merge_properties(prop.prop_enum, prop.value)
+
+            # In wwise, each node can modify the property via rtpc, which can easily lead to
+            # unintended stacking of adjustments
+            if isinstance(node, RtpcMixin):
+                rtpc_values = node.get_rtpc_values(self.rtpcs)
+                RtpcParams = get_selected_game().rtpc_params
+
+                for param, val in rtpc_values.items():
+                    param_enum = RtpcParams(param)
+                    try:
+                        prop = PropID[param_enum.name]
+                        merge_properties(prop, val)
+                    except KeyError:
+                        continue
 
         elif isinstance(node, PlayContext):
             if self.bank != node.bank:
                 raise ValueError("Cannot merge play contexts with different banks")
 
             for prop, val in node.properties.items():
-                if prop in properties and prop.is_accumulating():
-                    properties[prop] += val
-                else:
-                    properties[prop] = val
+                merge_properties(prop, val)
 
             rtpcs |= node.rtpcs
             states |= node.states
@@ -87,3 +102,39 @@ class PlayContext:
             distance=self.distance,
             angle=self.angle,
         )
+
+    def get_effective_volume(self) -> float:
+        vol = self.properties.get(PropID.Volume, 0.0)
+
+        att = self.attenuation
+        if att:
+            vol += att.get_attenuated_value(
+                AttenuationProperty.Volume, self.distance, self.angle
+            )
+
+        # In DB
+        return vol
+
+    def get_effective_hpf(self) -> float:
+        hpf = self.properties.get(PropID.HPF, 0.0)
+
+        att = self.attenuation
+        if att:
+            hpf += att.get_attenuated_value(
+                AttenuationProperty.HPF, self.distance, self.angle
+            )
+
+        # In cents
+        return max(0.0, min(100.0, hpf))
+
+    def get_effective_lpf(self) -> float:
+        lpf = self.properties.get(PropID.LPF, 0.0)
+
+        att = self.attenuation
+        if att:
+            lpf += att.get_attenuated_value(
+                AttenuationProperty.LPF, self.distance, self.angle
+            )
+
+        # In cents
+        return max(0.0, min(100.0, lpf))

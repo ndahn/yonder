@@ -116,16 +116,13 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             self.source_id,
             ctx.get_wav_for_source,
             loop=(PropID.Loop in props),
-            volume_db=props.get(PropID.Volume, 0.0),
-            hpf_cents=props.get(PropID.HPF, 0.0),
-            lpf_cents=props.get(PropID.LPF, 0.0),
+            volume_db=ctx.get_effective_volume(),
+            hpf_cents=ctx.get_effective_hpf(),
+            lpf_cents=ctx.get_effective_lpf(),
             pitch_semitones=props.get(PropID.Pitch, 0.0),
             loop_start=props.get(PropID.LoopStart, 0.0),
             loop_end=props.get(PropID.LoopEnd, 0.0),
             xfade=props.get(PropID.LoopCrossfadeDuration, 0.05),
-            attenuation=ctx.attenuation,
-            distance=ctx.distance,
-            angle=ctx.angle,
         )
 
     def play(self, ctx: PlayContext) -> None:
@@ -168,17 +165,9 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if xfade is not None:
             stream.xfade = xfade
 
-        vol = props.get(PropID.Volume)
-        if vol is not None:
-            stream.volume = vol
-
-        hpf = props.get(PropID.HPF)
-        if hpf is not None:
-            stream.hpf = hpf
-
-        lpf = props.get(PropID.LPF)
-        if lpf is not None:
-            stream.lpf = lpf
+        stream.volume = ctx.get_effective_volume()
+        stream.hpf = ctx.get_effective_hpf()
+        stream.lpf = ctx.get_effective_lpf()
 
         pitch = props.get(PropID.Pitch)
         if pitch is not None:

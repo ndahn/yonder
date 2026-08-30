@@ -23,6 +23,7 @@ def amp_to_db(amp: float) -> float:
 
 
 def lpf_to_hz(val: float) -> float:
+    val = max(0.0, min(100.0, val))
     lower = int(max(0, val))
     upper = int(min(100, val + 1))
     return interpolate(
@@ -33,8 +34,25 @@ def lpf_to_hz(val: float) -> float:
     )
 
 
+def hz_to_lpf(val: float) -> float:
+    if val < 0:
+        raise ValueError("Value must be >= 0")
+
+    for key in range(101):
+        upper = WwiseCutoffFrequencies[key]
+        lower = WwiseCutoffFrequencies.get(key + 1, 0.0)
+        if upper > val > lower:
+            return upper + (upper - val) / (upper - lower)
+
+    return 0.0
+
+
 def hpf_to_hz(val: float) -> float:
     return lpf_to_hz(100 - val)
+
+
+def hz_to_hpf(val: float) -> float:
+    return 100 - hz_to_lpf(val)
 
 
 def cents_to_speed(cents: float) -> float:

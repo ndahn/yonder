@@ -3,26 +3,21 @@ from pathlib import Path
 import pyo
 from pyo import sndinfo
 
-from yonder.types import Attenuation
 from yonder.types.base_types import (
     ClipAutomation,
-    ConversionTable,
-    ConeParams,
     TrackSrcInfo,
 )
-from yonder.enums import ClipAutomationType, CurveScaling, AttenuationProperty
+from yonder.enums import ClipAutomationType, CurveScaling
 from yonder.util import logger
 from .audiomath import (
     hpf_to_hz,
+    hz_to_hpf,
     lpf_to_hz,
+    hz_to_lpf,
     db_to_amp,
     amp_to_db,
     make_envelope,
-    eval_curve,
 )
-
-
-# TODO play silence if wem files not found
 
 
 class MultiTrackStream(pyo.PyoObject):
@@ -37,9 +32,6 @@ class MultiTrackStream(pyo.PyoObject):
         hpf_cents: float = 0,
         lpf_cents: float = 0,
         pitch_semitones: float = 0,
-        distance: float = 0.0,
-        angle: float = 0.0,
-        attenuation: Attenuation = None,
         clip_automations: list[ClipAutomation] = None,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
@@ -89,9 +81,6 @@ class MultiTrackStream(pyo.PyoObject):
             hpf_cents=hpf_cents,
             lpf_cents=lpf_cents,
             pitch_semitones=pitch_semitones,
-            distance=distance,
-            angle=angle,
-            attenuation=attenuation,
             clip_automations=clip_automations,
             loop_start=loop_start,
             loop_end=loop_end,
@@ -121,9 +110,6 @@ class MultiTrackStream(pyo.PyoObject):
         hpf_cents: float = 0,
         lpf_cents: float = 0,
         pitch_semitones: float = 0,
-        distance: float = 0.0,
-        angle: float = 0.0,
-        attenuation: Attenuation = None,
         clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
@@ -173,39 +159,14 @@ class MultiTrackStream(pyo.PyoObject):
         self._update_clip_clock()
         self._update_overall_clock()
 
-        # our crossfaded sum becomes this object's audio stream
         # always stereo, something like 7.1 would add a huge cpu cost otherwise
         self._mix = (self._players[0] + self._players[1]).mix(2)
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=0.05)
+        self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
-        self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
-
-        self._distance = distance
-        self._angle = angle
-        self._dist_ctrl_volume = pyo.SigTo(db_to_amp(0), time=0.05)
-        self._dist_ctrl_lpf = pyo.SigTo(lpf_to_hz(0), time=0.05)
-        self._dist_ctrl_hpf = pyo.SigTo(hpf_to_hz(0), time=0.05)
-        self._angle_ctrl_volume = pyo.SigTo(db_to_amp(0), time=0.05)
-        self._angle_ctrl_lpf = pyo.SigTo(lpf_to_hz(0), time=0.05)
-        self._angle_ctrl_hpf = pyo.SigTo(hpf_to_hz(0), time=0.05)
-        self._att_volume_curve: ConversionTable = None
-        self._att_lpf_curve: ConversionTable = None
-        self._att_hpf_curve: ConversionTable = None
-        self._cone_params: ConeParams = None
-
-        # apply attenuation data
-        if attenuation:
-            self._att_volume_curve = attenuation.get_curve(AttenuationProperty.Volume)
-            self._att_lpf_curve = attenuation.get_curve(AttenuationProperty.LPF)
-            self._att_hpf_curve = attenuation.get_curve(AttenuationProperty.HPF)
-
-            if attenuation.is_cone_enabled:
-                self._cone_params = attenuation.cone_params
 
         self._chain = self._setup_property_controls(self._mix, clip_automations)
-        self._update_attenuation()
-
         self._base_objs = sum(o.getBaseObjects() for o in self._chain)
 
     def _setup_property_controls(
@@ -214,6 +175,9 @@ class MultiTrackStream(pyo.PyoObject):
         clip_automations: list[ClipAutomation],
     ) -> list[pyo.PyoObject]:
         envelopes = []
+        gain_signal = self._gain_ctrl
+        hpf_signal = self._hpf_ctrl
+        lpf_signal = self._lpf_ctrl
 
         if not clip_automations:
             clip_automations = []
@@ -226,7 +190,7 @@ class MultiTrackStream(pyo.PyoObject):
                 #         ├─(×)──┐
                 # env1 ───┘      ├─(×)──> out signal
                 # env2 ──────────┘
-                self._gain_ctrl *= env
+                gain_signal *= env
                 envelopes.append(env)
 
             elif clip.auto_type in (
@@ -235,106 +199,39 @@ class MultiTrackStream(pyo.PyoObject):
             ):
                 # fades are already normalized to 0..1, no conversion needed
                 env = make_envelope(clip.graph_points, CurveScaling.None_, None)
-                self._gain_ctrl *= env
-                envelopes.append(env)
-
-            elif clip.auto_type == ClipAutomationType.LPF:
-                # clip y-axis is percent (0-100), which interpolates linearly;
-                # the log-frequency behavior lives inside the percent->hz table
-                env = make_envelope(clip.graph_points, CurveScaling.None_, hpf_to_hz)
-                self._hpf_ctrl *= env
+                gain_signal *= env
                 envelopes.append(env)
 
             elif clip.auto_type == ClipAutomationType.HPF:
-                env = make_envelope(clip.graph_points, CurveScaling.None_, lpf_to_hz)
-                self._lpf_ctrl *= env
+                # clip y-axis is percent (0-100), which interpolates linearly;
+                # the log-frequency behavior lives inside the percent->hz table
+                env = make_envelope(clip.graph_points, CurveScaling.None_, hpf_to_hz)
+                hpf_signal *= env
                 envelopes.append(env)
 
-            # NOTE: ClipAutomation and attenuation do not support pitch!
+            elif clip.auto_type == ClipAutomationType.LPF:
+                env = make_envelope(clip.graph_points, CurveScaling.None_, lpf_to_hz)
+                lpf_signal *= env
+                envelopes.append(env)
 
-        # TODO rtpcs not handled yet
-        signal_in = self._dist_ctrl_volume * self._angle_ctrl_volume * source
+            # NOTE: ClipAutomation and attenuation do not support pitch
 
         # fixed order for all voices: source -> pitch -> HPF -> LPF -> gain
         # transpo is in semitones; winsize balances latency vs. smearing
         # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
-        pitch = pyo.Harmonizer(signal_in, transpo=self._pitch_ctrl, winsize=0.1)
-
-        # distance attenuation
-        hp_base = pyo.ButHP(pitch, freq=self._hpf_ctrl)
-        hp_dist = pyo.ButHP(hp_base, freq=self._dist_ctrl_hpf)
-        hp_angle = pyo.ButHP(hp_dist, freq=self._angle_ctrl_hpf)
-
-        # cone params
-        lp_base = pyo.ButLP(hp_angle, freq=self._lpf_ctrl)
-        lp_dist = pyo.ButLP(lp_base, freq=self._dist_ctrl_lpf)
-        lp_angle = pyo.ButLP(lp_dist, freq=self._angle_ctrl_lpf)
+        pitch = pyo.Harmonizer(source, transpo=self._pitch_ctrl, winsize=0.1)
+        hp = pyo.ButHP(pitch, freq=hpf_signal)
+        lp = pyo.ButLP(hp, freq=lpf_signal)
+        final = lp * gain_signal
 
         return [
             source,
-            envelopes,
+            *envelopes,
             pitch,
-            hp_base,
-            hp_dist,
-            hp_angle,
-            lp_base,
-            lp_dist,
-            lp_angle,
-            self._gain_ctrl,
+            hp,
+            lp,
+            final,
         ]
-
-    @property
-    def distance(self) -> float:
-        return self._distance
-
-    @distance.setter
-    def distance(self, dist: float) -> None:
-        self._distance = dist
-        self._update_attenuation()
-
-    @property
-    def angle(self) -> float:
-        return self._angle
-
-    @angle.setter
-    def angle(self, phi: float) -> None:
-        self._angle = phi
-        self._update_attenuation()
-
-    def _update_attenuation(self) -> None:
-        def apply(
-            curve: ConversionTable, ctrl: pyo.SigTo, conv: Callable[[float], float]
-        ) -> None:
-            if curve:
-                y = eval_curve(curve.points, self._distance, curve.curve_scaling)
-                ctrl.value = conv(y)
-
-        apply(self._att_volume_curve, self._dist_ctrl_volume, db_to_amp)
-        apply(self._att_hpf_curve, self._dist_ctrl_hpf, hpf_to_hz)
-        apply(self._att_lpf_curve, self._dist_ctrl_lpf, lpf_to_hz)
-
-        if self._cone_params:
-            cone = self._cone_params
-            # TODO match to cone positioning angle
-            # For 0 to 360: min(self._angle % 360, 360 - self._angle % 360)
-            angle = abs((self._angle + 180) % 360 - 180)
-            inner_half = cone.inside_degrees / 2
-            outer_half = cone.outside_degrees / 2
-
-            if angle <= inner_half:
-                # within the inner cone, no additional attenuation
-                pass
-            elif outer_half > inner_half:
-                if angle <= outer_half:
-                    # transition zone
-                    f = (angle - inner_half) / (outer_half - inner_half)
-                else:
-                    # outside outer cone, maximum attenuation
-                    f = 1.0
-
-                self._angle_ctrl_volume.value = db_to_amp(f * cone.outside_volume)
-                self._angle_ctrl_hpf.value = hpf_to_hz(f * cone.high_pass)
-                self._angle_ctrl_lpf.value = lpf_to_hz(f * cone.low_pass)
 
     @property
     def volume(self) -> float:
@@ -342,7 +239,7 @@ class MultiTrackStream(pyo.PyoObject):
 
     @volume.setter
     def volume(self, vol_db: float) -> None:
-        self._gain_ctrl.value = amp_to_db(vol_db)
+        self._gain_ctrl.value = db_to_amp(vol_db)
 
     @property
     def gain(self) -> float:
@@ -354,19 +251,19 @@ class MultiTrackStream(pyo.PyoObject):
 
     @property
     def hpf(self) -> float:
-        return self._hpf_ctrl.value
+        return hz_to_hpf(self._hpf_ctrl.value)
 
     @hpf.setter
     def hpf(self, cents: float) -> None:
-        self._hpf_ctrl.value = cents
+        self._hpf_ctrl.value = hpf_to_hz(cents)
 
     @property
     def lpf(self) -> float:
-        return self._lpf_ctrl.value
+        return hz_to_lpf(self._lpf_ctrl.value)
 
     @lpf.setter
     def lpf(self, cents: float) -> None:
-        self._lpf_ctrl.value = cents
+        self._lpf_ctrl.value = lpf_to_hz(cents)
 
     @property
     def pitch(self) -> float:
