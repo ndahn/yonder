@@ -73,6 +73,18 @@ class add_hirc_player(DpgItem):
     def player(self) -> HIRCPlayer:
         return self._player
 
+    def play(self) -> None:
+        if self._player:
+            self._player.play()
+
+    def stop(self) -> None:
+        if self._player:
+            self._player.stop()
+
+    def update_context(self) -> None:
+        if self._player:
+            self._player.apply_context(None)
+
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
         dpg.delete_item(self._t("popup_states"), children_only=True)

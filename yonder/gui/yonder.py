@@ -613,15 +613,13 @@ class BanksOfYonder(DpgItem):
 
             with dpg.child_window(
                 width=600,
-                # autosize_x=True,
                 autosize_y=True,
+                resizable_x=True,
                 border=False,
             ):
                 dpg.add_child_window(
                     autosize_x=True,
                     height=-40,
-                    resizable_x=True,
-                    # autosize_y=True,
                     border=True,
                     tag=self._t("attributes"),
                 )
@@ -1713,16 +1711,16 @@ class BanksOfYonder(DpgItem):
             )
 
     def _on_node_changed(self, node: HIRCNode) -> None:
-        self._hirc_player.player.update_context()
+        self._hirc_player.update_context()
         self.update_json_panel()
 
     def _on_structure_changed(self) -> None:
-        self._hirc_player.player.stop()
+        self._hirc_player.stop()
         self.regenerate()
         self._hirc_player.load(self.bnk, self._selected_node)
 
     def jump_to_node(self, node: int | HIRCNode) -> None:
-        self._hirc_player.player.stop()
+        self._hirc_player.stop()
 
         if node in (0, "", None):
             return

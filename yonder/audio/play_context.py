@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 
 from yonder.types.mixins import PropertyMixin, RtpcMixin
 from yonder.enums import PropID, AttenuationProperty
-from yonder.game import get_selected_game
 from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav
 
@@ -46,6 +45,7 @@ class PlayContext:
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         from yonder.types.hirc_node import HIRCNode
+        from yonder.game import get_selected_game
 
         properties = dict(self.properties)
 
