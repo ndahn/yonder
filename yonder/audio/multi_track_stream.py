@@ -161,6 +161,8 @@ class MultiTrackStream(pyo.PyoObject):
 
         # always stereo, something like 7.1 would add a huge cpu cost otherwise
         self._mix = (self._players[0] + self._players[1]).mix(2)
+
+        # Main controls, usually for properties
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=0.05)
         self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
@@ -233,6 +235,18 @@ class MultiTrackStream(pyo.PyoObject):
             final,
         ]
 
+    def _recombine_hpf(self) -> None:
+        # HPF cutoff rises with restrictiveness
+        self._hpf_ctrl.value = max(
+            self._hpf_base, self._hpf_rtpc, self._hpf_dist, self._hpf_angle
+        )
+
+    def _recombine_lpf(self) -> None:
+        # LPF cutoff falls with restrictiveness
+        self._lpf_ctrl.value = min(
+            self._lpf_base, self._lpf_rtpc, self._lpf_dist, self._lpf_angle
+        )
+
     @property
     def volume(self) -> float:
         return amp_to_db(self._gain_ctrl.value)
@@ -272,6 +286,40 @@ class MultiTrackStream(pyo.PyoObject):
     @pitch.setter
     def pitch(self, semitones: float) -> None:
         self._pitch_ctrl.value = semitones
+
+    @property
+    def rtpc_gain(self) -> float:
+        return self._rtpc_gain_ctrl.value
+
+    @rtpc_gain.setter
+    def rtpc_gain(self, gain: float) -> None:
+        self._rtpc_gain_ctrl.value = gain
+
+    @property
+    def rtpc_hpf(self) -> float:
+        return self._hpf_rtpc
+
+    @rtpc_hpf.setter
+    def rtpc_hpf(self, cents: float) -> None:
+        self._hpf_rtpc = hpf_to_hz(cents)
+        self._recombine_hpf()
+
+    @property
+    def rtpc_lpf(self) -> float:
+        return self._lpf_rtpc
+
+    @rtpc_lpf.setter
+    def rtpc_lpf(self, cents: float) -> None:
+        self._lpf_rtpc = lpf_to_hz(cents)
+        self._recombine_lpf()
+
+    @property
+    def rtpc_pitch(self) -> float:
+        return self._rtpc_pitch_ctrl.value
+
+    @rtpc_pitch.setter
+    def rtpc_pitch(self, semitones: float) -> None:
+        self._rtpc_pitch_ctrl.value = semitones
 
     @property
     def playlist(self) -> list[TrackSrcInfo]:
