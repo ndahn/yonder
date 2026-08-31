@@ -1,4 +1,4 @@
-from typing import Any, TYPE_CHECKING
+from typing import Any
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
@@ -22,6 +22,7 @@ class add_hirc_player(DpgItem):
     ) -> None:
         super().__init__(tag)
         self._player: HIRCPlayer = None
+        self._vgmstream_requested: bool = False
         self._equalizer: add_equalizer = None
         self._attenuation_plot: add_attenuation_plot = None
         self._rtpcs: dict[int, float] = {}
@@ -45,9 +46,19 @@ class add_hirc_player(DpgItem):
         # to recreate the player each time the structure changes. Closing the server takes a
         # few ms, but we can let this be handled by the GC in the background.
 
-        # TODO what to do when this fails?
         cfg = get_config()
-        vgmstream = cfg.locate_vgmstream()
+
+        if self._vgmstream_requested:
+            # We already asked before, if it's still not available we fail
+            vgmstream = cfg.vgmstream_exe
+        else:
+            self._vgmstream_requested = True
+            vgmstream = cfg.locate_vgmstream()
+
+        if not vgmstream:
+            # Don't log this, it's just noise
+            print("[ERROR] vgmstream not found, HIRC player disabled")
+            return
 
         ctx = PlayContext(
             bnk,
