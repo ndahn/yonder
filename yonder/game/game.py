@@ -33,6 +33,15 @@ _selected_game: GameObjects = None
 
 
 def set_game(game: Game) -> None:
+    global _selected_game
+    _selected_game = get_game_objects(game)
+
+
+def get_selected_game() -> type[GameObjects]:
+    return _selected_game
+
+
+def get_game_objects(game: Game) -> type[GameObjects]:
     # Need to load these for subclass discovery even if we're not using them here
     from .eldenring import GameEldenring  # noqa: F401
     from .nightreign import GameNightreign  # noqa: F401
@@ -40,18 +49,11 @@ def set_game(game: Game) -> None:
     # AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
     # AC6 steam app id: 1888160
     
-    global _selected_game
-
     for game_spec in GameObjects.__subclasses__():
         if game_spec.game == game:
-            _selected_game = game_spec
-            break
+            return game_spec
     else:
         raise ValueError(f"Game {game} is not supported yet")
-
-
-def get_selected_game() -> type[GameObjects]:
-    return _selected_game
 
 
 def guess_game(path: Path) -> Game:

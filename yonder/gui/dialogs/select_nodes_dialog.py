@@ -353,7 +353,7 @@ class select_actormixer(select_nodes_dialog):
 
             pop_table_tree_level(table_tag)
 
-        for bnk in self.highlight_banks + ["init", "cs_main"]:
+        for bnk in self.highlight_banks + ["init", "cs_main", "cs_smain"]:
             banks = bank_map.pop(bnk, None)
             if banks:
                 place_bank_amx(bnk, banks)

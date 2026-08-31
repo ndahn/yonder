@@ -7,6 +7,8 @@ from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
 from yonder.util import repack_soundbank, logger, unpack_soundbank
+from yonder.enums import Game
+from yonder.game import get_game_objects
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.widgets import (
@@ -256,7 +258,26 @@ class mass_transfer_dialog(DpgItem):
 
         self.show_message()
         with loading_indicator(µ("Transferring")):
-            copy_wwise_events(self._src_bnk, self._dst_bnk, event_map)
+            known_objects = set()
+
+            # Skip any AMX (and busses) known to already exist in that game
+            if dpg.get_value(self._t("skip_known_objects")):
+                game = Game[dpg.get_value(self._t("game"))]
+
+                if dpg.get_value(self._t("skip_main_bank_objects")):
+                    for nid, amx in get_game_objects(
+                        game
+                    ).amx_summary.actormixers.items():
+                        if amx.bank in ("init", "cs_main", "cs_smain", "vcmain"):
+                            known_objects.add(nid)
+                else:
+                    known_objects = set(
+                        get_game_objects(game).amx_summary.actormixers.keys()
+                    )
+
+            copy_wwise_events(
+                self._src_bnk, self._dst_bnk, event_map, known_objects=known_objects
+            )
 
         logger.info(f"Transferred {len(event_map)} sounds to {self._dst_bnk.name}")
         dpg.show_item(self._t("button_save"))
@@ -350,6 +371,41 @@ class mass_transfer_dialog(DpgItem):
                     callback=self._swap_ids,
                     tag=self._t("button_swap_ids"),
                 )
+
+            with dpg.tree_node(label=µ("Advanced"), default_open=True):
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        default_value=True,
+                        label=µ("Skip known playback objects for"),
+                        tag=self._t("skip_known_objects"),
+                    )
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text(
+                            µ(
+                                "ActorMixers and busses are stored in cs_main/init. Enabling this will not transfer objects already known to exist in the specified game."
+                            ),
+                            wrap=440,
+                        )
+
+                    dpg.add_combo(
+                        [g.name for g in Game],
+                        default_value=Game.EldenRing.name,
+                        width=110,
+                        tag=self._t("game"),
+                    )
+
+                dpg.add_checkbox(
+                    label=µ("Main banks only"),
+                    default_value=True,
+                    tag=µ(self._t("skip_main_bank_objects")),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "When skipping known objects, only consider objects in the main soundbanks (init, cs_main, cs_smain, vcmain)."
+                        ),
+                        wrap=440,
+                    )
 
             dpg.add_separator()
             add_paragraphs(

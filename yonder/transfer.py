@@ -1,4 +1,4 @@
-from yonder import Soundbank, HIRCNode, Hash
+from yonder import Soundbank, HIRCNode, Hash, calc_hash
 from yonder.types import Event, Action, Sound, MusicTrack
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
@@ -51,7 +51,13 @@ def copy_node_structure(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     entrypoint: HIRCNode,
+    known_objects: set[str | int] = None,
 ) -> list[int]:
+    if not known_objects:
+        known_objects = set()
+
+    known_objects = {calc_hash(o) for o in known_objects}
+
     # Collect the hierarchy responsible for playing the sound(s)
     action_tree = src_bnk.get_subtree(entrypoint, False)
     tree_str = format_hierarchy(src_bnk, action_tree)
@@ -70,7 +76,7 @@ def copy_node_structure(
     transfer_nodes = []
     for nid in action_tree:
         node = src_bnk.get(nid)
-        if node and node.id not in dst_bnk:
+        if node and node.id not in known_objects and node.id not in dst_bnk:
             transfer_nodes.append(node.copy())
 
     dst_bnk.add_nodes(*transfer_nodes)
@@ -86,6 +92,9 @@ def copy_node_structure(
     for up_id in upchain:
         # Once we encounter an existing node we can assume the rest of the chain is
         # intact. Child nodes must be inserted *before* the first existing parent.
+        if up_id in known_objects:
+            break
+
         up_node = dst_bnk.get(up_id)
         if up_node:
             up_node.children.add(up_child.id)
@@ -132,8 +141,14 @@ def copy_wwise_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     wwise_map: dict[Hash, str],
+    *,
+    known_objects: set[str | int] = None,
     save: bool = True,
 ) -> None:
+    if not known_objects:
+        known_objects = set()
+
+    known_objects = {calc_hash(o) for o in known_objects}
     wems = []
 
     map_str = "\n".join(f"\t{src} -> {dst}" for src, dst in wwise_map.items())
@@ -144,6 +159,10 @@ def copy_wwise_events(
         evt: Event = src_bnk[wwise_src]
         if not isinstance(evt, Event):
             raise TypeError(f"{wwise_src} is not an Event")
+
+        if evt.id in known_objects or evt.id in dst_bnk:
+            logger.warning(f"{evt} already exists")
+            continue
 
         # Copy the event and its actions
         evt = copy_event(src_bnk, dst_bnk, evt, wwise_dst)
@@ -162,10 +181,14 @@ def copy_wwise_events(
 
             entrypoint = src_bnk.get(action.external_id)
             if entrypoint:
-                new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
+                new_wems = copy_node_structure(
+                    src_bnk, dst_bnk, entrypoint, known_objects
+                )
                 wems.extend(new_wems)
             else:
-                logger.warning(f"Could not find action target {action.external_id} in source bank")
+                logger.warning(
+                    f"Could not find action target {action.external_id} in source bank"
+                )
 
     # Save and verify
     if save:
