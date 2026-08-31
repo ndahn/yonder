@@ -1178,26 +1178,37 @@ def _create_attributes_musicswitchcontainer(
         tree_node.key = info[0]
         update_branch_label(sender, branch, None)
 
+    def on_add_branch(
+        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        branch, path = info
+        for _ in range(len(node.arguments) - len(path)):
+            new_child = DecisionTreeNode(999999)
+            branch.children.append(new_child)
+            branch.child_count += 1
+            branch = new_child
+
+        on_structure_changed()
+
     def on_delete_branch(
         sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        simple_choice_dialog(
+            µ("What to delete?"),
+            [µ("Branch & orphans"), µ("Branch only")],
+            on_delete_branch_nodes_decision,
+            title=µ("Delete branch"),
+            user_data=info,
+        )
+
+    def on_delete_branch_nodes_decision(
+        sender: str, choice: int, info: tuple[DecisionTreeNode, list[Hash]]
     ) -> None:
         branch, path = info
         node.remove_branch(path)
         logger.info(f"Removed branch {branch.name}")
         on_node_changed(base_tag, node, user_data)
 
-        # Choice dialog
-        simple_choice_dialog(
-            µ("Delete nodes connected to branch?"),
-            [µ("Yes"), µ("No")],
-            on_delete_branch_nodes_decision,
-            title=µ("Delete branch"),
-            user_data=branch,
-        )
-
-    def on_delete_branch_nodes_decision(
-        sender: str, choice: int, branch: DecisionTreeNode
-    ) -> None:
         if choice != 0:
             # Tree changed, need to regenerate the widgets
             on_structure_changed()
@@ -1217,6 +1228,23 @@ def _create_attributes_musicswitchcontainer(
 
         bnk.delete_nodes(*nodes)
         logger.info(f"Deleted {len(nodes)} nodes related to branch {branch.name}")
+        on_structure_changed()
+
+    def on_insert_decision(
+        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        # TODO confirm
+        _, path = info
+        node.insert_argument(len(path), 999999, GroupType.State)
+        on_structure_changed()
+
+    def on_remove_decision(
+        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        # TODO confirm
+        _, path = info
+        arg = node.arguments[len(path) - 1].group_id
+        node.remove_argument(arg)
         on_structure_changed()
 
     def update_branch_label(
@@ -1253,9 +1281,26 @@ def _create_attributes_musicswitchcontainer(
                 width=100,
                 user_data=(tree_node, level, item),
             )
-            dpg.add_button(
+            dpg.add_separator()
+
+            dpg.add_menu_item(
+                label=µ("Add branch"),
+                callback=on_add_branch,
+                user_data=(tree_node, path),
+            )
+            dpg.add_menu_item(
                 label=µ("Delete branch"),
                 callback=on_delete_branch,
+                user_data=(tree_node, path),
+            )
+            dpg.add_menu_item(
+                label=µ("Insert decision"),
+                callback=on_insert_decision,
+                user_data=(tree_node, path),
+            )
+            dpg.add_menu_item(
+                label=µ("Remove decision"),
+                callback=on_remove_decision,
                 user_data=(tree_node, path),
             )
 
