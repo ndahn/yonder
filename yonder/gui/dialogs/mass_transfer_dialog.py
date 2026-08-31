@@ -9,7 +9,13 @@ from yonder.hash import calc_hash
 from yonder.util import repack_soundbank, logger, unpack_soundbank
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator, yay
+from yonder.gui.widgets import (
+    DpgItem,
+    add_generic_widget,
+    add_paragraphs,
+    loading_indicator,
+    yay,
+)
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
 from .select_nodes_dialog import select_nodes_dialog
@@ -21,14 +27,16 @@ from .select_nodes_dialog import select_nodes_dialog
 class mass_transfer_dialog(DpgItem):
     def __init__(
         self,
+        src_bnk: Soundbank = None,
+        dst_bnk: Soundbank = None,
         *,
         title: str = "Transfer Sounds",
         tag: str = None,
     ) -> str:
         super().__init__(tag)
 
-        self._src_bnk: Soundbank = None
-        self._dst_bnk: Soundbank = None
+        self._src_bnk: Soundbank = src_bnk
+        self._dst_bnk: Soundbank = dst_bnk
 
         self._build(title)
 
@@ -37,7 +45,7 @@ class mass_transfer_dialog(DpgItem):
             if path.suffix == ".bnk":
                 bnk2json = get_config().locate_bnk2json()
                 path = unpack_soundbank(bnk2json, path)
-            
+
             self._src_bnk = Soundbank.load(path)
 
     def _on_dest_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
@@ -45,7 +53,7 @@ class mass_transfer_dialog(DpgItem):
             if path.suffix == ".bnk":
                 bnk2json = get_config().locate_bnk2json()
                 path = unpack_soundbank(bnk2json, path)
-            
+
             self._dst_bnk = Soundbank.load(path)
 
     def _select_nodes(self) -> None:
@@ -63,19 +71,19 @@ class mass_transfer_dialog(DpgItem):
         )
 
     def _swap_banks(self) -> None:
-        if not self._src_bnk:
-            self.show_message(µ("No source bank selected", "msg"))
+        if not self._src_bnk and not self._dst_bnk:
             return
 
-        if not self._dst_bnk:
-            self.show_message(µ("No destination bank selected", "msg"))
-            return
-
-        self.show_message()
         self._src_bnk, self._dst_bnk = self._dst_bnk, self._src_bnk
 
-        dpg.set_value(self._t("source_bnk"), shorten_path(self._src_bnk.json_path))
-        dpg.set_value(self._t("dest_bnk"), shorten_path(self._dst_bnk.json_path))
+        dpg.set_value(
+            self._t("source_bnk"),
+            shorten_path(self._src_bnk.json_path) if self._src_bnk else "",
+        )
+        dpg.set_value(
+            self._t("dest_bnk"),
+            shorten_path(self._dst_bnk.json_path) if self._dst_bnk else "",
+        )
 
     def _swap_ids(self) -> None:
         src_labels = dpg.get_value(self._t("source_ids"))
@@ -285,6 +293,7 @@ class mass_transfer_dialog(DpgItem):
                 Path,
                 µ("Source Soundbank"),
                 self._on_source_bnk_selected,
+                default=self._src_bnk.json_path if self._src_bnk else None,
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },
@@ -294,6 +303,7 @@ class mass_transfer_dialog(DpgItem):
                 Path,
                 µ("Destination Soundbank"),
                 self._on_dest_bnk_selected,
+                default=self._dst_bnk.json_path if self._dst_bnk else None,
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },

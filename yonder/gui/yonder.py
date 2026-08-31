@@ -2287,7 +2287,7 @@ class BanksOfYonder(DpgItem):
             dpg.focus_item(tag)
             return
 
-        mass_transfer_dialog(tag=tag)
+        mass_transfer_dialog(dst_bnk=self.bnk, tag=tag)
 
         dpg.split_frame()
         center_window(tag)
