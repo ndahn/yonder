@@ -810,23 +810,26 @@ def create_custom_music_event(
     bnk.add_nodes(enable_evt, *enable_evt.actions, disable_evt, disable_act)
 
 
-# TODO untested
-# Fixes some shenanigans FS caused in their soundbanks, making it difficult or impossible to add
-# custom music (especially in NR).
 def unmangle_soundbanks(main: Soundbank, smain: Soundbank, game: Game) -> Soundbank:
+    """Fixes some shenanigans FS caused in their soundbanks, making it difficult or impossible to add custom music (especially in NR).
+    """
     # Both NR and ER have a duplicate ambience structure in cs_smain which is actually
     # incomplete. The true one in cs_main takes priority, but it's confusing to have
-    smain.delete_subtree("Play_a000000000")
-    smain.delete_subtree("Stop_a000000000")
+    logger.info("Removing duplicate ambient structure from cs_smain")
+    for key in ("Play_a000000000", "Stop_a000000000"):
+        if key in smain:
+            smain.delete_subtree(key)
 
     if game == Game.EldenRing:
         pass
     elif game == Game.Nightreign:
         # NR contains an orphaned duplicate of the MusicSwitchContainer for music in cs_main
         # which will shadow the true one from cs_smain
-        main.delete_subtree(1001573296)
+        logger.info("Removing duplicate music structure from cs_main")
+        if 1001573296 in main:
+            main.delete_subtree(1001573296)
     else:
-        logger.warning(f"Unexpected game {game}")
+        logger.warning(f"Unsupported game {game}")
 
 
 # TODO untested

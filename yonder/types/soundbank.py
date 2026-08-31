@@ -295,6 +295,20 @@ class Soundbank:
         else:
             logger.info(f"Saved {self} to {path}")
 
+    def copy_to(self, folder: Path | str, update_bnk_path: bool = True, backup: bool = True) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        new_bnk_dir = folder / self.name
+
+        if backup and new_bnk_dir.is_dir():
+            shutil.copy(new_bnk_dir, str(new_bnk_dir) + ".bak")
+
+        shutil.copytree(self.bnk_dir, new_bnk_dir)
+        with (new_bnk_dir / "soundbank.json").open("w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+        if update_bnk_path:
+            self.json_path = new_bnk_dir / "soundbank.json"
+
     def new_id(self) -> int:
         while True:
             # IDs should be signed 32bit integers, although in practice

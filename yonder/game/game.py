@@ -1,18 +1,32 @@
 from typing import ClassVar
 import re
+from pathlib import Path
 from Crypto.Cipher import AES
 
-from yonder.types.soundbank import Soundbank
 from yonder.enums import Game, EnumWithUnknown
 from .data.actormixer_summary import AmxSummary
+from .steam import find_game_folder
+
+
+_undefined = object()
 
 
 class GameObjects:
     game: ClassVar[Game]
+    steam_app_id: ClassVar[int]
     regbin_key: ClassVar[bytes]
     rtpc_params: ClassVar[type[EnumWithUnknown]]
     game_states: ClassVar[dict[str, list[str]]]
     amx_summary: ClassVar[AmxSummary]
+
+    @classmethod
+    def get_game_path(cls, default: Path = _undefined) -> Path:
+        try:
+            return find_game_folder(cls.steam_app_id)
+        except FileNotFoundError:
+            if default is not _undefined:
+                return default
+            raise
 
 
 _selected_game: GameObjects = None
@@ -24,6 +38,7 @@ def set_game(game: Game) -> None:
     from .nightreign import GameNightreign  # noqa: F401
     # from .armoredcore6 import GameArmoredCore6
     # AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
+    # AC6 steam app id: 1888160
     
     global _selected_game
 
@@ -39,9 +54,7 @@ def get_selected_game() -> type[GameObjects]:
     return _selected_game
 
 
-def guess_game(bnk: Soundbank) -> Game:
-    path = bnk.bnk_dir
-
+def guess_game(path: Path) -> Game:
     # Search for more reliable clues first
     while True:
         regbin = path / "regulation.bin"
@@ -82,7 +95,7 @@ def guess_game(bnk: Soundbank) -> Game:
             break
 
     # Check if the path can give us any hints
-    path_str = str(bnk.bnk_dir).lower()
+    path_str = str(path).lower()
 
     if "nightreign" in path_str:
         return Game.Nightreign

@@ -73,6 +73,7 @@ class RTPCParameter_Nightreign(EnumWithUnknown):
 
 class GameNightreign(GameObjects):
     game = Game.Nightreign
+    steam_app_id = 2622380
     regbin_key = bytes.fromhex(
         "9a8ee90c4c01a43168a17d9d75e4a7d02107ebcf43d5acb0554f941601b57918"
     )

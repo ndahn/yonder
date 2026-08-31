@@ -193,6 +193,7 @@ AMBIENCE_SWITCH_GROUPS = [
 
 class GameEldenring(GameObjects):
     game = Game.EldenRing
+    steam_app_id = 1245620
     regbin_key = bytes.fromhex(
         "99bffc366a6bc8c6f5827d093602d676c42892a01c207fb024d3af4e493fef99"
     )

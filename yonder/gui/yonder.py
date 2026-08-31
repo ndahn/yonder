@@ -77,6 +77,7 @@ from .dialogs.create_area_bgm_dialog import create_area_bgm_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
+from .dialogs.unmangle_soundbanks_dialog import unmangle_soundbanks_dialog
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 from .widgets.hirc_player_widget import add_hirc_player
@@ -327,6 +328,11 @@ class BanksOfYonder(DpgItem):
                     label=µ("Waves to Wems", "menu"),
                     callback=self._open_convert_wavs_dialog,
                     tag=self._t("menu/waves_to_wems"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Unmangle Banks", "menu"),
+                    callback=self._open_unmangle_soundbanks_dialog,
+                    tag=self._t("menu/unmangle_soundbanks"),
                 )
 
             dpg.add_separator()
@@ -1241,7 +1247,7 @@ class BanksOfYonder(DpgItem):
 
             load_lookup_table(get_bank_lookup_table_path(self.bnk), True)
 
-            guessed_game = guess_game(self.bnk)
+            guessed_game = guess_game(self.bnk.bnk_dir)
             if guessed_game:
                 logger.info(f"Guessed game {guessed_game.name}")
                 set_game(guessed_game)
@@ -2312,6 +2318,18 @@ class BanksOfYonder(DpgItem):
             return
 
         convert_wavs_dialog(None, tag=tag)
+
+        dpg.split_frame()
+        center_window(tag)
+
+    def _open_unmangle_soundbanks_dialog(self) -> None:
+        tag = self._t("unmangle_soundbanks_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        unmangle_soundbanks_dialog(tag=tag)
 
         dpg.split_frame()
         center_window(tag)
