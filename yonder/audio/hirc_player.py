@@ -13,12 +13,6 @@ from .equalizer import Equalizer
 from .play_context import PlayContext
 
 
-# TODO
-# - fix playback
-# - attenuation distance handling
-# - guess steam directory for resolution
-
-
 class HIRCPlayer:
     def __init__(
         self,

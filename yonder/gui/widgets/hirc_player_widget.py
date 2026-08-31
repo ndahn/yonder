@@ -12,9 +12,6 @@ from .dpg_item import DpgItem
 from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
 
-if TYPE_CHECKING:
-    from yonder.audio.multi_track_stream import MultiTrackStream
-
 
 class add_hirc_player(DpgItem):
     def __init__(
