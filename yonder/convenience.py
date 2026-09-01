@@ -454,6 +454,27 @@ def _set_index_transition_ids(
                 trans.destination_ids[idx] = true_id
 
 
+def _get_unique_name(bnk: Soundbank, base: str, suffixes: list[int | str] = None) -> str:
+    if suffixes:
+        for val in suffixes:
+            if isinstance(val, int):
+                val = lookup_name(val, val)
+            if val:
+                base += "_" + val
+
+    base = base.rstrip("_")
+    if base in bnk:
+        base += "_"
+        add = 1
+
+        while base + str(add) in bnk:
+            add += 1
+
+        base += str(add)
+
+    return base
+
+
 def create_boss_bgm(
     bnk: Soundbank,
     master: MusicSwitchContainer,
@@ -490,8 +511,9 @@ def create_boss_bgm(
     boss_state_keys = parse_state_path(boss_phases)
 
     # Boss music manager
+    name = _get_unique_name(bnk, "BossBgm", master_branch)
     boss_msc = MusicSwitchContainer.new(
-        bnk.new_id(),
+        name,
         [("BossBattleState", GroupType.State)],
         None,
         parent=master.id,
@@ -588,8 +610,9 @@ def create_area_bgm(
     location_branches = location_tree.flatten()
 
     # Manager for this area
+    name = _get_unique_name(bnk, "AreaBgm", master_branch)
     area_msc = MusicSwitchContainer.new(
-        bnk.new_id(),
+        calc_hash(name),
         [(arg, GroupType.State) for arg in location_tree.all_args()],
         props=properties | {PropID.Priority: 80.0},
         parent=master,
