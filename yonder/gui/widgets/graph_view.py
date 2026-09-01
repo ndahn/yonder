@@ -237,7 +237,7 @@ class add_graph_widget(DpgItem):
         depth: int,
         lo: float,
         hi: float,
-        leaves: dict[int, int],
+        leafs: dict[int, int],
         layout: dict[int, GraphNode],
     ) -> None:
         """give nid a ring position, then split its wedge among its children."""
@@ -250,11 +250,11 @@ class add_graph_widget(DpgItem):
         )
 
         children = list(g.successors(nid))
-        total = leaves[nid] or 1
+        total = leafs[nid] or 1
         cur = lo
         for child in children:
-            share = (hi - lo) * leaves[child] / total
-            self._place(g, child, depth + 1, cur, cur + share, leaves, layout)
+            share = (hi - lo) * leafs[child] / total
+            self._place(g, child, depth + 1, cur, cur + share, leafs, layout)
             cur += share
 
     def _make_layout(self, g: nx.DiGraph) -> dict[int, GraphNode]:
@@ -269,16 +269,16 @@ class add_graph_widget(DpgItem):
         if g.number_of_nodes() == 0:
             return layout
 
-        leaves = self._leaf_counts(g)
+        leafs = self._leaf_counts(g)
         roots = [n for n in g if g.in_degree(n) == 0]
-        total = sum(leaves[r] for r in roots) or 1
+        total = sum(leafs[r] for r in roots) or 1
 
         half_sweep = math.pi / 4  # 45 degrees either side of center
         lo = -half_sweep
 
         for root in roots:
-            share = 2 * half_sweep * leaves[root] / total
-            self._place(g, root, 0, lo, lo + share, leaves, layout)
+            share = 2 * half_sweep * leafs[root] / total
+            self._place(g, root, 0, lo, lo + share, leafs, layout)
             lo += share
 
         return layout

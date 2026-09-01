@@ -132,7 +132,7 @@ def _build_tree(
 ) -> DecisionNode:
     """Construct a uniform-depth DecisionNode tree from flat TrackEntry rows.
 
-    All leaves sit at depth ``len(active_args)``. Each level groups entries
+    All leafs sit at depth ``len(active_args)``. Each level groups entries
     by their condition value for that level's arg; None is the wildcard branch.
     """
     root = DecisionNode()

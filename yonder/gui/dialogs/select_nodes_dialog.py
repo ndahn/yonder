@@ -3,7 +3,6 @@ import networkx as nx
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode, lookup_name
-from yonder.types import ActorMixer
 from yonder.game import get_selected_game
 from yonder.game.data import AmxData, AmxSummary
 from yonder.gui.localization import µ
@@ -15,7 +14,6 @@ from yonder.gui.widgets import (
     get_foldable_row_descriptor,
     is_foldable_row_expanded,
 )
-from yonder.gui.widgets.table_tree_nodes import RowDescriptor
 from yonder.gui.icons import Icons
 
 
@@ -26,7 +24,7 @@ class select_nodes_dialog(DpgItem):
         on_nodes_selected: Callable[[str, list[HIRCNode] | list[str], Any], None],
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
-        get_node_label: Callable[[HIRCNode], str] = None,
+        get_node_label: Callable[[HIRCNode], str] = str,
         multiple: bool = False,
         return_labels: bool = False,
         max_items: int = 200,
@@ -35,9 +33,6 @@ class select_nodes_dialog(DpgItem):
         user_data: Any = None,
     ) -> str:
         super().__init__(tag)
-
-        if not get_node_label:
-            get_node_label = lambda n: n.get_name()
 
         self._items: dict[str, HIRCNode] = {}
         self._get_items = get_items

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Type, Iterable, Literal
+from typing import Any, Callable, Type, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
@@ -7,8 +7,13 @@ from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
 from yonder.hash import lookup_name
 from yonder.game import get_selected_game
 from yonder.game.data import AmxData, build_bank_actormixer_summary
+from yonder.gui import style
+from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
-from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog, select_actormixer
+from yonder.gui.dialogs.select_nodes_dialog import (
+    select_nodes_dialog,
+    select_actormixer,
+)
 from .dpg_item import DpgItem
 
 
@@ -42,13 +47,13 @@ class add_select_node(DpgItem):
         self,
         bnk: Soundbank,
         label: str,
-        callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
+        callback: Callable[[str, int | HIRCNode | list[HIRCNode], Any], None],
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
         jump_to: Callable[[str, HIRCNode, Any], None] = None,
         create_new: Callable[[], HIRCNode] = None,
         multiple: bool = False,
-        default: HIRCNode = None,
+        default: HIRCNode | str = None,
         node_type: Type[HIRCNode] = None,
         node_filter: Callable[[HIRCNode], bool] = None,
         extra_query: str = None,
@@ -62,6 +67,7 @@ class add_select_node(DpgItem):
 
         self._bnk = bnk
         self._callback = callback
+        self._selected_node = default
         self._user_data = user_data
         self._multiple = multiple
         self._readonly = readonly
@@ -71,14 +77,6 @@ class add_select_node(DpgItem):
         self._get_node_details = get_node_details
         self._jump_to = jump_to
         self._create_new = create_new
-
-        if isinstance(default, HIRCNode):
-            default = default.id
-
-        if default is None:
-            default = "0"
-
-        default = str(default)
 
         self._build(label, default, readonly, textbox_width, parent)
 
@@ -90,14 +88,14 @@ class add_select_node(DpgItem):
     def _build(
         self,
         label: str,
-        default: HIRCNode,
+        default: HIRCNode | str,
         readonly: bool,
         textbox_width: int,
         parent: str,
     ):
         with dpg.group(horizontal=True, parent=parent):
             dpg.add_input_text(
-                default_value=default,
+                default_value=str(default),
                 decimal=True,
                 readonly=readonly,
                 enabled=not readonly,
@@ -106,33 +104,34 @@ class add_select_node(DpgItem):
                 user_data=self._user_data,
                 tag=self.tag,
             )
+            dpg.bind_item_theme(dpg.last_item(), style.themes.select_node_text)
 
-            if self._jump_to or self._create_new:
+            if self._create_new:
                 with dpg.popup(
                     dpg.last_item(), min_size=(100, 20), tag=self._t("context_popup")
                 ):
-                    if self._jump_to:
-                        dpg.add_menu_item(
-                            label=µ("Jump To"),
-                            callback=lambda s, a, u: self._jump_to(
-                                self.tag, self.selected_node, self._user_data
-                            ),
-                        )
+                    dpg.add_menu_item(
+                        label=µ("Create New"),
+                        callback=lambda s, a, u: self._on_node_selected(
+                            self.tag, self._create_new(), self._user_data
+                        ),
+                    )
 
-                    if self._create_new:
-                        dpg.add_menu_item(
-                            label=µ("Create New"),
-                            callback=lambda s, a, u: self._on_node_selected(
-                                self.tag, self._create_new(), self._user_data
-                            ),
-                        )
-
-            dpg.add_button(
-                arrow=True,
-                direction=dpg.mvDir_Right,
+            dpg.add_image_button(
+                Icons.select16,
                 callback=self._select_node,
             )
-            dpg.add_text(label)
+
+            if self._jump_to:
+                dpg.add_image_button(
+                    Icons.jump16,
+                    callback=lambda s, a, u: self._jump_to(
+                        self.tag, self._selected_node, self._user_data
+                    ),
+                )
+
+            if label:
+                dpg.add_text(label)
 
     def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
         if self._extra_query:
@@ -148,11 +147,26 @@ class add_select_node(DpgItem):
             yield node
 
     def _on_node_edit(self, sender: str, name: str, user_data: Any) -> None:
+        if not name:
+            name = 0
+        else:
+            node = self._bnk.get(name)
+            if not node:
+                if name.startswith("#"):
+                    name = name[1:]
+
+                if name.isdigit():
+                    node = int(name)
+                else:
+                    # Not a valid node identifier
+                    return None
+
+        self.selected_node = node
         if self._callback:
-            self._callback(self.tag, name, user_data)
+            self._callback(self.tag, node, user_data)
 
     def _on_node_selected(self, sender: str, node: HIRCNode, user_data: Any) -> None:
-        dpg.set_value(self.tag, str(node.id))
+        self.selected_node = node
         if self._callback:
             self._callback(self.tag, node, self._user_data)
 
@@ -170,22 +184,19 @@ class add_select_node(DpgItem):
     # === Public accessors =================
 
     @property
-    def selected_node(self) -> int:
-        val = dpg.get_value(self.tag)
-        try:
-            return int(val)
-        except Exception:
+    def selected_node(self) -> int | HIRCNode:
+        if self._selected_node is None:
             return None
+
+        if isinstance(self._selected_node, HIRCNode):
+            return self._selected_node
+
+        return self._bnk.get(self._selected_node, self._selected_node)
 
     @selected_node.setter
     def selected_node(self, node: int | HIRCNode) -> None:
-        if isinstance(node, HIRCNode):
-            node = node.id
-
-        if node is not None:
-            node = int(node)
-
-        dpg.set_value(self.tag, node)
+        dpg.set_value(self.tag, str(node))
+        self._selected_node = node
 
 
 class add_select_actormixer(add_select_node):

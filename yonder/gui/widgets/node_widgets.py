@@ -70,6 +70,7 @@ from .wav_player_widget import add_wav_player
 from .transition_matrix import add_transition_matrix
 from .editable_table import add_widget_table, add_curves_table
 from .hash_widget import add_hash_widget
+from .select_node import add_select_node
 
 
 _colorgen = style.HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)
@@ -380,7 +381,8 @@ def add_node_link(
         user_data=target,
         tag=tag,
     )
-    dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
+    dpg.bind_item_theme(tag, style.themes.link_button)
+
     return tag
 
 
@@ -1259,6 +1261,10 @@ def _create_attributes_musicswitchcontainer(
         label = f"{arg_name} = {val_name}"
         dpg.set_item_label(dpg_item, label)
 
+    def on_leaf_changed(sender: str, selected: HIRCNode, parent: DecisionTreeNode) -> None:
+        parent.node_id = selected.id if selected else 0
+        on_node_changed(base_tag, node, user_data)
+
     def bind_context_menu(
         item: str, tree_node: DecisionTreeNode, level: int, path: list[Hash]
     ) -> None:
@@ -1315,18 +1321,18 @@ def _create_attributes_musicswitchcontainer(
         if level == len(node.arguments) - 1:
             # Leaf
             nid = tree_node.node_id
-            leaf_node = bnk.get(nid)
+            leaf_node = bnk.get(nid, nid)
 
             with dpg.tree_node(span_full_width=True) as dpg_item:
-                if leaf_node:
-                    add_node_link(
-                        bnk,
-                        leaf_node,
-                        on_node_selected,
-                        user_data=user_data,
-                    )
-                else:
-                    dpg.add_text(µ("#{node} (not found)").format(node=nid))
+                add_select_node(
+                    bnk,
+                    label=None,
+                    callback=on_leaf_changed,
+                    default=leaf_node,
+                    jump_to=on_node_selected,
+                    user_data=tree_node,
+                    textbox_width=240,
+                )
         else:
             # Branch
             with dpg.tree_node(span_full_width=True) as dpg_item:
@@ -1922,6 +1928,7 @@ def _create_attributes_switchcontainer(
                     span_full_width=True,
                     tag=switch_tag,
                 ):
+                    # TODO do a table instead
                     for nid in switch.nodes:
                         switch_node = bnk.get(nid)
                         if switch_node:
