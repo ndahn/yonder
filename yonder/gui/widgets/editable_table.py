@@ -2,6 +2,7 @@ from typing import Any, Callable, TypeVar
 from pathlib import Path
 from dearpygui import dearpygui as dpg
 
+from yonder import Soundbank, HIRCNode
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
@@ -270,7 +271,7 @@ class add_widget_table(DpgItem):
             self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
 
     def _on_add_item_done(self, result: _T) -> None:
-        if not result:
+        if result is None:
             return
 
         pos = len(self._values)
@@ -960,6 +961,163 @@ class add_curves_table(DpgItem):
 
     def append(self, curve: GraphCurve, *, fire_callbacks: bool = False) -> None:
         self._table.append(curve, fire_callbacks=fire_callbacks)
+
+    def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
+        self._table.remove(idx, fire_callbacks=fire_callbacks)
+
+    def clear(self, *, fire_callbacks: bool = False) -> None:
+        self._table.clear(fire_callbacks=fire_callbacks)
+
+
+# ===========================================================================
+
+
+class add_nodes_table(DpgItem):
+    """A list of nodes built on ``add_select_node``.
+
+    Parameters
+    ----------
+    initial_nodes : list[HIRCNode | int]
+        Nodes to pre-populate the table with.
+    on_value_changed : callable, optional
+        Fired as ``on_value_changed(tag, nodes, user_data)`` after any add
+        or remove.
+    label : str
+        Text label rendered above the table.
+    get_node_details : Callable[[HIRCNode], list[str]]
+        Provides additional details for node when choosing a new one.
+    jump_to : Callable[[str, HIRCNode, Any], None]
+        Enable the jump-to button and call this when it's clicked.
+    create_new : Callable[[], HIRCNode]
+        Callback to create an entirely new node.
+    node_type : type[HIRCNode]
+        Show only nodes of this type when selecting.
+    node_filter : Callable[[HIRCNode], bool]
+        Filter to decide whether a node is eligible.
+    extra_query : str
+        An extra query to use when getting the candidate nodes.
+    on_select : callable, optional
+        Fired as ``on_select(tag, node, user_data)`` when a row is clicked.
+    show_clear : bool
+        Show a clear-all button.
+    parent : int or str
+        DPG parent item.
+    tag : int or str
+        Explicit tag; auto-generated if 0.
+    user_data : any
+        Passed through to callbacks.
+    """
+
+    def __init__(
+        self,
+        bnk: Soundbank,
+        initial_nodes: list[HIRCNode | int],
+        on_value_changed: Callable[[str, list[HIRCNode | int], Any], None] = None,
+        *,
+        label: str = "Nodes",
+        get_node_details: Callable[[HIRCNode], list[str]] = None,
+        jump_to: Callable[[str, HIRCNode, Any], None] = None,
+        create_new: Callable[[], HIRCNode] = None,
+        node_type: type[HIRCNode] = None,
+        node_filter: Callable[[HIRCNode], bool] = None,
+        extra_query: str = None,
+        on_select: Callable[[str, Path, Any], None] = None,
+        selected_row_color: style.RGBA = style.muted_purple,
+        show_clear: bool = False,
+        parent: str | int = 0,
+        tag: str | int = 0,
+        user_data: Any = None,
+    ) -> None:
+        super().__init__(tag)
+
+        self._bnk = bnk
+        self._on_value_changed = on_value_changed
+        self._on_select_cb = on_select
+        self._label = label
+        self._get_node_details = get_node_details
+        self._jump_to = jump_to
+        self._create_new = create_new
+        self._node_type = node_type
+        self._node_filter = node_filter
+        self._extra_query = extra_query
+        self._user_data = user_data
+
+        self._table = add_widget_table(
+            initial_nodes,
+            self._create_row,
+            new_item=self._add_item,
+            on_add=self._on_add,
+            on_remove=self._on_remove,
+            on_select=self._on_select if on_select else None,
+            add_item_label=µ("+ Add Node"),
+            selected_row_color=selected_row_color,
+            show_clear=show_clear,
+            label=label,
+            parent=parent,
+            tag=self.tag,
+            user_data=user_data,
+        )
+
+    # === Callbacks =====================================================
+
+    def _add_item(self, done: Callable[[HIRCNode | int], None]) -> None:
+        done(0)
+
+    def _create_row(self, node: HIRCNode | int, idx: int) -> None:
+        from .select_node import add_select_node
+
+        add_select_node(
+            self._bnk,
+            None,
+            self._on_node_selected,
+            default=node,
+            get_node_details=self._get_node_details,
+            jump_to=self._jump_to,
+            create_new=self._create_new,
+            node_type=self._node_type,
+            node_filter=self._node_filter,
+            extra_query=self._extra_query,
+            user_data=idx,
+        )
+
+    def _on_node_selected(self, sender: str, node: HIRCNode | int, idx: int) -> None:
+        self._table._values[idx] = node
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, self._table._values, self._user_data)
+
+    def _on_add(
+        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+    ) -> None:
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, info[2], self._user_data)
+
+    def _on_remove(
+        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+    ) -> None:
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, info[2], self._user_data)
+
+    def _on_select(
+        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+    ) -> None:
+        if self._on_select_cb:
+            self._on_select_cb(self.tag, info[1], self._user_data)
+
+    # === Public ========================================================
+
+    @property
+    def nodes(self) -> list[HIRCNode | int]:
+        return self._table.items
+
+    @nodes.setter
+    def nodes(self, items: list[HIRCNode | int]) -> None:
+        self._table.items = items
+
+    def select(self, index: int) -> None:
+        self._table.select(index)
+
+    def append(self, node: HIRCNode | int, *, fire_callbacks: bool = False) -> None:
+        self._table.append(node, fire_callbacks=fire_callbacks)
 
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
         self._table.remove(idx, fire_callbacks=fire_callbacks)

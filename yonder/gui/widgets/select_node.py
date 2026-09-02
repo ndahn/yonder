@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Type, Iterable
+from typing import Any, Callable, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
@@ -54,7 +54,7 @@ class add_select_node(DpgItem):
         create_new: Callable[[], HIRCNode] = None,
         multiple: bool = False,
         default: HIRCNode | str = None,
-        node_type: Type[HIRCNode] = None,
+        node_type: type[HIRCNode] = None,
         node_filter: Callable[[HIRCNode], bool] = None,
         extra_query: str = None,
         readonly: bool = True,

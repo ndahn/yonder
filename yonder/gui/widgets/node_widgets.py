@@ -41,6 +41,7 @@ from yonder.types.base_types import (
     RTPC,
     Layer,
     StateChunk,
+    SwitchPackage,
 )
 from yonder.enums import (
     ActionType,
@@ -68,7 +69,7 @@ from .rtpc_table import add_rtpc_table
 from .states_table import add_states_table
 from .wav_player_widget import add_wav_player
 from .transition_matrix import add_transition_matrix
-from .editable_table import add_widget_table, add_curves_table
+from .editable_table import add_widget_table, add_curves_table, add_nodes_table
 from .hash_widget import add_hash_widget
 from .select_node import add_select_node
 
@@ -1261,7 +1262,9 @@ def _create_attributes_musicswitchcontainer(
         label = f"{arg_name} = {val_name}"
         dpg.set_item_label(dpg_item, label)
 
-    def on_leaf_changed(sender: str, selected: HIRCNode, parent: DecisionTreeNode) -> None:
+    def on_leaf_changed(
+        sender: str, selected: HIRCNode, parent: DecisionTreeNode
+    ) -> None:
         parent.node_id = selected.id if selected else 0
         on_node_changed(base_tag, node, user_data)
 
@@ -1896,6 +1899,14 @@ def _create_attributes_switchcontainer(
         node.group_id = info[0]
         on_node_changed(base_tag, node, user_data)
 
+    def on_switch_nodes_changed(
+        sender: str, switch_nodes: list[HIRCNode | int], switch: SwitchPackage
+    ) -> None:
+        switch.nodes = [
+            n.id if isinstance(n, HIRCNode) else int(n) for n in switch_nodes
+        ]
+        on_node_changed(base_tag, node, user_data)
+
     empty = []
 
     with dpg.group():
@@ -1928,18 +1939,14 @@ def _create_attributes_switchcontainer(
                     span_full_width=True,
                     tag=switch_tag,
                 ):
-                    # TODO do a table instead
-                    for nid in switch.nodes:
-                        switch_node = bnk.get(nid)
-                        if switch_node:
-                            add_node_link(
-                                bnk,
-                                switch_node,
-                                on_node_selected,
-                                user_data=user_data,
-                            )
-                        else:
-                            dpg.add_text(µ("#{node} (not found)").format(node=nid))
+                    add_nodes_table(
+                        bnk,
+                        [bnk.get(nid, nid) for nid in switch.nodes],
+                        on_switch_nodes_changed,
+                        label=None,
+                        jump_to=on_node_selected,
+                        user_data=switch,
+                    )
 
         dpg.add_spacer(height=3)
         dpg.add_checkbox(
