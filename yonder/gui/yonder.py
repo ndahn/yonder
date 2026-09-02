@@ -639,7 +639,7 @@ class BanksOfYonder(DpgItem):
                 border=False,
             ):
                 with dpg.tab_bar(tag=self._t("info_tabs")):
-                    with dpg.tab(label=µ("Graph"), tag=self._t("graph_tab")):
+                    with dpg.tab(label=µ("Tree"), tag=self._t("graph_tab")):
                         self._graph_widget = add_graph_widget(
                             self.bnk,
                             None,
