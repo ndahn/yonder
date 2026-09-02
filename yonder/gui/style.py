@@ -136,7 +136,8 @@ class themes:
     notification_frame = None
     item_default = None
     item_highlight = None
-    select_node_text = None
+    node_link_enabled = None
+    node_link_disabled = None
     link_button = None
     transparent_button = None
     no_padding = None
@@ -278,7 +279,7 @@ def init_themes():
                 dpg.mvThemeCol_Border, muted_green, category=dpg.mvThemeCat_Core
             )
 
-    with dpg.theme() as themes.select_node_text:
+    with dpg.theme() as themes.node_link_enabled:
         with dpg.theme_component(dpg.mvAll):
             dpg.add_theme_color(
                 dpg.mvThemeCol_Text, light_blue, category=dpg.mvThemeCat_Core
@@ -292,6 +293,22 @@ def init_themes():
             )
             dpg.add_theme_color(
                 dpg.mvThemeCol_Border, light_blue, category=dpg.mvThemeCat_Core
+            )
+
+    with dpg.theme() as themes.node_link_disabled:
+        with dpg.theme_component(dpg.mvAll):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, muted_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, muted_blue, category=dpg.mvThemeCat_Core
+            )
+        with dpg.theme_component(dpg.mvAll, enabled_state=False):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, muted_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, muted_blue, category=dpg.mvThemeCat_Core
             )
 
     with dpg.theme() as themes.link_button:

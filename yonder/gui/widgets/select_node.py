@@ -66,6 +66,9 @@ class add_select_node(DpgItem):
     ) -> str:
         super().__init__(tag)
 
+        if not isinstance(default, HIRCNode):
+            default = bnk.get(default, default)
+
         self._bnk = bnk
         self._callback = callback
         self._selected_node = default
@@ -106,7 +109,6 @@ class add_select_node(DpgItem):
                 user_data=self._user_data,
                 tag=self.tag,
             )
-            dpg.bind_item_theme(dpg.last_item(), style.themes.select_node_text)
 
             if self._create_new:
                 with dpg.popup(
@@ -117,12 +119,14 @@ class add_select_node(DpgItem):
                         callback=lambda s, a, u: self._on_node_selected(
                             self.tag, self._create_new(), self._user_data
                         ),
+                        tag=self._t("create_new_button"),
                     )
 
             if self._allow_select:
                 dpg.add_image_button(
                     Icons.select16,
                     callback=self._select_node,
+                    tag=self._t("select_button"),
                 )
 
             if self._jump_to:
@@ -131,10 +135,13 @@ class add_select_node(DpgItem):
                     callback=lambda s, a, u: self._jump_to(
                         self.tag, self._selected_node, self._user_data
                     ),
+                    tag=self._t("jump_to_button"),
                 )
 
             if label:
                 dpg.add_text(label)
+
+        self._update_widget_state()
 
     def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
         if self._extra_query:
@@ -184,22 +191,38 @@ class add_select_node(DpgItem):
             user_data=self._user_data,
         )
 
+    def _update_widget_state(self) -> None:
+        if isinstance(self._selected_node, HIRCNode):
+            dpg.bind_item_theme(self.tag, style.themes.node_link_enabled)
+            if self._jump_to:
+                dpg.configure_item(
+                    self._t("jump_to_button"), tint_color=style.white, enabled=True
+                )
+        else:
+            dpg.bind_item_theme(self.tag, style.themes.node_link_disabled)
+            if self._jump_to:
+                dpg.configure_item(
+                    self._t("jump_to_button"),
+                    tint_color=style.light_grey,
+                    enabled=False,
+                )
+
     # === Public accessors =================
 
     @property
     def selected_node(self) -> int | HIRCNode:
-        if self._selected_node is None:
-            return None
+        node = self._selected_node
 
-        if isinstance(self._selected_node, HIRCNode):
-            return self._selected_node
+        if not isinstance(self._selected_node, HIRCNode):
+            node = self._bnk.get(node, node)
 
-        return self._bnk.get(self._selected_node, self._selected_node)
+        return node
 
     @selected_node.setter
     def selected_node(self, node: int | HIRCNode) -> None:
         dpg.set_value(self.tag, str(node))
         self._selected_node = node
+        self._update_widget_state()
 
 
 class add_select_actormixer(add_select_node):

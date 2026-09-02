@@ -38,6 +38,7 @@ class DpgItem:
 
         if dpg.does_item_exist(tag):
             dpg.delete_item(tag)
+            dpg.remove_alias(tag)
             return True
 
         return False

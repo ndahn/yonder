@@ -1692,14 +1692,14 @@ class BanksOfYonder(DpgItem):
         # v3) traverse the dpg tree and close DpgItems explicitly -> yay
 
         def delve(tag: str) -> None:
-            item = DpgItem.get_instance(tag)
-            if item:
-                item.destroy()
-
             if dpg.does_item_exist(tag):
                 for children in dpg.get_item_children(tag).values():
                     for child in children:
                         delve(child)
+
+            item = DpgItem.get_instance(tag)
+            if item:
+                item.destroy()
 
         delve(self._t("attributes"))
         dpg.delete_item(self._t("attributes"), children_only=True, slot=1)

@@ -315,9 +315,9 @@ class add_states_table(StateMixin, DpgItem):
             return new
 
         with dpg.tree_node(label=name, span_full_width=True) as tree_node:
-            # TODO use a node link instead, usually states should not be shared
+            # TODO Should we enforce 1:1 relationships to states?
             add_select_node(
-                self._bnk.query,
+                self._bnk,
                 µ("State").format(num_references=referees),
                 self._make_setter(state_value, "state_instance_id", lambda n: n.id),
                 jump_to=self._jump_to,

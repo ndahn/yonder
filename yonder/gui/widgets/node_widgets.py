@@ -377,7 +377,7 @@ def add_node_link(
         default=bnk.get(target, target),
         jump_to=on_node_selected,
         allow_select=allow_select,
-        textbox_width=240,
+        textbox_width=width,
         user_data=user_data,
         tag=tag,
     )
