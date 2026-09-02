@@ -35,14 +35,17 @@ nav:
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
     - Node Types: wwise/node_types.md
-  - HowTo:
-    - How to use Yonder: howto/yonder.md
-    - About Hashes: howto/hashes.md
-    - Wems & Wavs: howto/wems.md
-    - DLLs: howto/dlls.md
-    - Boss BGMs: howto/boss_bgm.md
-    - Area BGMs: howto/area_bgm.md
+  - Yonder:
+    - How to Yonder: yonder/yonder.md
+    - About Hashes: yonder/hashes.md
+    - Game Presets: yonder/games.md
+    - Custom Soundbanks: yonder/new_bank.md
+    - Troubleshooting: yonder/troubleshooting.md
   - Tools:
+    - Simple Sounds: tools/simple_sounds.md
+    - Batch Sound Builder: tools/batch_sound_builder.md 
+    - Boss BGMs: tools/boss_bgm.md
+    - Area BGMs: tools/area_bgm.md
     - Transfering Sounds: tools/mass_transfer.md
     - Unmangling Soundbanks: tools/unmangle.md
   - API Reference

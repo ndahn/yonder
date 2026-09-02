@@ -1,6 +1,6 @@
 # Sources
 
-Wwise can play various audio codecs, however, the most common one used is a variant of Ogg Vorbis. These are saved in `.wem` files. Like most things Wwise these files use a [hash](../howto/hashes.md) as their filename and are shipped along the soundbank in one of three different ways:
+Wwise can play various audio codecs, however, the most common one used is a variant of Ogg Vorbis. These are saved in `.wem` files. Like most things Wwise these files use a [hash](../yonder/hashes.md) as their filename and are shipped along the soundbank in one of three different ways:
 
 - *embedded* - the sound is stored in the [DATA section](soundbanks.md#data) of the soundbank. This is commonly done for small sounds (<200kB).
 - *streaming* - to avoid long loading times for soundbanks, larger sounds like music tracks are stored outside the soundbank. You can find them next to the soundank under `wem/XX/`, where `XX` is the first two digits of the filename.

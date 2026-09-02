@@ -8,7 +8,7 @@ States can be thought of as global integer variables that nodes may listen to. T
 
 !!! example
 
-    A typical example for a state in Elden Ring is the `FieldBattleState`. If it is set to `Battle` (or rather its [hash](../howto/hashes.md)), the active area music node will apply a negative volume modifier to the area music and remove this modifier from the area's battle music. The reverse happens when it is set to any other value.
+    A typical example for a state in Elden Ring is the `FieldBattleState`. If it is set to `Battle` (or rather its [hash](../yonder/hashes.md)), the active area music node will apply a negative volume modifier to the area music and remove this modifier from the area's battle music. The reverse happens when it is set to any other value.
 
 ## Switches
 

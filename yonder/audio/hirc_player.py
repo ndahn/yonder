@@ -23,6 +23,8 @@ class HIRCPlayer:
         if not isinstance(entrypoint, HIRCNode):
             entrypoint = bnk[entrypoint]
 
+        # TODO need to include the AMX uptree
+
         self.bnk = bnk
         self.entrypoint = entrypoint
         self.context = context
