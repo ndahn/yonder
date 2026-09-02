@@ -33,10 +33,17 @@ class DpgItem:
     def destroy(self) -> None:
         pass
 
-    def _delete_item(self, suffix: str) -> bool:
-        tag = self._t(suffix)
-
+    def _delete_item(self, tag: str) -> bool:
         if dpg.does_item_exist(tag):
+            dpg.delete_item(tag)
+            
+            alias = dpg.get_item_alias(tag)
+            if dpg.does_alias_exist(alias):
+                dpg.remove_alias(alias)
+            
+            return True
+
+        if dpg.does_alias_exist(tag):
             dpg.delete_item(tag)
             dpg.remove_alias(tag)
             return True

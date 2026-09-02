@@ -64,6 +64,7 @@ class add_states_table(StateMixin, DpgItem):
         self._on_value_changed = on_value_changed
         self._user_data = user_data
         self._jump_to = jump_to
+        self._popups: list[str] = []
 
         if label:
             dpg.add_text(label)
@@ -73,7 +74,8 @@ class add_states_table(StateMixin, DpgItem):
         self._build()
 
     def destroy(self):
-        self._delete_item("context_popup")
+        for popup in self._popups:
+            self._delete_item(popup)
 
     # === Internal ======================================================
 
@@ -142,11 +144,12 @@ class add_states_table(StateMixin, DpgItem):
             name = lookup_name(h, f"#{h}")
             dpg.set_item_label(item_tag, name)
 
+        popup = self._t(f"{item_tag}_popup")
         with dpg.popup(
             item_tag,
             mousebutton=dpg.mvMouseButton_Right,
             min_size=(100, 50),
-            tag=self._t("context_popup"),
+            tag=popup,
         ):
             add_hash_widget(
                 getattr(obj, attr),
@@ -155,6 +158,8 @@ class add_states_table(StateMixin, DpgItem):
                 string_label=label,
                 width=120,
             )
+        
+        self._popups.append(popup)
 
     # === Properties ======================================================
 

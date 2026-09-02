@@ -48,6 +48,7 @@ class add_rtpc_table(DpgItem):
         self._rtpcs = rtpcs
         self._on_value_changed = on_value_changed
         self._user_data = user_data
+        self._popups: list[str] = []
 
         if label:
             dpg.add_text(label)
@@ -56,7 +57,8 @@ class add_rtpc_table(DpgItem):
         self.refresh()
 
     def destroy(self):
-        self._delete_item("context_popup")
+        for popup in self._popups:
+            self._delete_item(popup)
 
     # === Internal ======================================================
 
@@ -96,11 +98,12 @@ class add_rtpc_table(DpgItem):
         )
 
     def _bind_context_menu(self, item_tag: str, rtpc: RTPC) -> None:
+        popup = self._t(f"{item_tag}_popup")
         with dpg.popup(
             item_tag,
             mousebutton=dpg.mvMouseButton_Right,
             min_size=(100, 50),
-            tag=self._t("context_popup"),
+            tag=popup,
         ):
             add_hash_widget(
                 rtpc.id,
@@ -110,6 +113,8 @@ class add_rtpc_table(DpgItem):
                 user_data=rtpc,
                 width=120,
             )
+
+        self._popups.append(popup)
 
     def _add_row(self, idx: int, rtpc: RTPC) -> None:
         with dpg.group(horizontal=True, parent=self._tag):

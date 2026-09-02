@@ -86,7 +86,7 @@ class add_select_node(DpgItem):
         self._build(label, default, readonly, textbox_width, parent)
 
     def destroy(self):
-        self._delete_item("context_popup")
+        self._delete_item(self._t("context_popup"))
 
     # === Build =================
 
