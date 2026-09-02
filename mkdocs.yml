@@ -34,13 +34,7 @@ nav:
   - Home: index.md
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
-    - Globals: wwise/globals.md
-    - Events: wwise/events.md
-    - Containers: wwise/containers.md
-    - Sources: wwise/sources.md
-    - RTPCs: wwise/rtpcs.md
-    - States: wwise/states.md
-    - Attenuation: wwise/attenuation.md
+    - Node Types: wwise/node_types.md
   - HowTo:
     - How to use Yonder: howto/yonder.md
     - About Hashes: howto/hashes.md
