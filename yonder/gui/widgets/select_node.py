@@ -50,6 +50,7 @@ class add_select_node(DpgItem):
         callback: Callable[[str, int | HIRCNode | list[HIRCNode], Any], None],
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
+        allow_select: bool = True,
         jump_to: Callable[[str, HIRCNode, Any], None] = None,
         create_new: Callable[[], HIRCNode] = None,
         multiple: bool = False,
@@ -75,6 +76,7 @@ class add_select_node(DpgItem):
         self._node_filter = node_filter
         self._extra_query = extra_query
         self._get_node_details = get_node_details
+        self._allow_select = allow_select
         self._jump_to = jump_to
         self._create_new = create_new
 
@@ -117,10 +119,11 @@ class add_select_node(DpgItem):
                         ),
                     )
 
-            dpg.add_image_button(
-                Icons.select16,
-                callback=self._select_node,
-            )
+            if self._allow_select:
+                dpg.add_image_button(
+                    Icons.select16,
+                    callback=self._select_node,
+                )
 
             if self._jump_to:
                 dpg.add_image_button(

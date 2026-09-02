@@ -168,29 +168,33 @@ def create_node_widgets(
                 with dpg.group(horizontal=True):
                     dpg.add_text("Parent: ", tag=f"{tag}/parent_is", bullet=True)
                     parent_node = bnk.get(node.parent, node.parent)
-                    add_node_link(bnk, parent_node, on_node_selected)
+                    add_node_link(
+                        bnk, parent_node, on_structure_changed, on_node_selected
+                    )
 
             if hasattr(node, "children"):
                 with dpg.tree_node(label=µ("Children"), span_full_width=True):
                     for child_id in node.children:
                         child = bnk.get(child_id, child_id)
-                        add_node_link(bnk, child, on_node_selected)
+                        add_node_link(
+                            bnk,
+                            child,
+                            on_structure_changed,
+                            on_node_selected,
+                            allow_select=False,
+                        )
 
             if isinstance(node, Action):
                 with dpg.group(horizontal=True):
                     dpg.add_text(µ("Target: "), bullet=True)
                     ext = bnk.get(node.external_id)
-                    if ext:
-                        add_node_link(
-                            bnk,
-                            ext.id,
-                            on_node_selected,
-                            user_data=user_data,
-                        )
-                    else:
-                        dpg.add_text(
-                            µ("#{node} (not found)").format(node=node.external_id)
-                        )
+                    add_node_link(
+                        bnk,
+                        ext,
+                        on_structure_changed,
+                        on_node_selected,
+                        user_data=user_data,
+                    )
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
@@ -355,34 +359,28 @@ def add_node_states(
 def add_node_link(
     bnk: Soundbank,
     target: int | HIRCNode,
+    on_structure_changed: Callable[[], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
+    allow_select: bool = True,
+    width: int = 240,
     tag: str = 0,
     user_data: Any = None,
 ) -> str:
     if not tag:
         tag = dpg.generate_uuid()
 
-    if isinstance(target, HIRCNode):
-        target = target.id
-
-    if target in (0, None):
-        label = "#0"
-    else:
-        node = bnk.get(target)
-        if node:
-            label = str(node)
-        else:
-            label = f"#{target} (ext)"
-
-    dpg.add_button(
-        label=label,
-        small=True,
-        callback=lambda s, a, u: on_node_selected(tag, u, user_data),
-        user_data=target,
+    add_select_node(
+        bnk,
+        None,
+        lambda s, a, u: on_structure_changed(),
+        default=bnk.get(target, target),
+        jump_to=on_node_selected,
+        allow_select=allow_select,
+        textbox_width=240,
+        user_data=user_data,
         tag=tag,
     )
-    dpg.bind_item_theme(tag, style.themes.link_button)
 
     return tag
 
@@ -1029,12 +1027,13 @@ def _create_attributes_event(
                 )
                 dpg.add_text("=")
                 target = bnk.get(action.external_id)
-                if target:
-                    add_node_link(bnk, target.id, on_node_selected, user_data=user_data)
-                else:
-                    dpg.add_text(
-                        µ("#{node} (not found)").format(node=action.external_id)
-                    )
+                add_node_link(
+                    bnk,
+                    target,
+                    on_structure_changed,
+                    on_node_selected,
+                    user_data=user_data,
+                )
 
             else:
                 dpg.add_text(µ("#{node} (not found)").format(node=aid))
@@ -1327,14 +1326,12 @@ def _create_attributes_musicswitchcontainer(
             leaf_node = bnk.get(nid, nid)
 
             with dpg.tree_node(span_full_width=True) as dpg_item:
-                add_select_node(
+                add_node_link(
                     bnk,
-                    label=None,
-                    callback=on_leaf_changed,
-                    default=leaf_node,
-                    jump_to=on_node_selected,
+                    leaf_node,
+                    on_structure_changed,
+                    on_node_selected,
                     user_data=tree_node,
-                    textbox_width=240,
                 )
         else:
             # Branch
@@ -1660,10 +1657,14 @@ def _create_attributes_randomsequencecontainer(
 ) -> None:
     def create_playlist_row(item: tuple[int, int], idx: int) -> None:
         target = bnk.get(item[0])
-        if target:
-            add_node_link(bnk, target, on_node_selected, user_data=user_data)
-        else:
-            dpg.add_text(µ("#{node} (not found)").format(node=item[0]))
+        add_node_link(
+            bnk,
+            target,
+            on_structure_changed,
+            on_node_selected,
+            width=220,
+            user_data=user_data,
+        )
 
         dpg.add_input_int(
             default_value=item[1],
@@ -1793,7 +1794,7 @@ def _create_attributes_state(
             if i > 0  # don't include the default here
         ]
 
-        add_node_link(bnk, ref_node, on_node_selected)
+        add_node_link(bnk, ref_node, on_structure_changed, on_node_selected)
         dpg.add_text(", ".join(params))
 
     def param_to_row(param: tuple[int, float], idx: int) -> None:
