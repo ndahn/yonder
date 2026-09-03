@@ -55,6 +55,15 @@ More interestingly, of course, is `SetBossBGM`, which is used for unique boss th
 
 To activate a heatup phase you don't need to do anything extra. Simply pass e.g. `BossBGMState.HeatUp` to the `SetBossBGM` instruction instead of `BossBGMState.Start/Stop/etc.`.
 
+A typical EMEVD event for a boss with no heatup phases may look like this:
+
+```js
+$Event(0, Default, function(bossEntityId, areaEntityId, bgmParamId) {
+    // TODO
+    ...
+});
+```
+
 ## Unlocking Additional States
 
 In order to use arbitrary strings for the `BgmEnemyType` you need a dll. Yonder currently has dlls for Elden Ring and Nightreign - don't even try to use them on other games, it won't work. You can load them like any other dll by adding them to your [me3 profile](https://me3.help/en/latest/configuration-reference/):
