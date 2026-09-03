@@ -1,4 +1,4 @@
-# Adding a New Soundbank
+# Custom Soundbanks
 
 If you want to add an entirely new soundbank, you should start by creating an empty one from Yonder's *File* menu. Make sure to choose an [appropriate name](../wwise/soundbanks.md#important-soundbanks) for your use case. Afterwards you can edit it just like any other soundbank.
 

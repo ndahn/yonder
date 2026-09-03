@@ -44,7 +44,7 @@ _Effects Properties Section_ - unknown for now beyond what can be guessed from t
 
 ### HIRC
 
-_Hierarchy Section_ - graphs of playback nodes like containers, events, audio sources, states, etc. This is the main section you will interact with in Yonder. See [node_types.md] for more details.
+_Hierarchy Section_ - graphs of playback nodes like containers, events, audio sources, states, etc. This is the main section you will interact with in Yonder. See [node types](index.md) for more details.
 
 ### INIT
 

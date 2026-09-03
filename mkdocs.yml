@@ -32,23 +32,33 @@ theme:
 
 nav:
   - Home: index.md
+  - About: about.md
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
-    - Node Types: wwise/node_types.md
+    - Node Types: 
+      - wwise/index.md
+      - Routing: wwise/routing.md
+      - Game Parameters: wwise/game_parameters.md
+      - Events: wwise/events.md
+      - Containers: wwise/containers.md
+      - Sources: wwise/sources.md
   - Yonder:
     - How to Yonder: yonder/yonder.md
-    - Audio Playback: yonder/playback.md
+    - Playback: yonder/playback.md
     - About Hashes: yonder/hashes.md
     - Game Presets: yonder/games.md
-    - Custom Soundbanks: yonder/new_bank.md
+    - Custom Soundbanks: yonder/custom_banks.md
     - Troubleshooting: yonder/troubleshooting.md
   - Tools:
+    - tools/index.md
     - Simple Sounds: tools/simple_sounds.md
     - Batch Sound Builder: tools/batch_sound_builder.md 
     - Boss BGMs: tools/boss_bgm.md
     - Area BGMs: tools/area_bgm.md
     - Transfering Sounds: tools/mass_transfer.md
     - Unmangling Soundbanks: tools/unmangle.md
+  - Guides:
+    - guides/index.md
   - API Reference
 
 exclude_docs: "!/templates/"
