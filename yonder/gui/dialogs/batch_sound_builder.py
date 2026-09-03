@@ -234,12 +234,12 @@ class create_batch_sound_builder_dialog(DpgItem):
         choice = dpg.get_value(self._t("bulk/soundtype"))
         default_soundtype = self._soundtype_choice_to_enum(choice)
         group_id = abs(int(start))
-        groups_from_filenames = dpg.get_value(self._t("bulk/groups_from_filenames"))
+        detect_filenames = dpg.get_value(self._t("bulk/detect_filenames"))
 
         for path in ret:
             path = Path(path)
 
-            if groups_from_filenames:
+            if detect_filenames:
                 m = re.match(rf".*([{SoundType.values()}])(\d{{6,10}}).*", path.stem)
                 if m:
                     soundtype = SoundType(m.group(1))
@@ -432,7 +432,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     dpg.add_checkbox(
                         label=µ("Detect group names"),
                         default_value=True,
-                        tag=self._t("bulk/groups_from_filenames"),
+                        tag=self._t("bulk/detect_filenames"),
                     )
                     with dpg.tooltip(dpg.last_item()):
                         dpg.add_text(µ("Recognizes filenames like s100200300_bang"))

@@ -222,15 +222,6 @@ class create_area_bgm_dialog(DpgItem):
 
     # === Helpers ===========================================================
 
-    def _get_area_mscs(self, filt: str) -> list[MusicSwitchContainer]:
-        valid_msc_arg_hash = calc_hash("BgmPlaceType")
-        return list(
-            self.bnk.query(
-                f"arguments:*/group_id={valid_msc_arg_hash} {filt}",
-                node_type=MusicSwitchContainer,
-            )
-        )
-
     def _conditions_summary(
         self,
         entry: _BgmInfo,
@@ -800,13 +791,15 @@ Area tree:
                 autosize_x=True,
                 height=-125,
             ):
+                valid_msc_arg_hash = calc_hash("BgmPlaceType")
                 dpg.add_text(µ("MusicSwitchContainer"))
                 add_select_node(
-                    self._get_area_mscs,
+                    self.bnk,
                     "MusicSwitchContainer",
                     self._on_msc_selected,
                     get_node_details=get_details_musicswitchcontainer,
                     node_type=MusicSwitchContainer,
+                    extra_query=f"arguments:*/group_id={valid_msc_arg_hash}",
                 )
 
                 dpg.add_spacer(height=4)

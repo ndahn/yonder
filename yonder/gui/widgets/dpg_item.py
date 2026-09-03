@@ -36,16 +36,11 @@ class DpgItem:
     def _delete_item(self, tag: str) -> bool:
         if dpg.does_item_exist(tag):
             dpg.delete_item(tag)
+            try:
+                dpg.remove_alias(tag)
+            except SystemError:
+                pass
             
-            alias = dpg.get_item_alias(tag)
-            if dpg.does_alias_exist(alias):
-                dpg.remove_alias(alias)
-            
-            return True
-
-        if dpg.does_alias_exist(tag):
-            dpg.delete_item(tag)
-            dpg.remove_alias(tag)
             return True
 
         return False

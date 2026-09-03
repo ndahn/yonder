@@ -130,7 +130,7 @@ class edit_state_path_dialog(DpgItem):
                         tag=self._t("node_enabled"),
                     )
                     add_select_node(
-                        self._get_nodes,
+                        self._bnk,
                         "Node",
                         self._on_node_selected,
                         get_node_details=get_details_generic,
@@ -151,9 +151,6 @@ class edit_state_path_dialog(DpgItem):
                 )
 
     # === DPG callbacks =================================================
-
-    def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
-        yield from self._bnk.query(filt)
 
     def _on_node_selected(
         self, sender: str, leaf_node: int | HIRCNode, ud: Any

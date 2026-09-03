@@ -128,7 +128,7 @@ class create_wwise_event_dialog(DpgItem):
             )
 
             add_select_node(
-                self._bnk.query,
+                self._bnk,
                 µ("Target node"),
                 None,
                 node_filter=lambda n: hasattr(n, "parent"),

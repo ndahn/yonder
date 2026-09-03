@@ -67,10 +67,6 @@ class create_boss_track_dialog(DpgItem):
     def get_phase_label(phase: int) -> str:
         return f"Heatup {phase}" if phase > 0 else "Normal"
 
-    def _get_music_switch_containers(self, filt: str) -> list[MusicSwitchContainer]:
-        filt = f"arguments:*/group_id={self.bgm_enemy_type_hash} {filt}"
-        return list(self.bnk.query(filt, node_type=MusicSwitchContainer))
-
     def _edit_state_path(self) -> None:
         if not self.msc:
             self.show_message(µ("Select MusicSwitchContainer first", "msg"))
@@ -305,11 +301,12 @@ class create_boss_track_dialog(DpgItem):
     def _build_tab_tracks(self) -> None:
         with dpg.tab(label=µ("Tracks")):
             add_select_node(
-                self._get_music_switch_containers,
+                self.bnk,
                 "MusicSwitchContainer",
                 self._on_music_switch_container_selected,
                 get_node_details=get_details_musicswitchcontainer,
                 node_type=MusicSwitchContainer,
+                extra_query=f"arguments:*/group_id={self.bgm_enemy_type_hash}"
             )
 
             with dpg.group(horizontal=True):
