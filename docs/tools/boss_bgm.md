@@ -39,7 +39,7 @@ An intro plays the first part of a track before the loop-start point once and th
 
 ## Boss Phases
 
-When adding additional audio files to the boss bgm tool they are setup as additional boss phases (also known as heatup or HU). Each file past the first will become one additional heatup track. Fromsoft allows for at least 2 heatup phases in Elden Ring (e.g. Malenia), 3 in Nightreign (Straghess). Music phases are controlled via [EMEVD](#emevd) which sets the `BossBattleState` Wwise state.
+When adding additional audio files to the boss bgm tool they are setup as additional boss phases (also known as heatup or HU). Each file past the first will become one additional heatup track. Fromsoft allows for at least 2 heatup phases in Elden Ring (e.g. Malenia), 3 in Nightreign (Straghess). Music phases are controlled via [EMEVD](#game-setup) which sets the `BossBattleState` Wwise state.
 
 ## Transition Rules
 

@@ -9,16 +9,17 @@ A soundbank is a binary file in Audiokinetik's prorprietary format that organize
 ## Important Soundbanks
 
 In recent Fromsoft games, soundbanks were organized as follows:
-| Bank | Description |
-| ---- | ----------- |
-| `init` | Busses and most project-wide sections. |
-| `cs_main` | Character sounds that should always be loaded as well as ambience soundscapes. |
-| `cs_smain` | All music tracks, including boss themes. |
-| `cs_cXXXX` | Character-specific sounds. |
-| `vcXXX` | Character-specific (localized) voice lines. |
-| `cs_mXX` | Map-specific sounds. |
-| `cs_smXX` | Sounds for cutscenes (by map ID). |
-| \* | Others will usually be game-object specific, e.g. `aeg` for game assets. |
+
+| Bank       | Description                                                                    |
+| ---------- | ------------------------------------------------------------------------------ |
+| `init`     | Busses and most project-wide sections.                                         |
+| `cs_main`  | Character sounds that should always be loaded as well as ambience soundscapes. |
+| `cs_smain` | All music tracks, including boss themes.                                       |
+| `cs_cXXXX` | Character-specific sounds.                                                     |
+| `vcXXX`    | Character-specific (localized) voice lines.                                    |
+| `cs_mXX`   | Map-specific sounds.                                                           |
+| `cs_smXX`  | Sounds for cutscenes (by map ID).                                              |
+| \*         | Others will usually be game-object specific, e.g. `aeg` for game assets.       |
 
 ## Sections
 

@@ -27,7 +27,7 @@ theme:
     - search.suggest
   palette:
     - scheme: slate
-      primary: light blue
+      primary: indigo
       accent: deep purple
 
 nav:
@@ -43,7 +43,7 @@ nav:
       - Containers: wwise/containers.md
       - Sources: wwise/sources.md
   - Yonder:
-    - How to Yonder: yonder/yonder.md
+    - How to Yonder: yonder/howto.md
     - Playback: yonder/playback.md
     - About Hashes: yonder/hashes.md
     - Game Presets: yonder/games.md
