@@ -25,7 +25,7 @@ Select one of their children based on a [switch or state](game_parameters.md#sta
 
 ## Music Switch Container
 
-These serve a similar purpose as switch containers, however, they allow to use more complex decision trees that choose a child based on one or more multiple [game_parameters](states.md). They also define transition rules between children. As the name implies, these are intended for transitioning between different music tracks.
+These serve a similar purpose as switch containers, however, they allow to use more complex decision trees that choose a child based on one or more multiple [game_parameters](game_parameters.md). They also define transition rules between children. As the name implies, these are intended for transitioning between different music tracks.
 
 ## Music Random Sequence Container
 

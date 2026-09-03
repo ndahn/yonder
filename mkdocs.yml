@@ -59,7 +59,7 @@ nav:
     - Unmangling Soundbanks: tools/unmangle.md
   - Guides:
     - guides/index.md
-  - API Reference
+  #- API Reference
 
 exclude_docs: "!/templates/"
 
@@ -76,9 +76,9 @@ plugins:
               show_symbol_type_heading: true
               show_symbol_type_toc: true
               scoped_crossrefs: true
-  - api-autonav:
-      modules: ["yonder"]
-      nav_item_prefix: ""
+  #- api-autonav:
+  #    modules: ["yonder"]
+  #    nav_item_prefix: ""
 
 markdown_extensions:
   - admonition
