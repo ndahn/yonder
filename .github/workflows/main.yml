@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout main
         uses: actions/checkout@v1
-        with:
-          ref: feature_new_player
 
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
