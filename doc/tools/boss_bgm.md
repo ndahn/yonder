@@ -57,4 +57,15 @@ To activate a heatup phase you don't need to do anything extra. Simply pass e.g.
 
 ## Unlocking Additional States
 
+In order to use arbitrary strings for the `BgmEnemyType` you need a dll. Yonder currently has dlls for Elden Ring and Nightreign - don't even try to use them on other games, it won't work. You can load them like any other dll by adding them to your [me3 profile](https://me3.help/en/latest/configuration-reference/):
 
+```toml
+[[native]]
+path=<path/to/unlock_wwise_state.dll>
+```
+
+Once you have done this, new rows you add to `WwiseValueToStringParam_BgmBossChrIdConv` param can be used like any other ID in `SetBossBGM` - *just make sure they have at most 6 digits*.
+
+!!! bug
+
+    Note that this is __not__ enough for Nightreign - You also need to [unmangle your soundbanks](unmangle.md)!
