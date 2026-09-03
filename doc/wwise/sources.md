@@ -16,9 +16,9 @@ Sounds are the most common type of source nodes and are basically used for every
 
 ## Music 
 
-For music sources it is often desirable to have more control over their playback, e.g. (cross) fades, stateful playlists, etc. Part of this is realized through dedicated [music containers](containers.md#music-switch-container). These containers typically target a *Music Segment* node, which by itself only defines a fixed duration and a set of markers, e.g. loop points. 
+For music sources it is often desirable to have more control over their playback, e.g. (cross) fades, stateful playlists, etc. Part of this is realized through dedicated [music containers](containers.md#music-switch-container). These containers typically target a *MusicSegment* node, which by itself only defines a fixed duration and a set of markers, e.g. loop points. 
 
-Each segment can contain one or more *Music Track* nodes, which will be played back in parallel and cut off once the segment duration has been reached. Music tracks can also have multiple sources, and depending on the track type, these will either be played in sequence or picked at random.
+Each segment can contain one or more *MusicTrack* nodes, which will be played back in parallel and cut off once the segment duration has been reached. Music tracks can also have multiple sources, and depending on the track type, these will either be played in sequence or picked at random.
 
 !!! info
 

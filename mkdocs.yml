@@ -37,6 +37,7 @@ nav:
     - Node Types: wwise/node_types.md
   - Yonder:
     - How to Yonder: yonder/yonder.md
+    - Audio Playback: yonder/playback.md
     - About Hashes: yonder/hashes.md
     - Game Presets: yonder/games.md
     - Custom Soundbanks: yonder/new_bank.md

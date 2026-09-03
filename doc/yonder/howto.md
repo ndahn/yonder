@@ -30,29 +30,8 @@ On the right you will see two tabs: a graph view, which can e used to quickly na
 
 ## Doing Things
 
-Most soundbank edits will just come down to this: knowing what you want to do, and understanding how to use the various [node types](../wwise/node_types.md). That being said, Yonder includes a few utilities to make some common operations easier and setup Fromsoft-typical structures.
-
-| Tool | Summary |
-| ---- | ------- |
-| [Simple Sounds](../tools/simple_sounds.md) | Setup a new play/stop pair that plays a single sound. |
-| [Batch Sound Builder](../tools/batch_sound_builder.md) | Use this if you already have a bunch of simple sound files for which you want to setup events. Very useful for porting DS3 sounds. |
-| [Boss Bgm](../tools/boss_bgm.md) | A custom boss needs custom music, and this tool will set it up for you. |
-| [Area Bgm](../tools/area_bgm.md) | Create a new background music track playing in specific map regions. |
-| [Mass Transfer](../tools/mass_transfer.md) | Let's you move sounds between soundbanks. |
-| [Unmangle](../tools/unmangle.md) | Cleans up some stuff Fromsoft added that would otherwise prevent your edits from taking effect. |
+Most soundbank edits will just come down to this: knowing what you want to do, and understanding how to use the various [node types](../wwise/node_types.md). That being said, Yonder includes various [tools](../tools/index.md) to make some common operations easier and setup Fromsoft-typical structures. More in-depth manual edits are covered in the [guides](../guides/index.md) section.
 
 !!! tip
 
     Once you've made some edits you need to first **save** the soundbank (which writes your edits to the extracted `soundbank.json`), then **repack** it (which converts it back to a `.bnk`). Both of these actions can be triggered from the *File* menu - a backup will be created. *Always check the terminal output to see if there are any issues!*
-
-## The HIRC Player
-
-Yonder now comes with a player widget that emulates part of the in-game playback. In particular, it will traverse the currently selected subtree, accumulate modifiers, and mix and play branches based on user-defined [game paramters](../wwise/game_parameters.md).
-
-This is still experimental and I'm not sure how far I can (or want to) take it. The following Wwise things are currently *not* supported:
-
-- effects (i.e. only the dry signal is processed)
-- transition rules
-- occlusion, obstruction, diffraction, transmission
-- bus properties
-- many container attributes that would probably be relevant...

@@ -7,6 +7,27 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>`, where
 - `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects, `c` for character sounds, `v` for voice lines...)
 - `<id>` is a 9-digit number
 
+| Type | Name (1) |
+| ---- | ---- |
+| `a` | Environment |
+| `c` | Character |
+| `f` | Menu |
+| `o` | Object |
+| `p` | CutsceneSe |
+| `s` | Sfx |
+| `m` | Bgm |
+| `v` | Voice |
+| `x` | FloorMaterialDetermined |
+| `b` | ArmorMaterialDetermined |
+| `i` | Phantom |
+| `y` | MultiChannelStreaming |
+| `z` | MaterialRelated |
+| `e` | FootEffect |
+| `g` | GeometryAsset |
+| `d` | DynamicDialog |
+
+1. These names and type characters are valid for Elden Ring and Nightreign. While past games used similar patterns, Fromsoft has and will make changes depending on the game.
+
 !!! info
 
     When modifying e.g. a TAE (animation events), you will typically only specify the type and ID (or just the ID if the type is fixed). The game will then use this information to derive the full play-event name and send it to Wwise.
