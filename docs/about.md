@@ -13,7 +13,7 @@ A [soundbank](wwise/soundbanks.md) contains (part of) a large tree graph, where 
 > *But Mana, I can't possibly read all of this!* (1)
 { .annotate }
 
-1. Yes you can :raised_eyebrow: At the very least, read the pages I wrote about the various [node types](wwise/index.md) - *all of them* :knife:
+1. Yes you can :raised_eyebrow: At the very least, read the pages I wrote about the various [node types](wwise/node_types.md) - *all of them* :knife:
 
 That's the long and short of it. The rest of this site will be dedicated to explaining soundbanks in more detail, what you can (and can't) do with [Yonder](yonder/howto.md), and how to do certain complex edits.
 

@@ -25,6 +25,7 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>`, where
 | `e` | FootEffect |
 | `g` | GeometryAsset |
 | `d` | DynamicDialog |
+
 { .annotate }
 
 1. These names and type characters are valid for Elden Ring and Nightreign. While past games used similar patterns, Fromsoft has and will make changes depending on the game.

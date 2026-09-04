@@ -35,13 +35,12 @@ nav:
   - About: about.md
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
-    - Node Types: 
-      - wwise/index.md
-      - Routing: wwise/routing.md
-      - Game Parameters: wwise/game_parameters.md
-      - Events: wwise/events.md
-      - Containers: wwise/containers.md
-      - Sources: wwise/sources.md
+    - Node Types: wwise/index.md
+    - Routing: wwise/routing.md
+    - Game Parameters: wwise/game_parameters.md
+    - Events: wwise/events.md
+    - Containers: wwise/containers.md
+    - Sources: wwise/sources.md
   - Yonder:
     - How to Yonder: yonder/howto.md
     - Playback: yonder/playback.md
