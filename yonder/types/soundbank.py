@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, Generator, Iterator, TYPE_CHECKING
 from pathlib import Path
-import re
 from random import randrange
 from collections import deque
 import json
@@ -628,7 +627,7 @@ class Soundbank:
                     break
 
     def find_events_for(self, node: int | HIRCNode) -> Generator[Event, None, None]:
-        from yonder.types import Event
+        from yonder.types import Event, ActorMixer
 
         if not isinstance(node, HIRCNode):
             node = self[node]
@@ -637,9 +636,23 @@ class Soundbank:
             yield node
             return
 
-        # TODO cache nodes by type
-        events: list[Event] = list(self.query(node_type=Event))
+        # first try walking up the tree
         g = self.tree
+        if node in self:
+            todo = [node.id]
+            while todo:
+                nid = todo.pop()
+                for pid in g.predecessors(nid):
+                    parent = self.get(pid)
+                    if isinstance(parent, Event):
+                        yield parent
+                    elif not isinstance(parent, ActorMixer):
+                        todo.append(pid)
+            
+            return
+
+        # cache nodes by type
+        events: list[Event] = list(self.query(node_type=Event))
 
         for evt in events:
             if node.id in nx.descendants(g, evt.id):
