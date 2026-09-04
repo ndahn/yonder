@@ -46,7 +46,7 @@ nav:
     - Game Presets: yonder/games.md
     - Playback: yonder/playback.md
   - Tools:
-    - tools/index.md
+    - Overview: tools/index.md
     - Simple Sounds: tools/simple_sounds.md
     - Batch Sound Builder: tools/batch_sound_builder.md 
     - Boss BGMs: tools/boss_bgm.md
@@ -54,12 +54,12 @@ nav:
     - Transfering Sounds: tools/mass_transfer.md
     - Unmangling Soundbanks: tools/unmangle.md
   - Guides:
-    - guides/index.md
+    - Overview: guides/index.md
     - In-Game Setup: guides/game_setup.md
     - Custom Soundbanks: guides/custom_banks.md
     - Working with Music: guides/working_with_music.md
     - Setting up Attenuations: guides/attenuation_setup.md
-  - Troubleshooting: yonder/troubleshooting.md
+  - Troubles?: troubleshooting.md
   #- API Reference
 
 exclude_docs: "!/templates/"

@@ -1,6 +1,8 @@
 # Soundbanks
 
-> There is a guide to setup your own [custom bank](../guides/custom_banks.md)!
+!!! tip
+
+    There is a guide to setup your own [custom bank](../guides/custom_banks.md)!
 
 A soundbank is a binary file in Audiokinetik's prorprietary format that organizes information in various sections. The most important sections are HIRC (Hierarchy), where playback graphs are stored, and DATA, which contains (most of) the audio data.
 

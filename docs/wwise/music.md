@@ -1,6 +1,8 @@
 # Music 
 
-> Also see the guide on how to [work with music](../guides/working_with_music.md)!
+!!! tip
+
+    Also see the guide on how to [work with music](../guides/working_with_music.md)!
 
 For music sources it is often desirable to have more control over their playback, e.g. (cross) fades, stateful playlists, etc. This is realized through hierarchies of specialized music containers that lead into music segments and tracks.
 

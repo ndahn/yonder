@@ -28,7 +28,9 @@ RTPCs or Real-Time Parameter Control are floating point variables the game can s
 
 ## Attenuation
 
-> Also check out the guide on [setting up attenuation](../guides/attenuation_setup.md)!
+!!! tip
+
+    Also check out the guide on [setting up attenuation](../guides/attenuation_setup.md)!
 
 Attenuation means modifying a sound based on a listener's position relative to its source. There are 5 parameters that drive attenuation in Wwise:
 
