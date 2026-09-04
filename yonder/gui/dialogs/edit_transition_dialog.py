@@ -1,5 +1,6 @@
-from typing import Any, Callable, TypeAlias
+from typing import Any, Callable
 from copy import deepcopy
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder.types.base_types import MusicTransitionRule
@@ -259,6 +260,11 @@ class edit_transition_dialog(DpgItem):
                     label=µ("Okay", "button"),
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
+                )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=setting_source_and_destination_properties",
                 )
 
     # === DPG Callbacks =================================================

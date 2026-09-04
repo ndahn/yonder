@@ -636,7 +636,7 @@ class Soundbank:
             yield node
             return
 
-        # first try walking up the tree
+        # first try walking up the tree, probably faster?
         g = self.tree
         if node in self:
             todo = [node.id]

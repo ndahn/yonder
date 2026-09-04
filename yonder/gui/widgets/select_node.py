@@ -260,14 +260,11 @@ class add_select_actormixer(add_select_node):
         self._current_bank_only = current_bank_only
 
     def _select_node(self):
-        if self._current_bank_only:
-            summary = build_bank_actormixer_summary(self._bnk)
-        else:
-            summary = get_selected_game().amx_summary.merge_bank_data(self._bnk)
-
+        bank_summary = build_bank_actormixer_summary(self._bnk)
         select_actormixer(
-            summary,
             self._on_node_selected,
+            default_summary_key=self._bnk.name,
+            extra_summaries={self._bnk.name: bank_summary},
             highlight_banks=[self._bnk.name],
             multiple=self._multiple,
             user_data=self._user_data,

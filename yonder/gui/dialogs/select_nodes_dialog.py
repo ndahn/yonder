@@ -3,7 +3,8 @@ import networkx as nx
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode, lookup_name
-from yonder.game import get_selected_game
+from yonder.enums import Game
+from yonder.game import get_selected_game, get_game_objects
 from yonder.game.data import AmxData, AmxSummary
 from yonder.gui.localization import µ
 from yonder.gui.widgets import (
@@ -210,18 +211,22 @@ class select_nodes_dialog(DpgItem):
 class select_actormixer(select_nodes_dialog):
     def __init__(
         self,
-        summary: AmxSummary,
         on_nodes_selected: Callable[[str, list[AmxData] | list[str], Any], None],
         *,
+        default_summary_key: str = None,
+        extra_summaries: dict[str, AmxSummary] = None,
         highlight_banks: list[str] = None,
         multiple: bool = False,
         title: str = "Select ActorMixer",
         tag: str = 0,
         user_data: Any = None,
     ) -> str:
-        self.summary = summary
-        self.amx_tree = summary.tree
-        self.highlight_banks = highlight_banks or []
+        
+        self.default_summary_key: str = default_summary_key
+        self.summary: AmxSummary = None
+        self.amx_tree: nx.DiGraph = None
+        self.highlight_banks: list[str] = highlight_banks or []
+        self._extra_summaries: dict[str, list[AmxData]] = extra_summaries or {}
 
         super().__init__(
             None,
@@ -235,7 +240,15 @@ class select_actormixer(select_nodes_dialog):
         )
 
     def _build(self, title: str) -> None:
+        dpg.add_combo(
+            [g.name for g in Game],
+            default_value=self.default_summary_key,
+            callback=self._change_amx_summary,
+            tag=self._t("amx_source"),
+        )
+        
         super()._build(title)
+
         dpg.add_table_column(
             label="Hints",
             width=80,
@@ -244,7 +257,22 @@ class select_actormixer(select_nodes_dialog):
             parent=self._t("table"),
         )
 
-    def regenerate(self, amx_info: list[AmxData] = None) -> None:
+        self._change_amx_summary(self._t("amx_source"), get_selected_game().game.name, None)
+
+    def _change_amx_summary(self, sender: str, source_name: str, user_data: Any) -> None:
+        selected_source = dpg.get_value(self._t("amx_source"))
+
+        try:
+            game = Game[selected_source]
+            self.summary = get_game_objects(game).amx_summary
+        except KeyError:
+            infos = self._extra_summaries[selected_source]
+            self.summary = AmxSummary({a.nid: a for a in infos})
+        
+        self.amx_tree = self.summary.tree
+        self.regenerate()
+
+    def regenerate(self, amx_infos: list[AmxData] = None) -> None:
         table_tag = self._t("table")
 
         # TODO Still slightly janky, but works for now
@@ -260,10 +288,10 @@ class select_actormixer(select_nodes_dialog):
 
         bank_map: dict[str, list[AmxData]] = {}
 
-        if not amx_info:
-            amx_info = self.summary.actormixers.values()
+        if not amx_infos:
+            amx_infos = self.summary.actormixers.values()
 
-        for amx in amx_info:
+        for amx in amx_infos:
             if amx.bank:
                 bank_map.setdefault(amx.bank, []).append(amx)
 
