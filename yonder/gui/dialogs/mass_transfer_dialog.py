@@ -7,7 +7,7 @@ from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
 from yonder.util import repack_soundbank, logger, unpack_soundbank
-from yonder.enums import Game
+from yonder.enums import Game, ActionType
 from yonder.game import get_game_objects
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -21,9 +21,6 @@ from yonder.gui.widgets import (
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
 from .select_nodes_dialog import select_nodes_dialog
-
-
-# TODO add option to skip known ActorMixers/busses per game
 
 
 class mass_transfer_dialog(DpgItem):
@@ -92,6 +89,124 @@ class mass_transfer_dialog(DpgItem):
         dst_labels = dpg.get_value(self._t("dest_ids"))
         dpg.set_value(self._t("source_ids"), dst_labels)
         dpg.set_value(self._t("dest_ids"), src_labels)
+
+    def _collect_events(self) -> None:
+        src_labels: list[str] = dpg.get_value(self._t("source_ids")).splitlines()
+        dst_labels: list[str] = dpg.get_value(self._t("dest_ids")).splitlines()
+        
+        src_ids = []
+        for line in src_labels:
+            if not line.startswith(("Play_", "Stop_", "#")):
+                line = "Play_" + line
+        
+            src_ids.append(self._line_to_hash(line))
+
+        num = max(len(src_labels), len(dst_labels))
+        src_labels += [""] * (num - len(src_labels))
+        dst_labels += [""] * (num - len(dst_labels))
+        
+        for nid in src_ids:
+            obj = self._src_bnk.get(nid)
+            target_id = None
+
+            if isinstance(obj, Event):
+                for action in obj.get_action_nodes(self._src_bnk):
+                    if action.action_type_enum in (
+                        ActionType.Play,
+                        ActionType.StopEO,
+                        ActionType.StopE,
+                    ):
+                        target_id = action.external_id
+                        break
+            else:
+                target_id = obj.id
+
+            if target_id:
+                for evt in self._src_bnk.find_events_for(target_id):
+                    if evt.id not in src_ids:
+                        name = evt.get_name()
+                        src_labels.append(name)
+                        dst_labels.append(name)
+
+        dpg.set_value(self._t("source_ids"), "\n".join(src_labels))
+        dpg.set_value(self._t("dest_ids"), "\n".join(dst_labels))
+
+    def _get_event_map(self, skip_invalid: bool) -> dict[str, str]:
+        event_map = {}
+        src_ids = self._prune_ids(dpg.get_value(self._t("source_ids")).splitlines())
+        dst_ids = self._prune_ids(dpg.get_value(self._t("dest_ids")).splitlines())
+
+        if len(src_ids) != len(dst_ids):
+            if skip_invalid:
+                num = min(len(src_ids), len(dst_ids))
+                src_ids = src_ids[:num]
+                dst_ids = dst_ids[:num]
+            else:
+                raise ValueError(µ("Source and destination IDs not balanced"))
+
+        if not src_ids:
+            return {}
+
+        if not skip_invalid and not self._src_bnk:
+            raise ValueError(µ("no source bank selected"))
+
+        skip = set()
+
+        for idx, line in enumerate(src_ids):
+            src_play_id = self._line_to_hash(line)
+            if src_play_id not in self._src_bnk:
+                if skip_invalid:
+                    skip.add(idx)
+                else:
+                    raise ValueError(
+                        µ("{name} not found in source bank").format(name=line)
+                    )
+
+        if not skip_invalid and not self._dst_bnk:
+            raise ValueError(µ("no destination bank selected"))
+
+        for idx, line in enumerate(dst_ids):
+            if line.startswith("#"):
+                if skip_invalid:
+                    skip.add(idx)
+                else:
+                    raise ValueError(µ("Destination IDs cannot be hashes"))
+
+            dst_play_id = self._line_to_hash(line)
+            if dst_play_id in self._dst_bnk:
+                if skip_invalid:
+                    skip.add(idx)
+                else:
+                    raise ValueError(
+                        µ("{name} already exists in destination bank").format(
+                            name=line
+                        )
+                    )
+
+        for idx, (sid, did) in enumerate(zip(src_ids, dst_ids)):
+            if idx in skip:
+                continue
+
+            src_explicit = sid.startswith(("Play_", "Stop_", "#"))
+            dst_explicit = did.startswith(("Play_", "Stop_"))
+            if src_explicit != dst_explicit:
+                if not skip_invalid:
+                    raise ValueError(
+                        µ("Cannot pair explicit with implicit event names")
+                    )
+
+            if src_explicit:
+                event_map[self._line_to_hash(sid)] = did
+            else:
+                play_evt = f"Play_{sid}"
+                if play_evt in self._src_bnk:
+                    event_map[play_evt] = f"Play_{did}"
+
+                stop_evt = f"Stop_{sid}"
+                if stop_evt in self._src_bnk:
+                    event_map[stop_evt] = f"Stop_{did}"
+
+        return event_map
 
     def _on_nodes_selected(
         self, sender: str, selected: list[str], user_data: Any
@@ -188,73 +303,16 @@ class mass_transfer_dialog(DpgItem):
             self.show_message(µ("No destination bank selected", "msg"))
             return
 
-        src_ids = self._prune_ids(dpg.get_value(self._t("source_ids")).splitlines())
-        dst_ids = self._prune_ids(dpg.get_value(self._t("dest_ids")).splitlines())
-
-        if not src_ids:
-            self.show_message(µ("No source IDs selected", "msg"))
-            return
-
-        if len(src_ids) != len(dst_ids):
-            self.show_message(
-                µ(
-                    "Source and destination IDs not balanced",
-                    "msg",
-                )
-            )
-            return
-
-        for line in src_ids:
-            src_play_id = self._line_to_hash(line)
-            if src_play_id not in self._src_bnk:
-                self.show_message(
-                    µ("{name} not found in source bank", "msg").format(name=line)
-                )
-                return
-
-        for line in dst_ids:
-            if line.startswith("#"):
-                self.show_message(
-                    µ(
-                        "Destination IDs cannot be hashes",
-                        "msg",
-                    )
-                )
-                return
-
-            dst_play_id = self._line_to_hash(line)
-            if dst_play_id in self._dst_bnk:
-                self.show_message(
-                    µ("{name} already exists in destination bank", "msg").format(
-                        name=line
-                    )
-                )
-                return
-
         # Resolve the user inputs to specific events
-        event_map = {}
-        for sid, did in zip(src_ids, dst_ids):
-            src_explicit = sid.startswith(("Play_", "Stop_", "#"))
-            dst_explicit = did.startswith(("Play_", "Stop_"))
-            if src_explicit != dst_explicit:
-                self.show_message(
-                    µ(
-                        "Cannot pair explicit with implicit event names",
-                        "msg",
-                    )
-                )
-                return
+        try:
+            event_map = self._get_event_map(False)
+        except ValueError as e:
+            self.show_message(str(e))
+            return
 
-            if src_explicit:
-                event_map[self._line_to_hash(sid)] = did
-            else:
-                play_evt = f"Play_{sid}"
-                if play_evt in self._src_bnk:
-                    event_map[play_evt] = f"Play_{did}"
-
-                stop_evt = f"Stop_{sid}"
-                if stop_evt in self._src_bnk:
-                    event_map[stop_evt] = f"Stop_{did}"
+        if not event_map:
+            self.show_message(µ("No events to transfer", "msg"))
+            return
 
         self.show_message()
         with loading_indicator(µ("Transferring")):
@@ -371,6 +429,18 @@ class mass_transfer_dialog(DpgItem):
                     callback=self._swap_ids,
                     tag=self._t("button_swap_ids"),
                 )
+                dpg.add_button(
+                    label=µ("Collect Events"),
+                    callback=self._collect_events,
+                    tag=self._t("collect_events"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "Pull in events with actions targeting the same structures as the ones you have selected above"
+                        ),
+                        wrap=440,
+                    )
 
             with dpg.tree_node(label=µ("Advanced"), default_open=True):
                 with dpg.group(horizontal=True):
