@@ -26,12 +26,14 @@ class Event(HIRCNode):
     def new(cls, nid: Hash, actions: list[int] = None) -> Event:
         return Event(nid, actions=actions or [])
 
-    def get_action_nodes(self, bnk: Soundbank) -> list[Action]:
+    def get_action_nodes(
+        self, bnk: Soundbank, *action_types: ActionType
+    ) -> list[Action]:
         ret = []
 
         for aid in self.actions:
-            action = bnk.get(aid)
-            if action:
+            action: Action = bnk.get(aid)
+            if action and (not action_types or action.action_type_enum in action_types):
                 ret.append(action)
 
         return ret

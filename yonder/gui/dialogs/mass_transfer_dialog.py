@@ -93,18 +93,18 @@ class mass_transfer_dialog(DpgItem):
     def _collect_events(self) -> None:
         src_labels: list[str] = dpg.get_value(self._t("source_ids")).splitlines()
         dst_labels: list[str] = dpg.get_value(self._t("dest_ids")).splitlines()
-        
+
         src_ids = []
         for line in src_labels:
             if not line.startswith(("Play_", "Stop_", "#")):
                 line = "Play_" + line
-        
+
             src_ids.append(self._line_to_hash(line))
 
         num = max(len(src_labels), len(dst_labels))
         src_labels += [""] * (num - len(src_labels))
         dst_labels += [""] * (num - len(dst_labels))
-        
+
         for nid in src_ids:
             obj = self._src_bnk.get(nid)
             target_id = None
@@ -123,6 +123,20 @@ class mass_transfer_dialog(DpgItem):
 
             if target_id:
                 for evt in self._src_bnk.find_events_for(target_id):
+                    play_actions = evt.get_action_nodes(self._src_bnk, ActionType.Play)
+
+                    if play_actions:
+                        for pa in play_actions:
+                            if pa.external_id == target_id:
+                                # Explicitly plays our target_id, should be included
+                                break
+                        else:
+                            if evt.has_action_type(
+                                self._src_bnk, ActionType.StopEO, ActionType.StopE
+                            ):
+                                # Has a play action targeting a different node, don't include it
+                                continue
+
                     if evt.id not in src_ids:
                         name = evt.get_name()
                         src_labels.append(name)
@@ -178,9 +192,7 @@ class mass_transfer_dialog(DpgItem):
                     skip.add(idx)
                 else:
                     raise ValueError(
-                        µ("{name} already exists in destination bank").format(
-                            name=line
-                        )
+                        µ("{name} already exists in destination bank").format(name=line)
                     )
 
         for idx, (sid, did) in enumerate(zip(src_ids, dst_ids)):
@@ -442,7 +454,7 @@ class mass_transfer_dialog(DpgItem):
                         wrap=440,
                     )
 
-            with dpg.tree_node(label=µ("Advanced"), default_open=True):
+            with dpg.tree_node(label=µ("Advanced")):
                 with dpg.group(horizontal=True):
                     dpg.add_checkbox(
                         default_value=True,
@@ -465,14 +477,14 @@ class mass_transfer_dialog(DpgItem):
                     )
 
                 dpg.add_checkbox(
-                    label=µ("Main banks only"),
+                    label=µ("Skip objects from main banks only"),
                     default_value=True,
                     tag=µ(self._t("skip_main_bank_objects")),
                 )
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text(
                         µ(
-                            "When skipping known objects, only consider objects in the main soundbanks (init, cs_main, cs_smain, vcmain)."
+                            "When skipping known objects, only skip objects from init, cs_main, cs_smain, and vcmain."
                         ),
                         wrap=440,
                     )
