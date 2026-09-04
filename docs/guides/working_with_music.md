@@ -2,7 +2,11 @@
 
 ## Clip Automations
 
-TODO
+A music track might sometimes need some adjustment to give it the chef's kiss. This could be a gradual fade-out, adjusting the volume in a small section where the drums stick out too much, or taking off the edge with a low-pass filter. This can be done with clip automations without having to edit the audio source.
+
+Clip automations can be setup on a *MusicTrack* node and are fairly straight forward: on the x-axis you will have the playback time in seconds, on the y-axis the adjustment of the parameter you chose.
+
+*TODO*
 
 ## Transition Rules
 
