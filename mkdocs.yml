@@ -36,11 +36,10 @@ nav:
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
     - Node Types: wwise/node_types.md
-    - Routing: wwise/routing.md
+    - Sounds: wwise/sounds.md
+    - Music: wwise/music.md
+    - Globals: wwise/globals.md
     - Game Parameters: wwise/game_parameters.md
-    - Events: wwise/events.md
-    - Containers: wwise/containers.md
-    - Sources: wwise/sources.md
   - Yonder:
     - How to Yonder: yonder/howto.md
     - About Hashes: yonder/hashes.md
@@ -56,7 +55,9 @@ nav:
     - Unmangling Soundbanks: tools/unmangle.md
   - Guides:
     - guides/index.md
-    - Custom Soundbanks: yonder/custom_banks.md
+    - Custom Soundbanks: guides/custom_banks.md
+    - Working with Music: guides/working_with_music.md
+    - Setting up Attenuations: guides/attenuation_setup.md
   - Troubleshooting: yonder/troubleshooting.md
   #- API Reference
 
