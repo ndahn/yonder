@@ -21,6 +21,8 @@ In recent Fromsoft games, soundbanks were organized as follows:
 | `cs_smXX`  | Sounds for cutscenes (by map ID).                                              |
 | \*         | Others will usually be game-object specific, e.g. `aeg` for game assets.       |
 
+## Sections
+
 <!-- prettier-ignore -->
 | Section | Description |
 | ------- | ----------- |
