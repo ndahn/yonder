@@ -13,7 +13,7 @@ While you do have a lot of freedom with how you fill your soundbank, there are a
 - *Music* - always goes into `cs_smain` (s!)
 - *Ambience* - always goes into `cs_main`
 
-The game also follows hardcoded [naming schemes](../wwise/soundbanks.md) that you have to follow, and only keeps soundbanks loaded that it currently needs. This generally includes the `init`, `cs_main`, `cs_smain`, and `vcmain` banks. Additional banks are loaded based on the present characters, assets, maps, etc. These usually have an entry in the `regulation.bin` telling the game which soundbank(s) to load for this entity.
+The game also follows hardcoded [naming schemes](../wwise/soundbanks.md) that you have to follow, and only keeps soundbanks loaded that it currently needs. This generally includes the `init`, `cs_main`, `cs_smain`, and `vcmain` banks. Additional banks are loaded based on the present characters, assets, maps, etc. These usually have an entry in the `regulation.bin` telling the game which soundbank(s) to load for this entity. You can edit it using [Smithbox](https://github.com/vawser/Smithbox/releases).
 
 | Type | Param | Fields |
 | ---- | ----- | ------ |
