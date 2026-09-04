@@ -9,4 +9,4 @@ flowchart TD
     RSC --> SN(...)
 ```
 
-Creates a simple one-shot sound structure. Based on the selected playback mode, sounds added will be either played back in sequence or at random. See [RandomSequenceContainers](../wwise/containers.md#random-sequence-container) for more details.
+Creates a simple one-shot sound structure. Based on the selected playback mode, sounds added will be either played back in sequence or at random. See [RandomSequenceContainers](../wwise/sounds.md#random-sequence-container) for more details.

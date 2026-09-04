@@ -13,7 +13,7 @@ Yonder can set all of this up for you (in the Fromsoft-typical fashion), but eve
 
 ## BgmEnemyType
 
-As briefly described in the section about [custom banks](../yonder/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single *MusicSwitchContainer* which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_parameters.md#states). For this reason, music can *only* be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps). You can of course *still* use additional states, e.g. to introduce variations for different weather types.
+As briefly described in the section about [custom banks](../guides/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single *MusicSwitchContainer* which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_parameters.md#states). For this reason, music can *only* be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps). You can of course *still* use additional states, e.g. to introduce variations for different weather types.
 
 !!! tip
 

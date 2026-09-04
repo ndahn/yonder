@@ -4,7 +4,7 @@ Besides using [events](events.md) for (de-)activating different subtrees of the 
 
 ## States
 
-States can be thought of as global integer variables that nodes may listen to. Their most common use case is to apply volume, high pass or low pass modifiers on certain state values, but some nodes like [music switch containers](containers.md#music-switch-container) will also use them when deciding which children to play. States affect all listening nodes equally.
+States can be thought of as global integer variables that nodes may listen to. Their most common use case is to apply volume, high pass or low pass modifiers on certain state values, but some nodes like [music switch containers](contaimusicners.md#music-switch-container) will also use them when deciding which children to play. States affect all listening nodes equally.
 
 !!! example
 
@@ -16,7 +16,7 @@ Switches work exactly like states, however, they work on a per-game-object basis
 
 !!! example
 
-    A nice example is different sounds for footsteps based on the type of ground a character is walking on. These would be organized in a single structure with a [switch container](containers.md#switch-container) selecting the child node to play based on a per-character `GroundType` switch. Since this is a switch and not a state, two game characters can walk side by side on different surfaces and still have different foot steps.
+    A nice example is different sounds for footsteps based on the type of ground a character is walking on. These would be organized in a single structure with a [switch container](sounds.md#switch-container) selecting the child node to play based on a per-character `GroundType` switch. Since this is a switch and not a state, two game characters can walk side by side on different surfaces and still have different foot steps.
 
 ## RTPCs
 
