@@ -2,6 +2,10 @@
 
 Yonder currently has two audio players: the legacy one works well, but only plays source nodes. Whenever you see a visualized audio file it's the legacy player being used. The HIRC player on the other hand plays entire hierarchies and simulates a large chunk of in-game audio playback, but is still new and probably has quite a few bugs. They will probably be merged at some point.
 
+!!! tip
+
+    Wwise stores its audio data in `.wem` files, which you can playback using [foobar2000](https://www.foobar2000.org/) with the [vgmstream decoder plugin](https://www.foobar2000.org/components/view/foo_input_vgmstream). Behind the curtains, Yonder uses the [vgmstream CLI](https://vgmstream.org/) to convert your wems for playback, too.
+
 ## The HIRC Player
 
 Yonder now comes with a player widget that emulates part of the in-game playback. In particular, it will traverse the currently selected subtree, accumulate modifiers, and mix and play branches based on user-defined virtual game state. In particular you can control the following:

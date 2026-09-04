@@ -4,7 +4,7 @@ These nodes make up the bulk of playback nodes. Their main purpose is to define 
 
 !!! info
 
-    Containers will sometimes set a maximum number of (virtual) "voices". A voice in Wwise is an instance of a playing sound. Voices becomes *virtual* if their output volume is below a certain threshold, allowing Wwise to skip many computations to save resources. If a containers voice limit is reached, any additional playback requests will be ignored until it has capacity again.
+    Containers will sometimes set a maximum number of (virtual) "voices". A voice in Wwise is an instance of a playing sound. Voices become *virtual* if their output volume is below a certain threshold, allowing Wwise to skip many computations to save resources. If a containers voice limit is reached, any additional playback requests will be ignored until it has capacity again.
 
 ## Random Sequence Container
 
@@ -35,4 +35,4 @@ Wwise stores its audio data in `.wem` files, typically encoded using Ogg Vorbis.
 
 !!! tip
 
-    To play back `.wem` files you can use [foobar2000](https://www.foobar2000.org/) with the [vgmstream decoder plugin](https://www.foobar2000.org/components/view/foo_input_vgmstream). Behind the curtains, Yonder uses the [vgmstream CLI](https://vgmstream.org/) to convert your wems to wav for playback.
+    To play back `.wem` files you can use [foobar2000](https://www.foobar2000.org/) with the [vgmstream decoder plugin](https://www.foobar2000.org/components/view/foo_input_vgmstream). Behind the curtains, Yonder uses the [vgmstream CLI](https://vgmstream.org/) to convert your wems for playback, too.
