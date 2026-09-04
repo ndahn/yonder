@@ -23,15 +23,9 @@ Yonder's area bgm tool allows you to setup further variations, e.g. for indoor/o
 ## Trims & Loop Points
 To trim a song and adjust where it loops, simply drag the red and green markers on the track view (by default they will be placed at the very beginning and end). You can test your loop by enabling the *Loop* and *Test* checkboxes, which will cause yonder to only play a few seconds around the loop on repeat. If you also setup a battle theme, it's probably best that it matches the duration of your main theme exactly - either by nature or through trimming.
 
-## Transition Rules
+!!! tip
 
-The [music containers](../wwise/containers.md#music-switch-container) created by this tool also allow you to define transition rules based on the container's source and target branch. Yonder represents these as matrices of colored squares, where each pair will have a color depending on the rule it's using (source child on the left, target child at the top).
-
-To add a new transition rule, right click the cell you want to customize and select *Add Rule*. The settings here largely reflect the [Wwise documentation](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=setting_source_and_destination_properties), however, if you want to setup a transition segment you'll have to do it manually for now.
-
-!!! warning
-
-    Make sure to use the __exact same__ *sync type* as other rules in this container, otherwise it will most likely break in-game playback.
+    For crossfades see the guide on [transition rules](../guides/working_with_music.md)!
 
 ## Map Regions
 

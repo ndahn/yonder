@@ -1,5 +1,7 @@
 # Soundbanks
 
+> There is a guide to setup your own [custom bank](../guides/custom_banks.md)!
+
 A soundbank is a binary file in Audiokinetik's prorprietary format that organizes information in various sections. The most important sections are HIRC (Hierarchy), where playback graphs are stored, and DATA, which contains (most of) the audio data.
 
 !!! info
@@ -31,7 +33,7 @@ In recent Fromsoft games, soundbanks were organized as follows:
 | DIDX (Data Index) | Index and metadata for the DATA section. |
 | ENVS (Sound Environment) | Curves for altering sounds based on obstruction and occlusion. |
 | FXPR (Effects Properties) | Unknown for now beyond what can be guessed from the name. |
-| HIRC (Hierarchy) | Graphs of playback nodes like containers, events, audio sources, states, etc. This is the main section you will interact with in Yonder. See [node types](index.md) for more details. |
+| HIRC (Hierarchy) | Graphs of playback nodes like containers, events, audio sources, states, etc. This is the main section you will interact with in Yonder. See [node types](node_types.md) for more details. |
 | INIT (Init) | Lists (effect) plugins used by this soundbank. |
 | PLAT (Platform) | Platform specific metadata. |
 | STID (Short ID (?)) | Contains references to other soundbanks that may be referenced by nodes in this soundbank. |

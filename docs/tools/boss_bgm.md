@@ -9,7 +9,7 @@ Yonder can set all of this up for you (in the Fromsoft-typical fashion), but eve
 
 !!! tip
 
-    Highly recommend you read up on [music containers](../wwise/containers.md#music-switch-container) and [sources](../wwise/sources.md#music) before you continue.
+    Highly recommend you read up on [music containers](../wwise/music.md#music-switch-container) and [sources](../wwise/sounds.md#sounds) before you continue.
 
 ## BgmEnemyType
 
@@ -35,21 +35,15 @@ Even if you don't want any extras, you probably still want to trim your song and
 
 ## Intros
 
-An intro plays the first part of a track before the loop-start point once and then enters the loop. If enabled, Yonder will do exactly that: setup the part between begin-trim and loop-start as an intro, then setup a segment with the actual loop. This is done using a [MusicRandomSequenceContainer](../wwise/containers.md#music-random-sequence-container) with a playlist where the first playlist item is marked as a *loop base*.
+An intro plays the first part of a track before the loop-start point once and then enters the loop. If enabled, Yonder will do exactly that: setup the part between begin-trim and loop-start as an intro, then setup a segment with the actual loop. This is done using a [MusicRandomSequenceContainer](../wwise/music.md#music-random-sequence-container) with a playlist where the first playlist item is marked as a *loop base*.
 
 ## Boss Phases
 
 When adding additional audio files to the boss bgm tool they are setup as additional boss phases (also known as heatup or HU). Each file past the first will become one additional heatup track. Fromsoft allows for at least 2 heatup phases in Elden Ring (e.g. Malenia), 3 in Nightreign (Straghess). Music phases are controlled via [EMEVD](#game-setup) which sets the `BossBattleState` Wwise state.
 
-## Transition Rules
+!!! tip
 
-The [music containers](../wwise/containers.md#music-switch-container) created by this tool also allow you to define transition rules based on the container's source and target branch. Yonder represents these as matrices of colored squares, where each pair will have a color depending on the rule it's using (source child on the left, target child at the top).
-
-To add a new transition rule, right click the cell you want to customize and select *Add Rule*. The settings here largely reflect the [Wwise documentation](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=setting_source_and_destination_properties), however, if you want to setup a transition segment you'll have to do it manually for now.
-
-!!! warning
-
-    Make sure to use the __exact same__ *sync type* as other rules in this container, otherwise it will most likely break in-game playback.
+    For crossfades see the guide on [transition rules](../guides/working_with_music.md)!
 
 ## Game Setup
 
