@@ -1,11 +1,12 @@
 # Events & Actions
 
-Playback of sounds is controlled from the game by posting events to Wwise. These are short strings (encoded as hashes) that will cause an event node with matching name/hash to activate. Each event node has one or more actions attached that may start or stop certain sounds, set states, mute or modify busses, and more. 
+Playback of sounds is controlled from the game by posting events to Wwise. These are short strings (encoded as hashes) that will cause an event node with matching name/hash to activate. Each event node has one or more actions attached that may start or stop certain sounds, set states, mute or modify busses, and more.
 
-In Fromsoft games, most events follow the pattern `<action>_<type><id>`, where
-- `<action>` is either `Play` or `Stop`
-- `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects, `c` for character sounds, `v` for voice lines...)
-- `<id>` is a 9-digit number
+In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
+
+* `<action>` is either `Play` or `Stop`
+* `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects,  `c` for character sounds,  `v` for voice lines...)
+* `<id>` is a 9-digit number
 
 | Type | Name (1) |
 | ---- | ---- |

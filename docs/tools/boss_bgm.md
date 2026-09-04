@@ -13,7 +13,7 @@ Yonder can set all of this up for you (in the Fromsoft-typical fashion), but eve
 
 ## BgmEnemyType
 
-As briefly described in the section about [custom banks](../yonder/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single *MusicSwitchContainer* which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_parameters.md#states). For this reason, music can *only* be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps).
+As briefly described in the section about [custom banks](../yonder/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single *MusicSwitchContainer* which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_parameters.md#states). For this reason, music can *only* be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps). You can of course *still* use additional states, e.g. to introduce variations for different weather types.
 
 !!! tip
 
@@ -25,7 +25,7 @@ When setting up a new boss bgm you need to choose a string it should react to. T
 
     Unfortunately, for whatever reason Fromsoft has decided to hardcode *and* validate the strings that are allowed to be used for boss themes. However, there are a couple of unused ones that can be used straight away (depending on the game). Keep an eye out for "Reserved" strings. Yonder also provides a `dll` that allows you to use arbitrary strings - this is described [further down](#unlocking-additional-states).
 
-## Trims and Loop Points
+## Trims & Loop Points
 
 Even if you don't want any extras, you probably still want to trim your song and define where it should loop. To adjust these, simply drag the red and green markers on the track view (by default they will be placed at the very beginning and end). You can test your loop by enabling the *Loop* and *Test* checkboxes, which will cause yonder to only play a few seconds around the loop on repeat.
 
@@ -43,11 +43,17 @@ When adding additional audio files to the boss bgm tool they are setup as additi
 
 ## Transition Rules
 
-Once the tool has finished its work you will find that both the created *MusicSwitchContainer* and *MusicRandomSequenceContainer* (small) matrices of colored squares. Those are the transition rules between their children, and each pair will have a color depending on the rule it's using.
+The [music containers](../wwise/containers.md#music-switch-container) created by this tool also allow you to define transition rules based on the container's source and target branch. Yonder represents these as matrices of colored squares, where each pair will have a color depending on the rule it's using (source child on the left, target child at the top).
+
+To add a new transition rule, right click the cell you want to customize and select *Add Rule*. The settings here largely reflect the [Wwise documentation](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=setting_source_and_destination_properties), however, if you want to setup a transition segment you'll have to do it manually for now.
+
+!!! warning
+
+    Make sure to use the __exact same__ *sync type* as other rules in this container, otherwise it will most likely break in-game playback.
 
 ## Game Setup
 
-Boss music is controlled through EMEVD, Fromsoft's event scripting language, which you can edit using [Darkscript3](https://github.com/AinTunez/DarkScript3/releases). There are several [very nice tutorials](https://www.soulsmodding.com/doku.php?id=tutorial:intro-to-elden-ring-emevd) on how to write EMEVD (or rather MattScript), but the two instructions you want to look out for are [`SetBosBGM`](https://soulsmods.github.io/emedf/er-emedf.html#SetBossBGM) and [`SetFieldBattleBGMHeatUp`](https://soulsmods.github.io/emedf/er-emedf.html#SetFieldBattleBGMHeatUp). 
+Boss music is controlled through EMEVD, Fromsoft's event scripting language, which you can edit using [Darkscript3](https://github.com/AinTunez/DarkScript3/releases). There are several [very nice tutorials](https://www.soulsmodding.com/doku.php?id=tutorial:intro-to-elden-ring-emevd) on how to write EMEVD (or rather MattScript), but the two instructions you want to look out for are [`SetBosBGM`](https://soulsmods.github.io/emedf/er-emedf.html#SetBossBGM) and [`SetFieldBattleBGMHeatUp`](https://soulsmods.github.io/emedf/er-emedf.html#SetFieldBattleBGMHeatUp).
 
 These instructions __don't__ set the `BgmEnemyType` or `BossBattleState` directly. For the `SetFieldBattleBGMHeatUp` you pass it a "threat level" integer (a number between 0 and ~50). This will be mangled into a string like *FieldBoss_ThreatLevel15* and is meant for generic bosses open-world that don't have a unique theme.
 
@@ -55,26 +61,46 @@ More interestingly, of course, is `SetBossBGM`, which is used for unique boss th
 
 To activate a heatup phase you don't need to do anything extra. Simply pass e.g. `BossBGMState.HeatUp` to the `SetBossBGM` instruction instead of `BossBGMState.Start/Stop/etc.`.
 
-A typical EMEVD event for a boss with no heatup phases may look like this:
+An EMEVD event for a boss with no heatup phases may look like this:
 
 ```js
-$Event(0, Default, function(bossEntityId, areaEntityId, bgmParamId) {
-    // TODO
-    ...
-});
+    $Event(0, Default, function(bossEntityId, bossDefeatedFlag, areaEntityId, bgmParamId) {
+        DisableCharacter(bossEntityId);
+        DisableCharacterAI(bossEntityId);
+        
+        // Check if boss is already defeated
+        if (EventFlag(bossDefeatedFlag)) {
+            DisableCharacterCollision(bossEntityId);
+            ForceCharacterDeath(bossEntityId, false);
+            EndEvent();
+        }
+
+        // Player enters area
+        WaitFor(InArea(10000, areaEntityId));
+
+        // The boss makes its entrance
+        EnableCharacter(bossEntityId);
+        EnableCharacterAI(bossEntityId);
+        ForceAnimationPlayback(bossEntityId, 20026, false, false, false);
+        SetBossBGM(123456, BossBGMState.Start);
+    });
 ```
+
+!!! info
+
+    Fromsoft uses *common events* to cover repeating patterns like this. For bosses, these are `9005800`, `9005801`, `9005811`, and `9005822`, which will also handle e.g. fog walls and stopping the music once the boss is defeated. Compare with vanilla events and explore!
 
 ## Unlocking Additional States
 
 In order to use arbitrary strings for the `BgmEnemyType` you need a dll. Yonder currently has dlls for Elden Ring and Nightreign - don't even try to use them on other games, it won't work. You can load them like any other dll by adding them to your [me3 profile](https://me3.help/en/latest/configuration-reference/):
 
 ```toml
-[[native]]
-path=<path/to/unlock_wwise_state.dll>
+    [[native]]
+    path=<path/to/unlock_wwise_state.dll>
 ```
 
 Once you have done this, new rows you add to `WwiseValueToStringParam_BgmBossChrIdConv` param can be used like any other ID in `SetBossBGM` - *just make sure they have at most 6 digits*.
 
 !!! bug
 
-    Note that this is __not__ enough for Nightreign - You also need to [unmangle your soundbanks](unmangle.md)!
+    Note that this is __not__ enough for Nightreign - you also need to [unmangle your soundbanks](unmangle.md)!
