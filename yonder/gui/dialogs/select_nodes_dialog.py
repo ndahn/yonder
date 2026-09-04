@@ -215,17 +215,16 @@ class select_actormixer(select_nodes_dialog):
         *,
         default_summary_key: str = None,
         extra_summaries: dict[str, AmxSummary] = None,
-        highlight_banks: list[str] = None,
+        top_banks: list[str] = None,
         multiple: bool = False,
         title: str = "Select ActorMixer",
         tag: str = 0,
         user_data: Any = None,
     ) -> str:
-        
-        self.default_summary_key: str = default_summary_key
-        self.summary: AmxSummary = None
-        self.amx_tree: nx.DiGraph = None
-        self.highlight_banks: list[str] = highlight_banks or []
+        self._default_summary_key: str = default_summary_key or get_selected_game().game.name
+        self._summary: AmxSummary = None
+        self._amx_tree: nx.DiGraph = None
+        self._top_banks: list[str] = top_banks or []
         self._extra_summaries: dict[str, list[AmxData]] = extra_summaries or {}
 
         super().__init__(
@@ -240,15 +239,15 @@ class select_actormixer(select_nodes_dialog):
         )
 
     def _build(self, title: str) -> None:
-        dpg.add_combo(
-            [g.name for g in Game],
-            default_value=self.default_summary_key,
-            callback=self._change_amx_summary,
-            tag=self._t("amx_source"),
-        )
-        
         super()._build(title)
 
+        dpg.add_combo(
+            list(self._extra_summaries) + [g.name for g in Game],
+            default_value=self._default_summary_key,
+            callback=self._change_amx_summary,
+            tag=self._t("amx_source"),
+            before=self._t("filter"),
+        )
         dpg.add_table_column(
             label="Hints",
             width=80,
@@ -257,19 +256,20 @@ class select_actormixer(select_nodes_dialog):
             parent=self._t("table"),
         )
 
-        self._change_amx_summary(self._t("amx_source"), get_selected_game().game.name, None)
+        self._change_amx_summary(
+            self._t("amx_source"), self._default_summary_key, None
+        )
 
-    def _change_amx_summary(self, sender: str, source_name: str, user_data: Any) -> None:
-        selected_source = dpg.get_value(self._t("amx_source"))
+    def _change_amx_summary(
+        self, sender: str, source_name: str, user_data: Any
+    ) -> None:
+        if source_name in self._extra_summaries:
+            self._summary = self._extra_summaries[source_name]
+        else:
+            game = Game[source_name]
+            self._summary = get_game_objects(game).amx_summary
 
-        try:
-            game = Game[selected_source]
-            self.summary = get_game_objects(game).amx_summary
-        except KeyError:
-            infos = self._extra_summaries[selected_source]
-            self.summary = AmxSummary({a.nid: a for a in infos})
-        
-        self.amx_tree = self.summary.tree
+        self._amx_tree = self._summary.tree
         self.regenerate()
 
     def regenerate(self, amx_infos: list[AmxData] = None) -> None:
@@ -286,10 +286,14 @@ class select_actormixer(select_nodes_dialog):
         self._selected_keys.clear()
         dpg.delete_item(table_tag, children_only=True, slot=1)
 
+        if not self._summary:
+            # May happen during inital build()
+            return
+
         bank_map: dict[str, list[AmxData]] = {}
 
         if not amx_infos:
-            amx_infos = self.summary.actormixers.values()
+            amx_infos = self._summary.actormixers.values()
 
         for amx in amx_infos:
             if amx.bank:
@@ -314,7 +318,7 @@ class select_actormixer(select_nodes_dialog):
                 self._row_tags[amx_id] = row
 
             with dpg.group(horizontal=True, horizontal_spacing=0, parent=row.row):
-                info = self.summary.actormixers.get(amx_id)
+                info = self._summary.actormixers.get(amx_id)
 
                 if info:
                     if info.bus:
@@ -366,7 +370,7 @@ class select_actormixer(select_nodes_dialog):
 
         def place_bank_amx(bank: str, bank_amx: list[AmxData]) -> None:
             make_row(bank, 0, False)
-            bank_graph = self.amx_tree.subgraph([a.nid for a in bank_amx])
+            bank_graph = self._amx_tree.subgraph([a.nid for a in bank_amx])
             roots = sorted(n for n in bank_graph if bank_graph.in_degree(n) == 0)
 
             push_table_tree_level(table_tag)
@@ -376,7 +380,7 @@ class select_actormixer(select_nodes_dialog):
 
             pop_table_tree_level(table_tag)
 
-        for bnk in self.highlight_banks + ["init", "cs_main", "cs_smain"]:
+        for bnk in self._top_banks + ["init", "cs_main", "cs_smain"]:
             banks = bank_map.pop(bnk, None)
             if banks:
                 place_bank_amx(bnk, banks)
@@ -411,7 +415,7 @@ class select_actormixer(select_nodes_dialog):
 
     def _get_amx_details(self, amx_id: int) -> list[str]:
         # TODO need to expand the summary with the current bank's info
-        root, info = self.summary.get_effective_values(amx_id, self.amx_tree)
+        root, info = self._summary.get_effective_values(amx_id, self._amx_tree)
 
         if root <= 0:
             return ["<no data>"]
@@ -421,7 +425,7 @@ class select_actormixer(select_nodes_dialog):
 
         lines = []
 
-        root_bus = self.summary.actormixers[root].bus
+        root_bus = self._summary.actormixers[root].bus
         if root_bus != info.bus:
             lines.append(f"Bus: {name(info.bus)} ({name(root_bus)})")
         else:
@@ -480,11 +484,11 @@ class select_actormixer(select_nodes_dialog):
             return
 
         if self._multiple:
-            result = [self.summary.actormixers[a] for a in sorted(self._selected_keys)]
+            result = [self._summary.actormixers[a] for a in sorted(self._selected_keys)]
         else:
             amx_id = next(iter(self._selected_keys))
-            result = self.summary.actormixers[amx_id]
-        
+            result = self._summary.actormixers[amx_id]
+
         self._on_nodes_selected(self.tag, result, self._user_data)
         dpg.delete_item(self.tag)
 
@@ -558,7 +562,7 @@ class select_actormixer(select_nodes_dialog):
 
         matching = set()
 
-        for info in self.summary.actormixers.values():
+        for info in self._summary.actormixers.values():
             row = self._row_tags.get(info.nid)
             if not row:
                 continue
@@ -571,9 +575,9 @@ class select_actormixer(select_nodes_dialog):
 
         while todo:
             m = todo.pop()
-            pred = list(self.amx_tree.predecessors(m))
+            pred = list(self._amx_tree.predecessors(m))
             if pred and pred[0] not in show:
                 show.add(pred[0])
                 todo.append(pred[0])
 
-        self.regenerate([self.summary.actormixers.get(a) for a in sorted(show)])
+        self.regenerate([self._summary.actormixers.get(a) for a in sorted(show)])

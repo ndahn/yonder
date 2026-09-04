@@ -265,7 +265,7 @@ class add_select_actormixer(add_select_node):
             self._on_node_selected,
             default_summary_key=self._bnk.name,
             extra_summaries={self._bnk.name: bank_summary},
-            highlight_banks=[self._bnk.name],
+            top_banks=[self._bnk.name],
             multiple=self._multiple,
             user_data=self._user_data,
         )
