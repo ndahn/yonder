@@ -8,7 +8,7 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
 * `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects,  `c` for character sounds,  `v` for voice lines...)
 * `<id>` is a 9-digit number
 
-| Type | Name (1) |
+| Type | Name (1) | { .annotate }
 | ---- | ---- |
 | `a` | Environment |
 | `c` | Character |
@@ -26,8 +26,6 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
 | `e` | FootEffect |
 | `g` | GeometryAsset |
 | `d` | DynamicDialog |
-
-{ .annotate }
 
 1. These names and type characters are valid for Elden Ring and Nightreign. While past games used similar patterns, Fromsoft has and will make changes depending on the game.
 

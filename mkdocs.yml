@@ -35,7 +35,7 @@ nav:
   - About: about.md
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
-    - Node Types: wwise/index.md
+    - Node Types: wwise/node_types.md
     - Routing: wwise/routing.md
     - Game Parameters: wwise/game_parameters.md
     - Events: wwise/events.md
@@ -43,10 +43,10 @@ nav:
     - Sources: wwise/sources.md
   - Yonder:
     - How to Yonder: yonder/howto.md
-    - Playback: yonder/playback.md
+    - Custom Soundbanks: yonder/custom_banks.md
     - About Hashes: yonder/hashes.md
     - Game Presets: yonder/games.md
-    - Custom Soundbanks: yonder/custom_banks.md
+    - Playback: yonder/playback.md
     - Troubleshooting: yonder/troubleshooting.md
   - Tools:
     - tools/index.md
