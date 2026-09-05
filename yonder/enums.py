@@ -296,12 +296,10 @@ class PropID(IntEnum):
     PositioningTypeBlend = 0x47
     ReflectionBusVolume = 0x48
 
-    def is_accumulating(self) -> bool:
-        return self in (
+    def is_additive(self) -> bool:
+        return self in [
             PropID.LFE,
             PropID.Pitch,
-            PropID.LPF,
-            PropID.HPF,
             PropID.BusVolume,
             PropID.InitialDelay,
             PropID.MakeUpGain,
@@ -309,7 +307,23 @@ class PropID(IntEnum):
             PropID.MidiVelocityOffset,
             PropID.PlaybackSpeed,
             PropID.MuteRatio,
-        )
+            # These *could* use a different accumulation behavior, see
+            # https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_filter_behavior
+            PropID.LPF,
+            PropID.HPF,
+            PropID.OutputBusHPF,
+            PropID.OutputBusLPF,
+            PropID.UserAuxSendLPF0,
+            PropID.UserAuxSendLPF1,
+            PropID.UserAuxSendLPF2,
+            PropID.UserAuxSendLPF3,
+            PropID.UserAuxSendHPF0,
+            PropID.UserAuxSendHPF1,
+            PropID.UserAuxSendHPF2,
+            PropID.UserAuxSendHPF3,
+            PropID.GameAuxSendLPF,
+            PropID.GameAuxSendHPF,
+        ]
 
 
 # TODO these should be used by the TimeModulator instead of PropID

@@ -20,7 +20,7 @@ An attenuation is defined by one or more distance-curves, which are associated w
 | LPF | Cents | Low-pass filter |
 | HPF | Cents | High-pass filter |
 | Spread | Cents | Related to surround sound, distributes virtual sources across spatial cannels |
-| [Focus](https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=focus) | Cents | Rleated to surround sound, condenses spread and separates spatial channels  |
+| [Focus](https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=focus) | Cents | Related to surround sound, condenses spread and separates spatial channels  |
 
 Each curve has the distance on the x-axis in meters, and its property value on the y-axis - so the y-axis' units depend on the property (see [units](../wwise/units.md)). The effects applied by the attenuation are (like all modifiers) accumulated.
 

@@ -137,7 +137,7 @@ class AmxSummary:
                 result.aux4 = amx.aux4
 
             for prop, val in amx.properties.items():
-                if prop.is_accumulating():
+                if prop.is_additive():
                     result.properties.setdefault(prop, 0.0)
                     result.properties[prop] += val
                 else:
