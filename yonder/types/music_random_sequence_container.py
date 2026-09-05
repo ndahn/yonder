@@ -300,9 +300,9 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         return ret
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
-        sig = pyo.Sig(0)
-        my_pyo.cache["pyo_placeholder"] = sig
-        return pyo.InputFader(sig)
+        fader = pyo.InputFader(pyo.Sig(0))
+        my_pyo.cache["fader"] = fader
+        return pyo.Sig(fader)
 
     def play(self, ctx: PlayContext) -> None:
         if not self.playlist_items:
@@ -321,7 +321,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             return
 
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.output
+        fader: pyo.InputFader = my_pyo.cache["fader"]
 
         state: PlaylistState = my_pyo.cache.get("playlist_state")
         if not state:
@@ -369,4 +369,4 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                 logger.warning(f"Segment {item.segment_id} not found, skipping")
 
         if state.finished:
-            fader.setInput(my_pyo.cache["pyo_placeholder"])
+            fader.setInput(pyo.Sig(0))

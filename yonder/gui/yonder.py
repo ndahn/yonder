@@ -130,6 +130,11 @@ class BanksOfYonder(DpgItem):
         logger.addHandler(LogHandler())
 
     def _on_close(self) -> None:
+        if self._hirc_player:
+            player = self._hirc_player.player
+            if player:
+                player.close()
+
         if self.bnk:
             lookup_table = get_active_lookup_table()
             if lookup_table:

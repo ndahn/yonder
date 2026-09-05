@@ -276,9 +276,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         loop_end = props.get(PropID.LoopEnd, stream.loop_end)
         stream.set_loop_points(loop_start, loop_end)
 
-        begin_trim = props.get(PropID.TrimInTime, stream.begin_trim)
-        end_trim = props.get(PropID.TrimOutTime, stream.end_trim)
-        stream.set_trims(begin_trim, end_trim)
+        # Property trims are ignored for now
 
         xfade = props.get(PropID.LoopCrossfadeDuration)
         if xfade is not None:

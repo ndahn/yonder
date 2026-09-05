@@ -113,6 +113,8 @@ class MultiTrackStream(pyo.PyoObject):
         clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
         xfade: float = 0.05,
         mul: float = 1,
         add: float = 0,
@@ -169,7 +171,7 @@ class MultiTrackStream(pyo.PyoObject):
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
 
         self._chain = self._setup_property_controls(self._mix, clip_automations)
-        self._base_objs = sum(o.getBaseObjects() for o in self._chain)
+        self._base_objs = [base for o in self._chain for base in o.getBaseObjects()]
 
     def _setup_property_controls(
         self,

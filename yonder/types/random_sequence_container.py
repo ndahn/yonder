@@ -142,9 +142,9 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return RandomMode(self.random_mode)
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
-        sig = pyo.Sig(0)
-        my_pyo.cache["pyo_placeholder"] = sig
-        return pyo.InputFader(sig)
+        fader = pyo.InputFader(pyo.Sig(0))
+        my_pyo.cache["fader"] = fader
+        return pyo.Sig(fader)
 
     def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
         if not self.playlist:
@@ -156,7 +156,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo.playing = True
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.output
+        fader: pyo.InputFader = my_pyo.cache["fader"]
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
 
         if force_playlist_idx >= 0:
@@ -182,8 +182,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             fader.setInput(child.pyo(ctx).output, xfade)
             my_pyo.cache["prev_node"] = child.id
         else:
-            xfade = 0.5
-            fader.setInput(my_pyo.cache["pyo_placeholder"], xfade)
+            fader.setInput(pyo.Sig(0), 0.5)
 
         if prev_node:
             prev_node.release_pyo(ctx, xfade + 0.1)

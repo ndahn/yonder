@@ -147,9 +147,9 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             self.children.remove(other)
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
-        sig = pyo.Sig(0)
-        my_pyo.cache["pyo_placeholder"] = sig
-        return pyo.InputFader(sig)
+        fader = pyo.InputFader(pyo.Sig(0))
+        my_pyo.cache["fader"] = fader
+        return pyo.Sig(fader)
 
     def play(self, ctx: PlayContext) -> None:
         if not self.switch_groups:
@@ -165,7 +165,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        fader: pyo.InputFader = my_pyo.output
+        fader: pyo.InputFader = my_pyo.cache["fader"]
 
         switch_state = ctx.states.get(self.group_id, self.default_switch)
 
@@ -186,7 +186,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         # Setup the new input signal source
         if not nodes:
-            input_sig = my_pyo.cache["pyo_placeholder"]
+            input_sig = pyo.Sig(0)
         elif len(nodes) == 1:
             input_sig = nodes[0].pyo(ctx).output
         else:

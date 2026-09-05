@@ -157,9 +157,11 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         loop_end = props.get(PropID.LoopEnd, stream.loop_end)
         stream.set_loop_points(loop_start, loop_end)
 
-        begin_trim = props.get(PropID.TrimInTime, stream.begin_trim)
-        end_trim = props.get(PropID.TrimOutTime, stream.end_trim)
-        stream.set_trims(begin_trim, end_trim)
+        if PropID.TrimInTime in props:
+            stream.current_clip.begin_trim_offset = props.get(PropID.TrimInTime)
+
+        if PropID.TrimOutTime in props:
+            stream.current_clip.end_trim_offset = props.get(PropID.TrimOutTime)
 
         xfade = props.get(PropID.LoopCrossfadeDuration)
         if xfade is not None:
