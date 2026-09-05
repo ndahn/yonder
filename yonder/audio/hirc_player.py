@@ -1,6 +1,7 @@
 from __future__ import annotations
 import time
 import atexit
+from typing import Callable
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
@@ -19,6 +20,7 @@ class HIRCPlayer:
         bnk: Soundbank,
         entrypoint: HIRCNode,
         context: PlayContext,
+        on_finished: Callable[[], None] = None,
     ):
         if not isinstance(entrypoint, HIRCNode):
             entrypoint = bnk[entrypoint]
@@ -30,6 +32,8 @@ class HIRCPlayer:
         self.context = context
         self._voice_gains: dict[int, float] = {}
         self._playing = False
+        self._play_epoch = 0
+        self._on_finished: Callable[[], None] = on_finished
 
         # NOTE crashes on some systems with input enabled, but we don't need it
         self._server: pyo.Server = pyo.Server(sr=48000, duplex=0)
@@ -55,12 +59,19 @@ class HIRCPlayer:
             logger.error("Failed to close player", exc_info=e)
 
     def close(self) -> None:
-        self.entrypoint.stop(self.context)
+        # close is called again by __del__ and atexit, avoid closing twice
+        if getattr(self, "_closed", False):
+            return
+
+        self._closed = True
 
         if self._server.getIsStarted():
             self._server.stop()
             # Allow the server to drain all buffers and callbacks
             time.sleep(0.25)
+
+        # Deleting the objects is safe now that processing has ended
+        self.entrypoint.release_pyo(self.context, 0)
 
         if self._server.getIsBooted():
             self._server.shutdown()
@@ -73,9 +84,9 @@ class HIRCPlayer:
 
     def collect_control_states(
         self, active_only: bool
-    ) -> tuple[list[int], dict[int, set[int]]]:
-        rtpcs: list[int] = []
+    ) -> tuple[dict[int, set[int]], list[int]]:
         states: dict[int, set[int]] = {}
+        rtpcs: list[int] = []
         todo: list[HIRCNode] = [self.entrypoint]
 
         while todo:
@@ -153,19 +164,27 @@ class HIRCPlayer:
 
         return ret
 
-    def set_volume(self, node_id: int | None, vol_db: float) -> None:
+    def set_volume(self, node_id: int | None, gain: float) -> None:
+        node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
-            node.pyo(self.context).output.volume = vol_db
+            state = node.pyo_state()
+            if state:
+                state.output.master_gain = gain
 
     def set_muted(self, node_id: int | None, muted: bool) -> None:
+        node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
-            voice = node.pyo(self.context).output
+            state = node.pyo_state()
+            if not state:
+                continue
+
+            voice = state.output
             if muted:
-                if voice.gain > 0:
-                    self._voice_gains[node.id] = voice.gain
-                    voice.gain = 0
+                if voice.master_gain > 0:
+                    self._voice_gains[node.id] = voice.master_gain
+                    voice.master_gain = 0
             else:
-                voice.gain = self._voice_gains.get(node.id, 1.0)
+                voice.master_gain = self._voice_gains.get(node.id, 1.0)
 
     def set_master_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.time = time
@@ -181,8 +200,12 @@ class HIRCPlayer:
         self.entrypoint.update_playback(ctx)
         self.context = ctx
 
-    def seek(self, pos: float) -> float:
-        logger.error("Seek is not implemented yet")
+    def seek(self, node_id: int, pos: float) -> float:
+        node: Sound | MusicTrack
+        for node in self.collect_voices(True, node_id):
+            state = node.pyo_state()
+            if state:
+                state.output.seek(pos)
 
     def play(self, dur: float = 0, delay: float = 0) -> None:
         if self._playing:
@@ -191,10 +214,31 @@ class HIRCPlayer:
         self._playing = True
         node_out = self.entrypoint.pyo(self.context).output
         self.entrypoint.play(self.context)
+
+        # Notice when playback ends on its own. Triggers armed here may outlive 
+        # this play (e.g. when the user stops early), so the epoch invalidates 
+        # them instead of letting them finish a later play
+        self._play_epoch += 1
+        epoch = self._play_epoch
+
+        def on_end(ctx: PlayContext) -> None:
+            if epoch == self._play_epoch:
+                self._finish()
+
+        self.entrypoint.register_end_trigger(self.context, on_end)
+
         self._mixer.clear()
         self._mixer.addInput(0, node_out)
         self._mixer.setAmp(0, 0, 1)
 
+    def _finish(self) -> None:
+        # Stop everything so the next play() starts from a clean slate
+        self.stop()
+
+        if self._on_finished:
+            self._on_finished()
+
     def stop(self, wait: float = 0) -> None:
+        self._play_epoch += 1
         self.entrypoint.stop(self.context)
         self._playing = False

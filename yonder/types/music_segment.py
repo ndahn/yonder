@@ -198,7 +198,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         clock.freq = 1000 / self.duration
         clock.phase = offset
 
-        self.register_end_trigger(ctx, self._on_segment_end, 0, 0)
+        self.register_end_trigger(ctx, self._on_segment_end, fire_on_loop=True)
 
         clock.play()
         my_pyo.play()
@@ -234,9 +234,10 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         callback: Callable[[PlayContext], None],
         before: float = 0,
         max_triggers: int = 1,
-    ):
+        fire_on_loop: bool = False,
+    ) -> bool:
         if not self.is_pyo_initialized():
-            return
+            return False
 
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
@@ -246,18 +247,21 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         def on_trigger(ctx: PlayContext) -> None:
             nonlocal num_trig
 
+            # A looping segment restarts instead of ending, only our loop 
+            # handler still needs the trigger
+            if not fire_on_loop and ctx.properties.get(PropID.Loop) is not None:
+                return
+
             callback(ctx)
             num_trig += 1
 
             # Cleanup the trigger objects if we've been triggered enough times
             if max_triggers > 0 and num_trig >= max_triggers:
-                cache = self.pyo(ctx).cache
-                objects = cache.get(storage_key, [])
+                state = self.pyo_state()
+                storage = state.cache.get("triggers", {}) if state else {}
 
-                for obj in objects:
+                for obj in storage.pop(storage_key, []):
                     obj.stop()
-
-                del cache[storage_key]
 
         # Trigger when this segment is only x seconds away from its end
         th = (self.duration - abs(before)) / self.duration
@@ -269,3 +273,5 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         storage: dict = my_pyo.cache.setdefault("triggers", {})
         storage_key = max(storage.keys(), default=-1) + 1
         storage[storage_key] = cb_objects
+
+        return True

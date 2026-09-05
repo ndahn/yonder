@@ -168,8 +168,12 @@ class HIRCNode(DataNode):
     def is_pyo_initialized(self) -> bool:
         return hasattr(self, "_pyo")
 
+    def pyo_state(self) -> PlaybackState | None:
+        """Return this node's playback state without merging a context or initializing the audio backend. Prefer this over `pyo` for read-only access, since `pyo` overwrites the stored context with a fresh merge of whatever context is passed in."""
+        return getattr(self, "_pyo", None)
+
     def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
-        """Release all pyo objects created by this node, if any. Called after a user-defined delay to give pyo enough time to finish processing the object."""
+        """Release all pyo objects created by this node, if any. With a positive delay this happens asynchronously after that many seconds, giving pyo enough time to finish processing the object. A delay of 0 releases synchronously, which is required when the server is stopped or about to stop, since the scheduled callback would never fire."""
         if hasattr(self, "_release_cb"):
             from yonder.util import logger
 
@@ -193,9 +197,13 @@ class HIRCNode(DataNode):
                     # Don't forward the delay
                     node.release_pyo(ctx, 0)
 
-            del self._release_cb
+            if hasattr(self, "_release_cb"):
+                del self._release_cb
 
-        self._release_cb = pyo.CallAfter(release, delay)
+        if delay > 0:
+            self._release_cb = pyo.CallAfter(release, delay)
+        else:
+            release()
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
@@ -264,15 +272,58 @@ class HIRCNode(DataNode):
         callback: Callable[[PlayContext], None],
         before: float = 0,
         max_triggers: int = 1,
-    ) -> None:
+    ) -> bool:
+        """Register a callback to fire when this node's playback ends.
+
+        By default the end triggers of all actively playing children are bundled: the callback fires once, after the last of them has ended. This covers all pass-through and multi-voice types (Event, Action, containers). Nodes that produce their own end signal (Sound, MusicTrack, MusicSegment) override this, as must containers whose playback continues past a child's end (e.g. MusicRandomSequenceContainer).
+
+        Note that bundling assumes one-shot semantics; `before` and `max_triggers` are simply forwarded and only meaningful when registering directly on a node with its own end signal.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The current playback context.
+        callback : Callable[[PlayContext], None]
+            Called with the context of the last child to end. Runs in pyo's trigger thread.
+        before : float
+            Fire the callback this many seconds before the actual end.
+        max_triggers : int
+            Detach the trigger after this many calls, 0 means never.
+
+        Returns
+        -------
+        bool
+            True if an end trigger was armed. False means the callback can never fire, usually because nothing is playing.
+        """
         ctx = ctx.merge(self)
 
+        children: list[HIRCNode] = []
+        seen: set[int] = set()
         for _, ref in self.get_references():
             node = ctx.bank.get(ref)
-            if node and node.is_pyo_initialized():
-                node.register_end_trigger(
-                    ctx, callback, before=before, max_triggers=max_triggers
-                )
+            if node and node.id not in seen:
+                seen.add(node.id)
+                # TODO is_pyo_initialized might be better, but might catch nodes that 
+                # can't even finish
+                state = node.pyo_state()
+                if state and state.playing:
+                    children.append(node)
+
+        pending = len(children)
+        if not pending:
+            return False
+
+        def on_child_end(child_ctx: PlayContext) -> None:
+            nonlocal pending
+            pending -= 1
+            if pending == 0:
+                callback(child_ctx)
+
+        for node in children:
+            if not node.register_end_trigger(ctx, on_child_end, before, max_triggers):
+                pending -= 1
+
+        return pending > 0
 
     def __hash__(self) -> int:
         return self.id

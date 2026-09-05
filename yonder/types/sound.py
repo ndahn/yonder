@@ -119,7 +119,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             volume_db=ctx.get_effective_volume(),
             hpf_cents=ctx.get_effective_hpf(),
             lpf_cents=ctx.get_effective_lpf(),
-            pitch_semitones=props.get(PropID.Pitch, 0.0),
+            pitch_cents=props.get(PropID.Pitch, 0.0),
             loop_start=props.get(PropID.LoopStart, 0.0),
             loop_end=props.get(PropID.LoopEnd, 0.0),
             xfade=props.get(PropID.LoopCrossfadeDuration, 0.05),
@@ -132,7 +132,7 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo.playing = True
         self.update_playback(ctx)
-        self.register_end_trigger(ctx, self._on_sound_end, 0, 0)
+        self.register_end_trigger(ctx, self._on_sound_end, 0, 1)
         my_pyo.play()
 
     def _on_sound_end(self, ctx: PlayContext) -> None:
@@ -183,7 +183,10 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         callback: Callable[[PlayContext], None],
         before: float = 0,
         max_triggers: int = 1,
-    ) -> None:
+    ) -> bool:
+        if not self.is_pyo_initialized():
+            return False
+
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         stream: MultiTrackStream = my_pyo.output
@@ -198,13 +201,11 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
             # Cleanup the trigger objects if we've been triggered enough times
             if max_triggers > 0 and num_trig >= max_triggers:
-                cache = self.pyo(ctx).cache
-                objects = cache.get(storage_key, [])
+                state = self.pyo_state()
+                storage = state.cache.get("triggers", {}) if state else {}
 
-                for obj in objects:
+                for obj in storage.pop(storage_key, []):
                     obj.stop()
-
-                del cache[storage_key]
 
         if before == 0:
             trigger_signal = stream["trig"]
@@ -219,6 +220,8 @@ class Sound(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         storage: dict = my_pyo.cache.setdefault("triggers", {})
         storage_key = max(storage.keys(), default=-1) + 1
         storage[storage_key] = cb_objects
+
+        return True
 
     def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
         if self.is_pyo_initialized():

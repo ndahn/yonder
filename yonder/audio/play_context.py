@@ -56,9 +56,9 @@ class PlayContext:
         def merge_properties(prop: PropID, val: float) -> None:
             if prop.is_additive():
                 properties.setdefault(prop, 0.0)
-                properties[prop] += prop.value
+                properties[prop] += val
             else:
-                properties[prop] = prop.value
+                properties[prop] = val
 
         if isinstance(node, HIRCNode):
             if isinstance(node, PropertyMixin):

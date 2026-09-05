@@ -12,13 +12,19 @@ It's usually measured in tenths of a Bel which makes the units in most common sc
 
 ## Frequencies - Hz (Hertz)
 
-A pure tone like a an A-minor is a wave with a single frequency, and like water in a pond, many such waves can be overlayed on top of each other to form more complex patterns. This is what audio signals are, except that the waves now propagate through a 3-dimensional medium instead of across a surface - vibrations instead of waves, so to speak. The frequency of a wave is measured in Hertz, which describes how many peaks the wave has per second. Many filters and effects will have frequency settings to control what they are doing.
+A pure tone like a an A-minor is a wave with a single frequency, and like water in a pond, many such waves can be overlayed on top of each other to form more complex patterns. This is what audio signals are, except that the waves now propagate through a 3-dimensional medium instead of across a surface - vibrations instead of waves, so to speak. The frequency of a wave is measured in Hertz, which describes how many peaks the wave has per second. Many filters and effects will have frequency settings to control what they are doing. For example, a band-pass filter would have two frequency limits and would try to suppress any frequencies outside of this range.
 
-For example, a low-pass filter usually has a cutoff frequency: signals below this frequency pass (almost) unaltered, signals with higher frequencies are suppressed. A high-pass filter works by the same principle.
+## Cents
 
-!!! warning
+Cents are a logarithmic unit for music intervals, i.e. an octave of 12 semitone of 100 cents each. This unit is often used when adjusting notes, and you may encounter it when adding a *pitch* property.
 
-    In Wwise, low-pass and high-pass filters don't use frequencies for their cutoff points. Instead they are using *Cents*, i.e. percentage values that [map to a frequency table](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=associating_low_pass_filter_values_with_their_corresponding_cutoff_frequencies). This makes it easy to do addition and subtraction, which would not be possible with frequencies.
+!!! info
+
+    The pitch property adjusts the sound's pitch by altering its playback speed. To maintain speed you'd have to use a Harmonizer or Vocoder effect; however, doing a proper pitch shift without glitches is incredibly difficult and generally creates mediocre results past a certain range.
+
+## Low-Pass & High-Pass Filters
+
+In Wwise, the low-pass and high-pass filter *properties* don't use frequencies for their cutoff points. Instead they are using normalized units, i.e. percentage values that [map to a frequency table](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=associating_low_pass_filter_values_with_their_corresponding_cutoff_frequencies). This makes it easy to do addition and subtraction, which would not be possible with frequencies.
 
 ## Accumulation
 

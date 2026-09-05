@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import ClassVar
+from typing import Callable, ClassVar
 from dataclasses import dataclass, field
 import networkx as nx
 import pyo
@@ -370,3 +370,21 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
         if state.finished:
             fader.setInput(pyo.Sig(0))
+
+            for cb in my_pyo.cache.pop("end_callbacks", []):
+                cb(ctx)
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+    ) -> bool:
+        """The playlist advances through its segments on its own, so external callbacks only fire once the playlist is exhausted. Infinite playlists never fire; `before` and `max_triggers` are ignored."""
+        my_pyo = self.pyo_state()
+        if not my_pyo or not my_pyo.playing:
+            return False
+
+        my_pyo.cache.setdefault("end_callbacks", []).append(callback)
+        return True

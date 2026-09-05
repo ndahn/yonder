@@ -16,6 +16,8 @@ from .audiomath import (
     hz_to_lpf,
     db_to_amp,
     amp_to_db,
+    cents_to_speed,
+    speed_to_cents,
     make_envelope,
 )
 
@@ -31,7 +33,7 @@ class MultiTrackStream(pyo.PyoObject):
         volume_db: float = 0,
         hpf_cents: float = 0,
         lpf_cents: float = 0,
-        pitch_semitones: float = 0,
+        pitch_cents: float = 0,
         clip_automations: list[ClipAutomation] = None,
         begin_trim: float = 0.0,
         end_trim: float = 0.0,
@@ -80,7 +82,7 @@ class MultiTrackStream(pyo.PyoObject):
             volume_db=volume_db,
             hpf_cents=hpf_cents,
             lpf_cents=lpf_cents,
-            pitch_semitones=pitch_semitones,
+            pitch_cents=pitch_cents,
             clip_automations=clip_automations,
             loop_start=loop_start,
             loop_end=loop_end,
@@ -109,12 +111,10 @@ class MultiTrackStream(pyo.PyoObject):
         volume_db: float = 0,
         hpf_cents: float = 0,
         lpf_cents: float = 0,
-        pitch_semitones: float = 0,
+        pitch_cents: float = 0,
         clip_automations: list[ClipAutomation] = None,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
-        begin_trim: float = 0.0,
-        end_trim: float = 0.0,
         xfade: float = 0.05,
         mul: float = 1,
         add: float = 0,
@@ -136,14 +136,18 @@ class MultiTrackStream(pyo.PyoObject):
         self._xfade = xfade
         self._paused_pos = 0.0
         self.loop = loop
-        self.speed = pyo.SigTo(1.0, 0.05)
+
+        # wwise implements pitch as a playback speed change (resampling).
+        # Our clocks are driven from this signal and follow automatically
+        speed = cents_to_speed(pitch_cents)
+        self._speed_ctrl = pyo.SigTo(speed, 0.05, init=speed)
 
         # two players alternate clips and crossfade at the boundary
         # needed for looping at arbitrary points
         first_path = str(resolve_source(self._playlist[0].source_id))
         self._envs = [pyo.SigTo(0, xfade), pyo.SigTo(0, xfade)]
         self._players = [
-            pyo.SfPlayer(first_path, speed=self.speed, loop=False, mul=self._envs[i])
+            pyo.SfPlayer(first_path, speed=self._speed_ctrl, loop=False, mul=self._envs[i])
             for i in range(2)
         ]
         self._active_player = 0
@@ -153,7 +157,7 @@ class MultiTrackStream(pyo.PyoObject):
         self._clip_clock = pyo.Phasor()
         self._pre_wrap = pyo.Thresh(self._clip_clock)
         self._swapper = pyo.TrigFunc(self._pre_wrap, self._advance)
-        self._trig = pyo.Trig()
+        self._trig = pyo.Trig().stop()  # discard auto-play trigger
 
         # overall clock: constant-rate progress across the whole track
         self._overall_clock = pyo.Phasor()
@@ -165,13 +169,15 @@ class MultiTrackStream(pyo.PyoObject):
         self._mix = (self._players[0] + self._players[1]).mix(2)
 
         # Main controls, usually for properties
+        self._master_gain_ctrl = pyo.SigTo(1.0, time=0.05)
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=0.05)
-        self._pitch_ctrl = pyo.SigTo(pitch_semitones, time=0.05)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=0.05)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
 
         self._chain = self._setup_property_controls(self._mix, clip_automations)
-        self._base_objs = [base for o in self._chain for base in o.getBaseObjects()]
+        # Only the fully processed signal is our output. Consumers like Mixer and 
+        # InputFader read the first stream of this object, i.e. the raw signal
+        self._base_objs = self._chain[-1].getBaseObjects()
 
     def _setup_property_controls(
         self,
@@ -220,34 +226,21 @@ class MultiTrackStream(pyo.PyoObject):
 
             # NOTE: ClipAutomation and attenuation do not support pitch
 
-        # fixed order for all voices: source -> pitch -> HPF -> LPF -> gain
-        # transpo is in semitones; winsize balances latency vs. smearing
-        # better, but more costly: PVAnal -> PVTranspoe -> PVSynth
-        pitch = pyo.Harmonizer(source, transpo=self._pitch_ctrl, winsize=0.1)
-        hp = pyo.ButHP(pitch, freq=hpf_signal)
+        # fixed order for all voices: source -> HPF -> LPF -> gain
+        # (pitch is applied as playback speed at the source, like wwise does)
+        hp = pyo.ButHP(source, freq=hpf_signal)
         lp = pyo.ButLP(hp, freq=lpf_signal)
-        final = lp * gain_signal
+        pre_master = lp * gain_signal
+        final = pre_master * self._master_gain_ctrl
 
         return [
             source,
             *envelopes,
-            pitch,
             hp,
             lp,
+            pre_master,
             final,
         ]
-
-    def _recombine_hpf(self) -> None:
-        # HPF cutoff rises with restrictiveness
-        self._hpf_ctrl.value = max(
-            self._hpf_base, self._hpf_rtpc, self._hpf_dist, self._hpf_angle
-        )
-
-    def _recombine_lpf(self) -> None:
-        # LPF cutoff falls with restrictiveness
-        self._lpf_ctrl.value = min(
-            self._lpf_base, self._lpf_rtpc, self._lpf_dist, self._lpf_angle
-        )
 
     @property
     def volume(self) -> float:
@@ -264,6 +257,15 @@ class MultiTrackStream(pyo.PyoObject):
     @gain.setter
     def gain(self, gain: float) -> None:
         self._gain_ctrl.value = gain
+
+    @property
+    def master_gain(self) -> float:
+        """UI-driven gain (voice sliders, mute), applied after the property-driven volume so the two don't clobber each other."""
+        return self._master_gain_ctrl.value
+
+    @master_gain.setter
+    def master_gain(self, gain: float) -> None:
+        self._master_gain_ctrl.value = gain
 
     @property
     def hpf(self) -> float:
@@ -283,45 +285,11 @@ class MultiTrackStream(pyo.PyoObject):
 
     @property
     def pitch(self) -> float:
-        return self._pitch_ctrl.value
+        return speed_to_cents(self._speed_ctrl.value)
 
     @pitch.setter
-    def pitch(self, semitones: float) -> None:
-        self._pitch_ctrl.value = semitones
-
-    @property
-    def rtpc_gain(self) -> float:
-        return self._rtpc_gain_ctrl.value
-
-    @rtpc_gain.setter
-    def rtpc_gain(self, gain: float) -> None:
-        self._rtpc_gain_ctrl.value = gain
-
-    @property
-    def rtpc_hpf(self) -> float:
-        return self._hpf_rtpc
-
-    @rtpc_hpf.setter
-    def rtpc_hpf(self, cents: float) -> None:
-        self._hpf_rtpc = hpf_to_hz(cents)
-        self._recombine_hpf()
-
-    @property
-    def rtpc_lpf(self) -> float:
-        return self._lpf_rtpc
-
-    @rtpc_lpf.setter
-    def rtpc_lpf(self, cents: float) -> None:
-        self._lpf_rtpc = lpf_to_hz(cents)
-        self._recombine_lpf()
-
-    @property
-    def rtpc_pitch(self) -> float:
-        return self._rtpc_pitch_ctrl.value
-
-    @rtpc_pitch.setter
-    def rtpc_pitch(self, semitones: float) -> None:
-        self._rtpc_pitch_ctrl.value = semitones
+    def pitch(self, cents: float) -> None:
+        self._speed_ctrl.value = cents_to_speed(cents)
 
     @property
     def playlist(self) -> list[TrackSrcInfo]:
@@ -360,12 +328,12 @@ class MultiTrackStream(pyo.PyoObject):
 
     def _update_clip_clock(self) -> None:
         dur = max(self._clip_duration(self.current_clip), 1e-6)
-        self._clip_clock.freq = self.speed / dur
+        self._clip_clock.freq = self._speed_ctrl / dur
         self._pre_wrap.threshold = 1.0 - self._xfade / dur
 
     def _update_overall_clock(self) -> None:
         span = max(self._loop_end - self._loop_start, 1e-6)
-        self._overall_clock.freq = self.speed / span
+        self._overall_clock.freq = self._speed_ctrl / span
 
     @property
     def duration(self) -> float:

@@ -70,10 +70,12 @@ class add_hirc_player(DpgItem):
             angle=self._angle,
         )
 
-        self._player = HIRCPlayer(bnk, entrypoint, ctx)
+        self._player = HIRCPlayer(
+            bnk, entrypoint, ctx, lambda: self._set_play_button_state(False)
+        )
         self._player.set_equalizer(self._equalizer.values)
 
-        dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
+        self._set_play_button_state(False)
         self.regenerate()
         self.set_enabled(True)
 
@@ -152,8 +154,8 @@ class add_hirc_player(DpgItem):
         # RTPC & States
         dpg.push_container_stack(self._t("popup_states"))
 
-        all_rtpcs, all_states = self._player.collect_control_states(False)
-        active_rtpcs, active_states = self._player.collect_control_states(True)
+        all_states, all_rtpcs = self._player.collect_control_states(False)
+        active_states, active_rtpcs = self._player.collect_control_states(True)
 
         if all_rtpcs:
             with dpg.tree_node(label=µ("RTPC"), default_open=True):
@@ -161,7 +163,7 @@ class add_hirc_player(DpgItem):
                 def toggle_rtpcs_active_only(
                     sender: str, enabled: bool, cb_user_data: Any
                 ) -> None:
-                    active_rtpcs, _ = self._player.collect_control_states(True)
+                    _, active_rtpcs = self._player.collect_control_states(True)
                     for child in dpg.get_item_children(self._t("rtpcs_group"), slot=1):
                         ud = dpg.get_item_user_data(child)
                         if ud is not None:
@@ -195,7 +197,7 @@ class add_hirc_player(DpgItem):
                 def toggle_states_active_only(
                     sender: str, enabled: bool, cb_user_data: Any
                 ) -> None:
-                    _, active_states = self._player.collect_control_states(True)
+                    active_states, _ = self._player.collect_control_states(True)
                     for child in dpg.get_item_children(self._t("states_group"), slot=1):
                         ud = dpg.get_item_user_data(child)
                         if ud is not None:
@@ -230,6 +232,11 @@ class add_hirc_player(DpgItem):
 
         dpg.pop_container_stack()
 
+    def _set_play_button_state(self, playing: bool) -> None:
+        dpg.configure_item(
+            self._t("btn_play"), texture_tag=Icons.pause if playing else Icons.play
+        )
+
     def _on_ctrl_seek_zero(self) -> None:
         if self._player:
             self._player.seek(0)
@@ -240,7 +247,7 @@ class add_hirc_player(DpgItem):
 
         self._player.stop()
         self._player.seek(0)
-        dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
+        self._set_play_button_state(False)
 
     def _on_ctrl_play_pause(self) -> None:
         if not self._player:
@@ -248,10 +255,10 @@ class add_hirc_player(DpgItem):
 
         if self._player.playing:
             self._player.stop()
-            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.play)
+            self._set_play_button_state(False)
         else:
             self._player.play()
-            dpg.configure_item(self._t("btn_play"), texture_tag=Icons.pause)
+            self._set_play_button_state(True)
 
     def _on_ctrl_forward_10s(self) -> None:
         if self._player:
@@ -312,9 +319,9 @@ class add_hirc_player(DpgItem):
             return
 
         if amp == 0.0:
-            self._player.set_muted(True)
+            self._player.set_muted(None, True)
         else:
-            self._player.set_muted(False)
+            self._player.set_muted(None, False)
             self._player.set_master_volume(amp)
 
     def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:

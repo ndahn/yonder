@@ -146,6 +146,9 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         my_pyo.cache["fader"] = fader
         return pyo.Sig(fader)
 
+    # NOTE once playlist continuation (loop_count, sequence advance) is
+    # implemented, this class must override register_end_trigger so child ends
+    # are consumed here instead of bubbling up
     def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
         if not self.playlist:
             return
@@ -165,24 +168,25 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             # TODO need to keep state depending on random mode
             _, playlist_item = self.pick_random_child()
 
+        xfade = (
+            max(
+                [
+                    ctx.properties.get(PropID.FadeOutTime, 0.0),
+                    ctx.properties.get(PropID.FadeInTime, 0.0),
+                    50,
+                ]
+            )
+            / 1000
+        )
+        
         child = ctx.bank.get(playlist_item.play_id)
         if child:
-            xfade = (
-                max(
-                    [
-                        ctx.properties.get(PropID.FadeOutTime, 0.0),
-                        ctx.properties.get(PropID.FadeInTime, 0.0),
-                        50,
-                    ]
-                )
-                / 1000
-            )
-
             child.play(ctx)
             fader.setInput(child.pyo(ctx).output, xfade)
             my_pyo.cache["prev_node"] = child.id
         else:
             fader.setInput(pyo.Sig(0), 0.5)
 
-        if prev_node:
+        # Don't kill the voice we just started
+        if prev_node and prev_node != child:
             prev_node.release_pyo(ctx, xfade + 0.1)

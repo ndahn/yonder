@@ -34,15 +34,15 @@ def lpf_to_hz(val: float) -> float:
     )
 
 
-def hz_to_lpf(val: float) -> float:
-    if val < 0:
+def hz_to_lpf(hz: float) -> float:
+    if hz < 0:
         raise ValueError("Value must be >= 0")
 
     for key in range(101):
         upper = WwiseCutoffFrequencies[key]
         lower = WwiseCutoffFrequencies.get(key + 1, 0.0)
-        if upper > val > lower:
-            return upper + (upper - val) / (upper - lower)
+        if upper > hz > lower:
+            return upper + (upper - hz) / (upper - lower)
 
     return 0.0
 
@@ -51,26 +51,16 @@ def hpf_to_hz(val: float) -> float:
     return lpf_to_hz(100 - val)
 
 
-def hz_to_hpf(val: float) -> float:
-    return 100 - hz_to_lpf(val)
+def hz_to_hpf(hz: float) -> float:
+    return 100 - hz_to_lpf(hz)
 
 
 def cents_to_speed(cents: float) -> float:
     return 2.0 ** (cents / 1200.0)
 
 
-def to_pyo_domain(prop: PropID, val: float) -> float:
-    if prop == PropID.Volume:
-        return db_to_amp(val)
-    elif prop == PropID.LPF:
-        return lpf_to_hz(val)
-    elif prop == PropID.HPF:
-        return hpf_to_hz(val)
-    elif prop == PropID.Pitch:
-        # semitones (same log domain as cents): no exp, just rescale
-        return val / 100
-    else:
-        raise ValueError(f"Unhandled property {prop}")
+def speed_to_cents(speed: float) -> float:
+    return 1200.0 * math.log(speed) / math.log(2)
 
 
 def _scaling_domain(scaling: CurveScaling) -> tuple[Callable, Callable]:
