@@ -22,6 +22,4 @@ For example, a low-pass filter usually has a cutoff frequency: signals below thi
 
 ## Accumulation
 
-All playback nodes in Wwise can have modifiers/properties, some of which may be controlled by [game parameters](game_parameters.md). As the tree-graph is traversed, these modifiers are accumulated and the final value is applied to the leave nodes/audio sources. This is true for volumes (dB), low-pass filters (Hz), and high-pass filters (Hz) (*and maybe pitch (Hz)*) - all other properties replace any previous values. Wwise has two [accumulation modes](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_filter_behavior): *addition* and *maximum*. 
-
-*Verify: The Fromsoft I'm aware of are using __addition__.*
+All playback nodes in Wwise can have modifiers/properties, some of which may be controlled by [game parameters](game_parameters.md). As the tree-graph is traversed, these modifiers are accumulated and the final value is applied to the leave nodes/audio sources. This is true for volumes (dB), low-pass filters (Hz), and high-pass filters (Hz) (*and maybe pitch (Hz)*) - all other properties replace any previous values. Wwise has two [accumulation modes](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_filter_behavior): *addition* and *maximum*. Fromsoft is using __addition__.*
