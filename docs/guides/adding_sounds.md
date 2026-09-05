@@ -1,4 +1,4 @@
-# Using your Sounds In-Game
+# Adding Sounds to your Game
 
 !!! note
 

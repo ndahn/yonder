@@ -20,13 +20,18 @@ An attenuation is defined by one or more distance-curves, which are associated w
 | LPF | Cents | Low-pass filter |
 | HPF | Cents | High-pass filter |
 | Spread | Cents | Related to surround sound, distributes virtual sources across spatial cannels |
-| [Focus](https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=focus) | Cents | Rleated to surround sound, separates spatial channels  |
+| [Focus](https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=focus) | Cents | Rleated to surround sound, condenses spread and separates spatial channels  |
 
-Each curve has the distance on the x-axis and its property value on the y-axis, so the y-axis' units depend on the property (see [units](../wwise/units.md)). The effects applied by the attenuation are (like all modifiers) accumulated.
+Each curve has the distance on the x-axis in meters, and its property value on the y-axis - so the y-axis' units depend on the property (see [units](../wwise/units.md)). The effects applied by the attenuation are (like all modifiers) accumulated.
+
+## Disabling Distance Falloff
+
+Sometimes you want a sound to be heard no matter where the players are (e.g. an [ultimate boss attack](https://youtu.be/zoaF0qq3Qqk)).
+*TODO check placi, note on ducking*
 
 ## Cone Params
 
-Attenuations can also limit the sound to a cone relative to the emitter source. This behavior is defined by an inner cone, inside of which no additional attenuation applies, and an outer cone, outside of which the full cone attenuation applies. Between these two cones lies the transition zone, which linearly interpolates between zero and full cone attenuation, and no curve can be applied. The cone attenuation will be added on top of the distance attenuation for volume, LPF, and HPF.
+Attenuations can also limit the sound to a cone relative to the source's orientation. This behavior is defined by an inner cone, inside of which no additional attenuation applies, and an outer cone, outside of which the full cone attenuation applies. Between these two cones lies the transition zone, which linearly interpolates between zero and full cone attenuation, and no curve can be applied. The cone attenuation will be added on top of the distance attenuation for volume, LPF, and HPF.
 
 ## Applying to Sounds
 
