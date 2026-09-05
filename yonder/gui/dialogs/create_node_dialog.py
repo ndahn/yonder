@@ -1,7 +1,7 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode
+from yonder import Soundbank, HIRCNode, calc_hash
 from yonder.types import Sound, MusicTrack
 from yonder.gui.localization import µ
 from yonder.util import get_function_spec, logger
@@ -93,6 +93,8 @@ class create_node_dialog(DpgItem):
     # === DPG callbacks =================================================
 
     def _set_arg(self, sender: str, app_data: Any, key: str) -> None:
+        if key == "nid":
+            self._nid = calc_hash(app_data)
         self._node_args[key] = app_data
 
     def _on_type_selected(self, sender: str, type_name: str, ud: Any) -> None:
@@ -119,7 +121,7 @@ class create_node_dialog(DpgItem):
 
             if name == "nid":
                 label = "Object ID"
-                default = self._bnk.new_id()
+                default = self._nid
 
             self._node_args[name] = arg.default
             add_generic_widget(
@@ -134,6 +136,12 @@ class create_node_dialog(DpgItem):
             )
 
     def _on_okay(self) -> None:
+        if self._nid in self._bnk:
+            self.show_message("ID already exists in bank")
+            return
+
+        self.show_message()
+
         args = self._node_args
         args["nid"] = self._nid
         node_cls = self._node_types[self._selected_type]

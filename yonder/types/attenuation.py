@@ -32,17 +32,17 @@ class Attenuation(RtpcMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        curves_to_use: list[int],
-        curves: list[ConversionTable],
+        curves_to_use: list[int] = None,
+        curves: list[ConversionTable] = None,
         cone_params: ConeParams = None,
     ) -> Attenuation:
-        if len(curves_to_use) != 7:
+        if curves_to_use and len(curves_to_use) != 7:
             raise ValueError("Curves to use must be exactly 7 elements")
 
         return cls(
             nid,
-            curves_to_use=[crv.value for crv in curves_to_use],
-            curves=curves,
+            curves_to_use=curves_to_use or (-1,) * 7,
+            curves=curves or [],
             is_cone_enabled=bool(cone_params),
             cone_params=cone_params or ConeParams(),
         )

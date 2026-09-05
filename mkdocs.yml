@@ -40,6 +40,7 @@ nav:
     - Music: wwise/music.md
     - Globals: wwise/globals.md
     - Game Parameters: wwise/game_parameters.md
+    - Units: wwise/units.md
   - Yonder:
     - How to Yonder: yonder/howto.md
     - About Hashes: yonder/hashes.md

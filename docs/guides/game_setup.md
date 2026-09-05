@@ -17,7 +17,7 @@ Whichever way you choose, you need to decide on two things: the [sound type](../
 
 !!! tip
 
-    As usual, it is best to compare with vanilla things that already do what you want in spirit.
+    As usual, it is best to compare with vanilla things that in spirit already do what you want.
 
 ## Modifying the Soundbank
 
@@ -33,6 +33,7 @@ How to play your sounds very much depends on your game and use case, but to give
 | ----- | -------- | --- |
 | Animations | [DSAS](https://github.com/Meowmaritus/DSAnimStudio/releases) | Add a TAE 129 `Wwise_PlaySound_BySlot` event. |
 | FXR | [fxr-playground](https://fxr-playground.pages.dev/) | Add a node with a []`NodeSound`](https://fxr-docs.pages.dev/classes/NodeSound) or []`EmissionSound`](https://fxr-docs.pages.dev/classes/EmissionSound) action. |
-| Events | [Darkscript3](https://github.com/AinTunez/DarkScript3/releases) | Use the [`PlaySE`](https://soulsmods.github.io/emedf/er-emedf.html#PlaySE) instruction. |
 | SpEffects | [Smithbox](https://github.com/vawser/Smithbox/releases) | *TODO* |
-| HKS | (text editor) | *TODO* |
+| HKS | (text editor) | Not possible use FXR or SpEffects instead. |
+| Events | [Darkscript3](https://github.com/AinTunez/DarkScript3/releases) | Use the [`PlaySE`](https://soulsmods.github.io/emedf/er-emedf.html#PlaySE) instruction. |
+| Dialog & Menus | [ESDStudio](https://github.com/GompDS/ESDStudio/releases) | *TODO* |
