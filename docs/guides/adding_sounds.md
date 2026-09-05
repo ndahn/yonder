@@ -32,7 +32,7 @@ How to play your sounds very much depends on your game and use case, but to give
 | Where | Software | How |
 | ----- | -------- | --- |
 | Animations | [DSAS](https://github.com/Meowmaritus/DSAnimStudio/releases) | Add a TAE 129 `Wwise_PlaySound_BySlot` event. |
-| FXR | [fxr-playground](https://fxr-playground.pages.dev/) | Add a node with a []`NodeSound`](https://fxr-docs.pages.dev/classes/NodeSound) or []`EmissionSound`](https://fxr-docs.pages.dev/classes/EmissionSound) action. |
+| FXR | [fxr-playground](https://fxr-playground.pages.dev/) | Add a node with a [`NodeSound`](https://fxr-docs.pages.dev/classes/NodeSound) or [`EmissionSound`](https://fxr-docs.pages.dev/classes/EmissionSound) action. |
 | SpEffects | [Smithbox](https://github.com/vawser/Smithbox/releases) | *TODO* |
 | HKS | (text editor) | Not possible use FXR or SpEffects instead. |
 | Events | [Darkscript3](https://github.com/AinTunez/DarkScript3/releases) | Use the [`PlaySE`](https://soulsmods.github.io/emedf/er-emedf.html#PlaySE) instruction. |
