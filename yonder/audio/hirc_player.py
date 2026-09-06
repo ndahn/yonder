@@ -9,6 +9,7 @@ import pyo
 
 from yonder.types import Soundbank, HIRCNode, Sound, MusicTrack
 from yonder.util import logger
+from .audiomath import db_to_amp, amp_to_db
 from .equalizer import Equalizer
 from .play_context import PlayContext
 
@@ -175,9 +176,10 @@ class HIRCPlayer:
 
     def set_master_volume(self, vol: float, time: float = 0.05) -> None:
         self._gate.time = time
-        self._gate.value = vol
+        self._gate.value = db_to_amp(vol)
 
-    def set_volume(self, gain: float, node_id: int = None) -> None:
+    def set_volume(self, vol: float, node_id: int = None) -> None:
+        gain = db_to_amp(vol)
         node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
             state = node.pyo_state()

@@ -51,7 +51,8 @@ class settings_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             with dpg.tree_node(label=µ("General"), default_open=True):
-                dpg.add_slider_double(
+                # FIXME deprecated
+                dpg.add_drag_double(
                     label=µ("Playback Volume"),
                     default_value=config.playback_volume,
                     min_value=0.1,

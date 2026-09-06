@@ -160,7 +160,7 @@ class convert_wavs_dialog(DpgItem):
                     default_value=False,
                     tag=self._t("adjust_volume"),
                 )
-                dpg.add_slider_float(
+                dpg.add_drag_float(
                     label=µ("Target volume"),
                     default_value=-3.0,
                     min_value=-96.0,
@@ -174,7 +174,7 @@ class convert_wavs_dialog(DpgItem):
                     default_value=False,
                     tag=self._t("trim_silence"),
                 )
-                dpg.add_slider_float(
+                dpg.add_drag_float(
                     label=µ("Silence threshold"),
                     default_value=0.0,
                     min_value=-10.0,
@@ -188,7 +188,7 @@ class convert_wavs_dialog(DpgItem):
                     default_value=False,
                     tag=self._t("create_prefetch_snippet"),
                 )
-                dpg.add_slider_float(
+                dpg.add_drag_float(
                     label=µ("Snippet length"),
                     default_value=1.0,
                     min_value=-0.5,

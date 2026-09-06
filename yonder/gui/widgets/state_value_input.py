@@ -36,8 +36,7 @@ class add_state_value_input(DpgItem):
         custom_values: dict[str, int] = None,
         raw: bool = False,
         readonly: bool = False,
-        textbox_width: int = 160,
-        show: bool = True,
+        width: int = 160,
         parent: str = 0,
         tag: str = 0,
         user_data: Any = None,
@@ -53,10 +52,10 @@ class add_state_value_input(DpgItem):
 
         self._custom_values.setdefault("-", 0)
 
-        with dpg.group(horizontal=True, show=show, parent=parent, tag=self.tag):
+        with dpg.group(horizontal=True, parent=parent, tag=self.tag):
             dpg.add_input_text(
                 default_value=_get_label(default_value),
-                width=textbox_width,
+                width=width,
                 readonly=readonly,
                 callback=self._on_value_changed,
                 tag=self._t("input"),

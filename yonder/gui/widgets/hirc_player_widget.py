@@ -158,8 +158,8 @@ class add_hirc_player(DpgItem):
                     label=voice.id,
                     callback=self._on_set_volume_voice,
                     default_value=1.0,
-                    min_value=0.0,
-                    max_value=2.0,
+                    min_value=-10,
+                    max_value=10,
                     clamped=True,
                     no_input=True,
                     width=280,
@@ -217,7 +217,7 @@ class add_hirc_player(DpgItem):
                     for rtpc in all_rtpcs:
                         self._player.context.rtpcs.setdefault(rtpc, 0.0)
 
-                        dpg.add_slider_double(
+                        dpg.add_drag_double(
                             label=rtpc,
                             default_value=0.0,
                             height=15,
@@ -352,19 +352,16 @@ class add_hirc_player(DpgItem):
         if self._player:
             self._player.set_equalizer(values)
 
-    def _on_set_volume(self, sender: str, amp: float, user_data: Any) -> None:
+    def _on_set_volume(self, sender: str, vol: float, user_data: Any) -> None:
         if not self._player:
             return
 
-        if amp == 0.0:
-            self._player.set_muted(True, None)
-        else:
-            self._player.set_muted(False, None)
-            self._player.set_master_volume(amp)
+        self._player.set_muted(False, None)
+        self._player.set_master_volume(vol)
 
-    def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:
+    def _on_set_volume_voice(self, sender: str, vol: float, voice_id: int) -> None:
         if self._player:
-            self._player.set_volume(amp, voice_id)
+            self._player.set_volume(vol, voice_id)
 
     def _toggle_voice(self, sender: str, muted: bool, voice_id: int) -> None:
         if not self._player:
@@ -491,8 +488,8 @@ class add_hirc_player(DpgItem):
                 label=µ("Volume"),
                 callback=self._on_set_volume,
                 default_value=1.0,
-                min_value=0.1,
-                max_value=2.0,
+                min_value=-10,
+                max_value=10,
                 clamped=True,
                 width=280,
             )

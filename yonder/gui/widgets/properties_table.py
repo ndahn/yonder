@@ -101,7 +101,8 @@ class add_properties_table(DpgItem):
                 user_data=idx,
                 tag=self._combo_tag(idx),
             )
-            dpg.add_input_double(
+            # TODO custom range per property
+            dpg.add_drag_float(
                 default_value=val,
                 width=-1,
                 callback=self._on_prop_value_changed,
