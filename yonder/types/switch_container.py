@@ -190,10 +190,12 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         elif len(nodes) == 1:
             input_sig = nodes[0].pyo(ctx).output
         else:
-            input_sig = pyo.Mixer(outs=1, chnls=1)
+            mixer = pyo.Mixer(outs=1, chnls=2)
             for n in nodes:
-                input_sig.addInput(n.id, n.pyo(ctx).output)
-                input_sig.setAmp(n.id, 1)
+                mixer.addInput(n.id, n.pyo(ctx).output)
+                mixer.setAmp(n.id, 1)
+
+            input_sig = mixer.mix()
 
         # Per-node fading seems excessive for yonder, and fromsoft rarely uses it anyways
         xfade = 50

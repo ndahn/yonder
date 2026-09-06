@@ -16,11 +16,11 @@ A pure tone like a an A-minor is a wave with a single frequency, and like water 
 
 ## Cents
 
-Cents are a logarithmic unit for music intervals, i.e. an octave of 12 semitone of 100 cents each. This unit is often used when adjusting notes, and you may encounter it when adding a *pitch* property.
+Cents are a logarithmic unit for music intervals, where 100 cents span the interval between two equally tempered semitones - i.e. an octave (12 semitones) has a range of 1200 cents. This unit is often used when adjusting notes, and you may encounter it when adding a *pitch* property.
 
 !!! info
 
-    The pitch property adjusts the sound's pitch by altering its playback speed. To maintain speed you'd have to use a Harmonizer or Vocoder effect; however, doing a proper pitch shift without glitches is incredibly difficult and generally creates mediocre results past a certain range.
+    The pitch property adjusts the sound's pitch by altering its playback speed (resampling). To maintain speed you'd have to use a Harmonizer or Vocoder effect; however, doing a proper pitch shift without glitches is incredibly difficult and generally creates mediocre results past a certain range.
 
 ## Low-Pass & High-Pass Filters
 

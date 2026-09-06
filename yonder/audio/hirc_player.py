@@ -40,7 +40,7 @@ class HIRCPlayer:
         self._server.deactivateMidi()
         self._server.boot()
 
-        self._mixer = pyo.Mixer(outs=1, chnls=1, time=0.05)
+        self._mixer = pyo.Mixer(outs=1, chnls=2, time=0.05)
         self._equalizer = Equalizer(self._mixer[0])
         self._gate = pyo.SigTo(value=1.0, time=0.05)
 

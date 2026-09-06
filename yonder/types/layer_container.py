@@ -115,7 +115,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.layers.append(layer)
         return layer
 
-    def get_layer(self, child: HIRCNode | int) -> bool:
+    def get_layer(self, child: HIRCNode | int) -> Layer:
         if isinstance(child, HIRCNode):
             child = child.id
 
@@ -161,10 +161,25 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 )
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
-        my_pyo.cache["controls"] = {}
-        return pyo.Mixer(outs=1, chnls=1)
+        mixer = pyo.Mixer(outs=1, chnls=2)
+        controls = {}
 
-    # TODO each layer has an InitialRTPC object that should be merged with the context
+        for child_id in self.children.items:
+            child = my_pyo.ctx.bank.get(child_id)
+            
+            if child:
+                # TODO not sure how to use the layer.initial_rtpc data here
+                # layer = self.get_layer(child_id)
+                # rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
+                ctrl = pyo.SigTo(1)
+                controls[child_id] = ctrl
+                child_pyo = child.pyo(my_pyo.ctx).output
+                mixer.addInput(child_id, child_pyo * ctrl)
+                mixer.setAmp(child_id, 0, 1)
+
+        my_pyo.cache["controls"] = controls
+        # NOTE a mixer by itself is not an output object
+        return mixer.mix()
 
     def play(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
@@ -174,33 +189,28 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         my_pyo.playing = True
         self.update_playback(ctx)
 
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child:
+                child.play(ctx)
+
     def update_playback(self, ctx: PlayContext) -> None:
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
-        mixer: pyo.Mixer = my_pyo.output
-        controls = my_pyo.cache["controls"]
+        controls: dict[int, pyo.SigTo] = my_pyo.cache["controls"]
 
-        # TODO Crashes when no layers?
-        for layer in self.layers:
-            # rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
-            x = ctx.rtpcs.get(layer.rtpc_id)
+        for child_id in self.children.items:
+            layer = self.get_layer(child_id)
+            ctrl = controls[child_id]
 
-            for child_info in layer.associated_children:
-                child = ctx.bank.get(child_info.associated_child_id)
-                if child:
-                    # TODO not sure how to use the layer.initial_rtpc data here
-                    child.play(ctx)
-                    y = eval_curve(child_info.graph_points, x)
-                    ctrl: pyo.SigTo = controls.get(child.id)
-
-                    if ctrl is None:
-                        # Use a control to smooth out transitions
-                        ctrl = pyo.SigTo(y)
-                        child_pyo = child.pyo(ctx).output
-                        mixer.addInput(child.id, ctrl * child_pyo)
-                        mixer.setAmp(child.id, 0, 1)
-                        controls[child.id] = ctrl
-                    else:
+            if layer:
+                for info in layer.associated_children:
+                    if info.associated_child_id == child_id:
+                        x = ctx.rtpcs.get(layer.rtpc_id)
+                        y = eval_curve(info.graph_points, x)
                         ctrl.value = y
+                        break
+            else:
+                ctrl.value = 1
 
         super().update_playback(ctx)
