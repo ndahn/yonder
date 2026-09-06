@@ -1,5 +1,5 @@
 from __future__ import annotations
-from enum import IntEnum, StrEnum
+from enum import IntEnum, StrEnum, auto
 
 
 class EnumWithUnknown(IntEnum):
@@ -223,6 +223,21 @@ class MusicTrackType(EnumWithUnknown):
     # - Switch
 
 
+class Units(IntEnum):
+    None_ = auto()
+    Count = auto()
+    Ratio = auto()
+    Percent = auto()
+    ID = auto()
+    dB = auto()
+    Hz = auto()
+    Cents = auto()
+    Seconds = auto()
+    Milliseconds = auto()
+    Meters = auto()
+    Degrees = auto()
+
+
 class PropID(IntEnum):
     Volume = 0x00
     LFE = 0x01
@@ -296,7 +311,7 @@ class PropID(IntEnum):
     PositioningTypeBlend = 0x47
     ReflectionBusVolume = 0x48
 
-    def is_additive(self) -> bool:
+    def is_accum_additive(self) -> bool:
         return self in [
             PropID.LFE,
             PropID.Pitch,
@@ -324,6 +339,87 @@ class PropID(IntEnum):
             PropID.GameAuxSendLPF,
             PropID.GameAuxSendHPF,
         ]
+
+    def is_accum_maximum(self) -> bool:
+        # Just in case we need it
+        return False
+
+    @property
+    def unit(self) -> Units:
+        # TODO A lot of these are guessed, need examples to verify
+        return {
+            PropID.Volume: Units.dB,
+            PropID.LFE: Units.None_,
+            PropID.Pitch: Units.Cents,
+            PropID.LPF: Units.Percent,
+            PropID.HPF: Units.Percent,
+            PropID.BusVolume: Units.dB,
+            PropID.MakeUpGain: Units.Ratio,
+            PropID.Priority: Units.None_,
+            PropID.PriorityDistanceOffset: Units.Meters,
+            PropID.MuteRatio: Units.Ratio,
+            PropID.PanLR: Units.Percent,
+            PropID.PanFR: Units.Percent,
+            PropID.CenterPCT: Units.Percent,
+            PropID.DelayTime: Units.Milliseconds,
+            PropID.TransitionTime: Units.Milliseconds,
+            PropID.Probability: Units.Percent,
+            PropID.DialogueMode: Units.None_,
+            PropID.UserAuxSendVolume0: Units.dB,
+            PropID.UserAuxSendVolume1: Units.dB,
+            PropID.UserAuxSendVolume2: Units.dB,
+            PropID.UserAuxSendVolume3: Units.dB,
+            PropID.GameAuxSendVolume: Units.dB,
+            PropID.OutputBusVolume: Units.dB,
+            PropID.OutputBusHPF: Units.Percent,
+            PropID.OutputBusLPF: Units.Percent,
+            PropID.HDRBusThreshold: Units.dB,
+            PropID.HDRBusRatio: Units.Ratio,
+            PropID.HDRBusReleaseTime: Units.Milliseconds,
+            PropID.HDRBusGameParam: Units.None_,
+            PropID.HDRBusGameParamMin: Units.None_,
+            PropID.HDRBusGameParamMax: Units.None_,
+            PropID.HDRActiveRange: Units.None_,
+            PropID.LoopStart: Units.Milliseconds,
+            PropID.LoopEnd: Units.Milliseconds,
+            PropID.TrimInTime: Units.Milliseconds,
+            PropID.TrimOutTime: Units.Milliseconds,
+            PropID.FadeInTime: Units.Milliseconds,
+            PropID.FadeOutTime: Units.Milliseconds,
+            PropID.FadeInCurve: Units.None_,
+            PropID.FadeOutCurve: Units.None_,
+            PropID.LoopCrossfadeDuration: Units.Milliseconds,
+            PropID.CrossfadeUpCurve: Units.None_,
+            PropID.CrossfadeDownCurve: Units.None_,
+            PropID.MidiTrackingRootNote: Units.None_,
+            PropID.MidiPlayOnNoteType: Units.None_,
+            PropID.MidiTransposition: Units.Cents,
+            PropID.MidiVelocityOffset: Units.Cents,
+            PropID.MidiKeyRangeMin: Units.Cents,
+            PropID.MidiKeyRangeMax: Units.Cents,
+            PropID.MidiVelocityRangeMin: Units.Cents,
+            PropID.MidiVelocityRangeMax: Units.Cents,
+            PropID.MidiChannelMask: Units.None_,
+            PropID.PlaybackSpeed: Units.Cents,
+            PropID.MidiTempoSource: Units.None_,
+            PropID.MidiTargetNode: Units.ID,
+            PropID.AttachedPluginFXID: Units.ID,
+            PropID.Loop: Units.None_,
+            PropID.InitialDelay: Units.Milliseconds,
+            PropID.UserAuxSendLPF0: Units.Percent,
+            PropID.UserAuxSendLPF1: Units.Percent,
+            PropID.UserAuxSendLPF2: Units.Percent,
+            PropID.UserAuxSendLPF3: Units.Percent,
+            PropID.UserAuxSendHPF0: Units.Percent,
+            PropID.UserAuxSendHPF1: Units.Percent,
+            PropID.UserAuxSendHPF2: Units.Percent,
+            PropID.UserAuxSendHPF3: Units.Percent,
+            PropID.GameAuxSendLPF: Units.Percent,
+            PropID.GameAuxSendHPF: Units.Percent,
+            PropID.AttenuationID: Units.ID,
+            PropID.PositioningTypeBlend: Units.None_,
+            PropID.ReflectionBusVolume: Units.dB,
+        }[self]
 
 
 # TODO these should be used by the TimeModulator instead of PropID

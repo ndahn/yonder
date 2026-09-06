@@ -1,9 +1,10 @@
 from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
-from yonder.enums import PropID
+from yonder.enums import PropID, Units
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
+from .select_node import add_select_node
 
 
 class add_properties_table(DpgItem):
@@ -69,25 +70,54 @@ class add_properties_table(DpgItem):
 
     # === Internal ======================================================
 
-    def _combo_tag(self, idx: int) -> str:
-        return self._t(f"combo_{idx}")
-
-    def _value_tag(self, idx: int) -> str:
-        return self._t(f"value_{idx}")
-
-    def _remove_tag(self, idx: int) -> str:
-        return self._t(f"remove_{idx}")
-
     def _get_available_props(self, exclude: PropID = None) -> list[PropID]:
         used = set(self._properties.keys())
         if exclude:
             used.discard(exclude)
         return [k for k in PropID if k not in used]
 
+    def _get_prop_range(self, prop: PropID) -> tuple[float, float, str]:
+        unit = prop.unit
+
+        if unit == Units.Count:
+            return (0, 100, "%.0f")
+
+        if unit == Units.Ratio:
+            return (0, 1, "%.3f")
+
+        if unit == Units.Percent:
+            return (0, 100, "%.3f")
+
+        if unit == Units.ID:
+            return (0, 10e10 - 1, "%.0f")
+
+        if unit == Units.dB:
+            return (-96, 96, "%0.3f")
+
+        if unit == Units.Hz:
+            return (-48000, 48000, "%.1f")
+
+        if unit == Units.Cents:
+            return (-1200, 1200, "%.1f")
+
+        if unit == Units.Seconds:
+            return (0, 100, "%.3f")
+
+        if unit == Units.Milliseconds:
+            return (0, 10000, "%.0f")
+
+        if unit == Units.Meters:
+            return (-100, 100, "%.3f")
+
+        if unit == Units.Degrees:
+            return (0, 360, "%.3f")
+
+        return (-1000, 1000, "%.3f")
+
     def _sync_combos(self) -> None:
         for idx, prop in enumerate(self._properties):
             dpg.configure_item(
-                self._combo_tag(idx),
+                self._t(f"combo_{idx}"),
                 items=sorted(p.name for p in self._get_available_props(exclude=prop)),
             )
 
@@ -99,21 +129,26 @@ class add_properties_table(DpgItem):
                 width=-1,
                 callback=self._on_prop_type_changed,
                 user_data=idx,
-                tag=self._combo_tag(idx),
+                tag=self._t(f"combo_{idx}"),
             )
-            # TODO custom range per property
+
+            vmin, vmax, fmt = self._get_prop_range(prop)
             dpg.add_drag_float(
                 default_value=val,
                 width=-1,
                 callback=self._on_prop_value_changed,
+                min_value=vmin,
+                max_value=vmax,
+                format=fmt,
                 user_data=idx,
-                tag=self._value_tag(idx),
+                tag=self._t(f"value_{idx}"),
             )
+
             dpg.add_button(
                 label="x",
                 callback=self._on_remove_clicked,
                 user_data=idx,
-                tag=self._remove_tag(idx),
+                tag=self._t(f"remove_{idx}"),
             )
 
     def _add_footer(self) -> None:
@@ -134,7 +169,14 @@ class add_properties_table(DpgItem):
 
         # Update value widget: reset to 0 only if the type actually changed
         if old_prop != new_prop:
-            dpg.set_value(self._value_tag(idx), 0.0)
+            vmin, vmax, fmt = self._get_prop_range(new_prop)
+            dpg.configure_item(
+                self._t(f"value_{idx}"),
+                default_value=0.0,
+                min_value=vmin,
+                max_value=vmax,
+                format=fmt,
+            )
             self._properties[new_prop] = 0.0
 
         self._sync_combos()

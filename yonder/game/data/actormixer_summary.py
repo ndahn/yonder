@@ -137,9 +137,11 @@ class AmxSummary:
                 result.aux4 = amx.aux4
 
             for prop, val in amx.properties.items():
-                if prop.is_additive():
+                if prop.is_accum_additive():
                     result.properties.setdefault(prop, 0.0)
                     result.properties[prop] += val
+                elif prop.is_accum_maximum() and prop in result.properties:
+                    result.properties[prop] = max(val, result.properties[prop])
                 else:
                     result.properties[prop] = val
 

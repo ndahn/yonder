@@ -54,7 +54,7 @@ class PlayContext:
         states = self.states
 
         def merge_properties(prop: PropID, val: float) -> None:
-            if prop.is_additive():
+            if prop.is_accum_additive():
                 properties.setdefault(prop, 0.0)
                 properties[prop] += val
             else:
