@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Callable, TYPE_CHECKING, get_args
 import sys
+import os
 import re
 from pathlib import Path
 from dataclasses import dataclass, is_dataclass, fields
@@ -34,6 +35,7 @@ logger = logging.getLogger("yonder")
 
 
 _tmp_dir: Path = None
+_max_tmp_size_mb: int = 300
 
 
 def resource_dir() -> Path:
@@ -57,14 +59,40 @@ def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     return res.read_text(encoding="utf8")
 
 
+def set_max_temp_size(size_mb: int) -> None:
+    global _max_tmp_size_mb
+    _max_tmp_size_mb = size_mb
+
+
+def get_max_temp_size() -> int:
+    return _max_tmp_size_mb
+
+
 def get_temp_dir() -> Path:
     global _tmp_dir
 
     if _tmp_dir is None:
         _tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
         _tmp_dir.mkdir(parents=True, exist_ok=True)
-        atexit.register(lambda t: t.is_dir() and shutil.rmtree(t), _tmp_dir)
         logger.info(f"Temporary files will be stored in {_tmp_dir}")
+
+    # Cleanup our cache everytime it's accessed
+    if _max_tmp_size_mb > 0:
+        wavs = list(_tmp_dir.glob("*.wav"))
+        total = sum(p.stat().st_size for p in wavs) / (1024 ** 2)
+
+        if total > _max_tmp_size_mb:
+            # Delete oldest files first
+            wavs.sort(key=os.path.getctime)
+
+            while wavs and total > _max_tmp_size_mb:
+                try:
+                    f = wavs.pop()
+                    size = f.stat().st_size / (1024 ** 2)
+                    f.unlink(missing_ok=True)
+                    total -= size
+                except PermissionError:
+                    continue
 
     return _tmp_dir
 

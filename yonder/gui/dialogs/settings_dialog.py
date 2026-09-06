@@ -60,6 +60,15 @@ class settings_dialog(DpgItem):
                     no_input=True,
                     callback=lambda s, a, u: setattr(config, "playback_volume", a),
                 )
+                dpg.add_input_int(
+                    label=µ("Max. Cache Size (MB)"),
+                    default_value=config.max_cache_size_mb,
+                    min_value=0,
+                    max_value=1000,
+                    min_clamped=True,
+                    max_clamped=False,
+                    callback=lambda s, a, u: setattr(config, "max_cache_size_mb", a),
+                )
 
             dpg.add_spacer(height=5)
             with dpg.tree_node(

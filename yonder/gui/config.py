@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
 from yonder.hash import load_lookup_table
-from yonder.util import logger
+from yonder.util import logger, set_max_temp_size
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 if TYPE_CHECKING:
@@ -21,6 +21,7 @@ class Config:
     playback_volume: float = 1.0
     prune_hash_tables: bool = True
     custom_eq: list[float] = field(default_factory=lambda: [0.0] * 10)
+    max_cache_size_mb: int = 300
 
     bnk2json_exe: str = None
     wwise_exe: str = None
@@ -170,4 +171,5 @@ def load_config(config_path: str = None) -> Config:
         _config.save(config_path)
 
     _config.load_hash_dicts()
+    set_max_temp_size(_config.max_cache_size_mb)
     return _config
