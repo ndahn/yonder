@@ -25,12 +25,13 @@ def yay(fadeout: float = 2.0):
 
     def fadeout_cb() -> None:
         t = time.time() - fadeout_start
-        if t < fadeout:
+        if t > fadeout:
+            if dpg.does_item_exist(tag):
+                dpg.delete_item(tag)
+        else:
             alpha = 255 - int(t / fadeout * 255)
             dpg.configure_item(f"{tag}_overlay", color=(255, 255, 255, alpha))
             dpg.set_frame_callback(dpg.get_frame_count() + 1, fadeout_cb)
-        else:
-            dpg.delete_item(tag)
 
     vw = dpg.get_viewport_width()
     vh = dpg.get_viewport_height()
@@ -38,8 +39,13 @@ def yay(fadeout: float = 2.0):
     y0 = (vh - _texture_h) / 2
     x1 = vw - x0
     y1 = vh - y0
-    
+
     with dpg.viewport_drawlist(front=True, tag=tag):
         dpg.draw_image("yonder_yay", (x0, y0), (x1, y1), tag=f"{tag}_overlay")
 
     fadeout_cb()
+
+    # Make sure this gets deleted even if our callback is somehow lost
+    dpg.set_frame_callback(
+        dpg.get_frame_count() + fadeout * 60, fadeout_cb
+    )
