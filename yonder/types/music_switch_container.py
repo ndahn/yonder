@@ -193,6 +193,7 @@ class MusicSwitchContainer(DecisionTreeMixin, StateMixin, RtpcMixin, PropertyMix
         prev_node = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
 
         if node == prev_node:
+            super().update_playback(ctx)
             return
 
         rule = self.music_trans_node_params.get_transition_rule(prev_node, node)

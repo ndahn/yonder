@@ -76,43 +76,43 @@ class add_properties_table(DpgItem):
             used.discard(exclude)
         return [k for k in PropID if k not in used]
 
-    def _get_prop_range(self, prop: PropID) -> tuple[float, float, str]:
+    def _get_prop_range(self, prop: PropID) -> tuple[float, float, str, float]:
         unit = prop.unit
 
         if unit == Units.Count:
-            return (0, 100, "%.0f")
+            return (0, 100, "%.0f", 0.1)
 
         if unit == Units.Ratio:
-            return (0, 1, "%.3f")
+            return (0, 1, "%.3f", 0.02)
 
         if unit == Units.Percent:
-            return (0, 100, "%.3f")
+            return (0, 100, "%.3f", 0.1)
 
         if unit == Units.ID:
-            return (0, 10e10 - 1, "%.0f")
+            return (0, 10e10 - 1, "%.0f", 0.02)
 
         if unit == Units.dB:
-            return (-96, 96, "%0.3f")
+            return (-96, 96, "%0.3f", 0.02)
 
         if unit == Units.Hz:
-            return (-48000, 48000, "%.1f")
+            return (-48000, 48000, "%.1f", 1)
 
         if unit == Units.Cents:
-            return (-1200, 1200, "%.1f")
+            return (-1200, 1200, "%.1f", 1)
 
         if unit == Units.Seconds:
-            return (0, 100, "%.3f")
+            return (0, 100, "%.3f", 0.02)
 
         if unit == Units.Milliseconds:
-            return (0, 10000, "%.0f")
+            return (0, 10000, "%.0f", 1)
 
         if unit == Units.Meters:
-            return (-100, 100, "%.3f")
+            return (-100, 100, "%.3f", 0.1)
 
         if unit == Units.Degrees:
-            return (0, 360, "%.3f")
+            return (0, 360, "%.3f", 0.2)
 
-        return (-1000, 1000, "%.3f")
+        return (-1000, 1000, "%.3f", 1)
 
     def _sync_combos(self) -> None:
         for idx, prop in enumerate(self._properties):
@@ -132,7 +132,7 @@ class add_properties_table(DpgItem):
                 tag=self._t(f"combo_{idx}"),
             )
 
-            vmin, vmax, fmt = self._get_prop_range(prop)
+            vmin, vmax, fmt, rate = self._get_prop_range(prop)
             dpg.add_drag_float(
                 default_value=val,
                 width=-1,
@@ -140,6 +140,7 @@ class add_properties_table(DpgItem):
                 min_value=vmin,
                 max_value=vmax,
                 format=fmt,
+                speed=rate,
                 user_data=idx,
                 tag=self._t(f"value_{idx}"),
             )
@@ -169,12 +170,13 @@ class add_properties_table(DpgItem):
 
         # Update value widget: reset to 0 only if the type actually changed
         if old_prop != new_prop:
-            vmin, vmax, fmt = self._get_prop_range(new_prop)
+            vmin, vmax, fmt, rate = self._get_prop_range(new_prop)
             dpg.configure_item(
                 self._t(f"value_{idx}"),
                 default_value=0.0,
                 min_value=vmin,
                 max_value=vmax,
+                speed=rate,
                 format=fmt,
             )
             self._properties[new_prop] = 0.0

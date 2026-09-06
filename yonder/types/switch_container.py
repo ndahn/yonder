@@ -222,3 +222,5 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         my_pyo.cache["input_sig"] = input_sig
         my_pyo.cache["active_switch"] = switch_state
+
+        super().update_playback(ctx)

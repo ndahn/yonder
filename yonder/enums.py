@@ -313,6 +313,7 @@ class PropID(IntEnum):
 
     def is_accum_additive(self) -> bool:
         return self in [
+            PropID.Volume,
             PropID.LFE,
             PropID.Pitch,
             PropID.BusVolume,
