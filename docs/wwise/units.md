@@ -4,7 +4,7 @@
 
 Human hearing follows a logarithmic curve, and so in order to double the perceived volume of a sound you actually need to increase the sound's power tenfold. The unit Bel (named after its inventor A. G. Bel) models this relation and is defined as ratio of two amplitudes:
 
-![Q = 20 * log(Divide[Subscript[P,1],Subscript[P,2]]) "dB"](assets/images/decibel_formula.png)
+![Q = 20 * log(Divide[Subscript[P,1],Subscript[P,2]]) "dB"](../assets/images/decibel_formula.png)
 
 It's usually measured in tenths of a Bel which makes the units in most common scenarios more human-friendly. In Wwise, volume modifiers are added on top of the input signal's volume - i.e. if you add +6dB to the signal its amplitude will double (and at +10dB it will _sound_ twice as loud).
 

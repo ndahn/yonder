@@ -1,6 +1,6 @@
 # Batch Sound Builder
 
-![](assets/images/tool_batch_sound_builder.png)
+![](../assets/images/tool_batch_sound_builder.png)
 
 Originally suggested by Shiki, this tool lets you create many [simple sounds](simple_sounds.md) with ease. Each group you setup becomes a new simple sound. 
 

@@ -1,6 +1,6 @@
 # Unmangling Soundbanks
 
-![](assets/images/tool_unmangle.png)
+![](../assets/images/tool_unmangle.png)
 
 Some of the soundbanks include (partial) duplicates of structures stored in other soundbanks. This is fine for vanilla stuff, since the structures are identical, and any missing branches are lodaed from the other soundbank(s), but makes it incredibly hard to modify them properly. This tool will delete structures that are known or assumed to cause problems from the offending soundbanks.
 

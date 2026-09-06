@@ -18,7 +18,7 @@ Next, open one of the soundbanks from the *File* menu. The first time you do thi
 
 Yonder is organized in three panels - HIRC nodes on the left, node attributes in the center, utility stuff on the right.
 
-![](assets/images/yonder_panels.png)
+![](../assets/images/yonder_panels.png)
 
 The panel on the left will show you a list of [events](../wwise/events.md), [globals](../wwise/node_types.md#globals), and [bank sections](../wwise/soundbanks.md#sections). Under the events you will find a list of names and/or numbers, depending on whether the [hashes](hashes.md) are known. These nodes can be expanded to browse the rest of their associated hierarchy (see [node types](../wwise/node_types.md)). From the right-click context menu, nodes or entire subtrees can also be copied, reattached, and deleted.
 

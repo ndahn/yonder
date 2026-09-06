@@ -1,6 +1,6 @@
 # Area Music
 
-![](assets/images/tool_area_bgm.png)
+![](../assets/images/tool_area_bgm.png)
 
 When walking around a map in e.g. Elden Ring, there are usually _two_ songs playing in parallel: a mood theme, and a battle theme. The latter is usually suppressed, but gets overlayed on top when the player enters combat. The [state](../wwise/game_syncs.md) responsible for unmuting this second layer is `FieldBattleState` (usually set to `FieldNormal` or `FieldBattle`).
 

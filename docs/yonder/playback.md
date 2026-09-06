@@ -8,7 +8,7 @@ Yonder currently has two audio players: the legacy one works well, but only play
 
 ## The HIRC Player
 
-![](assets/images/hirc_player.png)
+![](../assets/images/hirc_player.png)
 
 Yonder now comes with a player widget that emulates part of the in-game playback. In particular, it will traverse the currently selected subtree, accumulate modifiers, and mix and play branches based on user-defined virtual game state. In particular you can control the following:
 

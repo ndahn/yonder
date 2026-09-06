@@ -1,6 +1,6 @@
 # Boss Music
 
-![](assets/images/tool_boss_bgm.png)
+![](../assets/images/tool_boss_bgm.png)
 
 Boss tracks are regular music tracks with complications. It's worth considering the following:
 
