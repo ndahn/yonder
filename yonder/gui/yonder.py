@@ -1667,7 +1667,7 @@ class BanksOfYonder(DpgItem):
             dpg.set_value(self._t("json"), node.json())
             # TODO enable player once ready
             try:
-                self._hirc_player.load(self.bnk, node)
+                self._hirc_player.set_entrypoint(node, self.bnk)
                 self._hirc_player.set_enabled(True)
             except ValueError as e:
                 logger.error(f"HIRC player failed to load: {e}")
@@ -1728,7 +1728,7 @@ class BanksOfYonder(DpgItem):
     def _on_structure_changed(self) -> None:
         self._hirc_player.stop()
         self.regenerate()
-        self._hirc_player.load(self.bnk, self._selected_node)
+        self._hirc_player.set_entrypoint(self._selected_node, self.bnk)
 
     def jump_to_node(self, node: int | HIRCNode) -> None:
         self._hirc_player.stop()

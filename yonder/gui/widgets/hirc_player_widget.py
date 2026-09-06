@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
 from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
+from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
@@ -16,11 +17,17 @@ from .attenuation_plot import add_attenuation_plot
 class add_hirc_player(DpgItem):
     def __init__(
         self,
+        bnk: Soundbank = None,
+        entrypoint: HIRCNode = None,
         *,
         tag: str = 0,
         parent: str = 0,
     ) -> None:
         super().__init__(tag)
+
+        self._bnk: Soundbank = bnk
+        self._entrypoint: HIRCNode = entrypoint
+        self._dirty: bool = True
         self._player: HIRCPlayer = None
         self._vgmstream_requested: bool = False
         self._equalizer: add_equalizer = None
@@ -29,6 +36,7 @@ class add_hirc_player(DpgItem):
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
         self._angle: float = 0.0
+
         self._setup_content(parent)
         self.set_enabled(False)
 
@@ -36,15 +44,37 @@ class add_hirc_player(DpgItem):
         # TODO
         pass
 
-    def load(self, bnk: Soundbank, entrypoint: HIRCNode) -> None:
-        self.set_enabled(False)
-
+    def set_entrypoint(self, entrypoint: HIRCNode, bnk: Soundbank = None) -> None:
         if self._player:
-            self._player.close()
+            self._player.stop()
+        
+        self._set_play_button_state(False)
+
+        if bnk:
+            self._bnk = bnk
+
+        self._entrypoint = entrypoint
+        self._dirty = True
+
+    def _init_player(self) -> None:
+        if self._player and not self._dirty:
+            return
+
+        self.set_enabled(False)
 
         # Removing pyo objects from a running pyo server tends to cause segfaults, so better
         # to recreate the player each time the structure changes. Closing the server takes a
         # few ms, but we can let this be handled by the GC in the background.
+        if self._player:
+            self._player.close()
+
+        if not self._bnk:
+            logger.error("Soundbank not set")
+            return
+        
+        if not self._entrypoint:
+            logger.error("Entrypoint not set")
+            return
 
         cfg = get_config()
 
@@ -61,7 +91,7 @@ class add_hirc_player(DpgItem):
             return
 
         ctx = PlayContext(
-            bnk,
+            self._bnk,
             vgmstream,
             cfg.bankdirs,
             rtpcs=dict(self._rtpcs),
@@ -71,23 +101,26 @@ class add_hirc_player(DpgItem):
         )
 
         self._player = HIRCPlayer(
-            bnk, entrypoint, ctx, lambda: self._set_play_button_state(False)
+            self._bnk, self._entrypoint, ctx, lambda: self._set_play_button_state(False)
         )
         self._player.set_equalizer(self._equalizer.values)
 
         self._set_play_button_state(False)
         self.regenerate()
         self.set_enabled(True)
+        self._dirty = False
 
     @property
     def player(self) -> HIRCPlayer:
         return self._player
 
     def play(self) -> None:
+        self._init_player()
         if self._player:
             self._player.play()
 
     def stop(self) -> None:
+        self._init_player()
         if self._player:
             self._player.stop()
 
@@ -239,17 +272,18 @@ class add_hirc_player(DpgItem):
 
     def _on_ctrl_seek_zero(self) -> None:
         if self._player:
-            self._player.seek(0)
+            self._player.seek(0, None)
 
     def _on_ctrl_stop(self) -> None:
         if not self._player:
             return
 
         self._player.stop()
-        self._player.seek(0)
+        self._player.seek(0, None)
         self._set_play_button_state(False)
 
     def _on_ctrl_play_pause(self) -> None:
+        self._init_player()
         if not self._player:
             return
 
@@ -262,11 +296,11 @@ class add_hirc_player(DpgItem):
 
     def _on_ctrl_forward_10s(self) -> None:
         if self._player:
-            self._player.seek(self._player.pos + 10.0)
+            self._player.seek(self._player.pos + 10.0, None)
 
     def _on_ctrl_forward_30s(self) -> None:
         if self._player:
-            self._player.seek(self._player.pos + 30.0)
+            self._player.seek(self._player.pos + 30.0, None)
 
     def _open_ctrl_popup(self, sender: str, app_data: str, tag: Any) -> None:
         pos = dpg.get_item_rect_min(sender)
@@ -319,20 +353,20 @@ class add_hirc_player(DpgItem):
             return
 
         if amp == 0.0:
-            self._player.set_muted(None, True)
+            self._player.set_muted(True, None)
         else:
-            self._player.set_muted(None, False)
+            self._player.set_muted(False, None)
             self._player.set_master_volume(amp)
 
     def _on_set_volume_voice(self, sender: str, amp: float, voice_id: int) -> None:
         if self._player:
-            self._player.set_volume(voice_id, amp)
+            self._player.set_volume(amp, voice_id)
 
     def _toggle_voice(self, sender: str, muted: bool, voice_id: int) -> None:
         if not self._player:
             return
 
-        self._player.set_muted(voice_id, muted)
+        self._player.set_muted(muted, voice_id)
         tag = self._t(f"voice_volume_{voice_id}")
 
         if muted:

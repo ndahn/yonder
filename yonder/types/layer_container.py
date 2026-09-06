@@ -180,6 +180,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         mixer: pyo.Mixer = my_pyo.output
         controls = my_pyo.cache["controls"]
 
+        # TODO Crashes when no layers?
         for layer in self.layers:
             # rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
             x = ctx.rtpcs.get(layer.rtpc_id)

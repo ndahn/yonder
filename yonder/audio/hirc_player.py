@@ -164,14 +164,21 @@ class HIRCPlayer:
 
         return ret
 
-    def set_volume(self, node_id: int | None, gain: float) -> None:
+    def set_equalizer(self, values: list[float] = None) -> None:
+        self._equalizer.set_values(values)
+
+    def set_master_volume(self, vol: float, time: float = 0.05) -> None:
+        self._gate.time = time
+        self._gate.value = vol
+
+    def set_volume(self, gain: float, node_id: int = None) -> None:
         node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
             state = node.pyo_state()
             if state:
                 state.output.master_gain = gain
 
-    def set_muted(self, node_id: int | None, muted: bool) -> None:
+    def set_muted(self, muted: bool, node_id: int = None) -> None:
         node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
             state = node.pyo_state()
@@ -186,21 +193,7 @@ class HIRCPlayer:
             else:
                 voice.master_gain = self._voice_gains.get(node.id, 1.0)
 
-    def set_master_volume(self, vol: float, time: float = 0.05) -> None:
-        self._gate.time = time
-        self._gate.value = vol
-
-    def set_equalizer(self, values: list[float] = None) -> None:
-        self._equalizer.set_values(values)
-
-    def apply_context(self, ctx: PlayContext = None) -> None:
-        if not ctx:
-            ctx = self.context
-
-        self.entrypoint.update_playback(ctx)
-        self.context = ctx
-
-    def seek(self, node_id: int, pos: float) -> float:
+    def seek(self, pos: float, node_id: int = None) -> float:
         node: Sound | MusicTrack
         for node in self.collect_voices(True, node_id):
             state = node.pyo_state()
@@ -230,6 +223,13 @@ class HIRCPlayer:
         self._mixer.clear()
         self._mixer.addInput(0, node_out)
         self._mixer.setAmp(0, 0, 1)
+
+    def apply_context(self, ctx: PlayContext = None) -> None:
+        if not ctx:
+            ctx = self.context
+
+        self.entrypoint.update_playback(ctx)
+        self.context = ctx
 
     def _finish(self) -> None:
         # Stop everything so the next play() starts from a clean slate
