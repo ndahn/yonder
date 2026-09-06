@@ -57,7 +57,7 @@ nav:
     - Unmangling Soundbanks: tools/unmangle.md
   - Guides:
     - Overview: guides/index.md
-    - In-Game Setup: guides/adding_sounds.md
+    - Adding a Sound: guides/adding_sounds.md
     - Custom Soundbanks: guides/custom_banks.md
     - Working with Music: guides/working_with_music.md
     - Setting up Attenuations: guides/attenuation_setup.md
