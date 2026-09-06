@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from yonder.types.mixins import PropertyMixin, RtpcMixin
 from yonder.enums import PropID, AttenuationProperty
 from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav
@@ -45,6 +44,7 @@ class PlayContext:
 
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         from yonder.types.hirc_node import HIRCNode
+        from yonder.types.mixins import PropertyMixin, RtpcMixin
         from yonder.game import get_selected_game
 
         properties = dict(self.properties)

@@ -11,11 +11,11 @@ from .base_types import (
     PropBundle,
     PropRangedModifiers,
 )
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, DecisionTreeMixin
 
 
 @dataclass(repr=False, eq=False)
-class DialogueEvent(PropertyMixin, HIRCNode):
+class DialogueEvent(DecisionTreeMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 15
     probability: int = 100
     tree_depth: int = 0

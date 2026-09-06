@@ -8,7 +8,6 @@ from typing import Callable
 import pyo
 
 from yonder.types import Soundbank, HIRCNode, Sound, MusicTrack
-from yonder.types.mixins import StateMixin, RtpcMixin
 from yonder.util import logger
 from .equalizer import Equalizer
 from .play_context import PlayContext
@@ -85,6 +84,8 @@ class HIRCPlayer:
     def collect_control_states(
         self, active_only: bool
     ) -> tuple[dict[int, set[int]], list[int]]:
+        from yonder.types.mixins import StateMixin, RtpcMixin, DecisionTreeMixin
+
         states: dict[int, set[int]] = {}
         rtpcs: list[int] = []
         todo: list[HIRCNode] = [self.entrypoint]
@@ -93,6 +94,11 @@ class HIRCPlayer:
             node = todo.pop()
 
             if not active_only or node.is_pyo_initialized():
+                if isinstance(node, DecisionTreeMixin):
+                    for group, values in node.get_used_state_values().items():
+                        group_states = states.setdefault(group, set())
+                        group_states.update(values)
+
                 if isinstance(node, StateMixin):
                     for group in node.states.state_group_chunks:
                         group_states = states.setdefault(group.state_group_id, set())

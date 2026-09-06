@@ -4,7 +4,7 @@ from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
 from yonder.audio.playback_state import PlaybackState
-from .mixins import DataNode
+from .mixins.data_node import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
