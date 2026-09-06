@@ -4,6 +4,8 @@
 
 Creates a simple one-shot sound structure. Based on the selected playback mode, sounds added will be either played back in sequence or at random. See [RandomSequenceContainers](../wwise/sounds.md#random-sequence-container) for more details.
 
+You can also use the *Create Play-/Stop-Event* tool to just create the events and attach your own structures to them later.
+
 ```mermaid
 flowchart TD
     Play["[Event]" Play_x123456789] -->|Play-Action| RSC(RandomSequenceContainer)
