@@ -415,17 +415,23 @@ class MultiTrackStream(pyo.PyoObject):
 
     @property
     def progress(self) -> float:
+        if not self.isPlaying():
+            # Clocks will return 0 while stopped
+            return self._paused_pos / self.play_duration
+
         return self._overall_clock.get()
 
     @property
     def clip_progress(self) -> float:
+        if not self.isPlaying():
+            # Clocks will return 0 while stopped
+            idx, offset = self._clip_for_position(self._paused_pos)
+            return offset / self._clip_duration(self._playlist[idx])
+
         return self._clip_clock.get()
 
     @property
     def pos(self) -> float:
-        if not self.isPlaying():
-            return self._paused_pos
-
         return self._loop_start + self.progress * (self._loop_end - self._loop_start)
 
     def seek(self, pos: float) -> None:
