@@ -31,6 +31,7 @@ from .node_widgets import create_node_widgets
 from .select_node import add_select_node, add_select_actormixer
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
 from .section_widgets import create_section_widgets
+from .state_value_input import add_state_value_input
 from .splash import add_splash
 from .wav_player_widget import add_wav_player
 from .properties_table import add_properties_table

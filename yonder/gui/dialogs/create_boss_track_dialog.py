@@ -23,6 +23,7 @@ from yonder.gui.widgets import (
     add_properties_table,
     add_transition_matrix,
     loading_indicator,
+    add_state_value_input,
     yay,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
@@ -58,6 +59,7 @@ class create_boss_track_dialog(DpgItem):
                 dst_play_pre_entry=True,
             )
         ]
+        self._bgm_enemy_type_widget: add_state_value_input = None
 
         self._build(title)
 
@@ -74,7 +76,7 @@ class create_boss_track_dialog(DpgItem):
 
         edit_state_path_dialog(
             self.bnk,
-            self.msc.arguments,
+            [arg.group_id for arg in self.msc.arguments],
             self._on_statepath_selected,
             state_path=self.current_state_path,
             hide_node_id=True,
@@ -137,9 +139,7 @@ class create_boss_track_dialog(DpgItem):
 
         self.msc = selected_msc
         self.current_state_path = ["*" for _ in self.msc.arguments]
-        self.current_state_path[self.bgm_enemy_type_idx] = dpg.get_value(
-            self._t("bgm_enemy_type")
-        )
+        self.current_state_path[self.bgm_enemy_type_idx] = self._bgm_enemy_type_widget.string_value
         self.show_message()
 
     def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
@@ -150,7 +150,6 @@ class create_boss_track_dialog(DpgItem):
         if self.msc:
             self.current_state_path[self.bgm_enemy_type_idx] = value
 
-        dpg.set_value(self._t("bgm_enemy_type"), value)
         self.show_message()
 
     def _on_statepath_selected(
@@ -158,7 +157,7 @@ class create_boss_track_dialog(DpgItem):
     ) -> None:
         self.current_state_path.clear()
         self.current_state_path.extend(state_path)
-        dpg.set_value(self._t("bgm_enemy_type"), state_path[self.bgm_enemy_type_idx])
+        self._bgm_enemy_type_widget.value = state_path[self.bgm_enemy_type_idx]
         self.show_message()
 
     def _on_track_added(self, sender: str, path: Path, user_data: Any) -> None:
@@ -309,19 +308,20 @@ class create_boss_track_dialog(DpgItem):
                 extra_query=f"arguments:*/group_id={self.bgm_enemy_type_hash}"
             )
 
-            with dpg.group(horizontal=True):
-                dpg.add_input_text(
-                    callback=self._on_bgmenemytype_changed,
-                    default_value="*",
-                    tag=self._t("bgm_enemy_type"),
-                )
-                enemy_keys = get_selected_game().game_states.get("BgmEnemyType")
-                dpg.add_combo(
-                    [x for x in enemy_keys if "reserved" in x.lower()],
-                    no_preview=True,
-                    callback=self._on_bgmenemytype_changed,
-                )
-                dpg.add_text("BgmEnemyType")
+            reserved_keys = [
+                x for x in 
+                get_selected_game().game_states.get("BgmEnemyType")
+                if "reserved" in x.lower()
+            ]
+            self._bgm_enemy_type_widget = add_state_value_input(
+                "BgmEnemyType",
+                reserved_keys,
+                self._on_bgmenemytype_changed,
+                default_value="*",
+                custom_values={"*": 0},
+                tag=self._t("bgm_enemy_type"),
+            )
+
             dpg.add_button(
                 label=µ("State Path", "button"),
                 callback=self._edit_state_path,

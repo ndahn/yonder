@@ -16,7 +16,7 @@ class PlaylistState:
     cache: dict = field(default_factory=dict)
 
     def get_playlist_item(self, item_id: int) -> MusicRanSeqPlaylistItem:
-        return self.playlist[item_id]["item"]
+        return self.playlist.nodes[item_id]["item"]
 
     @property
     def current_item(self) -> MusicRanSeqPlaylistItem:

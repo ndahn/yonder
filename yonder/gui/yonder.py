@@ -129,6 +129,8 @@ class BanksOfYonder(DpgItem):
         sys.excepthook = self._handle_exception
         logger.addHandler(LogHandler())
 
+        logger.info(f"Temporary files will be stored in {get_temp_dir()}")
+
     def _on_close(self) -> None:
         if self._hirc_player:
             player = self._hirc_player.player

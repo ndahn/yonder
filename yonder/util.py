@@ -74,7 +74,6 @@ def get_temp_dir() -> Path:
     if _tmp_dir is None:
         _tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
         _tmp_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Temporary files will be stored in {_tmp_dir}")
 
     # Cleanup our cache everytime it's accessed
     if _max_tmp_size_mb > 0:

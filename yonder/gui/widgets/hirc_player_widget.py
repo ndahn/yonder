@@ -12,6 +12,7 @@ from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
+from .state_value_input import add_state_value_input
 
 
 class add_hirc_player(DpgItem):
@@ -208,7 +209,7 @@ class add_hirc_player(DpgItem):
                     label=µ("For active nodes only"),
                     default_value=True,
                     callback=toggle_rtpcs_active_only,
-                    tag=self._t("states_active_only"),
+                    tag=self._t("rtpcs_active_only"),
                 )
 
                 with dpg.group(tag=self._t("rtpcs_group")):
@@ -231,12 +232,9 @@ class add_hirc_player(DpgItem):
                     sender: str, enabled: bool, cb_user_data: Any
                 ) -> None:
                     active_states, _ = self._player.collect_control_states(True)
-                    for child in dpg.get_item_children(self._t("states_group"), slot=1):
-                        ud = dpg.get_item_user_data(child)
-                        if ud is not None:
-                            show = not enabled or ud in active_states
-                            dpg.configure_item(child, show=show)
-                            # TODO adjust theme if not active
+                    for group in all_states:
+                        show = not enabled or group in active_states
+                        dpg.configure_item(self._t(f"state_value_{group}"), show=show)
 
                 dpg.add_checkbox(
                     label=µ("For active nodes only"),
@@ -249,15 +247,17 @@ class add_hirc_player(DpgItem):
                     for group, states in all_states.items():
                         group_name = lookup_name(group, f"#{group}")
                         state_names = sorted(lookup_name(s, f"#{s}") for s in states)
-                        self._player.context.states[group, calc_hash(state_names[0])]
+                        self._player.context.states.setdefault(group, calc_hash(state_names[0]))
 
-                        dpg.add_combo(
+                        add_state_value_input(
+                            group_name,
                             state_names,
+                            self._on_set_state,
                             default_value=state_names[0],
-                            label=group_name,
-                            callback=self._on_set_state,
+                            raw=True,
+                            show=(group in active_states),
                             user_data=group,
-                            show=group in active_states,
+                            tag=self._t(f"state_value_{group}"),
                         )
 
         if not all_rtpcs and not all_states:
@@ -324,20 +324,17 @@ class add_hirc_player(DpgItem):
             self._player.apply_context()
 
     def _on_set_rtpc(self, sender: str, value: float, rtpc: str) -> None:
-        h = int(rtpc[1:]) if rtpc.startswith("#") else calc_hash(rtpc)
-        self._rtpcs[h] = value
+        self._rtpcs[rtpc] = value
 
         if self._player:
-            self._player.context.rtpcs[h] = value
+            self._player.context.rtpcs[rtpc] = value
             self._player.apply_context()
 
-    def _on_set_state(self, sender: str, state: str, group: str) -> None:
-        g = int(group[1:]) if group.startswith("#") else calc_hash(group)
-        s = int(state[1:]) if state.startswith("#") else calc_hash(state)
-        self._states[g] = s
+    def _on_set_state(self, sender: str, state: int, group: int) -> None:
+        self._states[group] = state
 
         if self._player:
-            self._player.context.states[g] = s
+            self._player.context.states[group] = state
             self._player.apply_context()
             # This may cause the active nodes to change
             self.regenerate()

@@ -121,6 +121,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             g.add_node(item.playlist_item_id, item=item)
 
             for child in self.playlist_items[idx + 1 : idx + 1 + item.child_count]:
+                # TODO make sure the child exists
                 g.add_node(child.playlist_item_id, item=child)
                 g.add_edge(
                     item.playlist_item_id,

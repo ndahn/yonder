@@ -65,9 +65,9 @@ def build_gamestate_summary(game_path: Path, bnk2json_exe: Path) -> dict[str, li
 
 def load_gamestate_summary(game: Game) -> dict[str, list[str]]:
     if game == Game.EldenRing:
-        json_path = resource_dir() / "gamedata" / "er" / "amx.json"
+        json_path = resource_dir() / "gamedata" / "er" / "states.json"
     elif game == Game.Nightreign:
-        json_path = resource_dir() / "gamedata" / "nr" / "amx.json"
+        json_path = resource_dir() / "gamedata" / "nr" / "states.json"
     else:
         raise ValueError(f"Game {game} is not supported yet")
 

@@ -3,14 +3,10 @@ import sys
 import os
 from typing import Any, Iterable
 from pathlib import Path
-import shutil
-import tempfile
-import atexit
 from copy import deepcopy
 import subprocess
 from dearpygui import dearpygui as dpg
 
-from yonder.util import logger
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import CurveInterpolation
 from yonder.gui.localization import µ
@@ -18,15 +14,6 @@ from yonder.gui import style
 
 
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
-
-_tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
-atexit.register(lambda t: t.is_dir() and shutil.rmtree(t), _tmp_dir)
-logger.info(f"Temporary files will be stored in {_tmp_dir}")
-
-
-def get_temp_dir() -> Path:
-    _tmp_dir.mkdir(parents=True, exist_ok=True)
-    return _tmp_dir
 
 
 def estimate_drawn_text_size(
