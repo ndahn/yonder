@@ -1,4 +1,5 @@
 from typing import Any
+import time
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode, lookup_name, calc_hash
@@ -189,7 +190,6 @@ class add_hirc_player(DpgItem):
         dpg.push_container_stack(self._t("popup_states"))
 
         all_states, all_rtpcs = self._player.collect_control_states(False)
-        active_states, active_rtpcs = self._player.collect_control_states(True)
 
         if all_rtpcs:
             with dpg.tree_node(label=µ("RTPC"), default_open=True):
@@ -197,6 +197,7 @@ class add_hirc_player(DpgItem):
                 def toggle_rtpcs_active_only(
                     sender: str, enabled: bool, cb_user_data: Any
                 ) -> None:
+                    dpg.set_value(sender, enabled)
                     _, active_rtpcs = self._player.collect_control_states(True)
                     for child in dpg.get_item_children(self._t("rtpcs_group"), slot=1):
                         ud = dpg.get_item_user_data(child)
@@ -222,8 +223,9 @@ class add_hirc_player(DpgItem):
                             height=15,
                             callback=self._on_set_rtpc,
                             user_data=rtpc,
-                            show=rtpc in active_rtpcs,
                         )
+
+                toggle_rtpcs_active_only(self._t("rtpcs_active_only"), True, None)
 
         if all_states:
             with dpg.tree_node(label=µ("States"), default_open=True):
@@ -231,14 +233,16 @@ class add_hirc_player(DpgItem):
                 def toggle_states_active_only(
                     sender: str, enabled: bool, cb_user_data: Any
                 ) -> None:
+                    dpg.set_value(sender, enabled)
                     active_states, _ = self._player.collect_control_states(True)
                     for group in all_states:
                         show = not enabled or group in active_states
                         dpg.configure_item(self._t(f"state_value_{group}"), show=show)
+                        # TODO adjust theme if not active
 
                 dpg.add_checkbox(
                     label=µ("For active nodes only"),
-                    default_value=True,
+                    default_value=False,
                     callback=toggle_states_active_only,
                     tag=self._t("states_active_only"),
                 )
@@ -255,10 +259,11 @@ class add_hirc_player(DpgItem):
                             self._on_set_state,
                             default_value=state_names[0],
                             raw=True,
-                            show=(group in active_states),
                             user_data=group,
                             tag=self._t(f"state_value_{group}"),
                         )
+                
+                toggle_states_active_only(self._t("states_active_only"), True, None)
 
         if not all_rtpcs and not all_states:
             dpg.add_text(µ("(no RTPCs/states)"), color=style.light_grey)
@@ -293,6 +298,8 @@ class add_hirc_player(DpgItem):
         else:
             self._player.play()
             self._set_play_button_state(True)
+            time.sleep(0.1)
+            self.regenerate()
 
     def _on_ctrl_forward_10s(self) -> None:
         if self._player:

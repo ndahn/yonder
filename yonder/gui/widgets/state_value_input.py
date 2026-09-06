@@ -15,6 +15,9 @@ def _get_label(value: int | str) -> str:
         else:
             return value
 
+    if not value:
+        return "-"
+
     if isinstance(value, int):
         return lookup_name(value, f"#{value}")
 
@@ -32,7 +35,7 @@ class add_state_value_input(DpgItem):
         empty_value: int = 0,
         custom_values: dict[str, int] = None,
         raw: bool = False,
-        readonly: bool = True,
+        readonly: bool = False,
         textbox_width: int = 160,
         show: bool = True,
         parent: str = 0,
@@ -48,12 +51,13 @@ class add_state_value_input(DpgItem):
         self._custom_values = custom_values or {}
         self._raw = raw
 
+        self._custom_values.setdefault("-", 0)
+
         with dpg.group(horizontal=True, show=show, parent=parent, tag=self.tag):
             dpg.add_input_text(
                 default_value=_get_label(default_value),
                 width=textbox_width,
                 readonly=readonly,
-                enabled=not readonly,
                 callback=self._on_value_changed,
                 tag=self._t("input"),
             )
