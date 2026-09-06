@@ -162,14 +162,13 @@ class add_select_node(DpgItem):
         else:
             node = self._bnk.get(name)
             if not node:
-                if name.startswith("#"):
-                    name = name[1:]
+                name = name.removeprefix("#")
 
                 if name.isdigit():
                     node = int(name)
                 else:
                     # Not a valid node identifier
-                    return None
+                    return
 
         self.selected_node = node
         if self._callback:

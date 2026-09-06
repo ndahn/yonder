@@ -203,10 +203,10 @@ class DecisionTreeMixin:
                     break
             else:
                 if not wildcard:
-                    arg_name = lookup_name(
-                        self.arguments[idx].group_id, f"#{self.arguments[idx].group_id}"
-                    )
+                    arg = self.arguments[idx].group_id
+                    arg_name = lookup_name(arg, f"#{arg}")
                     val_name = lookup_name(val, f"#{val}")
+                    
                     raise ValueError(
                         f"Decision tree has no node at level {idx} ({arg_name}) to match {val} ({val_name})"
                     )
