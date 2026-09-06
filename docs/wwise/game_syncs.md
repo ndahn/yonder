@@ -1,4 +1,6 @@
-# Game Parameters
+# Game Syncs
+
+> [Wwise documentation](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=WwiseFundamentalApproach&id=what_are_game_syncs)
 
 Besides using [events](events.md) for (de-)activating different subtrees of the [HIRC](soundbanks.md#hirc), there are additional means the game may utilize for more fine-grained control over playback.
 

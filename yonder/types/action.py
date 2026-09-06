@@ -98,6 +98,10 @@ class Action(PropertyMixin, HIRCNode):
         )
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/events/#actions"
+
+    @property
     def action_type_enum(self) -> ActionType:
         # NOTE "action_type" is already reserved for serialization
         return ActionType(self.action_type)

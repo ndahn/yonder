@@ -1,4 +1,5 @@
 from typing import Callable
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -169,6 +170,13 @@ class create_wwise_event_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("playstop/button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/simple_sounds/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/simple_sounds/")
 
     def show_message(
         self, msg: str = None, color: tuple[int, int, int, int] = style.red

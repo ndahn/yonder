@@ -425,6 +425,9 @@ class add_graph_widget(DpgItem):
 
     # === Public ========================================================
 
+    def clear(self) -> None:
+        dpg.delete_item(self._t("yaxis"), children_only=True, slot=1)
+
     def regenerate(
         self,
         bnk: Soundbank = None,

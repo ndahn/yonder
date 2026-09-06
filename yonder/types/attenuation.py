@@ -47,6 +47,10 @@ class Attenuation(RtpcMixin, HIRCNode):
             cone_params=cone_params or ConeParams(),
         )
 
+    @property
+    def wwise_link(self) -> str:
+        return "https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_attenuation_curves_for_various_object_properties#wwise_properties_for_attenuation_curves_list"
+
     def get_curve(self, prop: AttenuationProperty) -> ConversionTable:
         idx = self.curves_to_use[prop.value]
         if idx == NO_CURVE:

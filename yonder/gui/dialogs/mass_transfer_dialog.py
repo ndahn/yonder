@@ -1,5 +1,6 @@
 from typing import Any
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
@@ -513,6 +514,16 @@ class mass_transfer_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/mass_transfer/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/mass_transfer/")
+
+                dpg.add_text("|")
+
                 dpg.add_button(
                     label=µ("Save", "button"),
                     callback=self._on_save,

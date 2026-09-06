@@ -43,10 +43,10 @@ class about_dialog(DpgItem):
                         color=style.light_grey,
                     )
                     dpg.add_button(
-                        label="https://github.com/ndahn/yonder",
+                        label="https://ndahn.github.io/yonder/",
                         small=True,
                         callback=lambda: webbrowser.open(
-                            "https://github.com/ndahn/yonder"
+                            "https://ndahn.github.io/yonder/"
                         ),
                     )
                     dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)

@@ -40,7 +40,7 @@ class Event(HIRCNode):
 
     @property
     def wwise_link(self):
-        return "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
+        return "https://ndahn.github.io/yonder/wwise/events/"
 
     def get_wwise_name(self, default: Any = None) -> str:
         name = self.name

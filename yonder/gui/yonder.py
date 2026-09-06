@@ -1231,6 +1231,7 @@ class BanksOfYonder(DpgItem):
         logger.info(µ("Loading soundbank {name}", "log").format(name=path))
         with loading_indicator(µ("Loading soundbank...", "loading")):
             self.remove_all_pinned_objects()
+            self._graph_widget.clear()
             dpg.set_value(self._t("events_filter"), "")
             dpg.set_value(self._t("globals_filter"), "")
 

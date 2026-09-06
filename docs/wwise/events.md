@@ -4,9 +4,9 @@ Playback of sounds is controlled from the game by posting events to Wwise. These
 
 In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
 
-* `<action>` is either `Play` or `Stop`
-* `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects,  `c` for character sounds,  `v` for voice lines...)
-* `<id>` is a 9-digit number
+- `<action>` is either `Play` or `Stop`
+- `<type>` is a single character to differentiate different types of sounds (e.g. `s` for sound effects, `c` for character sounds, `v` for voice lines...)
+- `<id>` is a 9-digit number
 
 !!! info
 
@@ -14,24 +14,24 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
 
 ## Sound Types
 
-| Type | Name |
-| ---- | ---- |
-| `a` | Environment |
-| `c` | Character |
-| `f` | Menu |
-| `o` | Object |
-| `p` | CutsceneSe |
-| `s` | Sfx |
-| `m` | Bgm |
-| `v` | Voice |
-| `x` | FloorMaterialDetermined |
-| `b` | ArmorMaterialDetermined |
-| `i` | Phantom |
-| `y` | MultiChannelStreaming |
-| `z` | MaterialRelated |
-| `e` | FootEffect |
-| `g` | GeometryAsset |
-| `d` | DynamicDialog |
+| Type | Name                    |
+| ---- | ----------------------- |
+| `a`  | Environment             |
+| `c`  | Character               |
+| `f`  | Menu                    |
+| `o`  | Object                  |
+| `p`  | CutsceneSe              |
+| `s`  | Sfx                     |
+| `m`  | Bgm                     |
+| `v`  | Voice                   |
+| `x`  | FloorMaterialDetermined |
+| `b`  | ArmorMaterialDetermined |
+| `i`  | Phantom                 |
+| `y`  | MultiChannelStreaming   |
+| `z`  | MaterialRelated         |
+| `e`  | FootEffect              |
+| `g`  | GeometryAsset           |
+| `d`  | DynamicDialog           |
 
 !!! info
 
@@ -39,4 +39,4 @@ In Fromsoft games, most events follow the pattern `<action>_<type><id>` , where
 
 ## Actions
 
-When an event is activated, it triggers all of its actions, which most commonly include a *Play* or *Stop* action to (de-)activate part of the hierarchy. Actions can also be used to mute or "duck" busses (i.e. lower their volume for the duration of the event), set [game parameters](game_parameters.md), stop other sounds, etc. Depending on the action type these can also make exceptions, and it is even possible to in turn trigger other events (*allowing for some truely cursed setups if you're willing to go the extra mile*).
+When an event is activated, it triggers all of its actions, which most commonly include a _Play_ or _Stop_ action to (de-)activate part of the hierarchy. Actions can also be used to mute or "duck" busses (i.e. lower their volume for the duration of the event), set [game parameters](game_syncs.md), stop other sounds, etc. Depending on the action type these can also make exceptions, and it is even possible to in turn trigger other events (_allowing for some truely cursed setups if you're willing to go the extra mile_).

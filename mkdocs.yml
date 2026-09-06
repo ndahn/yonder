@@ -36,10 +36,11 @@ nav:
   - Wwise:
     - Soundbanks: wwise/soundbanks.md
     - Node Types: wwise/node_types.md
+    - Events: wwise/events.md
     - Sounds: wwise/sounds.md
     - Music: wwise/music.md
     - Globals: wwise/globals.md
-    - Game Parameters: wwise/game_parameters.md
+    - Game Syncs: wwise/game_syncs.md
     - Units: wwise/units.md
   - Yonder:
     - How to Yonder: yonder/howto.md

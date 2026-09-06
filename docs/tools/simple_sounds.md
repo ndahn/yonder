@@ -1,5 +1,9 @@
 # Simple Sounds
 
+![](assets/images/tool_simple_sound.png)
+
+Creates a simple one-shot sound structure. Based on the selected playback mode, sounds added will be either played back in sequence or at random. See [RandomSequenceContainers](../wwise/sounds.md#random-sequence-container) for more details.
+
 ```mermaid
 flowchart TD
     Play["[Event]" Play_x123456789] -->|Play-Action| RSC(RandomSequenceContainer)
@@ -8,5 +12,3 @@ flowchart TD
     RSC --> S2(Sound2)
     RSC --> SN(...)
 ```
-
-Creates a simple one-shot sound structure. Based on the selected playback mode, sounds added will be either played back in sequence or at random. See [RandomSequenceContainers](../wwise/sounds.md#random-sequence-container) for more details.

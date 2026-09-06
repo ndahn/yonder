@@ -1,9 +1,5 @@
 # Soundbanks
 
-!!! tip
-
-    To make your own soundbank, follow [this guide](../guides/custom_banks.md)!
-
 A soundbank is a binary file in Audiokinetik's prorprietary format that organizes information in various sections. The most important sections are the HIRC (Hierarchy), where playback graphs are stored, and DATA, which contains (most of) the audio data.
 
 !!! info
@@ -24,6 +20,10 @@ In recent Fromsoft games, soundbanks were organized as follows:
 | `cs_mXX`   | Map-specific sounds.                                                           |
 | `cs_smXX`  | Sounds for cutscenes (by map ID).                                              |
 | \*         | Others will usually be game-object specific, e.g. `aeg` for game assets.       |
+
+!!! tip
+
+    To make your own soundbank, follow [this guide](../guides/custom_banks.md)!
 
 ## Sections
 

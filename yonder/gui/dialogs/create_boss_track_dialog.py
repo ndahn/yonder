@@ -1,6 +1,7 @@
 from typing import Any, Callable
 from pathlib import Path
 from copy import deepcopy
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -296,6 +297,13 @@ class create_boss_track_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/boss_bgm/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/boss_bgm/")
 
     def _build_tab_tracks(self) -> None:
         with dpg.tab(label=µ("Tracks")):

@@ -1,5 +1,6 @@
 from typing import Any
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
@@ -196,3 +197,10 @@ class unmangle_soundbanks_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/unmangle/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/unmangle/")

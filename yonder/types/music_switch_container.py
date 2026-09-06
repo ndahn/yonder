@@ -62,6 +62,10 @@ class MusicSwitchContainer(DecisionTreeMixin, StateMixin, RtpcMixin, PropertyMix
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/music/#music-switch-container"
+
+    @property
     def transition_rules(self) -> list[MusicTransitionRule]:
         return self.music_trans_node_params.transition_rules
 

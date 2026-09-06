@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import ClassVar
-import numpy
 import random
 from dataclasses import dataclass, field
 import pyo
@@ -70,6 +69,10 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         obj.parent = parent
         return obj
+
+    @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/sounds/#random-sequence-container"
 
     @property
     def parent(self) -> int:

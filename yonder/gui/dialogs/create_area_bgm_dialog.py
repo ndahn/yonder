@@ -4,6 +4,7 @@ from pathlib import Path
 from copy import deepcopy
 from dataclasses import dataclass, field
 from collections import Counter
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -290,7 +291,7 @@ Area tree:
                 self._on_area_val_changed,
                 default_value=_WILDCARD,
                 custom_values={"*": 0},
-                textbox_width=160,
+                width=160,
                 user_data=idx,
             )
             self._area_state_widgets[idx] = widget
@@ -353,7 +354,7 @@ Area tree:
             self._on_local_arg_name_changed,
             default_value=arg,
             custom_values={"*": 0},
-            textbox_width=200,
+            width=200,
             user_data=idx,
         )
         self._local_state_widgets[idx] = widget
@@ -773,8 +774,8 @@ Area tree:
     def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
-            width=640,
-            height=640,
+            width=520,
+            height=570,
             no_saved_settings=True,
             tag=self.tag,
             on_close=lambda: dpg.delete_item(self.tag),
@@ -785,16 +786,32 @@ Area tree:
                 self._build_tab_tracks()
                 self._build_tab_summary()
 
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label=µ("Let there be light!", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("btn_okay"),
+                )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/area_bgm/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/area_bgm/")
+
     def _build_tab_area_selector(self) -> None:
         with dpg.tab(label=µ("Area Selector")):
             dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-125,
+                height=-165,
             ):
                 valid_msc_arg_hash = calc_hash("BgmPlaceType")
-                dpg.add_text(µ("MusicSwitchContainer"))
                 add_select_node(
                     self.bnk,
                     "MusicSwitchContainer",
@@ -802,6 +819,7 @@ Area tree:
                     get_node_details=get_details_musicswitchcontainer,
                     node_type=MusicSwitchContainer,
                     extra_query=f"arguments:*/group_id={valid_msc_arg_hash}",
+                    textbox_width=200,
                 )
 
                 dpg.add_spacer(height=4)
@@ -850,7 +868,7 @@ Area tree:
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-90,
+                height=-130,
             ):
                 dpg.add_spacer(height=4)
                 self._area_states_table = add_widget_table(
@@ -917,13 +935,6 @@ Area tree:
                 tag=self._t("notification"),
                 show=False,
                 color=style.red,
-            )
-
-            dpg.add_spacer(height=4)
-            dpg.add_button(
-                label=µ("Let there be light!", "button"),
-                callback=self._on_okay,
-                tag=self._t("btn_okay"),
             )
 
     def _make_callback(

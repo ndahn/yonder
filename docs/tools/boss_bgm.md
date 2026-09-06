@@ -1,5 +1,7 @@
 # Boss Music
 
+![](assets/images/tool_boss_bgm.png)
+
 Boss tracks are regular music tracks with complications. It's worth considering the following:
 
 - should your boss theme play an intro before going into the loop?
@@ -13,13 +15,13 @@ Yonder can set all of this up for you (in the Fromsoft-typical fashion), but eve
 
 ## BgmEnemyType
 
-As briefly described in the section about [custom banks](../guides/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single *MusicSwitchContainer* which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_parameters.md#states). For this reason, music can *only* be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps). You can of course *still* use additional states, e.g. to introduce variations for different weather types.
+As briefly described in the section about [custom banks](../guides/custom_banks.md#what-goes-where), in Fromsoft games all music lives under a single _MusicSwitchContainer_ which transitions between music pieces using a decision tree that's reading global [states](../wwise/game_syncs.md#states). For this reason, music can _only_ be added to the `cs_smain` (s!) for now. The state that causes the container to switch to boss music is called `BgmEnemyType` - if it's set to a value associated with a boss bgm the boss music plays, otherwise the decision is left to other state variables (e.g. `BgmPlaceType` for different maps). You can of course _still_ use additional states, e.g. to introduce variations for different weather types.
 
 !!! tip
 
     To find and browse the music decision tree, open the `cs_smain` (sss!) soundbank and unfold the `Play_m000000000` event. You will find a music switch container with several dozen children. Open it and let it load, then unfold the *Decision Tree* widget.
 
-When setting up a new boss bgm you need to choose a string it should react to. This can be your boss' *chr ID*, it's name, or anything else as long as you're able to remember it. Write it down somewhere. *No, really - do it*.
+When setting up a new boss bgm you need to choose a string it should react to. This can be your boss' _chr ID_, it's name, or anything else as long as you're able to remember it. Write it down somewhere. _No, really - do it_.
 
 !!! warning
 
@@ -27,7 +29,7 @@ When setting up a new boss bgm you need to choose a string it should react to. T
 
 ## Trims & Loop Points
 
-Even if you don't want any extras, you probably still want to trim your song and define where it should loop. To adjust these, simply drag the red and green markers on the track view (by default they will be placed at the very beginning and end). You can test your loop by enabling the *Loop* and *Test* checkboxes, which will cause yonder to only play a few seconds around the loop on repeat.
+Even if you don't want any extras, you probably still want to trim your song and define where it should loop. To adjust these, simply drag the red and green markers on the track view (by default they will be placed at the very beginning and end). You can test your loop by enabling the _Loop_ and _Test_ checkboxes, which will cause yonder to only play a few seconds around the loop on repeat.
 
 !!! info
 
@@ -35,7 +37,7 @@ Even if you don't want any extras, you probably still want to trim your song and
 
 ## Intros
 
-An intro plays the first part of a track before the loop-start point once and then enters the loop. If enabled, Yonder will do exactly that: setup the part between begin-trim and loop-start as an intro, then setup a segment with the actual loop. This is done using a [MusicRandomSequenceContainer](../wwise/music.md#music-random-sequence-container) with a playlist where the first playlist item is marked as a *loop base*.
+An intro plays the first part of a track before the loop-start point once and then enters the loop. If enabled, Yonder will do exactly that: setup the part between begin-trim and loop-start as an intro, then setup a segment with the actual loop. This is done using a [MusicRandomSequenceContainer](../wwise/music.md#music-random-sequence-container) with a playlist where the first playlist item is marked as a _loop base_.
 
 ## Boss Phases
 
@@ -49,35 +51,39 @@ When adding additional audio files to the boss bgm tool they are setup as additi
 
 Boss music is controlled through EMEVD, Fromsoft's event scripting language, which you can edit using [Darkscript3](https://github.com/AinTunez/DarkScript3/releases). There are several [very nice tutorials](https://www.soulsmodding.com/doku.php?id=tutorial:intro-to-elden-ring-emevd) on how to write EMEVD (or rather MattScript), but the two instructions you want to look out for are [`SetBosBGM`](https://soulsmods.github.io/emedf/er-emedf.html#SetBossBGM) and [`SetFieldBattleBGMHeatUp`](https://soulsmods.github.io/emedf/er-emedf.html#SetFieldBattleBGMHeatUp).
 
-These instructions __don't__ set the `BgmEnemyType` or `BossBattleState` directly. For the `SetFieldBattleBGMHeatUp` you pass it a "threat level" integer (a number between 0 and ~50). This will be mangled into a string like *FieldBoss_ThreatLevel15* and is meant for generic bosses open-world that don't have a unique theme.
+These instructions **don't** set the `BgmEnemyType` or `BossBattleState` directly. For the `SetFieldBattleBGMHeatUp` you pass it a "threat level" integer (a number between 0 and ~50). This will be mangled into a string like _FieldBoss_ThreatLevel15_ and is meant for generic bosses open-world that don't have a unique theme.
 
-More interestingly, of course, is `SetBossBGM`, which is used for unique boss themes. Still, you don't pass it a string - instead you give it an ID which maps to a row in the `WwiseValueToStringParam_BgmBossChrIdConv` param in the regulation bin, which then contains the actual string which is used to set the Wwise state. However, as mentioned above, unless you're using a [dll](#unlocking-additional-states), only the predefined strings can be used, which leaves you with 8 unused "Reserved" states in Elden Ring and 1 (*2?*) in Nightreign.
+More interestingly, of course, is `SetBossBGM`, which is used for unique boss themes. Still, you don't pass it a string - instead you give it an ID which maps to a row in the `WwiseValueToStringParam_BgmBossChrIdConv` param in the regulation bin, which then contains the actual string which is used to set the Wwise state. However, as mentioned above, unless you're using a [dll](#unlocking-additional-states), only the predefined strings can be used, which leaves you with 8 unused "Reserved" states in Elden Ring and 1 (_2?_) in Nightreign.
 
 To activate a heatup phase you don't need to do anything extra. Simply pass e.g. `BossBGMState.HeatUp` to the `SetBossBGM` instruction instead of `BossBGMState.Start/Stop/etc.`.
 
 An EMEVD event for a boss with no heatup phases may look like this:
 
 ```js
-    $Event(0, Default, function(bossEntityId, bossDefeatedFlag, areaEntityId, bgmParamId) {
-        DisableCharacter(bossEntityId);
-        DisableCharacterAI(bossEntityId);
-        
-        // Check if boss is already defeated
-        if (EventFlag(bossDefeatedFlag)) {
-            DisableCharacterCollision(bossEntityId);
-            ForceCharacterDeath(bossEntityId, false);
-            EndEvent();
-        }
+$Event(
+  0,
+  Default,
+  function (bossEntityId, bossDefeatedFlag, areaEntityId, bgmParamId) {
+    DisableCharacter(bossEntityId);
+    DisableCharacterAI(bossEntityId);
 
-        // Player enters area
-        WaitFor(InArea(10000, areaEntityId));
+    // Check if boss is already defeated
+    if (EventFlag(bossDefeatedFlag)) {
+      DisableCharacterCollision(bossEntityId);
+      ForceCharacterDeath(bossEntityId, false);
+      EndEvent();
+    }
 
-        // The boss makes its entrance
-        EnableCharacter(bossEntityId);
-        EnableCharacterAI(bossEntityId);
-        ForceAnimationPlayback(bossEntityId, 20026, false, false, false);
-        SetBossBGM(123456, BossBGMState.Start);
-    });
+    // Player enters area
+    WaitFor(InArea(10000, areaEntityId));
+
+    // The boss makes its entrance
+    EnableCharacter(bossEntityId);
+    EnableCharacterAI(bossEntityId);
+    ForceAnimationPlayback(bossEntityId, 20026, false, false, false);
+    SetBossBGM(123456, BossBGMState.Start);
+  },
+);
 ```
 
 !!! info
@@ -93,7 +99,7 @@ In order to use arbitrary strings for the `BgmEnemyType` you need a dll. Yonder 
     path=<path/to/unlock_wwise_state.dll>
 ```
 
-Once you have done this, new rows you add to `WwiseValueToStringParam_BgmBossChrIdConv` param can be used like any other ID in `SetBossBGM` - *just make sure they have at most 6 digits*.
+Once you have done this, new rows you add to `WwiseValueToStringParam_BgmBossChrIdConv` param can be used like any other ID in `SetBossBGM` - _just make sure they have at most 6 digits_.
 
 !!! bug
 

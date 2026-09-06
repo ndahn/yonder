@@ -1,5 +1,6 @@
 from typing import Any, Callable
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
@@ -155,6 +156,13 @@ class create_simple_sound_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("simple_sound/button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/simple_sounds/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/simple_sounds/")
 
     # === DPG callbacks =================================================
 

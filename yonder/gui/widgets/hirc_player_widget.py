@@ -467,6 +467,7 @@ class add_hirc_player(DpgItem):
             show=False,
             tag=self._t("popup_attenuation"),
         ):
+            # TODO non-editable link to attenuation
             self._attenuation_plot = add_attenuation_plot(
                 None, self._on_set_distance_angle
             )

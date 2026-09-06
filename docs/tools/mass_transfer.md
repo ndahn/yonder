@@ -1,5 +1,7 @@
 # Mass Transfer
 
+![](assets/images/tool_mass_transfer.png)
+
 Soundbanks are only loaded when their corresponding game object is loaded, so oftentimes you simply want to transfer a couple sounds from e.g. an enemy's soundbank to the player's. The *Mass Transfer* tool let's you do exactly that. 
 
 ## Selecting IDs

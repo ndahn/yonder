@@ -65,7 +65,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     @property
     def wwise_link(self) -> str:
-        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=defining_playback_behavior_for_music_tracks"
+        return "https://ndahn.github.io/yonder/wwise/music/#segments-tracks"
 
     @property
     def track_type_enum(self) -> MusicTrackType:

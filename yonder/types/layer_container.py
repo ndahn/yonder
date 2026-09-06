@@ -56,7 +56,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     @property
     def wwise_link(self) -> str:
-        return "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
+        return "https://ndahn.github.io/yonder/wwise/sounds/#layer-container"
 
     @property
     def parent(self) -> int:

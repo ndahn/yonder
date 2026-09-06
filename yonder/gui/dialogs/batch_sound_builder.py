@@ -2,6 +2,7 @@ from typing import Any, Callable
 import re
 from pathlib import Path
 from dataclasses import dataclass, field
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Hash
@@ -547,6 +548,13 @@ class create_batch_sound_builder_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/batch_sound_builder/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/batch_sound_builder/")
 
     @property
     def groups(self) -> list[BatchGroup]:

@@ -8,14 +8,16 @@ Yonder currently has two audio players: the legacy one works well, but only play
 
 ## The HIRC Player
 
+![](assets/images/hirc_player.png)
+
 Yonder now comes with a player widget that emulates part of the in-game playback. In particular, it will traverse the currently selected subtree, accumulate modifiers, and mix and play branches based on user-defined virtual game state. In particular you can control the following:
 
 - global and per-voice volume
 - frequency equalizer (game-specific presets will be added later)
-- [game paramters](../wwise/game_parameters.md)
+- [game paramters](../wwise/game_syncs.md)
 - listener distance and angle from the source
 
-All of this is still experimental and I'm not sure how far I can (or want to) take it. The following Wwise things are currently *not* supported:
+All of this is still experimental and I'm not sure how far I can (or want to) take it. The following Wwise things are currently _not_ supported:
 
 - effects (i.e. only the dry signal is processed)
 - transition rules (except for fade durations)

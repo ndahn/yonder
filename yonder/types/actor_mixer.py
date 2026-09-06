@@ -39,6 +39,10 @@ class ActorMixer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/globals/"
+
+    @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
 

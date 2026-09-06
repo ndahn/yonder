@@ -36,13 +36,10 @@ class AmxData:
         return sum([self.aux1, self.aux2, self.aux3, self.aux4]) > 0
 
     @classmethod
-    def from_actormixer(cls, bnk: Soundbank | str, amx: ActorMixer) -> AmxData:
-        if isinstance(bnk, Soundbank):
-            bnk = bnk.get_name()
-
+    def from_actormixer(cls, bnk: Soundbank, amx: ActorMixer) -> AmxData:
         data = AmxData(
             amx.id,
-            bnk,
+            bnk.get_name(),
             amx.parent,
             amx.node_base_params.override_bus_id,
             amx.node_base_params.aux_params.aux1,

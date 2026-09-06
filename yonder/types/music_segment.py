@@ -59,7 +59,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
     @property
     def wwise_link(self):
-        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=what_is_music_segment"
+        return "https://ndahn.github.io/yonder/wwise/music/#segments-tracks"
 
     @property
     def parent(self) -> int:

@@ -2,8 +2,8 @@
 
 Wwise includes a large variety of node and data types that influence playback and audio output in many different ways. Yonder (or rather me, arbitrarily :) ) divides these into two groups: playback nodes and globals.
 
-!!! tip 
-    
+!!! tip
+
     Further details on the inner workings of Wwise can generally be found on the [Audiokinetic website](https://www.audiokinetic.com/en/documentation).
 
 ## Playback Nodes
@@ -12,8 +12,8 @@ Playback nodes are activated through [events](events.md) and take active part in
 
 !!! info
 
-    Most playback nodes accept properties and can react to [states and RTPCs](game_parameters.md). When a source is played back, it will use the [accumulated values](units.md#accumulation) of all of these modifiers, e.g. volume, low-pass, high-pass, pitch...
+    Most playback nodes accept properties and can react to [states and RTPCs](game_syncs.md). When a source is played back, it will use the [accumulated values](units.md#accumulation) of all of these modifiers, e.g. volume, low-pass, high-pass, pitch...
 
 ## Globals
 
-[Globals](globals.md) are often referenced from other nodes without becoming part of the playback hierarchy, e.g. audio busses or effects. Yonder separates these from regular nodes to make browing the hierarchy a little less clunky. [States](game_parameters.md) are also stored as nodes.
+[Globals](globals.md) are often referenced from other nodes without becoming part of the playback hierarchy, e.g. audio busses or effects. Yonder separates these from regular nodes to make browing the hierarchy a little less clunky. [States](game_syncs.md) are also stored as nodes.

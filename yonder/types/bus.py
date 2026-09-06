@@ -37,6 +37,10 @@ class Bus(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/globals/#busses"
+
+    @property
     def properties(self) -> list[PropBundle]:
         return self.initial_values.bus_initial_params.prop_bundle
 

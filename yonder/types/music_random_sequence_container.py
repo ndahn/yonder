@@ -60,7 +60,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
     @property
     def wwise_link(self) -> str:
-        return "https://www.audiokinetic.com/fr/public-library/2025.1.10_9233/?source=Help&id=defining_playback_behavior_of_music_playlist_containers"
+        return "https://ndahn.github.io/yonder/wwise/music/#music-random-sequence-container"
 
     @property
     def transition_rules(self) -> list[MusicTransitionRule]:
