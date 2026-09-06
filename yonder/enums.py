@@ -1,5 +1,5 @@
 from __future__ import annotations
-from enum import IntEnum, StrEnum, auto
+from enum import IntEnum, StrEnum, Enum, auto
 
 
 class EnumWithUnknown(IntEnum):
@@ -19,7 +19,7 @@ class EnumWithUnknown(IntEnum):
         return super().__eq__(other)
 
 
-class Game(IntEnum):
+class Game(Enum):
     EldenRing = 0
     Nightreign = 1
     # ArmoredCore6 = 2
@@ -223,7 +223,7 @@ class MusicTrackType(EnumWithUnknown):
     # - Switch
 
 
-class Units(IntEnum):
+class Units(Enum):
     None_ = auto()
     Count = auto()
     Ratio = auto()

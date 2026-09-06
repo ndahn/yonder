@@ -1255,8 +1255,8 @@ class BanksOfYonder(DpgItem):
             load_lookup_table(get_bank_lookup_table_path(self.bnk), True)
 
             guessed_game = guess_game(self.bnk.bnk_dir)
-            if guessed_game:
-                logger.info(f"Guessed game {guessed_game.name}")
+            if guessed_game is not None:
+                logger.info(f"Guessed game: {guessed_game.name}")
                 set_game(guessed_game)
                 dpg.set_value(self._t("menu/selected_game"), guessed_game.name)
             else:

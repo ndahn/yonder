@@ -37,7 +37,7 @@ class unmangle_soundbanks_dialog(DpgItem):
 
     def _on_banks_path_changed(self, sender: str, path: Path, user_data: Any) -> None:
         game = guess_game(path)
-        if game:
+        if game is not None:
             self._show_message()
             self._detected_game = game
             self._banks_path = path

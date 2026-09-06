@@ -52,8 +52,8 @@ def get_game_objects(game: Game) -> type[GameObjects]:
     for game_spec in GameObjects.__subclasses__():
         if game_spec.game == game:
             return game_spec
-    else:
-        raise ValueError(f"Game {game} is not supported yet")
+    
+    raise ValueError(f"Game {game} is not supported yet")
 
 
 def guess_game(path: Path) -> Game:
@@ -82,14 +82,14 @@ def guess_game(path: Path) -> Game:
             # If we can find an me3 profile it's somewhat safe to assume it's related
             # to this soundbank
             for line in me3profile.read_text().splitlines():
-                if re.match(r"^game\w*=.*", line):
-                    game = line.split("=")[-1].strip().lower()
+                if re.match(r"^game\s*=.*", line):
+                    line = line.lower()
 
-                    if game == "eldenring":
+                    if "eldenring" in line:
                         return Game.EldenRing
-                    if game == "nightreign":
+                    if "nightreign" in line:
                         return Game.Nightreign
-                    if game == "armoredcore6":
+                    if "armoredcore6" in line:
                         return Game.ArmoredCore6
 
         path = path.parent
