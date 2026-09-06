@@ -157,7 +157,6 @@ class Action(PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
         ctx = my_pyo.ctx
 
         if self.action_type_enum == ActionType.SetState:

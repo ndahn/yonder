@@ -312,7 +312,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
+        my_pyo.play()
         self._play_next(ctx)
 
     def _play_next(self, ctx: PlayContext) -> None:

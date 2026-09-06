@@ -157,7 +157,6 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.cache["fader"]
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
@@ -190,3 +189,5 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         # Don't kill the voice we just started
         if prev_node and prev_node != child:
             prev_node.release_pyo(ctx, xfade + 0.1)
+
+        my_pyo.play()

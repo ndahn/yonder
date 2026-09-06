@@ -1311,10 +1311,19 @@ class BanksOfYonder(DpgItem):
                     valid_nodes.update(nx.descendants(g, n.id))
 
             def delve(node: HIRCNode) -> None:
-                references = node.get_references()
+                references = []
                 seen = set()
 
-                for _, ref_id in references:
+                if hasattr(node, "children"):
+                    references = node.children.items
+                elif isinstance(node, Event):
+                    references = node.actions
+                elif isinstance(node, Action):
+                    references = [node.external_id]
+                elif isinstance(node, ActorMixer):
+                    references = [node.node_base_params.override_bus_id]
+
+                for ref_id in references:
                     if ref_id in seen:
                         continue
 

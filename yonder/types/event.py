@@ -143,7 +143,6 @@ class Event(HIRCNode):
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
         ctx = my_pyo.ctx
 
         for action in self.get_action_nodes(ctx.bank):

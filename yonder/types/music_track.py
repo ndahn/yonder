@@ -249,7 +249,6 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
         self.update_playback(ctx)
         self.register_end_trigger(ctx, self._on_track_end)
         my_pyo.play()
@@ -262,9 +261,6 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.pyo(ctx).output.seek(pos)
 
     def update_playback(self, ctx: PlayContext) -> None:
-        if not self.is_pyo_initialized():
-            return
-
         my_pyo = self.pyo(ctx)
         ctx = my_pyo.ctx
         stream: MultiTrackStream = my_pyo.output

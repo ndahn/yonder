@@ -36,7 +36,7 @@ class HIRCPlayer:
         self._on_finished: Callable[[], None] = on_finished
 
         # NOTE crashes on some systems with input enabled, but we don't need it
-        self._server: pyo.Server = pyo.Server(sr=48000, duplex=0)
+        self._server: pyo.Server = pyo.Server(duplex=0)
         self._server.deactivateMidi()
         self._server.boot()
 

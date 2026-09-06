@@ -12,7 +12,9 @@ class PlaybackState:
     cache: dict = field(default_factory=dict)
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
+        self.playing = True
         self.output.play(dur, delay)
 
     def stop(self, wait: int = 0) -> None:
+        self.playing = False
         self.output.stop(wait)

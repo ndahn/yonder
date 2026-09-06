@@ -184,7 +184,6 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
-        my_pyo.playing = True
         ctx = my_pyo.ctx
 
         for _, ref in self.get_references():

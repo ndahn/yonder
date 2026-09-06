@@ -238,7 +238,6 @@ class HIRCNode(DataNode):
         if self.is_pyo_initialized():
             my_pyo = self.pyo(ctx)
             my_pyo.stop()
-            my_pyo.playing = False
             ctx = my_pyo.ctx
         else:
             ctx = ctx.merge(self)
