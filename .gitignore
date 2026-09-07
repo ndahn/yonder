@@ -9,6 +9,7 @@ dpg_demo.py
 yonder_v*
 *.*lock*
 export/
+binary-mapper.exe
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
