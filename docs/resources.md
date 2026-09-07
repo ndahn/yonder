@@ -23,7 +23,7 @@ Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-a
 > Nightreign: [unlock_wwise_states_nr.dll](assets/downloads/unlock_wwise_states_nr.dll) (1)
 </div>
 
-2. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
+1. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
 
 #### Read Game Syncs
 
@@ -35,7 +35,11 @@ yonder:
     game_sync_chr_id: 8000
 ```
 
-> Elden Ring: [yonder_live_states.dll]()
+<div class="annotate" markdown>
+> Elden Ring: [yonder_live_states.dll]() (1)
+</div>
+
+1. [Source code]()
 
 ## Mysteries
 
@@ -45,4 +49,4 @@ Elden Ring and Nightreign have slightly different `init` soundbanks, which cause
 
 *Many thanks to the lovely Raster for this!*
 
-> [init.bnk](assets/downloads/init.bnk)
+[init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary }
