@@ -13,11 +13,16 @@ path=<path/to/your_lib.dll>
 
 Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states).
 
+<div class="annotate" markdown>
 > Elden Ring: [unlock_wwise_states_er.dll](assets/downloads/unlock_wwise_states_er.dll) (1)
-> Nightreign: [unlock_wwise_states_nr.dll](assets/downloads/unlock_wwise_states_nr.dll) (2)
-{ .annotate }
+</div>
 
 1. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/eldenring/src/lib.rs)
+
+<div class="annotate" markdown>
+> Nightreign: [unlock_wwise_states_nr.dll](assets/downloads/unlock_wwise_states_nr.dll) (1)
+</div>
+
 2. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
 
 #### Read Game Syncs
