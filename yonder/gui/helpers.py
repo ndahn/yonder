@@ -32,7 +32,17 @@ def estimate_drawn_text_size(
     return w, h
 
 
-def center_window(window: str, parent: str = None) -> None:
+def center_window(
+    window: str,
+    xratio: float = 0.5,
+    yratio: float = 0.5,
+    *,
+    parent: str = None,
+    split_frame: bool = True,
+) -> None:
+    if split_frame:
+        dpg.split_frame()
+
     if parent:
         dpos = dpg.get_item_pos(parent)
         dsize = dpg.get_item_rect_size(parent)
@@ -45,8 +55,8 @@ def center_window(window: str, parent: str = None) -> None:
     dpg.set_item_pos(
         window,
         (
-            dpos[0] + (dsize[0] - psize[0]) / 2,
-            dpos[1] + (dsize[1] - psize[1]) / 2,
+            dpos[0] + (dsize[0] - psize[0]) * xratio,
+            dpos[1] + (dsize[1] - psize[1]) * yratio,
         ),
     )
 

@@ -9,6 +9,7 @@ from yonder.game import get_selected_game
 from yonder.game.data import AmxData, build_bank_actormixer_summary
 from yonder.gui import style
 from yonder.gui.icons import Icons
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.select_nodes_dialog import (
     select_nodes_dialog,
@@ -182,13 +183,20 @@ class add_select_node(DpgItem):
     def _select_node(
         self,
     ) -> None:
+        tag = self._t("select_node_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         select_nodes_dialog(
             self._get_nodes,
             self._on_node_selected,
             get_node_details=self._get_node_details,
             multiple=self._multiple,
             user_data=self._user_data,
+            tag=tag,
         )
+        center_window(tag, 0.2, 0.2)
 
     def _update_widget_state(self) -> None:
         if isinstance(self._selected_node, HIRCNode):

@@ -24,6 +24,7 @@ from yonder.convenience import (
 from yonder.game import get_selected_game
 from yonder.wem import wav2wem
 from yonder.gui import style
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
@@ -803,6 +804,21 @@ Area tree:
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text("https://ndahn.github.io/yonder/tools/area_bgm/")
 
+    def _edit_area_transition_rule(self) -> None:
+        tag = self._t("edit_area_transition_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
+        edit_transition_dialog(
+            self.area_transition,
+            [],
+            self._on_area_transition_changed,
+            lock_sync_type=True,
+            tag=tag,
+        )
+        center_window(tag, 0.2, 0.2)
+
     def _build_tab_area_selector(self) -> None:
         with dpg.tab(label=µ("Area Selector")):
             dpg.add_spacer(height=4)
@@ -838,12 +854,7 @@ Area tree:
                     )
                     dpg.add_button(
                         label=µ("Edit"),
-                        callback=lambda s, a, u: edit_transition_dialog(
-                            self.area_transition,
-                            [],
-                            self._on_area_transition_changed,
-                            lock_sync_type=True,
-                        ),
+                        callback=self._edit_area_transition_rule,
                         tag=self._t("btn_edit_area_transition"),
                     )
 

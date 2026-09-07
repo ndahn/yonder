@@ -1914,8 +1914,6 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def node_paste(self) -> None:
@@ -2153,8 +2151,6 @@ class BanksOfYonder(DpgItem):
             self._load_soundbank_confirm(bnk.json_path)
 
         new_soundbank_dialog(on_soundbank_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_create_node_dialog(self) -> None:
@@ -2170,8 +2166,6 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_settings_dialog(self) -> None:
@@ -2182,8 +2176,6 @@ class BanksOfYonder(DpgItem):
             return
 
         settings_dialog(tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_bank_rename_dialog(self) -> None:
@@ -2198,8 +2190,6 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
 
         rename_bank_dialog(self.bnk, on_bank_renamed, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_new_wwise_event_dialog(self) -> None:
@@ -2218,8 +2208,6 @@ class BanksOfYonder(DpgItem):
             self.select_node(nodes[0])
 
         create_wwise_event_dialog(self.bnk, on_events_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_simple_sound_dialog(self) -> None:
@@ -2243,8 +2231,6 @@ class BanksOfYonder(DpgItem):
             self.jump_to_node(play_evt)
 
         create_simple_sound_dialog(self.bnk, on_sound_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_batch_sound_builder_dialog(self) -> None:
@@ -2265,6 +2251,7 @@ class BanksOfYonder(DpgItem):
             self.jump_to_node(groups[0][0])
 
         create_batch_sound_builder_dialog(self.bnk, on_batch_created, tag=tag)
+        center_window(tag)
 
     def _open_boss_track_dialog(self) -> None:
         tag = self._t("create_boss_track_dialog")
@@ -2284,8 +2271,6 @@ class BanksOfYonder(DpgItem):
             self.jump_to_node(nodes[0])
 
         create_boss_track_dialog(self.bnk, on_boss_track_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_area_bgm_dialog(self) -> None:
@@ -2302,8 +2287,6 @@ class BanksOfYonder(DpgItem):
             self.jump_to_node(nodes[0])
 
         create_area_bgm_dialog(self.bnk, on_area_track_created, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_calc_hash_dialog(self) -> None:
@@ -2314,8 +2297,6 @@ class BanksOfYonder(DpgItem):
             return
 
         calc_hash_dialog(tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_mass_transfer_dialog(self) -> None:
@@ -2326,8 +2307,6 @@ class BanksOfYonder(DpgItem):
             return
 
         mass_transfer_dialog(dst_bnk=self.bnk, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_export_sounds_dialog(self) -> None:
@@ -2338,8 +2317,6 @@ class BanksOfYonder(DpgItem):
             return
 
         export_sounds_dialog(tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_convert_wavs_dialog(self) -> None:
@@ -2350,8 +2327,6 @@ class BanksOfYonder(DpgItem):
             return
 
         convert_wavs_dialog(None, tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_unmangle_soundbanks_dialog(self) -> None:
@@ -2362,8 +2337,6 @@ class BanksOfYonder(DpgItem):
             return
 
         unmangle_soundbanks_dialog(tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _open_about_dialog(self) -> None:
@@ -2374,8 +2347,6 @@ class BanksOfYonder(DpgItem):
             return
 
         about_dialog(tag=tag)
-
-        dpg.split_frame()
         center_window(tag)
 
     def _exit_app(self):

@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import SyncType
 from yonder.gui import style
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 from .dpg_item import DpgItem
@@ -205,6 +206,11 @@ class add_transition_matrix(DpgItem):
     def _add_rule_for_cell(
         self, sender: str, app_data: Any, cell_info: tuple[int, int, int]
     ) -> None:
+        tag = self._t("add_rule_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         src, dst, _ = cell_info
         new_rule = deepcopy(self._rule_template)
         new_rule.source_ids = [src]
@@ -216,7 +222,9 @@ class add_transition_matrix(DpgItem):
             self._on_rule_changed,
             lock_sync_type=self._fixed_sync_type is not None,
             user_data=True,
+            tag=tag
         )
+        center_window(tag, 0.2, 0.2)
 
     def _delete_rule_for_cell(
         self, sender: str, app_data: Any, cell_info: tuple[int, int, int]
@@ -251,16 +259,24 @@ class add_transition_matrix(DpgItem):
     def _open_edit_transition_dialog(
         self, sender: str, app_data: Any, rule: MusicTransitionRule
     ) -> None:
+        tag = self._t(f"edit_rule_dialog_{id(rule)}")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         is_new = not rule
         if is_new:
             rule = deepcopy(self._rule_template)
+
         edit_transition_dialog(
             rule,
             self.targets,
             self._on_rule_changed,
             lock_sync_type=self._fixed_sync_type is not None,
             user_data=is_new,
+            tag=tag,
         )
+        center_window(tag, 0.2, 0.2)
 
     def _on_rule_changed(self, sender: str, rule: dict, is_new: bool) -> None:
         if is_new:

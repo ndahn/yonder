@@ -5,6 +5,7 @@ from yonder.enums import PropID, Units
 from yonder.gui.localization import µ
 from yonder.gui import style
 from yonder.gui.icons import Icons
+from yonder.gui.helpers import center_window
 from .dpg_item import DpgItem
 from .select_node import add_select_node
 
@@ -34,8 +35,13 @@ class add_properties_table(DpgItem):
     def __init__(
         self,
         properties: dict[PropID, Any],
-        on_value_changed: Callable[[str, dict[PropID, Any], Any], None],
+        on_values_changed: Callable[[str, dict[PropID, Any], Any], None],
         *,
+        prop_ranges_enabled: bool = False,
+        prop_ranges: dict[PropID, tuple[float, float]] = None,
+        on_prop_ranges_changed: Callable[
+            [str, dict[PropID, tuple[float, float]], Any], None
+        ] = None,
         label: str = "Properties",
         tag: str | int = 0,
         user_data: Any = None,
@@ -43,7 +49,10 @@ class add_properties_table(DpgItem):
         super().__init__(tag)
 
         self._properties = properties
-        self._callback = on_value_changed
+        self._prop_ranges_enabled = prop_ranges_enabled
+        self._on_values_changed = on_values_changed
+        self._prop_ranges = prop_ranges or {}
+        self._on_prop_ranges_changed = on_prop_ranges_changed
         self._user_data = user_data
 
         self._build(label)
@@ -68,7 +77,6 @@ class add_properties_table(DpgItem):
             dpg.add_table_column(
                 label=µ("Value"), width_stretch=True, init_width_or_weight=100
             )
-            dpg.add_table_column(label="", width_fixed=True)
             dpg.add_table_column(label="", width_fixed=True)
 
     # === Internal ======================================================
@@ -148,19 +156,23 @@ class add_properties_table(DpgItem):
                 tag=self._t(f"value_{idx}"),
             )
 
-            dpg.add_image_button(
-                Icons.keyframe,
-                tint_color=style.yellow,
-                callback=self._edit_prop_range,
-                tag=self._t(f"range_{idx}"),
-            )
+            with dpg.group(horizontal=True):
+                if self._prop_ranges_enabled:
+                    tint = style.yellow if prop in self._prop_ranges else style.white
+                    dpg.add_image_button(
+                        Icons.keyframe,
+                        callback=self._edit_prop_range,
+                        tint_color=tint,
+                        tag=self._t(f"range_{idx}"),
+                        user_data=idx,
+                    )
 
-            dpg.add_button(
-                label="x",
-                callback=self._on_remove_clicked,
-                user_data=idx,
-                tag=self._t(f"remove_{idx}"),
-            )
+                dpg.add_button(
+                    label="x",
+                    callback=self._on_remove_clicked,
+                    user_data=idx,
+                    tag=self._t(f"remove_{idx}"),
+                )
 
     def _add_footer(self) -> None:
         with dpg.table_row(parent=self._tag):
@@ -173,7 +185,7 @@ class add_properties_table(DpgItem):
         props_list = list(self._properties.items())
         old_prop, val = props_list[idx]
 
-        # Rebuild the dict preserving insertion order
+        # Rebuild the dict to preserve insertion order
         self._properties.clear()
         for i, (p, v) in enumerate(props_list):
             self._properties[new_prop if i == idx else p] = v
@@ -192,22 +204,86 @@ class add_properties_table(DpgItem):
             self._properties[new_prop] = 0.0
 
         self._sync_combos()
-        if self._callback:
-            self._callback(self._tag, dict(self._properties), self._user_data)
+        if self._on_values_changed:
+            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
+        
+        # Remove prop range if set
+        self._prop_ranges.pop(old_prop, None)
+        if self._prop_ranges_enabled:
+            dpg.configure_item(self._t(f"range_{idx}"), tint_color=style.white)
+
+        if self._on_prop_ranges_changed:
+            self._on_prop_ranges_changed(self.tag, dict(self._prop_ranges), self._user_data)
 
     def _on_prop_value_changed(self, sender: str, new_val: float, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
         self._properties[prop] = new_val
-        if self._callback:
-            self._callback(self._tag, dict(self._properties), self._user_data)
+
+        if self._on_values_changed:
+            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
 
     def _edit_prop_range(self, sender: str, app_data: Any, idx: int) -> None:
-        # TODO open dialog
-        pass
+        prop = list(self._properties.keys())[idx]
+        tag = f"prop_range_dialog_{prop}"
 
-    def _on_prop_range_changed(self, sender: str, prop_range: tuple[float, float], idx: int) -> None:
-        # TODO
-        pass
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
+        initial_range = self._prop_ranges.get(prop, (0.0, 0.0))
+        vmin, vmax, fmt, rate = self._get_prop_range(prop)
+
+        def on_change() -> None:
+            enabled = dpg.get_value(self._t(f"range_{prop}_enable"))
+            rmin = dpg.get_value(self._t(f"range_{prop}_min"))
+            rmax = dpg.get_value(self._t(f"range_{prop}_max"))
+
+            if enabled:
+                self._prop_ranges[prop] = (rmin, rmax)
+                dpg.configure_item(self._t(f"range_{idx}"), tint_color=style.yellow)
+            else:
+                self._prop_ranges.pop(prop, None)
+                dpg.configure_item(self._t(f"range_{idx}"), tint_color=style.white)
+
+            if self._on_prop_ranges_changed:
+                self._on_prop_ranges_changed(
+                    self.tag, self._prop_ranges, self._user_data
+                )
+
+        with dpg.window(
+            autosize=True,
+            label=prop.name,
+            on_close=lambda: dpg.delete_item(tag),
+            tag=tag,
+        ):
+            dpg.add_checkbox(
+                label=µ("Random range"),
+                default_value=(prop in self._prop_ranges),
+                callback=on_change,
+                tag=self._t(f"range_{prop}_enable"),
+            )
+            dpg.add_drag_float(
+                label=µ("min"),
+                default_value=initial_range[0],
+                min_value=vmin,
+                max_value=vmax,
+                format=fmt,
+                speed=rate,
+                callback=on_change,
+                tag=self._t(f"range_{prop}_min"),
+            )
+            dpg.add_drag_float(
+                label=µ("max"),
+                default_value=initial_range[1],
+                min_value=vmin,
+                max_value=vmax,
+                format=fmt,
+                speed=rate,
+                callback=on_change,
+                tag=self._t(f"range_{prop}_max"),
+            )
+
+        center_window(tag, xratio=0.2, yratio=0.2)
 
     def _on_add_clicked(self) -> None:
         available = self._get_available_props()
@@ -215,15 +291,15 @@ class add_properties_table(DpgItem):
             return
         self._properties[available[0]] = 0.0
         self.refresh()
-        if self._callback:
-            self._callback(self._tag, dict(self._properties), self._user_data)
+        if self._on_values_changed:
+            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
 
     def _on_remove_clicked(self, sender: str, app_data: Any, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
         self._properties.pop(prop)
         self.refresh()
-        if self._callback:
-            self._callback(self._tag, dict(self._properties), self._user_data)
+        if self._on_values_changed:
+            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
 
     # === Public ========================================================
 

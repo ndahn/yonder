@@ -80,7 +80,6 @@ class simple_choice_dialog(DpgItem):
                         )
                         choice_idx += 1
 
-        dpg.split_frame()
         center_window(dialog)
 
 
@@ -138,5 +137,4 @@ class simple_combo_dialog(DpgItem):
                     label=µ("Okay", "button"), callback=on_okay, tag=self._t("okay")
                 )
 
-        dpg.split_frame()
         center_window(dialog)

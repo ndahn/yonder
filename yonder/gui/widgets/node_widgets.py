@@ -42,7 +42,9 @@ from yonder.types.base_types import (
     Layer,
     StateChunk,
     SwitchPackage,
+    PropRangedModifier,
 )
+from yonder.types.mixins import PropertyMixin
 from yonder.enums import (
     ActionType,
     SourceType,
@@ -267,15 +269,15 @@ def rename_node(
 
 
 def add_node_properties(
-    node: HIRCNode,
+    node: PropertyMixin,
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     *,
     base_tag: str = None,
     user_data: Any = None,
 ) -> None:
-    def on_node_properties_changed(
-        sender: str, new_props: dict[PropID, float], node: HIRCNode
+    def on_prop_values_changed(
+        sender: str, new_props: dict[PropID, float], cb_user_data: Any
     ) -> None:
         for prop in list(node.properties):
             if prop.prop_id not in new_props:
@@ -290,6 +292,24 @@ def add_node_properties(
 
         on_node_changed(base_tag, node, user_data)
 
+    def on_prop_ranges_changed(
+        sender: str, prop_ranges: dict[PropID, tuple[float, float]], cb_user_data: Any
+    ) -> None:
+        node.property_ranges[:] = [
+            PropRangedModifier(p.value, rmin, rmax)
+            for p, (rmin, rmax) in prop_ranges.items()
+        ]
+
+        on_node_changed(base_tag, node, user_data)
+
+    prop_ranges_enabled = node.can_randomize_properties()
+    prop_ranges = {}
+
+    if prop_ranges_enabled:
+        for pr in node.property_ranges:
+            prop = PropID(pr.prop_type)
+            prop_ranges[prop] = node.get_property_range(prop)
+
     with dpg.tree_node(
         label=µ("Properties"),
         default_open=bool(node.properties),
@@ -298,9 +318,11 @@ def add_node_properties(
     ):
         add_properties_table(
             {p.prop_id: p.value for p in node.properties},
-            on_node_properties_changed,
+            on_prop_values_changed,
+            prop_ranges_enabled=prop_ranges_enabled,
+            prop_ranges=prop_ranges,
+            on_prop_ranges_changed=on_prop_ranges_changed,
             label=None,
-            user_data=node,
         )
 
 
