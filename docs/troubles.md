@@ -12,4 +12,4 @@ Debugging soundbanks is not a fun task, but there are a couple of common failure
 
 ??? example "Sounds from Adel don't work"
 
-    *We don't talk about Adel.*
+    [*We don't talk about Adel.*](resources.md#merged-init-bank)

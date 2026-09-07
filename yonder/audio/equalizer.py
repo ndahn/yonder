@@ -3,6 +3,8 @@ import pyo
 
 
 EQPresets = {
+    # 32 64 128 256 512 1k 2k 4k 8k 16k
+    # TODO Kidius suggested using 32, 64, *125*, *250*, *500*, 1k, 2k, 4k, 8k, 16k instead
     "Flat": (0.0,) * 10,
     "Acoustic": (5, 5, 4, 1, 2, 2, 3.5, 4, 3.5, 2),
     "Electronic": (4, 4, 1, 0, -2, 2, 1, 1.5, 4, 5),
