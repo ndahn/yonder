@@ -845,17 +845,26 @@ class BanksOfYonder(DpgItem):
         dpg.delete_item(self._t("menu/recent_files"), slot=1, children_only=True)
         # dpg.split_frame()
 
-        for i in range(10):
-            if i < len(self.config.recent_files):
-                path = Path(self.config.recent_files[i])
-                short = shorten_path(path, maxlen=70)
+        removed = []
+        added = 0
+        idx = 0
 
-                dpg.add_menu_item(
-                    label=str(short),
-                    parent=self._t("menu/recent_files"),
-                    callback=lambda s, a, u: self._load_soundbank_confirm(u),
-                    user_data=path,
-                )
+        while added < 10:
+            if idx < len(self.config.recent_files):
+                path = Path(self.config.recent_files[idx])
+
+                if path.is_file():
+                    short = shorten_path(path, maxlen=70)
+
+                    dpg.add_menu_item(
+                        label=str(short),
+                        parent=self._t("menu/recent_files"),
+                        callback=lambda s, a, u: self._load_soundbank_confirm(u),
+                        user_data=path,
+                    )
+                    added += 1
+                else:
+                    removed.append(idx)
             else:
                 # We need to add menu item stubs, otherwise the additional items will mess up
                 # the dearpygui layout
@@ -863,6 +872,12 @@ class BanksOfYonder(DpgItem):
                     parent=self._t("menu/recent_files"),
                     show=False,
                 )
+                added += 1
+
+            idx += 1
+
+        for idx in reversed(removed):
+            del self.config.recent_files[idx]
 
     def get_pinned_objects(self) -> list[int]:
         ret = []
