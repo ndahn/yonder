@@ -44,4 +44,4 @@ Elden Ring and Nightreign have slightly different `init` soundbanks, which cause
 
 *Many thanks to the lovely Raster for this!*
 
-[:fontawesome-regular-circle-down: init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary .md-button-small }
+[:fontawesome-solid-paper-plane: init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary .md-button-small }
