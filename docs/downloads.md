@@ -1,6 +1,6 @@
 # Downloads
 
-[The Misty Banks of Yonder](https://github.com/ndahn/yonder/releases "Get the most recent release!"){ .md-button .md-button--primary .md-button-small }
+[The Misty Banks of Yonder](https://github.com/ndahn/yonder/releases "Find the latest release here!"){ .md-button .md-button--primary .md-button-small }
 
 ## DLLs
 

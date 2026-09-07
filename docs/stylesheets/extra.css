@@ -1,3 +1,18 @@
 .md-button-small {
     padding: .25em 1em !important;
 }
+
+.yonder-bg-image {
+  position: fixed;
+  right: 50px;
+  bottom: 0;
+  width: 20vh;
+  height: 20vh;
+  background-image: url("../assets/images/icon.png");
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: contain;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
