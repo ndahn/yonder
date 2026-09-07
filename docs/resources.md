@@ -13,17 +13,12 @@ path=<path/to/your_lib.dll>
 
 Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states).
 
-<div class="annotate" markdown>
-> Elden Ring: [unlock_wwise_states_er.dll](assets/downloads/unlock_wwise_states_er.dll) (1)
-</div>
+[:fontawesome-regular-circle-down: Elden Ring](assets/downloads/unlock_wwise_states_er.dll){ .md-button .md-button--primary .md-button-small }
+
+[:fontawesome-regular-circle-down: Nightreign](assets/downloads/unlock_wwise_states_nr.dll){ .md-button .md-button--primary .md-button-small }
 
 1. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/eldenring/src/lib.rs)
-
-<div class="annotate" markdown>
-> Nightreign: [unlock_wwise_states_nr.dll](assets/downloads/unlock_wwise_states_nr.dll) (1)
-</div>
-
-1. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
+2. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
 
 #### Read Game Syncs
 
@@ -49,4 +44,4 @@ Elden Ring and Nightreign have slightly different `init` soundbanks, which cause
 
 *Many thanks to the lovely Raster for this!*
 
-[init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary }
+[:fontawesome-regular-circle-down: init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary .md-button-small }
