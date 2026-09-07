@@ -251,10 +251,8 @@ class add_widget_table(DpgItem):
     def _update_indicators(self) -> None:
         """Refresh all row indicator labels to reflect the current selection."""
         for idx, btn in self._sel_buttons.items():
-            try:
-                dpg.set_item_label(btn, ">" if idx == self._selected_idx else " ")
-            except Exception:
-                pass  # row may have been deleted mid-refresh
+            if dpg.does_item_exist(btn):
+                dpg.set_item_label(btn, "*" if idx == self._selected_idx else " ")
 
     # === DPG callbacks =================================================
 
