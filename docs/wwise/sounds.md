@@ -35,7 +35,7 @@ Sounds are the most common type of source nodes and are basically used for every
 
 Wwise stores its audio data in `.wem` files, typically encoded using Ogg Vorbis. Like most things Wwise, these files use a [hash](../yonder/hashes.md) as their filename and are shipped along the soundbank in one of three different ways:
 
-- _embedded_ - the sound is stored in the [DATA section](soundbanks.md#data) of the soundbank. This is commonly done for small sounds (<200kB).
+- _embedded_ - the sound is stored in the [DATA section](soundbanks.md#sections) of the soundbank. This is commonly done for small sounds (<200kB).
 - _streaming_ - to avoid long loading times for soundbanks, larger sounds like music tracks are stored outside the soundbank. You can find them next to the soundank under `wem/XX/`, where `XX` is the first two digits of the filename.
 - _prefetch streaming_ - for some longer sounds like dialog, frame-accurate playback is important. In these cases, Wwise will store a tiny snippet of just a few kB inside the soundbank. This snippet can be played back immediately while the rest of the sound is being loaded from the external `wem` folder.
 

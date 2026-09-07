@@ -11,14 +11,10 @@ path=<path/to/your_lib.dll>
 
 #### Unlock Music
 
-Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states).
+Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states). The source code can be found [here](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/).
 
-[:fontawesome-regular-circle-down: Elden Ring](assets/downloads/unlock_wwise_states_er.dll){ .md-button .md-button--primary .md-button-small }
-
-[:fontawesome-regular-circle-down: Nightreign](assets/downloads/unlock_wwise_states_nr.dll){ .md-button .md-button--primary .md-button-small }
-
-1. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/eldenring/src/lib.rs)
-2. [Source code](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/nightreign/src/dllmain.cpp)
+[:fontawesome-regular-circle-down:&nbsp; Elden Ring](assets/downloads/unlock_wwise_states_er.dll){ .md-button .md-button-small }
+[:fontawesome-regular-circle-down:&nbsp; Nightreign ](assets/downloads/unlock_wwise_states_nr.dll){ .md-button .md-button-small }
 
 #### Read Game Syncs
 
@@ -30,11 +26,7 @@ yonder:
     game_sync_chr_id: 8000
 ```
 
-<div class="annotate" markdown>
-> Elden Ring: [yonder_live_states.dll]() (1)
-</div>
-
-1. [Source code]()
+[:fontawesome-regular-circle-down:&nbsp; Elden Ring](){ .md-button .md-button-small }
 
 ## Mysteries
 
@@ -44,4 +36,4 @@ Elden Ring and Nightreign have slightly different `init` soundbanks, which cause
 
 *Many thanks to the lovely Raster for this!*
 
-[:fontawesome-solid-paper-plane: init.bnk](assets/downloads/init.bnk){ .md-button .md-button--primary .md-button-small }
+[:fontawesome-regular-circle-down:&nbsp; init.bnk](assets/downloads/init.bnk){ .md-button .md-button-small }

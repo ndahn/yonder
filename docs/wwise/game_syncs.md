@@ -2,11 +2,11 @@
 
 > [Wwise documentation](https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=WwiseFundamentalApproach&id=what_are_game_syncs)
 
-Besides using [events](events.md) for (de-)activating different subtrees of the [HIRC](soundbanks.md#hirc), there are additional means the game may utilize for more fine-grained control over playback.
+Besides using [events](events.md) for (de-)activating different subtrees of the [HIRC](soundbanks.md#sections), there are additional means the game may utilize for more fine-grained control over playback.
 
 ## States
 
-States can be thought of as global integer variables that nodes may listen to. Their most common use case is to apply volume, high pass or low pass modifiers on certain state values, but some nodes like [music switch containers](contaimusicners.md#music-switch-container) will also use them when deciding which children to play. States affect all listening nodes equally.
+States can be thought of as global integer variables that nodes may listen to. Their most common use case is to apply volume, high pass or low pass modifiers on certain state values, but some nodes like [music switch containers](music.md#music-switch-container) will also use them when deciding which children to play. States affect all listening nodes equally.
 
 !!! example
 
@@ -49,4 +49,4 @@ Each object can use a custom attenuation curve to apply volume modifiers, low-pa
 
 !!! note
 
-    The other driver parameters use global curves and cannot be changed on a per-object basis: obstruction and occlusion are defined in the [ENVS section](soundbanks.md#envs), diffraction and transmission in the [STMG section](soundbanks.md#stmg). 
+    The other driver parameters use global curves and cannot be changed on a per-object basis: obstruction and occlusion are defined in the [ENVS section](soundbanks.md#sections), diffraction and transmission in the [STMG section](soundbanks.md#sections). 
