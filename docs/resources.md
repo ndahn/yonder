@@ -5,16 +5,16 @@
 To load a dll in your game, add an entry to your [ME3 profile](https://me3.help/en/latest/configuration-reference/) like so. You can only have one entry per `[[native]]` section, so add additional ones if you want to load more dlls.
 
 ```toml
-    [[native]]
-    path=<path/to/your_lib.dll>
+[[native]]
+path=<path/to/your_lib.dll>
 ```
 
 #### Unlock Music
 
 Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states).
 
-- Elden Ring: [unlock_wwise_states_er.dll]()
-- Nightreign: [unlock_wwise_states_nr.dll]()
+> Elden Ring: [unlock_wwise_states_er.dll]()
+> Nightreign: [unlock_wwise_states_nr.dll]()
 
 #### Read Game Syncs
 
@@ -26,12 +26,14 @@ yonder:
     game_sync_chr_id: 8000
 ```
 
-- Elden Ring: [yonder_live_states.dll]()
+> Elden Ring: [yonder_live_states.dll]()
 
 ## Mysteries
 
 #### Merged Init Bank
 
-Elden Ring and Nightreign have slightly different `init` soundbanks, which causes problems for some sounds/soundbanks (*cuuuurse you, Adel...*). This soundbank is a merge of both, and will work for both Elden Ring and Nightreign. Just place it in your `Game/sd/` folder like any other soundbank.
+Elden Ring and Nightreign have slightly different `init` soundbanks, which causes problems for some sounds/soundbanks (*cuuuurse you, Adel...*). This soundbank is a merge of both, and will work for both Elden Ring and Nightreign. Just place it in your `Game/sd/` folder like any other soundbank. 
 
-- [init.bnk]()
+*Many thanks to the lovely Raster for this!*
+
+> [init.bnk](assets/downloads/init.bnk)
