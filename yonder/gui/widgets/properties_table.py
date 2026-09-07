@@ -167,8 +167,8 @@ class add_properties_table(DpgItem):
                         user_data=idx,
                     )
 
-                dpg.add_button(
-                    label="x",
+                dpg.add_image_button(
+                    Icons.trash,
                     callback=self._on_remove_clicked,
                     user_data=idx,
                     tag=self._t(f"remove_{idx}"),

@@ -60,11 +60,13 @@ class Icons:
     tool_convert = "tex_icon_tool_convert"
     tool_export_sounds = "tex_icon_tool_export_sounds"
     tool_mass_transfer = "tex_icon_tool_mass_transfer"
+    trash = "tex_icon_trash"
     transition = "tex_icon_transition"
     volume_down = "tex_icon_volume_down"
     volume_up = "tex_icon_volume_up"
     warning = "tex_icon_warning"
     wave = "tex_icon_wave"
+    x = "tex_icon_x"
 
 
 def load_icons():

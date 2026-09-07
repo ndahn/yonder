@@ -6,6 +6,7 @@ from yonder import Soundbank, HIRCNode
 from yonder.enums import CurveInterpolation
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.gui import style
+from yonder.gui.icons import Icons
 from yonder.gui.helpers import shorten_path, GraphCurve
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_multiple_dialog, choose_folder
@@ -196,11 +197,10 @@ class add_widget_table(DpgItem):
             remove_btn = None
             if self._new_item:
                 if not self._can_remove or self._can_remove(val, idx):
-                    remove_btn = dpg.add_button(
-                        label="x",
+                    remove_btn = dpg.add_image_button(
+                        Icons.trash,
                         callback=self._on_remove_clicked,
                         user_data=idx,
-                        small=True,
                     )
 
         # Bind a clicked handler to every content child (not the indicator or

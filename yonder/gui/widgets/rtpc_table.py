@@ -4,7 +4,8 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.enums import RtpcType, RtpcAccum, CurveScaling
 from yonder.game import get_selected_game
-from yonder.types.base_types import RTPC, RTPCGraphPoint
+from yonder.types.base_types import RTPC
+from yonder.gui.icons import Icons
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
 from .hash_widget import add_hash_widget
@@ -167,8 +168,8 @@ class add_rtpc_table(DpgItem):
                         )
                     dpg.add_spacer(height=5)
 
-            dpg.add_button(
-                label="x",
+            dpg.add_image_button(
+                Icons.trash,
                 callback=self._on_remove_clicked,
                 user_data=idx,
             )

@@ -43,8 +43,9 @@ class add_hirc_player(DpgItem):
         self.set_enabled(False)
 
     def set_enabled(self, enabled: bool) -> None:
-        # TODO
-        pass
+        for child in dpg.get_item_children(self._t("buttons"), slot=1):
+            if "button" in dpg.get_item_type(child).lower():
+                dpg.configure_item(child, enabled=enabled)
 
     def set_entrypoint(self, entrypoint: HIRCNode, bnk: Soundbank = None) -> None:
         if self._player:
@@ -385,10 +386,10 @@ class add_hirc_player(DpgItem):
             no_scrollbar=True,
             no_scroll_with_mouse=True,
             border=False,
-            tag=self._tag,
+            tag=self.tag,
             parent=parent,
         ):
-            with dpg.group(horizontal=True):
+            with dpg.group(horizontal=True, tag=self._t("buttons")):
                 dpg.add_image_button(
                     Icons.seek_zero,
                     callback=self._on_ctrl_seek_zero,
