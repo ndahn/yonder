@@ -17,6 +17,7 @@ from .base_types import (
     MediaInformation,
     RTPCGraphPoint,
     PropBundle,
+    PropRangedModifier,
     ClipAutomation,
     TrackSrcInfo,
     RTPC,
@@ -92,6 +93,10 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.node_base_params.node_initial_params.prop_ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:

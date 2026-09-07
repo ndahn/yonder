@@ -5,7 +5,7 @@ from typing import ClassVar
 from yonder.hash import Hash
 from yonder.enums import PropID
 from .hirc_node import HIRCNode
-from .base_types import PropBundle, PropRangedModifiers, InitialRTPC, RTPC
+from .base_types import PropBundle, PropRangedModifier, PropRangedModifiers, InitialRTPC, RTPC
 from .mixins import PropertyMixin, RtpcMixin
 
 
@@ -34,6 +34,10 @@ class TimeModulator(RtpcMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.prop_bundle
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:

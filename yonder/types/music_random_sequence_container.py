@@ -14,6 +14,7 @@ from .base_types import (
     MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
     PropBundle,
+    PropRangedModifier,
     Children,
     MusicTransitionRule,
     RTPC,
@@ -83,6 +84,10 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:

@@ -365,8 +365,8 @@ class FXChunk:
 @dataclass(slots=True)
 class PropRangedModifier:
     prop_type: int = 0
-    min: float = 0.0
-    max: float = 0.0
+    min: float | None = 0.0
+    max: float | None = 0.0
 
 
 @dataclass(slots=True)

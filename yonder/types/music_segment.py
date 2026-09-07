@@ -11,6 +11,7 @@ from .hirc_node import HIRCNode
 from .base_types import (
     MusicNodeParams,
     PropBundle,
+    PropRangedModifier,
     Children,
     MusicMarkerWwise,
     RTPC,
@@ -78,6 +79,10 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.music_node_params.node_base_params.node_initial_params.prop_ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:

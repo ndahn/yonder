@@ -28,6 +28,7 @@ class Icons:
     help = "tex_icon_help"
     info = "tex_icon_info"
     jump16 = "tex_icon_jump16"
+    keyframe = "tex_icon_keyframe"  # TODO size 18 seems good for in-line icons, organize
     music = "tex_icon_music"
     mute = "tex_icon_mute"
     new_event = "tex_icon_new_event"
@@ -38,6 +39,7 @@ class Icons:
     play_pause = "tex_icon_play_pause"
     previous = "tex_icon_previous"
     properties16 = "tex_icon_properties16"
+    random = "tex_icon_random"
     repack = "tex_icon_repack"
     rtpc16 = "tex_icon_rtpc16"
     select16 = "tex_icon_select16"

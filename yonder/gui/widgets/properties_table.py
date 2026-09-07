@@ -3,6 +3,8 @@ from dearpygui import dearpygui as dpg
 
 from yonder.enums import PropID, Units
 from yonder.gui.localization import µ
+from yonder.gui import style
+from yonder.gui.icons import Icons
 from .dpg_item import DpgItem
 from .select_node import add_select_node
 
@@ -66,6 +68,7 @@ class add_properties_table(DpgItem):
             dpg.add_table_column(
                 label=µ("Value"), width_stretch=True, init_width_or_weight=100
             )
+            dpg.add_table_column(label="", width_fixed=True)
             dpg.add_table_column(label="", width_fixed=True)
 
     # === Internal ======================================================
@@ -145,6 +148,13 @@ class add_properties_table(DpgItem):
                 tag=self._t(f"value_{idx}"),
             )
 
+            dpg.add_image_button(
+                Icons.keyframe,
+                tint_color=style.yellow,
+                callback=self._edit_prop_range,
+                tag=self._t(f"range_{idx}"),
+            )
+
             dpg.add_button(
                 label="x",
                 callback=self._on_remove_clicked,
@@ -190,6 +200,14 @@ class add_properties_table(DpgItem):
         self._properties[prop] = new_val
         if self._callback:
             self._callback(self._tag, dict(self._properties), self._user_data)
+
+    def _edit_prop_range(self, sender: str, app_data: Any, idx: int) -> None:
+        # TODO open dialog
+        pass
+
+    def _on_prop_range_changed(self, sender: str, prop_range: tuple[float, float], idx: int) -> None:
+        # TODO
+        pass
 
     def _on_add_clicked(self) -> None:
         available = self._get_available_props()

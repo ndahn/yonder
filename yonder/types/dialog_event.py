@@ -9,6 +9,7 @@ from .base_types import (
     GameSync,
     DecisionTreeNode,
     PropBundle,
+    PropRangedModifier,
     PropRangedModifiers,
 )
 from .mixins import PropertyMixin, DecisionTreeMixin
@@ -40,6 +41,10 @@ class DialogueEvent(DecisionTreeMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.prop_bundle
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.ranged_modifiers.entries
 
     def get_tree_size(self) -> int:
         num_tree_nodes = 1
