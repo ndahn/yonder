@@ -156,7 +156,7 @@ class add_hirc_player(DpgItem):
                     tag=self._t(f"voice_toggle_{voice.id}"),
                 )
                 dpg.add_slider_float(
-                    label=voice.id,
+                    label=voice.get_name(),
                     callback=self._on_set_volume_voice,
                     default_value=1.0,
                     min_value=-10,
@@ -217,9 +217,10 @@ class add_hirc_player(DpgItem):
                 with dpg.group(tag=self._t("rtpcs_group")):
                     for rtpc in all_rtpcs:
                         self._player.context.rtpcs.setdefault(rtpc, 0.0)
+                        label = lookup_name(rtpc, f"#{rtpc}")
 
                         dpg.add_drag_double(
-                            label=rtpc,
+                            label=label,
                             default_value=0.0,
                             height=15,
                             callback=self._on_set_rtpc,
