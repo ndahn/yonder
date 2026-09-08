@@ -1,11 +1,14 @@
+- include exes
 - merge banks tool
 - find bank conflicts tool
 - player panel
 - yonder_live_states.dll
+- mass transfer: duplicates as new
 - jump-to -> select -> regenerate broken in cs_main
 - transition rules missing play pre-entry/post-exit/transition piece
 - msc branches need to be merged/split when editing their path
 - msc tree edits only need to rebuild msc widgets, no need to regenerate everything
 - jump-to is not reliable
 - special delete case for events
-- title picture
+- nicer log message popups
+- doc homepage: title picture

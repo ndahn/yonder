@@ -52,6 +52,13 @@ def resource_dir() -> Path:
     return Path(__file__).parent.parent / "resources"
 
 
+def externals_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent / "external"
+
+    return Path(__file__).parent.parent / "external"
+
+
 def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     res = resource_dir() / res_path
     if binary:

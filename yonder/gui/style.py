@@ -172,6 +172,37 @@ class themes:
 
         return theme
 
+    @cache
+    @staticmethod
+    def make_link_theme(alignment: float = 0, color: RGBA = light_blue) -> str:
+        with dpg.theme() as theme:
+            with dpg.theme_component(0):
+                dpg.add_theme_style(
+                    dpg.mvStyleVar_ButtonTextAlign, alignment, category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_style(
+                    dpg.mvStyleVar_CellPadding, 1, 1, category=dpg.mvThemeCat_Core
+                )
+
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_Text, color, category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_Button, (0, 0, 0, 0), category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonHovered,
+                    (255, 255, 255, 40),
+                    category=dpg.mvThemeCat_Core,
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonActive,
+                    (255, 255, 255, 80),
+                    category=dpg.mvThemeCat_Core,
+                )
+
+        return theme
+
 
 def init_themes():
     # Global theme

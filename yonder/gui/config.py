@@ -7,7 +7,8 @@ from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
 from yonder.hash import load_lookup_table
-from yonder.util import logger, set_max_temp_size
+from yonder.util import logger, set_max_temp_size, externals_dir
+from yonder.gui.localization import µ
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 if TYPE_CHECKING:
@@ -53,41 +54,62 @@ class Config:
 
     def locate_bnk2json(self) -> str:
         if not self.bnk2json_exe or not Path(self.bnk2json_exe).is_file():
-            bnk2json_exe = open_file_dialog(
-                title="Locate bnk2json.exe", filetypes={"bnk2json.exe": "bnk2json.exe"}
-            )
-            if not bnk2json_exe:
-                raise ValueError("bnk2json not found")
+            bnk2json_exe = externals_dir() / "rewwise" / "bnk2json.exe"
 
-            self.bnk2json_exe = bnk2json_exe
+            if not bnk2json_exe.is_file():
+                bnk2json_exe = open_file_dialog(
+                    title="Locate bnk2json.exe",
+                    filetypes={"bnk2json.exe": "bnk2json.exe"},
+                )
+                if not bnk2json_exe:
+                    raise ValueError("bnk2json not found")
+
+            self.bnk2json_exe = str(bnk2json_exe)
             self.save()
 
         return self.bnk2json_exe
 
     def locate_wwise(self) -> str:
         if not self.wwise_exe or not Path(self.wwise_exe).is_file():
-            wwise_exe = open_file_dialog(
-                title="Locate WwiseConsole.exe",
-                filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
+            # Check in Program Files
+            wwise_exe = next(
+                Path("C:/Program Files (x86)/Audiokinetic/").glob(
+                    "Wwise*/Authoring/*/Release/bin/WwiseConsole.exe"
+                ),
+                None,
             )
-            if not wwise_exe:
-                raise ValueError("WwiseConsole not found")
 
-            self.wwise_exe = wwise_exe
+            if not wwise_exe:
+                wwise_exe = open_file_dialog(
+                    title="Locate WwiseConsole.exe",
+                    filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
+                )
+                if not wwise_exe:
+                    logger.warning(
+                        µ(
+                            "To install Wwise, go to https://www.audiokinetic.com/en/wwise/. Once installed, WwiseConsole.exe will be located under '<Wwise>/Authoring/x64/Release/bin/'."
+                        )
+                    )
+                    raise ValueError("WwiseConsole not found")
+
+            self.wwise_exe = str(wwise_exe)
             self.save()
 
         return self.wwise_exe
 
     def locate_vgmstream(self) -> str:
         if not self.vgmstream_exe or not Path(self.vgmstream_exe).is_file():
-            vgmstream_exe = open_file_dialog(
-                title="Locate vgmstream-cli.exe",
-                filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
-            )
-            if not vgmstream_exe:
-                raise ValueError("vgmstream-cli not found")
+            vgmstream_exe = externals_dir() / "vgmstream" / "cgmstream-cli.exe"
 
-            self.vgmstream_exe = vgmstream_exe
+            if not vgmstream_exe.is_file():
+                vgmstream_exe = open_file_dialog(
+                    title="Locate vgmstream-cli.exe",
+                    filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
+                )
+                if not vgmstream_exe:
+                    raise ValueError("vgmstream-cli not found")
+
+            self.vgmstream_exe = str(vgmstream_exe)
             self.save()
 
         return self.vgmstream_exe

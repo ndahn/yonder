@@ -58,6 +58,7 @@ from .localization import (
     µ,
 )
 from .dialogs.about_dialog import about_dialog
+from .dialogs.licenses_dialog import licenses_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
 from .dialogs.create_node_dialog import create_node_dialog
 from .dialogs.create_playstop_event_dialog import create_wwise_event_dialog
@@ -414,6 +415,11 @@ class BanksOfYonder(DpgItem):
                         )
 
                 dpg.add_separator()
+                dpg.add_menu_item(
+                    label=µ("Licenses", "menu"),
+                    callback=self._open_licenses_dialog,
+                    tag=self._t("menu/licenses"),
+                )
                 dpg.add_menu_item(
                     label=µ("About", "menu"),
                     callback=self._open_about_dialog,
@@ -2339,8 +2345,18 @@ class BanksOfYonder(DpgItem):
         unmangle_soundbanks_dialog(tag=tag)
         center_window(tag)
 
+    def _open_licenses_dialog(self) -> None:
+        tag = "licenses_dialog"
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        licenses_dialog(tag=tag)
+        center_window(tag, 0.2, 0.2)
+
     def _open_about_dialog(self) -> None:
-        tag = self._t("calc_hash_dialog")
+        tag = self._t("about_dialog")
         if dpg.does_item_exist(tag):
             dpg.show_item(tag)
             dpg.focus_item(tag)
