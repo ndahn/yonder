@@ -37,7 +37,6 @@ from .config import Config, get_config
 from .helpers import center_window, shorten_path
 from .widgets import (
     DpgItem,
-    create_node_widgets,
     create_section_widgets,
     loading_indicator,
     table_tree_node,
@@ -81,6 +80,7 @@ from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .dialogs.unmangle_soundbanks_dialog import unmangle_soundbanks_dialog
 from .panels.hirc_player_panel import add_hirc_player_widget
+from .panels.node_widgets import create_node_widgets
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 from .widgets.hirc_player_widget import add_hirc_player

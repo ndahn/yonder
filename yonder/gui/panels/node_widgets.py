@@ -63,17 +63,17 @@ from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
-from .paragraphs import add_paragraphs
-from .generic_input_widget import add_generic_widget, is_simple_type
-from .loading_indicator import loading_indicator
-from .properties_table import add_properties_table
-from .rtpc_table import add_rtpc_table
-from .states_table import add_states_table
-from .wav_player_widget import add_wav_player
-from .transition_matrix import add_transition_matrix
-from .editable_table import add_widget_table, add_curves_table, add_nodes_table
-from .hash_widget import add_hash_widget
-from .select_node import add_select_node
+from ..widgets.paragraphs import add_paragraphs
+from ..widgets.generic_input_widget import add_generic_widget, is_simple_type
+from ..widgets.loading_indicator import loading_indicator
+from ..widgets.properties_table import add_properties_table
+from ..widgets.rtpc_table import add_rtpc_table
+from ..widgets.states_table import add_states_table
+from ..widgets.wav_player_widget import add_wav_player
+from ..widgets.transition_matrix import add_transition_matrix
+from ..widgets.editable_table import add_widget_table, add_curves_table, add_nodes_table
+from ..widgets.hash_widget import add_hash_widget
+from ..widgets.select_node import add_select_node
 
 
 _colorgen = style.HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)

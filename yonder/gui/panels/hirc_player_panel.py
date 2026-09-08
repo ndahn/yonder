@@ -12,6 +12,7 @@ from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
 from yonder.gui.widgets.hirc_player_widget import add_hirc_player
+from yonder.gui.widgets.state_value_input import add_state_value_input
 
 
 class add_hirc_player_widget(DpgItem):
@@ -35,6 +36,7 @@ class add_hirc_player_widget(DpgItem):
 
     def _build(self) -> None:
         with dpg.child_window(autosize_x=True, autosize_y=True, tag=self.tag):
+            # Player info
             dpg.add_separator(label=µ("Info"))
             dpg.add_text(tag=self._t("player_info"))
 
@@ -55,6 +57,7 @@ class add_hirc_player_widget(DpgItem):
             dpg.add_checkbox(
                 label=µ("Show relevant game syncs only"),
                 default_value=True,
+                callback=self._on_active_only_changed,
                 tag=self._t("player_active_game_syncs_only"),
             )
 
@@ -104,6 +107,7 @@ class add_hirc_player_widget(DpgItem):
             def make_gamesync_table(base_tag: str) -> None:
                 with dpg.group(tag=self._t(base_tag)):
                     dpg.add_input_text(
+                        hint=µ("Filter"),
                         callback=lambda a, s, u: dpg.set_value(self._t(f"{base_tag}_table"), s),
                         tag=self._t(f"{base_tag}_filter"),
                     )
@@ -125,10 +129,28 @@ class add_hirc_player_widget(DpgItem):
 
         self._update_player_tab()
 
+    def _on_active_only_changed(self, sender: str, active_only: bool, user_data: Any) -> None:
+        if active_only:
+            active_states, active_rtpcs = self._hirc_player.player.collect_control_states(True)
+
+            for rtpc, (row, _) in self._state_rows.items():
+                h = calc_hash(rtpc.removeprefix("#"))
+                dpg.configure_item(row, show=(h in active_states))
+
+            for rtpc, (row, _) in self._rtpc_rows.items():
+                h = calc_hash(rtpc.removeprefix("#"))
+                dpg.configure_item(row, show=(h in active_rtpcs))
+        else:
+            for row, _ in self._state_rows.values():
+                dpg.show_item(row)
+
+            for row, _ in self._rtpc_rows.values():
+                dpg.show_item(row)
+
     def _update_player_tab(self) -> None:
         is_live = self._is_synchronizing
 
-        # TODO info text
+        # TODO info text, active voices, etc
 
         if self._rtpcs:
             dpg.show_item(self._t("player_rtpcs"))
@@ -153,6 +175,7 @@ class add_hirc_player_widget(DpgItem):
                         nxt = keys[idx + 1]
                         before, _ = self._rtpc_rows[nxt]
 
+                    # TODO hide if active rtpcs is enabled and r is not one of them
                     with dpg.table_row(filter_key=r, before=before, parent=table) as row:
                         dpg.add_text(r)
                         row_value = dpg.add_drag_float(
@@ -175,8 +198,7 @@ class add_hirc_player_widget(DpgItem):
 
     def _set_sync_state(self, synchronizing: bool) -> None:
         self._is_synchronizing = synchronizing
-        self._contiunous_sync = False
-
+        
         if synchronizing:
             dpg.show_item(self._t("player_sync_progress"))
             
@@ -185,12 +207,25 @@ class add_hirc_player_widget(DpgItem):
             else:
                 dpg.configure_item(self._t("player_sync_once"), tint_color=style.red)
 
-            # TODO disable all row edits
+            # prevent row edits
+            for _, row_value in self._rtpc_rows.values():
+                dpg.disable_item(row_value)
+
+            for _, row_value in self._state_rows.values():
+                dpg.disable_item(row_value)
         else:
+            dpg.hide_item(self._t("player_sync_progress"))
+
+            self._contiunous_sync = False
             dpg.configure_item(self._t("player_sync_once"), tint_color=style.white)
             dpg.configure_item(self._t("player_sync_auto"), tint_color=style.white)
-            dpg.hide_item(self._t("player_sync_progress"))
-            # TODO enable all row edits
+            
+            # allow row edits once more
+            for _, row_value in self._rtpc_rows.values():
+                dpg.enable_item(row_value)
+
+            for _, row_value in self._state_rows.values():
+                dpg.enable_item(row_value)
 
     def _on_rtpc_changed(self, sender: str, value: float, rtpc: str) -> None:
         h = calc_hash(rtpc.removeprefix("#"))
@@ -227,15 +262,20 @@ class add_hirc_player_widget(DpgItem):
                     self._rtpcs.update(data.get("rtpcs", {}))
                     self._states.update(data.get("states", {}))
 
+                    # Update the player immediately
+                    self._hirc_player.update_context(self._states, self._rtpcs)
+
+                    # Limit gui update rate
                     now = time.time()
-                    if (time - last_update) > 0.1:
+                    if (time - last_update) > 0.05:
                         self._update_player_tab()
 
                     last_update = now
                     if not self._contiunous_sync:
                         break
                 except TimeoutError:
-                    break
+                    if not self._contiunous_sync:
+                        break
         finally:
             if sock:
                 sock.close()

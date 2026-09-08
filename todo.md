@@ -1,4 +1,5 @@
 - player panel
+- add select att to attenuation widget
 - yonder_live_states.dll
 - mass transfer: duplicates as new
 - merge banks tool
