@@ -4,7 +4,7 @@ A soundbank is a binary file in Audiokinetik's prorprietary format that organize
 
 !!! info
 
-    For now, Yonder does not parse the raw soundbanks and instead relies on [rewwise/bnk2json](https://github.com/vswarte/rewwise/), which extracts the audio data as `.wem` files and the other sections into a large `.json`.
+    For now, Yonder does not parse the raw soundbanks and instead relies on [rewwise](https://github.com/vswarte/rewwise/), which extracts the audio data as `.wem` files and the other sections into a large `.json`.
 
 ## Important Soundbanks
 

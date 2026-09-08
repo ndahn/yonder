@@ -58,8 +58,8 @@ class Config:
 
             if not bnk2json_exe.is_file():
                 bnk2json_exe = open_file_dialog(
-                    title="Locate bnk2json.exe",
-                    filetypes={"bnk2json.exe": "bnk2json.exe"},
+                    title="Locate bnk2json",
+                    filetypes={"bnk2json": "bnk2json*"},
                 )
                 if not bnk2json_exe:
                     raise ValueError("bnk2json not found")
@@ -81,8 +81,8 @@ class Config:
 
             if not wwise_exe:
                 wwise_exe = open_file_dialog(
-                    title="Locate WwiseConsole.exe",
-                    filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
+                    title="Locate WwiseConsole",
+                    filetypes={"WwiseConsole": "WwiseConsole*"},
                 )
                 if not wwise_exe:
                     logger.warning(
@@ -99,12 +99,12 @@ class Config:
 
     def locate_vgmstream(self) -> str:
         if not self.vgmstream_exe or not Path(self.vgmstream_exe).is_file():
-            vgmstream_exe = externals_dir() / "vgmstream" / "cgmstream-cli.exe"
+            vgmstream_exe = externals_dir() / "vgmstream" / "vgmstream-cli.exe"
 
             if not vgmstream_exe.is_file():
                 vgmstream_exe = open_file_dialog(
-                    title="Locate vgmstream-cli.exe",
-                    filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
+                    title="Locate vgmstream-cli",
+                    filetypes={"vgmstream-cli": "vgmstream-cli*"},
                 )
                 if not vgmstream_exe:
                     raise ValueError("vgmstream-cli not found")

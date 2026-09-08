@@ -1,4 +1,3 @@
-- include exes
 - merge banks tool
 - find bank conflicts tool
 - player panel

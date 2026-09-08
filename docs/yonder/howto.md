@@ -1,18 +1,12 @@
 # How To Yonder
 
-First things first, in order to use Yonder properly you'll want to grab and install the following programs. Yonder will ask you to locate them the first time they are needed.
+Yonder comes with [rewwise](https://github.com/vswarte/rewwise/releases) and [vgmstream](https://vgmstream.org/), which are the two programs you need for unpacking/repacking soundbanks and `wem` playback. On Linux you will have to find/compile binaries yourself, or get a bit creative with wine-wrappers. 
 
-- [rewwise](https://github.com/vswarte/rewwise/releases) - includes `bnk2json` for packing and unpacking soundbanks
-- [vgmstream](https://vgmstream.org/) - for converting `wem` to `wav` files for playback
-- [Wwise](https://www.audiokinetic.com/en/download) - for converting various audio files to `wem`
-
-The latter two are optional (and Wwise is unfortunately not available for Linux), but will significantly improve your experience.
+In order to convert wave-files and other audio formats to `wem` you also need to install [Wwise](https://www.audiokinetic.com/en/download). Unfortunately, there is no Linux-version available, and I'm not aware of any alternatives. [This tool](https://github.com/EtiTheSpirit/WEMConverter/) may work for you, but Fromsoft usually uses Vorbis-encoded wems.
 
 ## First Steps
 
-To get those juicy soundbanks you'll first have to extract them from your game's archives. For Elden Ring and Nightreign this can be done using [Nuxe](https://github.com/JKAnderson/Nuxe). The soundbanks will be placed in the `Game/sd/` folder. Check the [soundbanks overview](../wwise/soundbanks.md#important-soundbanks) to get an idea of what lives where.
-
-Next, open one of the soundbanks from the *File* menu. The first time you do this Yonder will ask you for the location of `bnk2json`, which is part of *rewwise*. Locate it and wait for the bank to load - large soundbanks like `cs_main` can take several minutes.
+To get those juicy soundbanks you'll first have to extract them from your game's archives. For Elden Ring and Nightreign this can be done using [Nuxe](https://github.com/JKAnderson/Nuxe). The soundbanks will be placed in the `Game/sd/` folder. Check the [soundbanks overview](../wwise/soundbanks.md#important-soundbanks) to get an idea of what lives where. Sit back and wait for the bank to load - large soundbanks like `cs_main` can take several minutes.
 
 ## What is What?
 

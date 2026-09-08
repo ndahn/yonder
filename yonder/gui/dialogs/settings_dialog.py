@@ -81,7 +81,7 @@ class settings_dialog(DpgItem):
                     "bnk2json",
                     lambda s, a, u: setattr(config, "bnk2json_exe", str(a)),
                     default=shorten_path(config.bnk2json_exe),
-                    filetypes={"bnk2json.exe": "bnk2json.exe"},
+                    filetypes={"bnk2json": "bnk2json*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
@@ -95,7 +95,7 @@ class settings_dialog(DpgItem):
                     "wwise",
                     lambda s, a, u: setattr(config, "wwise_exe", str(a)),
                     default=shorten_path(config.wwise_exe),
-                    filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
+                    filetypes={"WwiseConsole*": "WwiseConsole*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
@@ -109,7 +109,7 @@ class settings_dialog(DpgItem):
                     "vgmstream",
                     lambda s, a, u: setattr(config, "vgmstream_exe", str(a)),
                     default=shorten_path(config.vgmstream_exe),
-                    filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
+                    filetypes={"vgmstream-cli": "vgmstream-cli*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(

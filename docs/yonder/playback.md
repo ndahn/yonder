@@ -14,7 +14,7 @@ Yonder now comes with a player widget that emulates part of the in-game playback
 
 - global and per-voice volume
 - frequency equalizer (game-specific presets will be added later)
-- [game paramters](../wwise/game_syncs.md)
+- [game syncs](../wwise/game_syncs.md)
 - listener distance and angle from the source
 
 All of this is still experimental and I'm not sure how far I can (or want to) take it. The following Wwise things are currently _not_ supported:
