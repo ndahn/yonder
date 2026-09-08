@@ -6,13 +6,14 @@ import logging
 import json
 import time
 from pathlib import Path
+from threading import Thread
 import subprocess
 import pyperclip
 import networkx as nx
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode, Game
+from yonder import Soundbank, HIRCNode, Game, lookup_name
 from yonder.types import (
     Action,
     ActorMixer,
@@ -79,6 +80,7 @@ from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .dialogs.unmangle_soundbanks_dialog import unmangle_soundbanks_dialog
+from .panels.hirc_player_panel import add_hirc_player_widget
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 from .widgets.hirc_player_widget import add_hirc_player
@@ -458,145 +460,10 @@ class BanksOfYonder(DpgItem):
                 with dpg.child_window(border=True, resizable_y=True, height=500):
                     with dpg.tab_bar(tag=self._t("bank_tabs")):
                         with dpg.tab(label=µ("Events"), tag=self._t("tab_events")):
-                            with dpg.group(horizontal=True):
-                                dpg.add_input_text(
-                                    hint=µ("Search on enter"),
-                                    width=-30,
-                                    on_enter=True,
-                                    callback=self._regenerate_events_list,
-                                    tag=self._t("events_filter"),
-                                )
-                                dpg.add_button(
-                                    label="?",
-                                    small=True,
-                                )
-                                with dpg.tooltip(dpg.last_item()):
-                                    add_paragraphs(
-                                        # See https://lucene.apache.org/core/2_9_4/queryparsersyntax.html
-                                        µ(
-                                            """\
-                                            Supports Lucene-style search queries (<field>=<value>). 
-
-                                            - You may use the * wildcard for values
-                                            - Field paths are prepended by ** unless quoted
-                                            - Use [X..Y] to specify a value range
-                                            - Precede your value with tilde ~ to do a fuzzy search
-                                            - Terms may be combined using grouping, OR, NOT. 
-                                            - Terms separated by a space are assumed to be AND.
-
-                                            You may run queries over the following fields:
-                                            - id (or hash), type, name
-                                            - any field name
-                                            - any field path separated by slashes /
-
-                                            Examples:
-                                            - id=*588 OR type=RandomSequenceContainer
-                                            - source_id=123456789
-                                            - NOT "node_base_params/parent_id"=[100000..200000]
-                                            - name=~Play_s*""",
-                                            "tips",
-                                        ),
-                                        color=style.light_blue,
-                                    )
-
-                            with dpg.group(horizontal=True, horizontal_spacing=0):
-                                dpg.add_image_button(
-                                    Icons.previous,
-                                    callback=self._prev_events_page,
-                                )
-                                dpg.add_spacer(width=4)
-                                dpg.add_image_button(
-                                    Icons.next,
-                                    callback=self._next_events_page,
-                                )
-                                dpg.add_spacer(width=10)
-                                dpg.add_text(
-                                    "No soundbank loaded", tag=self._t("events_count")
-                                )
-                                dpg.add_spacer(width=10)
-                                with dpg.group():
-                                    dpg.add_spacer(height=1)
-                                    dpg.add_loading_indicator(
-                                        radius=0.8,
-                                        style=1,
-                                        color=style.light_blue,
-                                        show=False,
-                                        tag=self._t("events_filter_loading"),
-                                    )
-
-                            dpg.add_spacer(height=3)
-
-                            with dpg.child_window(
-                                autosize_x=True, autosize_y=True, border=False
-                            ):
-                                with dpg.table(
-                                    no_host_extendX=True,
-                                    resizable=True,
-                                    borders_innerV=True,
-                                    policy=dpg.mvTable_SizingFixedFit,
-                                    header_row=False,
-                                    tag=self._t("events_table"),
-                                ):
-                                    dpg.add_table_column(
-                                        label=µ("Node"),
-                                        width_stretch=True,
-                                        tag=self._t("events_col_nodes"),
-                                    )
+                            self._build_tab_events()
 
                         with dpg.tab(label=µ("Globals"), tag=self._t("tab_globals")):
-                            dpg.add_input_text(
-                                hint="Search on enter",
-                                width=-1,
-                                on_enter=True,
-                                callback=self._regenerate_globals_list,
-                                tag=self._t("globals_filter"),
-                            )
-
-                            with dpg.group(horizontal=True, horizontal_spacing=0):
-                                dpg.add_button(
-                                    arrow=True,
-                                    direction=dpg.mvDir_Left,
-                                    callback=self._prev_globals_page,
-                                )
-                                dpg.add_spacer(width=4)
-                                dpg.add_button(
-                                    arrow=True,
-                                    direction=dpg.mvDir_Right,
-                                    callback=self._next_globals_page,
-                                )
-                                dpg.add_spacer(width=10)
-                                dpg.add_text(
-                                    "No soundbank loaded", tag=self._t("globals_count")
-                                )
-                                dpg.add_spacer(width=10)
-                                with dpg.group():
-                                    dpg.add_spacer(height=1)
-                                    dpg.add_loading_indicator(
-                                        radius=0.8,
-                                        style=1,
-                                        color=style.light_blue,
-                                        show=False,
-                                        tag=self._t("gloabls_filter_loading"),
-                                    )
-
-                            dpg.add_spacer(height=3)
-
-                            with dpg.child_window(
-                                autosize_x=True, autosize_y=True, border=False
-                            ):
-                                with dpg.table(
-                                    no_host_extendX=True,
-                                    resizable=True,
-                                    borders_innerV=True,
-                                    policy=dpg.mvTable_SizingFixedFit,
-                                    header_row=False,
-                                    tag=self._t("globals_table"),
-                                ):
-                                    dpg.add_table_column(
-                                        label=µ("Node"),
-                                        width_stretch=True,
-                                        tag=self._t("globals_col_nodes"),
-                                    )
+                            self._build_tab_globals()
 
                         with dpg.tab(label=µ("Sections"), tag=self._t("tab_sections")):
                             with dpg.table(
@@ -643,7 +510,7 @@ class BanksOfYonder(DpgItem):
                     tag=self._t("attributes"),
                 )
                 dpg.add_spacer(height=1)
-                self._hirc_player = add_hirc_player()
+                self._hirc_player = add_hirc_player(tag=self._t("hirc_player"))
 
             with dpg.child_window(
                 width=400,
@@ -661,30 +528,11 @@ class BanksOfYonder(DpgItem):
                             height=-1,
                         )
 
+                    with dpg.tab(label=µ("Player"), tag=self._t("player_tab")):
+                        add_hirc_player_widget(self._hirc_player, tag=self._t("hirc_player_panel"))
+
                     with dpg.tab(label=µ("Json"), tag=self._t("json_tab")):
-                        dpg.add_input_text(
-                            multiline=True,
-                            width=-1,
-                            height=-30,
-                            callback=lambda s, a, u: self._set_json_highlight(True),
-                            tag=self._t("json"),
-                        )
-                        with dpg.group(horizontal=True):
-                            dpg.add_button(
-                                label=µ("Apply", "button"),
-                                callback=self.apply_json,
-                                tag=self._t("json_apply"),
-                            )
-                            dpg.add_button(
-                                label=µ("Reload Json", "button"),
-                                callback=self.update_json_panel,
-                                tag=self._t("json_reload"),
-                            )
-                            dpg.add_button(
-                                label=µ("Reset Node", "button"),
-                                callback=self.reset_from_json,
-                                tag=self._t("json_reset"),
-                            )
+                        self._build_tab_json()
 
         # Shown now, but will be positioned properly by the welcome message
         with dpg.window(
@@ -707,6 +555,172 @@ class BanksOfYonder(DpgItem):
         with dpg.handler_registry():
             dpg.add_mouse_click_handler(
                 callback=lambda s, a, u: dpg.hide_item(self._t("notification_window"))
+            )
+
+    def _build_tab_events(self) -> None:
+        with dpg.group(horizontal=True):
+            dpg.add_input_text(
+                hint=µ("Search on enter"),
+                width=-30,
+                on_enter=True,
+                callback=self._regenerate_events_list,
+                tag=self._t("events_filter"),
+            )
+            dpg.add_button(
+                label="?",
+                small=True,
+            )
+            with dpg.tooltip(dpg.last_item()):
+                add_paragraphs(
+                    # See https://lucene.apache.org/core/2_9_4/queryparsersyntax.html
+                    µ(
+                        """\
+                        Supports Lucene-style search queries (<field>=<value>). 
+
+                        - You may use the * wildcard for values
+                        - Field paths are prepended by ** unless quoted
+                        - Use [X..Y] to specify a value range
+                        - Precede your value with tilde ~ to do a fuzzy search
+                        - Terms may be combined using grouping, OR, NOT. 
+                        - Terms separated by a space are assumed to be AND.
+
+                        You may run queries over the following fields:
+                        - id (or hash), type, name
+                        - any field name
+                        - any field path separated by slashes /
+
+                        Examples:
+                        - id=*588 OR type=RandomSequenceContainer
+                        - source_id=123456789
+                        - NOT "node_base_params/parent_id"=[100000..200000]
+                        - name=~Play_s*""",
+                        "tips",
+                    ),
+                    color=style.light_blue,
+                )
+
+        with dpg.group(horizontal=True, horizontal_spacing=0):
+            dpg.add_image_button(
+                Icons.previous,
+                callback=self._prev_events_page,
+            )
+            dpg.add_spacer(width=4)
+            dpg.add_image_button(
+                Icons.next,
+                callback=self._next_events_page,
+            )
+            dpg.add_spacer(width=10)
+            dpg.add_text(
+                "No soundbank loaded", tag=self._t("events_count")
+            )
+            dpg.add_spacer(width=10)
+            with dpg.group():
+                dpg.add_spacer(height=1)
+                dpg.add_loading_indicator(
+                    radius=0.8,
+                    style=1,
+                    color=style.light_blue,
+                    show=False,
+                    tag=self._t("events_filter_loading"),
+                )
+
+        dpg.add_spacer(height=3)
+
+        with dpg.child_window(
+            autosize_x=True, autosize_y=True, border=False
+        ):
+            with dpg.table(
+                no_host_extendX=True,
+                resizable=True,
+                borders_innerV=True,
+                policy=dpg.mvTable_SizingFixedFit,
+                header_row=False,
+                tag=self._t("events_table"),
+            ):
+                dpg.add_table_column(
+                    label=µ("Node"),
+                    width_stretch=True,
+                    tag=self._t("events_col_nodes"),
+                )
+
+    def _build_tab_globals(self) -> None:
+        dpg.add_input_text(
+            hint="Search on enter",
+            width=-1,
+            on_enter=True,
+            callback=self._regenerate_globals_list,
+            tag=self._t("globals_filter"),
+        )
+
+        with dpg.group(horizontal=True, horizontal_spacing=0):
+            dpg.add_button(
+                arrow=True,
+                direction=dpg.mvDir_Left,
+                callback=self._prev_globals_page,
+            )
+            dpg.add_spacer(width=4)
+            dpg.add_button(
+                arrow=True,
+                direction=dpg.mvDir_Right,
+                callback=self._next_globals_page,
+            )
+            dpg.add_spacer(width=10)
+            dpg.add_text(
+                "No soundbank loaded", tag=self._t("globals_count")
+            )
+            dpg.add_spacer(width=10)
+            with dpg.group():
+                dpg.add_spacer(height=1)
+                dpg.add_loading_indicator(
+                    radius=0.8,
+                    style=1,
+                    color=style.light_blue,
+                    show=False,
+                    tag=self._t("gloabls_filter_loading"),
+                )
+
+        dpg.add_spacer(height=3)
+
+        with dpg.child_window(
+            autosize_x=True, autosize_y=True, border=False
+        ):
+            with dpg.table(
+                no_host_extendX=True,
+                resizable=True,
+                borders_innerV=True,
+                policy=dpg.mvTable_SizingFixedFit,
+                header_row=False,
+                tag=self._t("globals_table"),
+            ):
+                dpg.add_table_column(
+                    label=µ("Node"),
+                    width_stretch=True,
+                    tag=self._t("globals_col_nodes"),
+                )
+
+    def _build_tab_json(self) -> None:
+        dpg.add_input_text(
+            multiline=True,
+            width=-1,
+            height=-30,
+            callback=lambda s, a, u: self._set_json_highlight(True),
+            tag=self._t("json"),
+        )
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label=µ("Apply", "button"),
+                callback=self.apply_json,
+                tag=self._t("json_apply"),
+            )
+            dpg.add_button(
+                label=µ("Reload Json", "button"),
+                callback=self.update_json_panel,
+                tag=self._t("json_reload"),
+            )
+            dpg.add_button(
+                label=µ("Reset Node", "button"),
+                callback=self.reset_from_json,
+                tag=self._t("json_reset"),
             )
 
     def _setup_context_menus(self) -> None:
