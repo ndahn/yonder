@@ -73,16 +73,22 @@ class add_hirc_player_widget(DpgItem):
                     tag=self._t("player_sync_port"),
                 )
 
+                dpg.add_spacer(height=2)
+
                 with dpg.group(horizontal=True):
                     dpg.add_text(µ("Synchronize"))
                     with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text(µ("Read game syncs from game (requires yonder_live_states.dll)"))
+                        dpg.add_text(
+                            µ(
+                                "Read game syncs from game (requires yonder_live_states.dll)"
+                            )
+                        )
 
                     dpg.add_image_button(
                         Icons.game_sync_once,
                         width=18,
                         height=18,
-                        callback=self._start_game_sync,
+                        callback=self._start_stop_game_sync,
                         tag=self._t("player_sync_once"),
                         user_data=False,
                     )
@@ -90,13 +96,19 @@ class add_hirc_player_widget(DpgItem):
                         Icons.game_sync_auto,
                         width=18,
                         height=18,
-                        callback=self._start_game_sync,
+                        callback=self._start_stop_game_sync,
                         tag=self._t("player_sync_auto"),
                         user_data=True,
                     )
+                    dpg.add_text(
+                        "",
+                        color=style.light_grey,
+                        show=False,
+                        tag=self._t("player_sync_status"),
+                    )
                     dpg.add_loading_indicator(
-                        radius=0.8,
-                        style=1,
+                        radius=1,
+                        style=2,
                         color=style.red,
                         show=False,
                         tag=self._t("player_sync_progress"),
@@ -108,13 +120,12 @@ class add_hirc_player_widget(DpgItem):
                 with dpg.group(tag=self._t(base_tag)):
                     dpg.add_input_text(
                         hint=µ("Filter"),
-                        callback=lambda a, s, u: dpg.set_value(self._t(f"{base_tag}_table"), s),
+                        callback=lambda a, s, u: dpg.set_value(
+                            self._t(f"{base_tag}_table"), s
+                        ),
                         tag=self._t(f"{base_tag}_filter"),
                     )
-                    with dpg.table(
-                        header_row=False,
-                        tag=self._t(f"{base_tag}_table")
-                    ):
+                    with dpg.table(header_row=False, tag=self._t(f"{base_tag}_table")):
                         dpg.add_table_column(width_stretch=True)
                         dpg.add_table_column(width_stretch=True)
 
@@ -129,9 +140,13 @@ class add_hirc_player_widget(DpgItem):
 
         self._update_player_tab()
 
-    def _on_active_only_changed(self, sender: str, active_only: bool, user_data: Any) -> None:
+    def _on_active_only_changed(
+        self, sender: str, active_only: bool, user_data: Any
+    ) -> None:
         if active_only:
-            active_states, active_rtpcs = self._hirc_player.player.collect_control_states(True)
+            active_states, active_rtpcs = (
+                self._hirc_player.player.collect_control_states(True)
+            )
 
             for rtpc, (row, _) in self._state_rows.items():
                 h = calc_hash(rtpc.removeprefix("#"))
@@ -176,7 +191,9 @@ class add_hirc_player_widget(DpgItem):
                         before, _ = self._rtpc_rows[nxt]
 
                     # TODO hide if active rtpcs is enabled and r is not one of them
-                    with dpg.table_row(filter_key=r, before=before, parent=table) as row:
+                    with dpg.table_row(
+                        filter_key=r, before=before, parent=table
+                    ) as row:
                         dpg.add_text(r)
                         row_value = dpg.add_drag_float(
                             default_value=value,
@@ -198,10 +215,11 @@ class add_hirc_player_widget(DpgItem):
 
     def _set_sync_state(self, synchronizing: bool) -> None:
         self._is_synchronizing = synchronizing
-        
+
         if synchronizing:
+            dpg.hide_item(self._t("player_sync_status"))
             dpg.show_item(self._t("player_sync_progress"))
-            
+
             if self._contiunous_sync:
                 dpg.configure_item(self._t("player_sync_auto"), tint_color=style.red)
             else:
@@ -219,7 +237,7 @@ class add_hirc_player_widget(DpgItem):
             self._contiunous_sync = False
             dpg.configure_item(self._t("player_sync_once"), tint_color=style.white)
             dpg.configure_item(self._t("player_sync_auto"), tint_color=style.white)
-            
+
             # allow row edits once more
             for _, row_value in self._rtpc_rows.values():
                 dpg.enable_item(row_value)
@@ -237,13 +255,17 @@ class add_hirc_player_widget(DpgItem):
         self._states[h] = value
         self._hirc_player.update_context(self._states, self._rtpcs)
 
-    def _start_game_sync(self, sender: str, app_data: Any, continuous: bool) -> None:
+    def _start_stop_game_sync(
+        self, sender: str, app_data: Any, continuous: bool
+    ) -> None:
         if self._is_synchronizing:
+            # Let the current synchronization time out
+            self._contiunous_sync = False
             return
-        
+
         self._contiunous_sync = continuous
         self._set_sync_state(True)
-        Thread(target=self._sync, daemon=True)
+        Thread(target=self._sync, daemon=True).start()
 
     def _sync(self) -> None:
         port = dpg.get_value(self._t("player_sync_port"))
@@ -275,6 +297,11 @@ class add_hirc_player_widget(DpgItem):
                         break
                 except TimeoutError:
                     if not self._contiunous_sync:
+                        dpg.configure_item(
+                            self._t("player_sync_status"),
+                            default_value="timeout",
+                            show=True,
+                        )
                         break
         finally:
             if sock:

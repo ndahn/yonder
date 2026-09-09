@@ -466,19 +466,7 @@ class BanksOfYonder(DpgItem):
                             self._build_tab_globals()
 
                         with dpg.tab(label=µ("Sections"), tag=self._t("tab_sections")):
-                            with dpg.table(
-                                no_host_extendX=True,
-                                resizable=True,
-                                borders_innerV=True,
-                                policy=dpg.mvTable_SizingFixedFit,
-                                header_row=False,
-                                tag=self._t("sections_table"),
-                            ):
-                                dpg.add_table_column(
-                                    label=µ("Section"),
-                                    width_stretch=True,
-                                    tag=self._t("sections_col_nodes"),
-                                )
+                            self._build_tab_sections()
 
                 with dpg.child_window(autosize_y=True, border=True):
                     dpg.add_text("Pinned Nodes", tag=self._t("pinned_nodes"))
@@ -697,6 +685,21 @@ class BanksOfYonder(DpgItem):
                     width_stretch=True,
                     tag=self._t("globals_col_nodes"),
                 )
+
+    def _build_tab_sections(self) -> None:
+        with dpg.table(
+            no_host_extendX=True,
+            resizable=True,
+            borders_innerV=True,
+            policy=dpg.mvTable_SizingFixedFit,
+            header_row=False,
+            tag=self._t("sections_table"),
+        ):
+            dpg.add_table_column(
+                label=µ("Section"),
+                width_stretch=True,
+                tag=self._t("sections_col_nodes"),
+            )
 
     def _build_tab_json(self) -> None:
         dpg.add_input_text(
