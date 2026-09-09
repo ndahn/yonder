@@ -9,3 +9,11 @@ captures = ["SETAREABGM_RVA"]
 [[patterns]]
 pattern = "48 89 54 24 10 55 53 56 41 55 41 56 41 57 48 8d 6c 24 d1"
 captures = ["UPDATEBGMSTATE_RVA"]
+
+[[patterns]]
+pattern = "66 0f 45 d8 48 8b 0d $ ' "
+captures = ["", "GLOBAL_WORLDSOUNDMAN_RVA"]
+
+[[patterns]]
+pattern = "48 8b f9 33 ed 48 8b 35 $ ' "
+captures = ["", "GLOBAL_FIELDAREA_RVA"]
