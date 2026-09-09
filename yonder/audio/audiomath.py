@@ -133,6 +133,9 @@ def make_envelope(
 def eval_curve(
     points: list[RTPCGraphPoint], x: float, scaling: CurveScaling = CurveScaling.None_
 ) -> float:
+    if not points:
+        return 0.0
+
     if x <= points[0].from_:
         return points[0].to
 

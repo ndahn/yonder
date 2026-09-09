@@ -64,11 +64,27 @@ class mass_transfer_dialog(DpgItem):
         self.show_message()
         select_nodes_dialog(
             lambda s: self._src_bnk.query(s, node_type=Event),
-            self._on_nodes_selected,
+            lambda s, a, u: self._add_transfer_ids(a),
             get_node_label=lambda n: n.get_name(),
             multiple=True,
             return_labels=True,
         )
+
+    def _select_all_new(self) -> None:
+        if not self._src_bnk:
+            self.show_message("No source bank selected")
+            return
+
+        if not self._dst_bnk:
+            self.show_message("No destination bank seleced")
+            return
+
+        new_ids = [
+            e.get_name()
+            for e in self._src_bnk.query(node_type=Event)
+            if e.id not in self._dst_bnk
+        ]
+        self._add_transfer_ids(new_ids)
 
     def _swap_banks(self) -> None:
         if not self._src_bnk and not self._dst_bnk:
@@ -181,12 +197,6 @@ class mass_transfer_dialog(DpgItem):
             raise ValueError(µ("no destination bank selected"))
 
         for idx, line in enumerate(dst_ids):
-            if line.startswith("#"):
-                if skip_invalid:
-                    skip.add(idx)
-                else:
-                    raise ValueError(µ("Destination IDs cannot be hashes"))
-
             dst_play_id = self._line_to_hash(line)
             if dst_play_id in self._dst_bnk:
                 if skip_invalid:
@@ -201,7 +211,7 @@ class mass_transfer_dialog(DpgItem):
                 continue
 
             src_explicit = sid.startswith(("Play_", "Stop_", "#"))
-            dst_explicit = did.startswith(("Play_", "Stop_"))
+            dst_explicit = did.startswith(("Play_", "Stop_", "#"))
             if src_explicit != dst_explicit:
                 if not skip_invalid:
                     raise ValueError(
@@ -221,9 +231,7 @@ class mass_transfer_dialog(DpgItem):
 
         return event_map
 
-    def _on_nodes_selected(
-        self, sender: str, selected: list[str], user_data: Any
-    ) -> None:
+    def _add_transfer_ids(self, selected: list[str]) -> None:
         src_labels: list[str] = dpg.get_value(self._t("source_ids")).splitlines()
         src_ids = set()
         new_items = []
@@ -433,6 +441,33 @@ class mass_transfer_dialog(DpgItem):
                     tag=self._t("button_select_ids"),
                 )
                 dpg.add_button(
+                    label=µ("Select New"),
+                    callback=self._select_all_new,
+                    tag=self._t("button_select_new"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "Add events from the source bank that are not in the destination bank yet"
+                        ),
+                        wrap=440,
+                    )
+                dpg.add_button(
+                    label=µ("Collect Events"),
+                    callback=self._collect_events,
+                    tag=self._t("collect_events"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "Pull in related events, e.g. a Stop-event when only a Play-event was specified"
+                        ),
+                        wrap=440,
+                    )
+
+                dpg.add_spacer(width=1)
+
+                dpg.add_button(
                     label=µ("Swap Banks"),
                     callback=self._swap_banks,
                     tag=self._t("button_swap_banks"),
@@ -442,18 +477,8 @@ class mass_transfer_dialog(DpgItem):
                     callback=self._swap_ids,
                     tag=self._t("button_swap_ids"),
                 )
-                dpg.add_button(
-                    label=µ("Collect Events"),
-                    callback=self._collect_events,
-                    tag=self._t("collect_events"),
-                )
-                with dpg.tooltip(dpg.last_item()):
-                    dpg.add_text(
-                        µ(
-                            "Pull in events with actions targeting the same structures as the ones you have selected above"
-                        ),
-                        wrap=440,
-                    )
+
+            dpg.add_spacer(height=1)
 
             with dpg.tree_node(label=µ("Advanced")):
                 with dpg.group(horizontal=True):
@@ -490,6 +515,7 @@ class mass_transfer_dialog(DpgItem):
                         wrap=440,
                     )
 
+            dpg.add_spacer(height=1)
             dpg.add_separator()
             add_paragraphs(
                 µ(
@@ -522,7 +548,7 @@ class mass_transfer_dialog(DpgItem):
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text("https://ndahn.github.io/yonder/tools/mass_transfer/")
 
-                dpg.add_text("|")
+                dpg.add_spacer(width=2)
 
                 dpg.add_button(
                     label=µ("Save", "button"),

@@ -144,6 +144,7 @@ class add_hirc_player_widget(DpgItem):
         self, sender: str, active_only: bool, user_data: Any
     ) -> None:
         if active_only:
+            # This widget shouldn't collect, just read from the player widget
             active_states, active_rtpcs = (
                 self._hirc_player.player.collect_control_states(True)
             )

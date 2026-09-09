@@ -91,7 +91,6 @@ class _ValueCondition(_Condition):
 
     def _candidates(self, node: HIRCNode) -> Generator[str, None, None]:
         yield node.id
-        yield node.type_name
         yield node.name
 
     def evaluate(self, obj: HIRCNode) -> bool:

@@ -10,3 +10,4 @@
 - transition rules missing play pre-entry/post-exit/transition piece
 - special delete case for events
 - doc homepage: title picture
+- sound builder: + layers
