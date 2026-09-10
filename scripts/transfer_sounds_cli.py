@@ -157,6 +157,7 @@ if __name__ == "__main__":
 
     try:
         copy_wwise_events(src_bnk, dst_bnk, event_map)
+        dst_bnk.save()
     except Exception:
         if hasattr(sys, "gettrace") and sys.gettrace() is not None:
             # Debugger is active, let the debugger handle it

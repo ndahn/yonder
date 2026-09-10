@@ -143,7 +143,6 @@ def copy_wwise_events(
     wwise_map: dict[Hash, str],
     *,
     known_objects: set[str | int] = None,
-    save: bool = True,
 ) -> None:
     if not known_objects:
         known_objects = set()
@@ -190,20 +189,16 @@ def copy_wwise_events(
                     f"Could not find action target {action.external_id} in source bank"
                 )
 
-    # Save and verify
-    if save:
-        # Save already solves and verifies
-        dst_bnk.save()
+    # Verify, always a good idea
+    logger.info("\nVerifying soundbank...")
+    dst_bnk.solve()
+    severity = dst_bnk.verify()
+    if severity > 0:
+        logger.warning(
+            " - some issues were found in your soundbank. Check the log!"
+        )
     else:
-        logger.info("\nVerifying soundbank...")
-        dst_bnk.solve()
-        severity = dst_bnk.verify()
-        if severity > 0:
-            logger.warning(
-                " - some issues were found in your soundbank. Check the log!"
-            )
-        else:
-            logger.info(" - seems surprisingly fine :o\n")
+        logger.info(" - seems surprisingly fine :o\n")
 
     # Copy WEMs
     copy_wems(src_bnk, dst_bnk, wems)

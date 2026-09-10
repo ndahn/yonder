@@ -23,8 +23,9 @@ PCM_SUBFORMAT_GUID = bytes([1, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xAA, 0, 0x38
 
 
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
-    from yonder import HIRCNode
-    from yonder.types.base_types import MediaInformation
+    from yonder.types import Sound, MusicTrack
+
+    wem_sizes: dict[int, int] = {}
 
     for wem in wems:
         if not wem.name.endswith(".wem"):
@@ -50,21 +51,23 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         else:
             target_path = bnk.bnk_dir / f"{wem_id}.wem"
 
+        wem_sizes[wem_id] = target_path.stat().st_size
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(wem, target_path)
 
-        # Update memory sizes
-        wem_nodes = list(bnk.query(f"'**/source_id'={wem_id}"))
-        wem_size = target_path.stat().st_size
-        for node in wem_nodes:
-            if isinstance(node, HIRCNode):
-                attr_paths = node.glob("**/media_information")
-                media_info: MediaInformation
+    # Update memory sizes
+    for sound in bnk.query(node_type=Sound):
+        sound: Sound
+        sz = wem_sizes.get(sound.source_id)
+        if sz is not None:
+            sound.bank_source_data.media_information.in_memory_media_size = sz
 
-                for _, media_info in attr_paths:
-                    # Music tracks have multiple sources, so check if this is the right one
-                    if media_info.source_id == wem_id:
-                        media_info.in_memory_media_size = wem_size
+    for track in bnk.query(node_type=MusicTrack):
+        track: MusicTrack
+        for source in track.sources:
+            sz = wem_sizes.get(source.source_id)
+            if sz is not None:
+                source.media_information.in_memory_media_size = sz
 
 
 def get_wem_metadata(wem: Path) -> dict:

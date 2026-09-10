@@ -47,5 +47,5 @@ def yay(fadeout: float = 2.0):
 
     # Make sure this gets deleted even if our callback is somehow lost
     dpg.set_frame_callback(
-        dpg.get_frame_count() + fadeout * 60, fadeout_cb
+        dpg.get_frame_count() + int(fadeout * 60), fadeout_cb
     )

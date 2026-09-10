@@ -886,4 +886,9 @@ def setup_music_soundbank(
 
     # Add reference to music_bnk so that it's automatically loaded by the game
     main.stid.add_bank("cs_music")
+
+    main.save()
+    smain.save()
+    music_bnk.save()
+
     return music_bnk

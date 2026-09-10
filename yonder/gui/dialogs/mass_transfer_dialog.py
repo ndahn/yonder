@@ -313,9 +313,6 @@ class mass_transfer_dialog(DpgItem):
         )
 
     def _on_okay(self) -> None:
-        dpg.hide_item(self._t("button_save"))
-        dpg.hide_item(self._t("button_repack"))
-
         if not self._src_bnk:
             self.show_message(µ("No source bank selected", "msg"))
             return
@@ -357,27 +354,16 @@ class mass_transfer_dialog(DpgItem):
             copy_wwise_events(
                 self._src_bnk, self._dst_bnk, event_map, known_objects=known_objects
             )
+            self._dst_bnk.save()
+
+            try:
+                bnk2json_exe = get_config().locate_bnk2json()
+                repack_soundbank(bnk2json_exe, self._dst_bnk.bnk_dir)
+            except ValueError:
+                logger.warning("bnk2json not found, your soundbank has NOT been repacked yet")
 
         logger.info(f"Transferred {len(event_map)} sounds to {self._dst_bnk.name}")
-        dpg.show_item(self._t("button_save"))
-        dpg.show_item(self._t("button_repack"))
         yay()
-
-    def _on_save(self) -> None:
-        self._dst_bnk.save()
-
-    def _on_repack(self) -> None:
-        try:
-            bnk2json = get_config().locate_bnk2json()
-        except Exception:
-            self.show_message(
-                µ(
-                    "bnk2json is required for repacking",
-                    "msg",
-                )
-            )
-        else:
-            repack_soundbank(bnk2json, self._dst_bnk.bnk_dir)
 
     def _build(self, title: str):
         with dpg.window(
@@ -547,18 +533,3 @@ class mass_transfer_dialog(DpgItem):
                 )
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text("https://ndahn.github.io/yonder/tools/mass_transfer/")
-
-                dpg.add_spacer(width=2)
-
-                dpg.add_button(
-                    label=µ("Save", "button"),
-                    callback=self._on_save,
-                    show=False,
-                    tag=self._t("button_save"),
-                )
-                dpg.add_button(
-                    label=µ("Repack", "button"),
-                    callback=self._on_repack,
-                    show=False,
-                    tag=self._t("button_repack"),
-                )
