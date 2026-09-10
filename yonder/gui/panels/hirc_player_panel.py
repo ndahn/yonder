@@ -27,8 +27,10 @@ class add_hirc_player_widget(DpgItem):
         self._hirc_player: add_hirc_player = hirc_player
         self._is_synchronizing = False
         self._contiunous_sync = False
-        self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
+        self._rtpcs: dict[int, float] = set()
+        self._active_states: dict[int, set[int]] = {}
+        self._active_rtpcs: set[int] = set()
         self._rtpc_rows: dict[str, tuple[int, int]] = {}
         self._state_rows: dict[str, tuple[int, int]] = {}
 
@@ -92,6 +94,12 @@ class add_hirc_player_widget(DpgItem):
                         tag=self._t("player_sync_once"),
                         user_data=False,
                     )
+                    dpg.add_text(
+                        "",
+                        color=style.light_grey,
+                        show=False,
+                        tag=self._t("player_sync_status"),
+                    )
                     dpg.add_image_button(
                         Icons.game_sync_auto,
                         width=18,
@@ -100,11 +108,12 @@ class add_hirc_player_widget(DpgItem):
                         tag=self._t("player_sync_auto"),
                         user_data=True,
                     )
-                    dpg.add_text(
-                        "",
-                        color=style.light_grey,
-                        show=False,
-                        tag=self._t("player_sync_status"),
+                    dpg.add_image_button(
+                        Icons.trash,
+                        width=18,
+                        height=18,
+                        callback=self._clear_game_syncs,
+                        tag=self._t("player_sync_clear"),
                     )
                     dpg.add_loading_indicator(
                         radius=1,
@@ -125,7 +134,12 @@ class add_hirc_player_widget(DpgItem):
                         ),
                         tag=self._t(f"{base_tag}_filter"),
                     )
-                    with dpg.table(header_row=False, tag=self._t(f"{base_tag}_table")):
+                    with dpg.table(
+                        header_row=False,
+                        borders_outerH=True,
+                        borders_outerV=True,
+                        tag=self._t(f"{base_tag}_table"),
+                    ):
                         dpg.add_table_column(width_stretch=True)
                         dpg.add_table_column(width_stretch=True)
 
@@ -144,18 +158,13 @@ class add_hirc_player_widget(DpgItem):
         self, sender: str, active_only: bool, user_data: Any
     ) -> None:
         if active_only:
-            # This widget shouldn't collect, just read from the player widget
-            active_states, active_rtpcs = (
-                self._hirc_player.player.collect_control_states(True)
-            )
-
             for rtpc, (row, _) in self._state_rows.items():
-                h = calc_hash(rtpc.removeprefix("#"))
-                dpg.configure_item(row, show=(h in active_states))
+                h = calc_hash(rtpc)
+                dpg.configure_item(row, show=(h in self._active_states))
 
             for rtpc, (row, _) in self._rtpc_rows.items():
-                h = calc_hash(rtpc.removeprefix("#"))
-                dpg.configure_item(row, show=(h in active_rtpcs))
+                h = calc_hash(rtpc)
+                dpg.configure_item(row, show=(h in self._active_rtpcs))
         else:
             for row, _ in self._state_rows.values():
                 dpg.show_item(row)
@@ -163,10 +172,45 @@ class add_hirc_player_widget(DpgItem):
             for row, _ in self._rtpc_rows.values():
                 dpg.show_item(row)
 
+    def _clear_game_syncs(self) -> None:
+        self._set_sync_state(False)
+        self._states.clear()
+        self._rtpcs.clear()
+        self._update_player_tab()
+
+    def _update_game_syncs_from_player(self) -> None:
+        """Collect game syncs that are relevant to the loaded hierarchy"""
+        player = self._hirc_player.player
+        if not player:
+            self._active_states.clear()
+            self._active_rtpcs.clear()
+            return
+
+        # Game syncs that are relevant for playback right now
+        self._active_states, self._active_rtpcs = player.collect_control_states(True)
+
+        # Game syncs that are relevant to any node in the loaded hierarchy
+        relevant_states, relevant_rtpcs = player.collect_control_states(False)
+
+        # Just check for stuff we don't know about yet and set some defaults
+        for state, values in relevant_states.items():
+            if state not in self._states:
+                # TODO retrieve default state, too where possible
+                self._states[state] = next(values, 0)
+
+        for rtpc in relevant_rtpcs:
+            self._rtpcs.setdefault(rtpc, 0.0)
+
     def _update_player_tab(self) -> None:
         is_live = self._is_synchronizing
+        active_only = dpg.get_value(self._t("player_active_game_syncs_only"))
 
         # TODO info text, active voices, etc
+        dpg.set_value(
+            self._t("player_info"), f"voices: {len(self._hirc_player.voices)}"
+        )
+
+        self._update_game_syncs_from_player()
 
         if self._rtpcs:
             dpg.show_item(self._t("player_rtpcs"))
@@ -175,11 +219,12 @@ class add_hirc_player_widget(DpgItem):
 
             for r in sorted(rtpcs):
                 value = rtpcs[r]
+                show = not active_only or calc_hash(r) in self._active_rtpcs
 
                 if r in self._rtpc_rows:
                     # Row exists, just update the value
                     _, row_value = self._rtpc_rows[r]
-                    dpg.set_value(dpg.get_item_children(row_value, slot=1)[1], value)
+                    dpg.configure_item(row_value, default_value=value, show=show)
                 else:
                     # Row does not exist yet, check where to insert it
                     keys = list(self._rtpc_rows)
@@ -191,7 +236,6 @@ class add_hirc_player_widget(DpgItem):
                         nxt = keys[idx + 1]
                         before, _ = self._rtpc_rows[nxt]
 
-                    # TODO hide if active rtpcs is enabled and r is not one of them
                     with dpg.table_row(
                         filter_key=r, before=before, parent=table
                     ) as row:
@@ -200,6 +244,7 @@ class add_hirc_player_widget(DpgItem):
                             default_value=value,
                             enabled=not is_live,
                             callback=self._on_rtpc_changed,
+                            show=show,
                             user_data=r,
                         )
 
@@ -208,6 +253,7 @@ class add_hirc_player_widget(DpgItem):
             dpg.hide_item(self._t("player_rtpcs"))
 
         if self._states:
+            # TODO
             dpg.show_item(self._t("player_states"))
             dpg.show_item(self._t("player_switches"))
         else:
@@ -247,14 +293,15 @@ class add_hirc_player_widget(DpgItem):
                 dpg.enable_item(row_value)
 
     def _on_rtpc_changed(self, sender: str, value: float, rtpc: str) -> None:
-        h = calc_hash(rtpc.removeprefix("#"))
+        h = calc_hash(rtpc)
         self._rtpcs[h] = value
-        self._hirc_player.update_context(self._states, self._rtpcs)
+        self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
-    def _on_state_changed(self, sender: str, value: float, state: str) -> None:
-        h = calc_hash(state.removeprefix("#"))
-        self._states[h] = value
-        self._hirc_player.update_context(self._states, self._rtpcs)
+    def _on_state_changed(self, sender: str, value: str, state: str) -> None:
+        h = calc_hash(state)
+        v = calc_hash(value)
+        self._states[h] = v
+        self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
     def _start_stop_game_sync(
         self, sender: str, app_data: Any, continuous: bool
@@ -275,18 +322,31 @@ class add_hirc_player_widget(DpgItem):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.settimeout(1.0)
-            sock.bind(("localhost", port))
+
+            attempt = 0
+            while True:
+                try:
+                    sock.bind(("localhost", port))
+                    break
+                except OSError:
+                    if attempt < 3:
+                        time.sleep(0.5)
+                    else:
+                        raise
 
             while True:
                 try:
                     # Wait for submission from dll
                     raw, _ = sock.recvfrom(1024)
-                    data = json.loads(raw.decode("utf-8").strip())
-                    self._rtpcs.update(data.get("rtpcs", {}))
-                    self._states.update(data.get("states", {}))
+                    if not self._is_synchronizing:
+                        break
 
-                    # Update the player immediately
-                    self._hirc_player.update_context(self._states, self._rtpcs)
+                    data = json.loads(raw.decode("utf-8").strip())
+
+                    # Update the player
+                    self._states.update(data.get("states", {}))
+                    self._rtpcs.update(data.get("rtpcs", {}))
+                    self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
                     # Limit gui update rate
                     now = time.time()
@@ -298,11 +358,14 @@ class add_hirc_player_widget(DpgItem):
                         break
                 except TimeoutError:
                     if not self._contiunous_sync:
-                        dpg.configure_item(
-                            self._t("player_sync_status"),
-                            default_value="timeout",
-                            show=True,
-                        )
+                        # Don't show the message if we were already supposed to stop
+                        if self._is_synchronizing:
+                            dpg.configure_item(
+                                self._t("player_sync_status"),
+                                default_value="timeout",
+                                show=True,
+                            )
+                        
                         break
         finally:
             if sock:

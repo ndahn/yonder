@@ -3,6 +3,7 @@ import time
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
+from yonder.types import Sound, MusicTrack
 from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
 from yonder.util import logger
@@ -33,6 +34,7 @@ class add_hirc_player(DpgItem):
         self._vgmstream_requested: bool = False
         self._equalizer: add_equalizer = None
         self._attenuation_plot: add_attenuation_plot = None
+        self._voices: list[Sound | MusicTrack] = []
         self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
@@ -49,8 +51,11 @@ class add_hirc_player(DpgItem):
     def set_entrypoint(self, entrypoint: HIRCNode, bnk: Soundbank = None) -> None:
         if self._player:
             self._player.stop()
-        
+
         self._set_play_button_state(False)
+        self._voices.clear()
+        self._states.clear()
+        self._rtpcs.clear()
 
         if bnk:
             self._bnk = bnk
@@ -73,7 +78,7 @@ class add_hirc_player(DpgItem):
         if not self._bnk:
             logger.error("Soundbank not set")
             return
-        
+
         if not self._entrypoint:
             logger.error("Entrypoint not set")
             return
@@ -107,6 +112,8 @@ class add_hirc_player(DpgItem):
         )
         self._player.set_equalizer(self._equalizer.values)
 
+        # TODO collect rtpcs and states
+
         self._set_play_button_state(False)
         self.regenerate()
         self.set_enabled(True)
@@ -115,6 +122,35 @@ class add_hirc_player(DpgItem):
     @property
     def player(self) -> HIRCPlayer:
         return self._player
+
+    @property
+    def voices(self) -> list[Sound | MusicTrack]:
+        return self._voices
+
+    @property
+    def states(self) -> dict[int, set[int]]:
+        return self._states
+
+    @property
+    def rtpcs(self) -> list[int]:
+        return self._rtpcs
+
+    def set_game_syncs(
+        self, states: dict[int, int] = None, rtpcs: dict[int, float] = None
+    ) -> None:
+        if states:
+            self._states.update(states)
+
+        if rtpcs:
+            self._rtpcs.update(rtpcs)
+
+        if states or rtpcs:
+            self.update_context()
+
+        if states:
+            # States can influence what is being played, rtpcs can't
+            # TODO limit update rate
+            self.regenerate()
 
     def play(self) -> None:
         self._init_player()
@@ -133,7 +169,7 @@ class add_hirc_player(DpgItem):
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
         dpg.delete_item(self._t("popup_states"), children_only=True)
-        self._attenuation_plot.clear_attenuations()
+        self._attenuation_plot.clear()
 
         grad1 = style.RGBA.create_gradient(
             style.light_blue.but(a=162), style.light_orange.but(a=162), 10
@@ -142,11 +178,12 @@ class add_hirc_player(DpgItem):
             style.pink.but(a=162), style.light_red.but(a=162), 10
         )
 
+        self._voices = self._player.collect_voices()
+
         # Individual voice settings
         dpg.push_container_stack(self._t("voice_settings"))
-        active_voices = self._player.collect_voices(True)
 
-        for idx, voice in enumerate(active_voices):
+        for idx, voice in enumerate(self._voices):
             with dpg.group(horizontal=True):
                 dpg.add_checkbox(
                     default_value=True,
@@ -176,13 +213,12 @@ class add_hirc_player(DpgItem):
         # Attenuation
         dpg.push_container_stack(self._t("popup_attenuation"))
 
-        # there may be multiple attenuations at the same time
-        context_map = self._player.collect_effective_contexts(True)
-        for voice in active_voices:
-            ctx = context_map[voice.id]
-            att = ctx.attenuation
-            if att:
-                self._attenuation_plot.add_attenuation(att)
+        # there may be multiple attenuations affecting different voices at the same time
+        for voice in self._voices:
+            if voice.is_pyo_initialized():
+                att = voice.pyo_state().ctx.attenuation
+                if att:
+                    self._attenuation_plot.add_attenuation(att)
 
         dpg.pop_container_stack()
 
@@ -245,22 +281,6 @@ class add_hirc_player(DpgItem):
             self._player.context.distance = self._distance
             self._player.context.angle = self._angle
             self._player.apply_context()
-
-    def _on_set_rtpc(self, sender: str, value: float, rtpc: str) -> None:
-        self._rtpcs[rtpc] = value
-
-        if self._player:
-            self._player.context.rtpcs[rtpc] = value
-            self._player.apply_context()
-
-    def _on_set_state(self, sender: str, state: int, group: int) -> None:
-        self._states[group] = state
-
-        if self._player:
-            self._player.context.states[group] = state
-            self._player.apply_context()
-            # This may cause the active nodes to change
-            self.regenerate()
 
     def _on_eqboost_changed(
         self, sender: str, values: list[float], user_data: Any

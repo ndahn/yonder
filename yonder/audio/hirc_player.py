@@ -82,6 +82,32 @@ class HIRCPlayer:
     def playing(self) -> bool:
         return self._playing
 
+    def collect_voices(
+        self, start_from: int | HIRCNode = None
+    ) -> list[Sound | MusicTrack]:
+        if not start_from:
+            start_from = self.entrypoint.id
+
+        sources = []
+        todo = [start_from]
+
+        while todo:
+            node_id = todo.pop()
+            node = self.bnk.get(node_id)
+
+            if not node:
+                continue
+
+            if isinstance(node, (Sound, MusicTrack)):
+                sources.append(node)
+
+                for _, ref in node.get_references():
+                    child = self.bnk.get(ref)
+                    if child:
+                        todo.append(child)
+
+        return sources
+
     def collect_control_states(
         self, active_only: bool
     ) -> tuple[dict[int, set[int]], list[int]]:
@@ -115,61 +141,6 @@ class HIRCPlayer:
                         todo.append(child)
 
         return (states, rtpcs)
-
-    def collect_voices(
-        self, active_only: bool, start_from: int | HIRCNode = None
-    ) -> list[Sound | MusicTrack]:
-        if not start_from:
-            start_from = self.entrypoint.id
-
-        sources = []
-        todo = [start_from]
-
-        while todo:
-            node_id = todo.pop()
-            node = self.bnk.get(node_id)
-
-            if not node:
-                continue
-
-            if (not active_only or node.is_pyo_initialized()) and isinstance(
-                node, (Sound, MusicTrack)
-            ):
-                sources.append(node)
-
-                for _, ref in node.get_references():
-                    child = self.bnk.get(ref)
-                    if child:
-                        todo.append(child)
-
-        return sources
-
-    def collect_effective_contexts(
-        self, active_only: bool = True, start_from: int | HIRCNode = None
-    ) -> dict[int, PlayContext]:
-        if not start_from:
-            start_from = self.entrypoint.id
-
-        ret = {}
-        todo = [(start_from, self.context)]
-
-        while todo:
-            node_id, ctx = todo.pop()
-            node = self.bnk.get(node_id)
-
-            if not node:
-                continue
-
-            if not active_only or node.is_pyo_initialized():
-                node_ctx = ctx.merge(node)
-                ret[node.id] = node_ctx
-
-                for _, ref in node.get_references():
-                    child = self.bnk.get(ref)
-                    if child:
-                        todo.append((child, node_ctx))
-
-        return ret
 
     def set_equalizer(self, values: list[float] = None) -> None:
         self._equalizer.set_values(values)

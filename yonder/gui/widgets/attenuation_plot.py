@@ -49,13 +49,13 @@ class add_attenuation_plot(DpgItem):
     def _build(self) -> None:
         with dpg.group(tag=self._tag):
             with dpg.plot(
-                width=240, 
+                width=240,
                 height=240,
                 no_box_select=True,
                 no_frame=True,
                 no_inputs=True,
-                #no_menus=True,
-                #no_title=True,
+                # no_menus=True,
+                # no_title=True,
                 equal_aspects=True,
                 tag=self._t("canvas"),
             ):
@@ -118,7 +118,9 @@ class add_attenuation_plot(DpgItem):
         dpg.set_value(self._t("info_text"), f"{dist:.1f}m / {math.degrees(phi):.0f}°")
 
         if self._on_position_changed:
-            self._on_position_changed(self._tag, (dist, math.degrees(phi)), self._user_data)
+            self._on_position_changed(
+                self._tag, (dist, math.degrees(phi)), self._user_data
+            )
 
     def _render_background(self, sender: str, series_data: list, ud: Any) -> None:
         # Save some cpu cycles when no updates are needed
@@ -190,7 +192,7 @@ class add_attenuation_plot(DpgItem):
         self._attenuations.pop(idx)
         self._dirty = True
 
-    def clear_attenuations(self) -> None:
+    def clear(self) -> None:
         self._attenuations.clear()
         self._dirty = True
 
