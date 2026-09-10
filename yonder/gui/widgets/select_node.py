@@ -67,7 +67,7 @@ class add_select_node(DpgItem):
     ) -> str:
         super().__init__(tag)
 
-        if not isinstance(default, HIRCNode):
+        if default and bnk and not isinstance(default, HIRCNode):
             default = bnk.get(default, default)
 
         self._bnk = bnk
@@ -215,6 +215,18 @@ class add_select_node(DpgItem):
                 )
 
     # === Public accessors =================
+
+    def set_bank(self, bnk: Soundbank, fire_callback: bool = True) -> None:
+        # Update the bank and keep the node selected if it still exists in that bank
+        nid = self.selected_node
+        if isinstance(nid, HIRCNode):
+            nid = nid.id
+
+        self._bnk = bnk
+        self.selected_node = bnk.get(nid)
+
+        if fire_callback and self._callback:
+            self._callback(self.tag, self.selected_node, self._user_data)
 
     @property
     def selected_node(self) -> int | HIRCNode:

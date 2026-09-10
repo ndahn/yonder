@@ -190,6 +190,10 @@ class WavPlayer:
         self._fx_pitch = ratio
 
     @property
+    def path(self) -> str:
+        return self._path
+
+    @property
     def position(self) -> float:
         """Position from start in seconds."""
         return self._cursor / self._params.framerate

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -11,6 +12,7 @@ warnings.filterwarnings("ignore", message="^.*find ffmpeg or avconv.*$")
 # NOTE need to manually install audioop-lts
 from pydub import AudioSegment, silence
 
+from yonder.hash import calc_hash
 from yonder.util import logger
 
 if TYPE_CHECKING:
@@ -22,6 +24,25 @@ WAVE_FORMAT_EXTENSIBLE = 0xFFFE  # standard ms tag; real codec is the subformat 
 PCM_SUBFORMAT_GUID = bytes([1, 0, 0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xAA, 0, 0x38, 0x9B, 0x71])
 
 
+def get_wem_id(wem_name: str | Path) -> int:
+    wem_name = Path(wem_name).stem
+
+    if wem_name.isdigit():
+        return int(wem_name)
+
+    # We allow adding additional info to the wem filename to make them easier to handle
+    if "_" in wem_name:
+        for part in wem_name.split("_"):
+            try:
+                wem_id = int(part)
+                if wem_id >= 10e6:
+                    return wem_id
+            except ValueError:
+                pass
+        
+    return calc_hash(wem_name)
+
+
 def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
     from yonder.types import Sound, MusicTrack
 
@@ -31,23 +52,12 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         if not wem.name.endswith(".wem"):
             continue
 
-        # We allow adding additional info to the wem filename to make them easier to handle
-        if "_" in wem.name:
-            for part in wem.name.split("_"):
-                try:
-                    wem_id = int(part)
-                    break
-                except ValueError:
-                    pass
-            wem_id = int(wem_id)
-        else:
-            wem_id = int(wem.stem)
+        wem_id = get_wem_id(wem)
 
         # Copy to the correct location
-        stream_path_rel = f"wem/{str(wem_id)[:2]}/{wem.name}"
-        if str(wem).endswith(str(stream_path_rel)):
+        if str(wem).endswith(f"wem/{wem.stem[:2]}/{wem.name}"):
             # Handle streamed sounds
-            target_path = bnk.bnk_dir.parent / stream_path_rel
+            target_path = bnk.bnk_dir.parent / "wem" / str(wem_id)[:2] / f"{wem_id}.wem"
         else:
             target_path = bnk.bnk_dir / f"{wem_id}.wem"
 

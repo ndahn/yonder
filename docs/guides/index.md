@@ -18,6 +18,11 @@ This section covers various high-level workflows - i.e. things that people commo
     Start with [this guide](adding_sounds.md) adding and using sounds.
 
 
+??? example "Where can I find this extremly specific sound?"
+
+    It's easy, just not straight forward. Head over to the [locating sounds](locating_sounds.md) guide.
+
+
 ??? example "Jazz would match Godfrey so much better."
 
     Fear not! The [working with music](working_with_music.md) page is there to guide you.

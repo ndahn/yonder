@@ -32,6 +32,30 @@ class DecisionTreeMixin:
             num_tree_nodes += len(item.children)
             todo.extend(item.children)
 
+    def get_flat_tree(self, string_keys: bool = True) -> dict[tuple[str | int], int]:
+        todo = [(c, []) for c in self.tree.children]
+        ret = {}
+
+        while todo:
+            node, path = todo.pop()
+
+            if string_keys:
+                if node.key == 0:
+                    path.append("*")
+                else:
+                    name = lookup_name(node.key, f"#{node.key}")
+                    path.append(name)
+            else:
+                path.append(node.key)
+
+            if len(path) == self.tree_depth:
+                ret[tuple(path)] = node.node_id
+            else:
+                for child in node.children:
+                    todo.append((child, list(path)))
+
+        return ret
+
     def get_used_state_values(self) -> dict[int, list[int]]:
         ret = {}
         todo = [(c, 0) for c in self.tree.children]
@@ -54,6 +78,9 @@ class DecisionTreeMixin:
 
     def has_argument(self, argument: Hash) -> None:
         return self.get_argument_pos(argument) >= 0
+
+    def get_string_argument(self) -> list[str]:
+        return [lookup_name(a.group_id, f"#{a.group_id}") for a in self.arguments]
 
     def insert_argument(
         self,

@@ -75,6 +75,7 @@ from .dialogs.convert_wav_dialog import convert_wavs_dialog
 from .dialogs.settings_dialog import settings_dialog
 from .dialogs.create_boss_track_dialog import create_boss_track_dialog
 from .dialogs.create_area_bgm_dialog import create_area_bgm_dialog
+from .dialogs.replace_music_dialog import replace_music_dialog
 from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
@@ -308,6 +309,11 @@ class BanksOfYonder(DpgItem):
                     # callback=self._open_ambience_dialog,
                     enabled=False,  # TODO
                     tag=self._t("menu/create_ambience"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Replace Music", "menu"),
+                    callback=self._open_replace_music_dialog,
+                    tag=self._t("menu/replace_music"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -2310,6 +2316,16 @@ class BanksOfYonder(DpgItem):
             self.jump_to_node(nodes[0])
 
         create_area_bgm_dialog(self.bnk, on_area_track_created, tag=tag)
+        center_window(tag)
+
+    def _open_replace_music_dialog(self) -> None:
+        tag = self._t("create_area_track_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        replace_music_dialog(self.bnk, tag=tag)
         center_window(tag)
 
     def _open_calc_hash_dialog(self) -> None:

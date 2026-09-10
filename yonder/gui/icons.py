@@ -45,6 +45,7 @@ class Icons:
     random = "tex_icon_random"
     recording = "tex_icon_recording"
     repack = "tex_icon_repack"
+    restore_file = "tex_icon_restore_file"
     rtpc16 = "tex_icon_rtpc16"
     select16 = "tex_icon_select16"
     select_empty = "tex_icon_select_empty"

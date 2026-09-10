@@ -40,9 +40,6 @@ class create_node_dialog(DpgItem):
         title: str = "Create Node",
         tag: str = None,
     ) -> None:
-        if tag and dpg.does_item_exist(tag):
-            dpg.delete_item(tag)
-
         super().__init__(tag)
 
         self._bnk = bnk
@@ -67,7 +64,7 @@ class create_node_dialog(DpgItem):
             height=400,
             autosize=True,
             no_saved_settings=True,
-            tag=self._tag,
+            tag=self.tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
             dpg.add_combo(
