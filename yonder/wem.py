@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 from pathlib import Path
-import re
 import shutil
 import subprocess
 
@@ -13,7 +12,7 @@ warnings.filterwarnings("ignore", message="^.*find ffmpeg or avconv.*$")
 from pydub import AudioSegment, silence
 
 from yonder.hash import calc_hash
-from yonder.util import logger
+from yonder.util import logger, get_temp_dir
 
 if TYPE_CHECKING:
     from yonder import Soundbank

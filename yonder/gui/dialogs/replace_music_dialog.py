@@ -38,41 +38,101 @@ class replace_music_dialog(DpgItem):
         self._bnk: Soundbank = bnk
         self._callback = callback
         self._msc_select: add_select_node = None
+        self._music_tracks: set[int] = set()
         self._replacements: dict[tuple[int, int], Path] = {}
+        self._buttons: dict[int, list[tuple[int, int]]] = {}
         self._player: WavPlayer = None
+        self._playback_source_id: int = None
 
         self._build(title)
 
     def _on_msc_changed(
         self, sender: str, msc: MusicSwitchContainer, user_data: Any
     ) -> None:
+        self._close_player()
         self._replacements.clear()
         self.regenerate()
 
     def _on_music_path_changed(
         self, sender: str, path: Path, info: tuple[int, int]
     ) -> None:
-        track, source_idx = info
-        self._replacements[(track.id, source_idx)] = path
-        dpg.configure_item(
-            self._t(f"reset_{track.id}_{source_idx}"), tint_color=style.yellow
-        )
-
         self._close_player()
+
+        track, sidx = info
+        node: MusicTrack = self._bnk[track]
+        source_id = node.source_ids[sidx]
+
+        if dpg.get_value(self._t("replace_all")):
+            for track in self._music_tracks:
+                node = self._bnk.get(track)
+                if node:
+                    try:
+                        sidx = node.source_ids.index(source_id)
+                        self._replacements[(track, sidx)] = path
+                    except ValueError:
+                        pass
+        else:
+            self._replacements[(track, sidx)] = path
+
+        self.regenerate()
 
     def _on_restore_track(
         self, sender: str, app_data: Any, info: tuple[int, int]
     ) -> None:
-        self._replacements.pop(info, None)
-        dpg.configure_item(sender, tint_color=style.white)
-
         self._close_player()
+        prev = self._replacements.pop(info, None)
+        
+        if prev is not None:
+            dpg.configure_item(sender, tint_color=style.white)
+            self.regenerate()
 
     def _close_player(self) -> None:
+        self._set_play_buttons_state(self._playback_source_id, False)
+        self._playback_source_id = None
+
         if self._player:
             self._player.stop()
             self._player = None
-            # TODO restore play icon
+
+    def _init_player(self, track: int, sidx: int) -> WavPlayer:
+        self._close_player()
+        cfg = get_config()
+
+        if (track, sidx) in self._replacements:
+            audio = self._replacements[(track, sidx)]
+
+            if not audio.is_file():
+                logger.warning(f"Replacement file {audio.name} not found")
+                return None
+        else:
+            source_id = self._bnk[track].source_ids[sidx]
+            audio = self._bnk.get_wem_path(source_id, search_paths=cfg.bankdirs)
+
+            if not audio:
+                logger.warning(f"Could not find audio file for {source_id}")
+                return None
+
+        if audio.suffix == ".wav":
+            wav = audio
+        else:
+            wav = get_temp_dir() / f"{audio.stem}.wav"
+
+        if not wav.is_file():
+            vgmstream_exe = cfg.locate_vgmstream()
+            wav = wem2wav(vgmstream_exe, audio, get_temp_dir())[0]
+
+        return WavPlayer(str(wav))
+
+    def _set_play_buttons_state(self, source_id: int, playing: bool) -> None:
+        if source_id is None:
+            return
+
+        tint = style.light_blue if playing else style.white
+        icon = Icons.pause if playing else Icons.play
+
+        for _, btn in self._buttons.get(source_id, []):
+            if dpg.does_item_exist(btn):
+                dpg.configure_item(btn, texture_tag=icon, tint_color=tint)
 
     def _on_play_pause_track(
         self, sender: str, app_data: Any, info: tuple[int, int]
@@ -80,32 +140,23 @@ class replace_music_dialog(DpgItem):
         track, sidx = info
         node: MusicTrack = self._bnk[track]
         source_id = node.source_ids[sidx]
-
         player = self._player
-        if player:
-            if player.path.endswith(f"{source_id}.wav"):
-                if player.playing:
-                    player.pause()
-                    dpg.configure_item(sender, texture_tag=Icons.play)
-                else:
-                    player.play()
-                    dpg.configure_item(sender, texture_tag=Icons.pause)
+
+        if not player or source_id != self._playback_source_id:
+            player = self._init_player(track, sidx)
+            if not player:
                 return
-            else:
-                self._close_player()
 
-        wav = get_temp_dir() / f"{source_id}.wem"
+            self._player = player
 
-        if not wav.is_file():
-            cfg = get_config()
-            wem = self._bnk.get_wem_path(source_id, search_paths=cfg.bankdirs)
-
-            if wem:
-                vgmstream_exe = cfg.locate_vgmstream()
-                wav = wem2wav(vgmstream_exe, wem)[0]
-
-        self._player = WavPlayer(str(wav))
-        self._player.play()
+        if player.playing:
+            player.pause()
+            self._set_play_buttons_state(source_id, False)
+            self._playback_source_id = None
+        else:
+            player.play()
+            self._set_play_buttons_state(source_id, True)
+            self._playback_source_id = source_id
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("music_table"), slot=1, children_only=True)
@@ -113,6 +164,8 @@ class replace_music_dialog(DpgItem):
         msc: MusicSwitchContainer = self._msc_select.selected_node
         if not isinstance(msc, MusicSwitchContainer):
             return
+
+        indent_px = 10
 
         def make_rows(node: MusicTrack, path: str, indent: int) -> None:
             if dpg.does_item_exist(self._t(f"row_{path}")):
@@ -126,41 +179,51 @@ class replace_music_dialog(DpgItem):
                 parent=self._t("music_table"),
                 tag=self._t(f"row_{path}"),
             ):
-                dpg.add_text(path, indent=indent * 12)
+                dpg.add_text(path, indent=indent * indent_px)
 
                 with dpg.group():
-                    for idx, source in enumerate(node.source_ids):
+                    for idx, sid in enumerate(node.source_ids):
+                        if (node.id, idx) in self._replacements:
+                            default = self._replacements[(node.id, idx)]
+                        else:
+                            default = self._bnk.get_wem_path(sid)
+
                         add_generic_widget(
                             Path,
                             None,
                             self._on_music_path_changed,
-                            default=self._bnk.get_wem_path(source),
+                            default=default,
                             filetypes={},
-                            user_data=(node, idx),
+                            user_data=(node.id, idx),
+                            width=-50,
                         )
 
                 with dpg.group():
-                    for idx, source in enumerate(node.source_ids):
+                    for idx, sid in enumerate(node.source_ids):
                         with dpg.group(horizontal=True):
                             tint = (
                                 style.yellow
                                 if (node.id, idx) in self._replacements
                                 else style.white
                             )
-                            dpg.add_image_button(
+                            reset_btn = dpg.add_image_button(
                                 Icons.restore_file,
                                 width=18,
                                 height=18,
                                 tint_color=tint,
                                 callback=self._on_restore_track,
-                                user_data=(node, idx),
+                                user_data=(node.id, idx),
                             )
-                            dpg.add_image_button(
+                            play_btn = dpg.add_image_button(
                                 Icons.play,
                                 width=18,
                                 height=18,
                                 callback=self._on_play_pause_track,
-                                user_data=(node, idx),
+                                user_data=(node.id, idx),
+                            )
+
+                            self._buttons.setdefault(sid, []).append(
+                                (reset_btn, play_btn)
                             )
 
         def delve(root: HIRCNode, path: str, indent: int) -> None:
@@ -170,6 +233,7 @@ class replace_music_dialog(DpgItem):
                 node = todo.pop()
 
                 if isinstance(node, MusicTrack):
+                    self._music_tracks.add(node.id)
                     make_rows(node, path, indent)
                 elif isinstance(node, MusicSwitchContainer):
                     delve_msc(node, path + "/", indent + 1)
@@ -185,6 +249,13 @@ class replace_music_dialog(DpgItem):
             tree = node.get_flat_tree()
             keys = sorted(tree)
 
+            if path_prefix:
+                with dpg.table_row(
+                    filter_key=path_prefix,
+                    parent=self._t("music_table"),
+                ):
+                    dpg.add_text(path_prefix, indent=indent * indent_px)
+
             for key in keys:
                 node = self._bnk.get(tree[key])
                 if not node:
@@ -196,9 +267,15 @@ class replace_music_dialog(DpgItem):
 
                 # need to dive down until we find the leaves
                 path = path_prefix + condensed
-                delve(node, path, indent)
+                delve(node, path, indent + 1)
 
-        delve_msc(msc, "", 0)
+        with dpg.table_row(
+            parent=self._t("music_table"),
+        ):
+            dpg.add_text(msc.get_name())
+
+        with loading_indicator(µ("Discovering"), color=style.purple):
+            delve_msc(msc, "", 0)
 
     def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         if not msg:
@@ -236,13 +313,13 @@ class replace_music_dialog(DpgItem):
                 wem = self._bnk.get_wem_path(source_id, search_paths=cfg.bankdirs)
 
                 if wem and delete_originals:
-                    wem.unlink()
+                    wem.unlink(missing_ok=True)
 
                 if path.suffix != ".wem":
                     if not wwise_exe:
                         wwise_exe = cfg.locate_wwise()
 
-                    path = wav2wem(wwise_exe, path)
+                    path = wav2wem(wwise_exe, path, get_temp_dir())
 
                 wem_id = get_wem_id(path)
                 target_path = wem.parent / f"{wem_id}.wem"
@@ -266,8 +343,8 @@ class replace_music_dialog(DpgItem):
     def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
-            width=520,
-            height=460,
+            width=600,
+            height=480,
             no_saved_settings=True,
             tag=self.tag,
             on_close=lambda: dpg.delete_item(window),
@@ -281,6 +358,11 @@ class replace_music_dialog(DpgItem):
                 tag=self._t("msc"),
             )
             dpg.add_checkbox(
+                label=µ("Replace all instances"),
+                default_value=True,
+                tag=self._t("replace_all"),
+            )
+            dpg.add_checkbox(
                 label=µ("Delete original wems"),
                 default_value=True,
                 tag=self._t("delete_originals"),
@@ -288,6 +370,7 @@ class replace_music_dialog(DpgItem):
 
             with dpg.child_window(
                 autosize_x=True,
+                no_scrollbar=True,
                 height=-120,
             ):
                 dpg.add_input_text(
@@ -297,9 +380,13 @@ class replace_music_dialog(DpgItem):
                     tag=self._t("music_filter"),
                 )
                 with dpg.table(
+                    resizable=True,
                     header_row=True,
+                    freeze_rows=1,
                     borders_outerH=True,
                     borders_outerV=True,
+                    no_host_extendY=True,
+                    scrollY=True,
                     tag=self._t("music_table"),
                 ):
                     dpg.add_table_column(label=µ("Condition"), width_stretch=True)
@@ -324,7 +411,7 @@ class replace_music_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label=µ("Scotty, beam them!", "button"),
+                    label=µ("Let chaos reign!", "button"),
                     callback=self._on_okay,
                     tag=self._t("button_okay"),
                 )
