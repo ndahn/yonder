@@ -5,9 +5,12 @@
 - merge banks tool
 - find bank conflicts tool
 - nicer log message popups
+- equalizer bars
 - msc branches need to be merged/split when editing their path
 - msc tree edits only need to rebuild msc widgets, no need to regenerate everything
 - transition rules missing play pre-entry/post-exit/transition piece
 - special delete case for events
 - doc homepage: title picture
 - sound builder: + layers
+- overhaul segment and music track node widgets
+- remove old player
