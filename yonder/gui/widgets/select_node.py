@@ -46,9 +46,9 @@ def get_details_generic(node: HIRCNode) -> list[str]:
 class add_select_node(DpgItem):
     def __init__(
         self,
-        bnk: Soundbank,
-        label: str,
-        callback: Callable[[str, int | HIRCNode | list[HIRCNode], Any], None],
+        bnk: Soundbank = None,
+        label: str = None,
+        callback: Callable[[str, int | HIRCNode | list[HIRCNode], Any], None] = None,
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
         allow_select: bool = True,
@@ -223,7 +223,8 @@ class add_select_node(DpgItem):
             nid = nid.id
 
         self._bnk = bnk
-        self.selected_node = bnk.get(nid)
+        if bnk:
+            self.selected_node = bnk.get(nid)
 
         if fire_callback and self._callback:
             self._callback(self.tag, self.selected_node, self._user_data)
@@ -247,10 +248,9 @@ class add_select_node(DpgItem):
 class add_select_actormixer(add_select_node):
     def __init__(
         self,
-        bnk: Soundbank,
-        label: str,
-        # TODO callback value type
-        callback: Callable[[str, AmxData | list[AmxData], Any], None],
+        bnk: Soundbank = None,
+        label: str = None,
+        callback: Callable[[str, AmxData | list[AmxData], Any], None] = None,
         *,
         amx_filter: Callable[[ActorMixer], bool] = None,
         current_bank_only: bool = False,
@@ -279,12 +279,20 @@ class add_select_actormixer(add_select_node):
         self._current_bank_only = current_bank_only
 
     def _select_node(self):
-        bank_summary = build_bank_actormixer_summary(self._bnk)
+        if self._bnk:
+            bank_name = self._bnk.name
+            extra = {bank_name: build_bank_actormixer_summary(self._bnk)}
+            top = [bank_name]
+        else:
+            bank_name = None
+            extra = None
+            top = None
+            
         select_actormixer(
             self._on_node_selected,
-            default_summary_key=self._bnk.name,
-            extra_summaries={self._bnk.name: bank_summary},
-            top_banks=[self._bnk.name],
+            default_summary_key=bank_name,
+            extra_summaries=extra,
+            top_banks=top,
             multiple=self._multiple,
             user_data=self._user_data,
         )

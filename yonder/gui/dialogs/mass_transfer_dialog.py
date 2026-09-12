@@ -17,6 +17,7 @@ from yonder.gui.widgets import (
     add_generic_widget,
     add_paragraphs,
     loading_indicator,
+    add_select_actormixer,
     yay,
 )
 from yonder.gui.helpers import shorten_path, dpg_section
@@ -37,6 +38,7 @@ class mass_transfer_dialog(DpgItem):
 
         self._src_bnk: Soundbank = src_bnk
         self._dst_bnk: Soundbank = dst_bnk
+        self._amx_override: add_select_actormixer = None
 
         self._build(title)
 
@@ -55,6 +57,7 @@ class mass_transfer_dialog(DpgItem):
                 path = unpack_soundbank(bnk2json, path)
 
             self._dst_bnk = Soundbank.load(path)
+            self._amx_override.set_bank(self._dst_bnk)
 
     def _select_nodes(self) -> None:
         if not self._src_bnk:
@@ -352,8 +355,16 @@ class mass_transfer_dialog(DpgItem):
                         get_game_objects(game).amx_summary.actormixers.keys()
                     )
 
+            amx_override = None
+            if dpg.get_value(self._t("enable_amx_override")):
+                amx_override = self._amx_override.selected_node
+
             copy_wwise_events(
-                self._src_bnk, self._dst_bnk, event_map, known_objects=known_objects
+                self._src_bnk,
+                self._dst_bnk,
+                event_map,
+                known_objects=known_objects,
+                amx_override=amx_override,
             )
             self._dst_bnk.save()
 
@@ -361,7 +372,9 @@ class mass_transfer_dialog(DpgItem):
                 bnk2json_exe = get_config().locate_bnk2json()
                 repack_soundbank(bnk2json_exe, self._dst_bnk.bnk_dir)
             except ValueError:
-                logger.warning("bnk2json not found, your soundbank has NOT been repacked yet")
+                logger.warning(
+                    "bnk2json not found, your soundbank has NOT been repacked yet"
+                )
 
         logger.info(f"Transferred {len(event_map)} sounds to {self._dst_bnk.name}")
         yay()
@@ -492,7 +505,7 @@ class mass_transfer_dialog(DpgItem):
                 dpg.add_checkbox(
                     label=µ("Skip objects from main banks only"),
                     default_value=True,
-                    tag=µ(self._t("skip_main_bank_objects")),
+                    tag=self._t("skip_main_bank_objects"),
                 )
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text(
@@ -501,6 +514,14 @@ class mass_transfer_dialog(DpgItem):
                         ),
                         wrap=440,
                     )
+
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        label=µ("Parent targets to new ActorMixer"),
+                        default_value=False,
+                        tag=self._t("enable_amx_override"),
+                    )
+                    self._amx_override = add_select_actormixer(textbox_width=160)
 
             dpg.add_spacer(height=1)
             dpg.add_separator()

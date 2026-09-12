@@ -51,7 +51,9 @@ def copy_node_structure(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     entrypoint: HIRCNode,
+    *,
     known_objects: set[str | int] = None,
+    parent_override: int | HIRCNode = None,
 ) -> list[int]:
     if not known_objects:
         known_objects = set()
@@ -81,33 +83,41 @@ def copy_node_structure(
 
     dst_bnk.add_nodes(*transfer_nodes)
 
-    # Go upwards through the parents chain and see what needs to be transferred
-    upchain = src_bnk.get_parent_chain(entrypoint)
-    upchain_str = "\n".join(
-        [f" ⤷ {up_id} ({repr(src_bnk[up_id])})" for up_id in reversed(upchain)]
-    )
-    logger.info(f"\nThe parent chain consists of the following nodes:\n{upchain_str}\n")
+    if parent_override:
+        if hasattr(entrypoint, "parent"):
+            entrypoint.parent = parent_override
+        else:
+            logger.warning(f"Parent override is set, but {entrypoint} has no parent")
+    else:
+        # Go upwards through the parents chain and see what needs to be transferred
+        upchain = src_bnk.get_parent_chain(entrypoint)
+        upchain_str = "\n".join(
+            [f" ⤷ {up_id} ({repr(src_bnk[up_id])})" for up_id in reversed(upchain)]
+        )
+        logger.info(
+            f"\nThe parent chain consists of the following nodes:\n{upchain_str}\n"
+        )
 
-    up_child = entrypoint
-    for up_id in upchain:
-        # Once we encounter an existing node we can assume the rest of the chain is
-        # intact. Child nodes must be inserted *before* the first existing parent.
-        if up_id in known_objects:
-            break
+        up_child = entrypoint
+        for up_id in upchain:
+            # Once we encounter an existing node we can assume the rest of the chain is
+            # intact. Child nodes must be inserted *before* the first existing parent.
+            if up_id in known_objects:
+                break
 
-        up_node = dst_bnk.get(up_id)
-        if up_node:
+            up_node = dst_bnk.get(up_id)
+            if up_node:
+                up_node.children.add(up_child.id)
+                break
+
+            # First time we encounter upchain node, clear the children, as non-existing items
+            # will make the soundbank invalid
+            up_node = src_bnk[up_id].copy()
+            up_node.children.clear()
             up_node.children.add(up_child.id)
-            break
+            dst_bnk.add_nodes(up_node)
 
-        # First time we encounter upchain node, clear the children, as non-existing items
-        # will make the soundbank invalid
-        up_node = src_bnk[up_id].copy()
-        up_node.children.clear()
-        up_node.children.add(up_child.id)
-        dst_bnk.add_nodes(up_node)
-
-        up_child = up_node
+            up_child = up_node
 
     return wems
 
@@ -143,6 +153,7 @@ def copy_wwise_events(
     wwise_map: dict[Hash, str],
     *,
     known_objects: set[str | int] = None,
+    amx_override: int | HIRCNode = None,
 ) -> None:
     if not known_objects:
         known_objects = set()
@@ -181,7 +192,11 @@ def copy_wwise_events(
             entrypoint = src_bnk.get(action.external_id)
             if entrypoint:
                 new_wems = copy_node_structure(
-                    src_bnk, dst_bnk, entrypoint, known_objects
+                    src_bnk,
+                    dst_bnk,
+                    entrypoint,
+                    known_objects=known_objects,
+                    parent_override=amx_override,
                 )
                 wems.extend(new_wems)
             else:
@@ -194,9 +209,7 @@ def copy_wwise_events(
     dst_bnk.solve()
     severity = dst_bnk.verify()
     if severity > 0:
-        logger.warning(
-            " - some issues were found in your soundbank. Check the log!"
-        )
+        logger.warning(" - some issues were found in your soundbank. Check the log!")
     else:
         logger.info(" - seems surprisingly fine :o\n")
 
@@ -211,7 +224,6 @@ def copy_structures_with_new_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     nodes: dict[HIRCNode, str],
-    save: bool = False,
 ) -> None:
     wems = []
 
@@ -232,19 +244,15 @@ def copy_structures_with_new_events(
         new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
         wems.extend(new_wems)
 
-    # Save and verify
-    if save:
-        # Save already solves and verifies
-        dst_bnk.save()
+    # Verify
+    logger.info("\nVerifying soundbank...")
+    dst_bnk.solve()
+    issues = dst_bnk.verify()
+    if issues:
+        for issue in issues:
+            logger.warning(f" - {issue}")
     else:
-        logger.info("\nVerifying soundbank...")
-        dst_bnk.solve()
-        issues = dst_bnk.verify()
-        if issues:
-            for issue in issues:
-                logger.warning(f" - {issue}")
-        else:
-            logger.info(" - seems surprisingly fine :o\n")
+        logger.info(" - seems surprisingly fine :o\n")
 
     # Copy WEMs
     copy_wems(src_bnk, dst_bnk, wems)
