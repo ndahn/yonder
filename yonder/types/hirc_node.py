@@ -177,7 +177,12 @@ class HIRCNode(DataNode):
         if hasattr(self, "_release_cb"):
             from yonder.util import logger
 
-            logger.warning(f"### Double free of {self}")
+            logger.warning(f"Double free of {self}")
+            return
+
+        if not self.is_pyo_initialized():
+            # No need to go deeper, large trees like a MusicSwitchContainer can take a long time
+            # to traverse entirely
             return
 
         def release():

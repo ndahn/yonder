@@ -9,7 +9,7 @@ import pyo
 
 from yonder.types import Soundbank, HIRCNode, Sound, MusicTrack
 from yonder.util import logger
-from .audiomath import db_to_amp, amp_to_db
+from .audiomath import db_to_amp
 from .equalizer import Equalizer
 from .play_context import PlayContext
 
@@ -17,17 +17,12 @@ from .play_context import PlayContext
 class HIRCPlayer:
     def __init__(
         self,
-        bnk: Soundbank,
         entrypoint: HIRCNode,
         context: PlayContext,
         on_finished: Callable[[], None] = None,
     ):
-        if not isinstance(entrypoint, HIRCNode):
-            entrypoint = bnk[entrypoint]
-
         # TODO need to include the AMX uptree
 
-        self.bnk = bnk
         self.entrypoint = entrypoint
         self.context = context
         self._voice_gains: dict[int, float] = {}
@@ -57,6 +52,10 @@ class HIRCPlayer:
             self.close()
         except Exception as e:
             logger.error("Failed to close player", exc_info=e)
+
+    def init_pyo(self) -> None:
+        if not self.entrypoint.is_pyo_initialized():
+            self.entrypoint.pyo(self.context)
 
     def close(self) -> None:
         # close is called again by __del__ and atexit, avoid closing twice
@@ -93,7 +92,7 @@ class HIRCPlayer:
 
         while todo:
             node_id = todo.pop()
-            node = self.bnk.get(node_id)
+            node = self.context.bank.get(node_id)
 
             if not node:
                 continue
@@ -102,45 +101,11 @@ class HIRCPlayer:
                 sources.append(node)
 
                 for _, ref in node.get_references():
-                    child = self.bnk.get(ref)
+                    child = self.context.bank.get(ref)
                     if child:
                         todo.append(child)
 
         return sources
-
-    def collect_control_states(
-        self, active_only: bool
-    ) -> tuple[dict[int, set[int]], list[int]]:
-        from yonder.types.mixins import StateMixin, RtpcMixin, DecisionTreeMixin
-
-        states: dict[int, set[int]] = {}
-        rtpcs: list[int] = []
-        todo: list[HIRCNode] = [self.entrypoint]
-
-        while todo:
-            node = todo.pop()
-
-            if not active_only or node.is_pyo_initialized():
-                if isinstance(node, DecisionTreeMixin):
-                    for group, values in node.get_used_state_values().items():
-                        group_states = states.setdefault(group, set())
-                        group_states.update(values)
-
-                if isinstance(node, StateMixin):
-                    for group in node.states.state_group_chunks:
-                        group_states = states.setdefault(group.state_group_id, set())
-                        group_states.update([s.state_id for s in group.states])
-
-                if isinstance(node, RtpcMixin):
-                    for rtpc in node.rtpcs:
-                        rtpcs.append(rtpc.id)
-
-                for _, ref in node.get_references():
-                    child = self.bnk.get(ref)
-                    if child:
-                        todo.append(child)
-
-        return (states, rtpcs)
 
     def set_equalizer(self, values: list[float] = None) -> None:
         self._equalizer.set_values(values)
@@ -207,8 +172,8 @@ class HIRCPlayer:
         if not ctx:
             ctx = self.context
 
-        self.entrypoint.update_playback(ctx)
         self.context = ctx
+        self.entrypoint.update_playback(ctx)
 
     def _finish(self) -> None:
         # Stop everything so the next play() starts from a clean slate

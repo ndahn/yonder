@@ -63,6 +63,7 @@ class DecisionTreeMixin:
         while todo:
             branch, depth = todo.pop()
             ret.setdefault(self.arguments[depth].group_id, []).append(branch.key)
+            todo.extend((c, depth + 1) for c in branch.children)
 
         return ret
 

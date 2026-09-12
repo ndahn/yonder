@@ -104,3 +104,7 @@ class add_state_value_input(DpgItem):
         val = _get_label(val)
         dpg.set_value(self._t("input"), val)
         dpg.set_value(self._t("combo"), val)
+
+    def set_enabled(self, enabled: bool) -> None:
+        dpg.configure_item(self._t("input"), enabled=enabled)
+        dpg.configure_item(self._t("combo"), enabled=enabled)

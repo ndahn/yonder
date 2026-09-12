@@ -156,7 +156,7 @@ class add_properties_table(DpgItem):
                 tag=self._t(f"value_{idx}"),
             )
 
-            with dpg.group(horizontal=True, horizontal_spacing=1):
+            with dpg.group(horizontal=True, horizontal_spacing=3):
                 if self._prop_ranges_enabled:
                     tint = style.yellow if prop in self._prop_ranges else style.white
                     dpg.add_image_button(

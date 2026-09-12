@@ -1718,14 +1718,7 @@ class BanksOfYonder(DpgItem):
         if isinstance(node, HIRCNode):
             self._backup = node.copy()
             dpg.set_value(self._t("json"), node.json())
-            # TODO enable player once ready
-            try:
-                self._hirc_player.set_entrypoint(node, self.bnk)
-                self._hirc_player.set_enabled(True)
-                self._hirc_player_panel.regenerate()
-            except ValueError as e:
-                logger.error(f"HIRC player failed to load: {e}")
-                self._hirc_player.set_enabled(False)
+            self._prepare_playback(node)
         else:
             self._backup = None
             dpg.set_value(self._t("json"), "")
@@ -1782,8 +1775,7 @@ class BanksOfYonder(DpgItem):
     def _on_structure_changed(self) -> None:
         self._hirc_player.stop()
         self.regenerate()
-        self._hirc_player.set_entrypoint(self._selected_node, self.bnk)
-        self._hirc_player_panel.regenerate()
+        self._prepare_playback(self._selected_node)
 
     def jump_to_node(self, node: int | HIRCNode) -> None:
         self._hirc_player.stop()
@@ -1877,8 +1869,19 @@ class BanksOfYonder(DpgItem):
                 )
             )
 
-    def regenerate_attributes(self) -> None:
+    def _regenerate_attributes(self) -> None:
         self._on_node_selected(self._selected_root, True, self._selected_node)
+
+    def _prepare_playback(self, node: HIRCNode) -> None:
+        def run() -> None:
+            try:
+                self._hirc_player.set_entrypoint(self.bnk, node)
+                self._hirc_player_panel.regenerate()
+            except ValueError as e:
+                logger.error(f"HIRC player failed to load: {e}")
+                self._hirc_player.set_enabled(False)
+
+        Thread(target=run, daemon=True).start()
 
     def _bank_solve_hirc(self) -> None:
         with loading_indicator(µ("Solving...", "loading")):

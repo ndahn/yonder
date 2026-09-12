@@ -1,12 +1,12 @@
 from typing import Any, Callable
 import time
+from threading import Thread
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.types import Sound, MusicTrack
 from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
-from yonder.util import logger
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
@@ -19,19 +19,14 @@ from .attenuation_plot import add_attenuation_plot
 class add_hirc_player(DpgItem):
     def __init__(
         self,
-        bnk: Soundbank = None,
-        entrypoint: HIRCNode = None,
-        on_new_entrypoint: Callable[[Soundbank, HIRCNode], None] = None,
         *,
+        on_player_state_changed: Callable[[], None] = None,
         tag: str = 0,
         parent: str = 0,
     ) -> None:
         super().__init__(tag)
 
-        self._bnk: Soundbank = bnk
-        self._entrypoint: HIRCNode = entrypoint
-        self._on_new_entrypoint = on_new_entrypoint
-        self._dirty: bool = True
+        self._on_player_state_changed = on_player_state_changed
         self._player: HIRCPlayer = None
         self._vgmstream_requested: bool = False
         self._equalizer: add_equalizer = None
@@ -45,45 +40,29 @@ class add_hirc_player(DpgItem):
         self._setup_content(parent)
         self.set_enabled(False)
 
+    def set_callback(self, on_player_state_changed: Callable[[], None]) -> None:
+        self._on_player_state_changed = on_player_state_changed
+
     def set_enabled(self, enabled: bool) -> None:
         for child in dpg.get_item_children(self._t("buttons"), slot=1):
             if "button" in dpg.get_item_type(child).lower():
                 dpg.configure_item(child, enabled=enabled)
 
-    def set_entrypoint(self, entrypoint: HIRCNode, bnk: Soundbank = None) -> None:
-        if self._player:
-            self._player.stop()
-
-        self._set_play_button_state(False)
-        self._voices.clear()
-        self._states.clear()
-        self._rtpcs.clear()
-
-        if bnk:
-            self._bnk = bnk
-
-        self._entrypoint = entrypoint
-        self._dirty = True
-
-    def _init_player(self) -> None:
-        if self._player and not self._dirty:
-            return
-
+    def set_entrypoint(self, bnk: Soundbank, entrypoint: HIRCNode) -> None:
         self.set_enabled(False)
+        self._set_play_button_state(False)
 
         # Removing pyo objects from a running pyo server tends to cause segfaults, so better
         # to recreate the player each time the structure changes. Closing the server takes a
         # few ms, but we can let this be handled by the GC in the background.
         if self._player:
-            self._player.close()
+            player = self._player
+            self._player = None
+            player.close()
 
-        if not self._bnk:
-            logger.error("Soundbank not set")
-            return
-
-        if not self._entrypoint:
-            logger.error("Entrypoint not set")
-            return
+        self._voices.clear()
+        self._states.clear()
+        self._rtpcs.clear()
 
         cfg = get_config()
 
@@ -96,11 +75,12 @@ class add_hirc_player(DpgItem):
 
         if not vgmstream:
             # Don't log this, it's just noise
-            print("[ERROR] vgmstream not found, HIRC player disabled")
+            print("[ERROR] vgmstream not found, HIRC player not loaded")
+            self.set_enabled(True)
             return
 
         ctx = PlayContext(
-            self._bnk,
+            bnk,
             vgmstream,
             cfg.bankdirs,
             rtpcs=dict(self._rtpcs),
@@ -110,21 +90,24 @@ class add_hirc_player(DpgItem):
         )
 
         self._player = HIRCPlayer(
-            self._bnk, self._entrypoint, ctx, lambda: self._set_play_button_state(False)
+            entrypoint, ctx, lambda: self._set_play_button_state(False)
         )
         self._player.set_equalizer(self._equalizer.values)
 
-        self._set_play_button_state(False)
         self.regenerate()
         self.set_enabled(True)
-        self._dirty = False
-
-        if self._on_new_entrypoint:
-            self._on_new_entrypoint(self._bnk, self._entrypoint)
 
     @property
     def player(self) -> HIRCPlayer:
         return self._player
+
+    @property
+    def bank(self) -> Soundbank:
+        return self._player.context.bank if self._player else None
+
+    @property
+    def entrypoint(self) -> HIRCNode:
+        return self._player.entrypoint if self._player else None
 
     @property
     def voices(self) -> list[Sound | MusicTrack]:
@@ -156,18 +139,19 @@ class add_hirc_player(DpgItem):
             self.regenerate()
 
     def play(self) -> None:
-        self._init_player()
         if self._player:
             self._player.play()
 
     def stop(self) -> None:
-        self._init_player()
         if self._player:
             self._player.stop()
 
     def update_context(self) -> None:
         if self._player:
-            self._player.apply_context(None)
+            ctx = self._player.context
+            ctx.states.update(self._states)
+            ctx.rtpcs.update(self._rtpcs)
+            self._player.apply_context(ctx)
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
@@ -181,7 +165,7 @@ class add_hirc_player(DpgItem):
             style.pink.but(a=162), style.light_red.but(a=162), 10
         )
 
-        self._voices = self._player.collect_voices()
+        self._voices = self._player.collect_voices() if self._player else []
 
         # Individual voice settings
         dpg.push_container_stack(self._t("voice_settings"))
@@ -230,6 +214,9 @@ class add_hirc_player(DpgItem):
             self._t("btn_play"), texture_tag=Icons.pause if playing else Icons.play
         )
 
+        if self._on_player_state_changed:
+            self._on_player_state_changed()
+
     def _on_ctrl_seek_zero(self) -> None:
         if self._player:
             self._player.seek(0, None)
@@ -243,7 +230,6 @@ class add_hirc_player(DpgItem):
         self._set_play_button_state(False)
 
     def _on_ctrl_play_pause(self) -> None:
-        self._init_player()
         if not self._player:
             return
 

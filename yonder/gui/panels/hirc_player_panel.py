@@ -6,7 +6,9 @@ import socket
 import json
 from dearpygui import dearpygui as dpg
 
-from yonder import lookup_name, calc_hash
+from yonder import lookup_name, calc_hash, HIRCNode
+from yonder.types.mixins import StateMixin, RtpcMixin, DecisionTreeMixin
+from yonder.game import get_selected_game
 from yonder.gui import style
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -27,14 +29,14 @@ class add_hirc_player_panel(DpgItem):
         self._hirc_player: add_hirc_player = hirc_player
         self._is_synchronizing = False
         self._contiunous_sync = False
+        self._widgets_updating = False
         self._states: dict[int, int] = {}
-        self._rtpcs: dict[int, float] = set()
-        self._active_states: dict[int, set[int]] = {}
-        self._active_rtpcs: set[int] = set()
+        self._rtpcs: dict[int, float] = {}
         self._rtpc_rows: dict[str, tuple[int, int]] = {}
-        self._state_rows: dict[str, tuple[int, int]] = {}
+        self._state_rows: dict[str, tuple[int, add_state_value_input]] = {}
 
         self._build()
+        hirc_player.set_callback(self._trigger_widgets_update)
 
     def _build(self) -> None:
         with dpg.child_window(autosize_x=True, autosize_y=True, tag=self.tag):
@@ -48,20 +50,14 @@ class add_hirc_player_panel(DpgItem):
 
             with dpg.group():
                 dpg.add_checkbox(
-                    label=µ("Play from hierarchy head"),
+                    label=µ("Play full hierarchy"),
                     default_value=True,
-                    tag=self._t("player_play_hierarchy_head"),
+                    tag=self._t("player_full_hierarchy"),
                 )
                 dpg.add_checkbox(
                     label=µ("Include AMX hierarchy"),
                     default_value=True,
                     tag=self._t("player_include_amx"),
-                )
-                dpg.add_checkbox(
-                    label=µ("Show relevant game syncs only"),
-                    default_value=True,
-                    callback=self._on_active_only_changed,
-                    tag=self._t("player_active_game_syncs_only"),
                 )
 
             # Game syncs
@@ -92,21 +88,15 @@ class add_hirc_player_panel(DpgItem):
                         width=18,
                         height=18,
                         callback=self._start_stop_game_sync,
-                        tag=self._t("player_sync_once"),
+                        tag=self._t("sync_once"),
                         user_data=False,
-                    )
-                    dpg.add_text(
-                        "",
-                        color=style.light_grey,
-                        show=False,
-                        tag=self._t("player_sync_status"),
                     )
                     dpg.add_image_button(
                         Icons.game_sync_auto,
                         width=18,
                         height=18,
                         callback=self._start_stop_game_sync,
-                        tag=self._t("player_sync_auto"),
+                        tag=self._t("sync_auto"),
                         user_data=True,
                     )
                     dpg.add_image_button(
@@ -114,14 +104,20 @@ class add_hirc_player_panel(DpgItem):
                         width=18,
                         height=18,
                         callback=self.regenerate,
-                        tag=self._t("player_sync_clear"),
+                        tag=self._t("sync_clear"),
                     )
                     dpg.add_loading_indicator(
                         radius=1,
                         style=2,
                         color=style.red,
                         show=False,
-                        tag=self._t("player_sync_progress"),
+                        tag=self._t("sync_progress"),
+                    )
+                    dpg.add_text(
+                        "",
+                        color=style.light_grey,
+                        show=False,
+                        tag=self._t("sync_status"),
                     )
 
             dpg.add_spacer(height=3)
@@ -142,16 +138,16 @@ class add_hirc_player_panel(DpgItem):
                         tag=self._t(f"{base_tag}_table"),
                     ):
                         dpg.add_table_column(width_stretch=True)
-                        dpg.add_table_column(width_stretch=True)
 
-            with dpg.tree_node(label=µ("RTPCs")):
-                make_gamesync_table("player_rtpcs")
+            with dpg.tree_node(
+                label=µ("RTPCs"), default_open=True, tag=self._t("tree_rtpcs")
+            ):
+                make_gamesync_table("sync_rtpcs")
 
-            with dpg.tree_node(label=µ("Switches")):
-                make_gamesync_table("player_switches")
-
-            with dpg.tree_node(label=µ("States")):
-                make_gamesync_table("player_states")
+            with dpg.tree_node(
+                label=µ("States"), default_open=True, tag=self._t("tree_states")
+            ):
+                make_gamesync_table("sync_states")
 
         self.regenerate()
 
@@ -159,85 +155,109 @@ class add_hirc_player_panel(DpgItem):
         self._set_sync_state(False)
         self._states.clear()
         self._rtpcs.clear()
-        
-        dpg.delete_item(self._t("player_rtpcs_table"), slot=1, children_only=True)
-        dpg.delete_item(self._t("player_switches_table"), slot=1, children_only=True)
-        dpg.delete_item(self._t("player_states_table"), slot=1, children_only=True)
-        dpg.set_value(self._t("player_rtpcs_filter"), "")
-        dpg.set_value(self._t("player_switches_filter"), "")
-        dpg.set_value(self._t("player_states_filter"), "")
 
-        self._update_player_tab()
+        # Clean up any of our custom dpg widgets
+        # for _, row_value in self._rtpc_rows.values():
+        #     ...
+        for _, row_value in self._state_rows.values():
+            row_value.destroy()
 
-    def _on_active_only_changed(
-        self, sender: str, active_only: bool, user_data: Any
-    ) -> None:
-        if active_only:
-            for rtpc, (row, _) in self._state_rows.items():
-                h = calc_hash(rtpc)
-                dpg.configure_item(row, show=(h in self._active_states))
+        self._rtpc_rows.clear()
+        self._state_rows.clear()
 
-            for rtpc, (row, _) in self._rtpc_rows.items():
-                h = calc_hash(rtpc)
-                dpg.configure_item(row, show=(h in self._active_rtpcs))
-        else:
-            for row, _ in self._state_rows.values():
-                dpg.show_item(row)
+        dpg.delete_item(self._t("sync_rtpcs_table"), slot=1, children_only=True)
+        dpg.delete_item(self._t("sync_states_table"), slot=1, children_only=True)
+        dpg.set_value(self._t("sync_rtpcs_filter"), "")
+        dpg.set_value(self._t("sync_states_filter"), "")
+        dpg.hide_item(self._t("sync_status"))
 
-            for row, _ in self._rtpc_rows.values():
-                dpg.show_item(row)
+        self._trigger_widgets_update()
 
-    def _collect_active_game_syncs(self) -> None:
-        """Collect game syncs that are relevant to the loaded hierarchy"""
-        player = self._hirc_player.player
-        if not player:
-            self._active_states.clear()
-            self._active_rtpcs.clear()
+    def _collect_control_states(
+        self, active_only: bool = True
+    ) -> tuple[dict[int, set[int]], list[int]]:
+        entrypoint = self._hirc_player.entrypoint
+        if not entrypoint:
+            return ({}, [])
+
+        # Make sure the playback structure is initialized so we have something to collect
+        self._hirc_player.player.init_pyo()
+
+        states: dict[int, set[int]] = {}
+        rtpcs: list[int] = []
+        todo: list[HIRCNode] = [self._hirc_player.entrypoint]
+        bnk = self._hirc_player.bank
+
+        while todo:
+            node = todo.pop()
+
+            # Only pyo-initialized nodes will be added to the todo-list
+            if isinstance(node, DecisionTreeMixin):
+                for group, values in node.get_used_state_values().items():
+                    group_states = states.setdefault(group, set())
+                    group_states.update(values)
+
+            if isinstance(node, StateMixin):
+                for group in node.states.state_group_chunks:
+                    group_states = states.setdefault(group.state_group_id, set())
+                    group_states.update([s.state_id for s in group.states])
+
+            if isinstance(node, RtpcMixin):
+                for rtpc in node.rtpcs:
+                    rtpcs.append(rtpc.id)
+
+            if bnk:
+                for _, ref in node.get_references():
+                    child = bnk.get(ref)
+                    if child and (not active_only or child.is_pyo_initialized()):
+                        todo.append(child)
+
+        return (states, rtpcs)
+
+    def _trigger_widgets_update(self) -> None:
+        if self._widgets_updating:
             return
 
-        # Game syncs that are relevant for playback right now
-        self._active_states, self._active_rtpcs = player.collect_control_states(True)
+        def run():
+            try:
+                self._update_player_tab()
+            finally:
+                self._widgets_updating = False
 
-        # Game syncs that are relevant to any node in the loaded hierarchy
-        relevant_states, relevant_rtpcs = player.collect_control_states(False)
-
-        # Just check for stuff we don't know about yet and set some defaults
-        for state, values in relevant_states.items():
-            if state not in self._states:
-                # TODO retrieve default state, too where possible
-                self._states[state] = next(iter(values), 0)
-
-        for rtpc in relevant_rtpcs:
-            self._rtpcs.setdefault(rtpc, 0.0)
+        self._widgets_updating = True
+        Thread(target=run, daemon=True).start()
 
     def _update_player_tab(self) -> None:
         is_live = self._is_synchronizing
-        active_only = dpg.get_value(self._t("player_active_game_syncs_only"))
 
         # TODO info text, active voices, etc
         dpg.set_value(
             self._t("player_info"), f"voices: {len(self._hirc_player.voices)}"
         )
 
-        self._collect_active_game_syncs()
+        # Game syncs that are relevant for playback right now
+        # Don't collect all syncs used *somewhere* as this can take multiple seconds
+        # for e.g. the main music switch container in cs_smain
+        active_states, active_rtpcs = self._collect_control_states(True)
 
-        if self._rtpcs:
-            dpg.show_item(self._t("player_rtpcs"))
-            table = self._t("player_rtpcs_table")
-            rtpcs = {lookup_name(r, f"#{r}"): v for r, v in self._rtpcs.items()}
+        if active_rtpcs:
+            dpg.show_item(self._t("sync_rtpcs"))
+            table = self._t("sync_rtpcs_table")
+            rtpcs = {
+                lookup_name(r, f"#{r}"): self._rtpcs.get(r, 0.0) for r in active_rtpcs
+            }
 
-            for r in sorted(rtpcs):
-                value = rtpcs[r]
-                show = not active_only or calc_hash(r) in self._active_rtpcs
+            for param in sorted(rtpcs):
+                value = rtpcs[param]
 
-                if r in self._rtpc_rows:
+                if param in self._rtpc_rows:
                     # Row exists, just update the value
-                    _, row_value = self._rtpc_rows[r]
-                    dpg.configure_item(row_value, default_value=value, show=show)
+                    _, row_value = self._rtpc_rows[param]
+                    dpg.configure_item(row_value, default_value=value)
                 else:
                     # Row does not exist yet, check where to insert it
                     keys = list(self._rtpc_rows)
-                    idx = bisect(keys, r)
+                    idx = bisect(keys, param)
                     before = 0
 
                     if keys and idx < len(keys):
@@ -246,60 +266,95 @@ class add_hirc_player_panel(DpgItem):
                         before, _ = self._rtpc_rows[nxt]
 
                     with dpg.table_row(
-                        filter_key=r, before=before, parent=table
+                        filter_key=param, before=before, parent=table
                     ) as row:
-                        dpg.add_text(r)
                         row_value = dpg.add_drag_float(
+                            label=param,
                             default_value=value,
                             enabled=not is_live,
                             callback=self._on_rtpc_changed,
-                            show=show,
-                            user_data=r,
+                            user_data=param,
                         )
 
-                    self._rtpc_rows[r] = (row, row_value)
+                    self._rtpc_rows[param] = (row, row_value)
         else:
-            dpg.hide_item(self._t("player_rtpcs"))
+            dpg.hide_item(self._t("sync_rtpcs"))
 
-        if self._states:
-            # TODO
-            dpg.show_item(self._t("player_states"))
-            dpg.show_item(self._t("player_switches"))
+        if active_states:
+            dpg.show_item(self._t("sync_states"))
+            table = self._t("sync_states_table")
+
+            states = {}
+            for group in active_states:
+                group_name = lookup_name(group, f"#{group}")
+                state_value = self._states.get(group)
+                state_name = (
+                    lookup_name(state_value, f"#{state_value}") if state_value else "-"
+                )
+                states[group_name] = state_name
+
+            for group in sorted(states):
+                state_value = states[group]
+
+                if group in self._state_rows:
+                    _, row_value = self._state_rows[group]
+                    row_value.value = state_value
+                else:
+                    keys = list(self._state_rows)
+                    idx = bisect(keys, group)
+                    before = 0
+
+                    if keys and idx < len(keys):
+                        nxt = keys[idx + 1]
+                        before, _ = self._state_rows[nxt]
+
+                    with dpg.table_row(
+                        filter_key=group, before=before, parent=table
+                    ) as row:
+                        known_states = get_selected_game().game_states.get(group, [])
+                        row_value = add_state_value_input(
+                            group,
+                            known_states,
+                            self._on_state_changed,
+                            default_value=state_value,
+                            user_data=group,
+                        )
+
+                    self._state_rows[group] = (row, row_value)
         else:
-            dpg.hide_item(self._t("player_states"))
-            dpg.hide_item(self._t("player_switches"))
+            dpg.hide_item(self._t("sync_states"))
 
     def _set_sync_state(self, synchronizing: bool) -> None:
         self._is_synchronizing = synchronizing
 
         if synchronizing:
-            dpg.hide_item(self._t("player_sync_status"))
-            dpg.show_item(self._t("player_sync_progress"))
+            dpg.hide_item(self._t("sync_status"))
+            dpg.show_item(self._t("sync_progress"))
 
             if self._contiunous_sync:
-                dpg.configure_item(self._t("player_sync_auto"), tint_color=style.red)
+                dpg.configure_item(self._t("sync_auto"), tint_color=style.red)
             else:
-                dpg.configure_item(self._t("player_sync_once"), tint_color=style.red)
+                dpg.configure_item(self._t("sync_once"), tint_color=style.red)
 
             # prevent row edits
             for _, row_value in self._rtpc_rows.values():
                 dpg.disable_item(row_value)
 
             for _, row_value in self._state_rows.values():
-                dpg.disable_item(row_value)
+                row_value.set_enabled(False)
         else:
-            dpg.hide_item(self._t("player_sync_progress"))
+            dpg.hide_item(self._t("sync_progress"))
 
             self._contiunous_sync = False
-            dpg.configure_item(self._t("player_sync_once"), tint_color=style.white)
-            dpg.configure_item(self._t("player_sync_auto"), tint_color=style.white)
+            dpg.configure_item(self._t("sync_once"), tint_color=style.white)
+            dpg.configure_item(self._t("sync_auto"), tint_color=style.white)
 
             # allow row edits once more
             for _, row_value in self._rtpc_rows.values():
                 dpg.enable_item(row_value)
 
             for _, row_value in self._state_rows.values():
-                dpg.enable_item(row_value)
+                row_value.set_enabled(True)
 
     def _on_rtpc_changed(self, sender: str, value: float, rtpc: str) -> None:
         h = calc_hash(rtpc)
@@ -360,7 +415,7 @@ class add_hirc_player_panel(DpgItem):
                     # Limit gui update rate
                     now = time.time()
                     if (time - last_update) > 0.05:
-                        self._update_player_tab()
+                        self._trigger_widgets_update()
 
                     last_update = now
                     if not self._contiunous_sync:
@@ -370,7 +425,7 @@ class add_hirc_player_panel(DpgItem):
                         # Don't show the message if we were already supposed to stop
                         if self._is_synchronizing:
                             dpg.configure_item(
-                                self._t("player_sync_status"),
+                                self._t("sync_status"),
                                 default_value="timeout",
                                 show=True,
                             )
@@ -381,4 +436,4 @@ class add_hirc_player_panel(DpgItem):
                 sock.close()
 
             self._set_sync_state(False)
-            self._update_player_tab()
+            self._trigger_widgets_update()
