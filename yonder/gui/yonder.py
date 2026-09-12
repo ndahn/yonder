@@ -1461,8 +1461,8 @@ class BanksOfYonder(DpgItem):
         self._regenerate_globals_list()
 
     def regenerate(self) -> None:
-        dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
-        dpg.set_value(self._t("json"), "")
+        self._clear_attributes_panel()
+        self.update_json_panel()
 
         if not self.bnk:
             return
@@ -1641,8 +1641,8 @@ class BanksOfYonder(DpgItem):
         self._selected_node = None
 
         self.update_json_panel()
+        self._clear_attributes_panel()
 
-        dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
         if section:
             # Don't copy the HIRC section!
             if isinstance(section, HIRCSection):
@@ -1736,7 +1736,21 @@ class BanksOfYonder(DpgItem):
         #         break
         root = self.bnk.get_branch_root(node)
         self._graph_widget.regenerate(self.bnk, root, node)
+        self._clear_attributes_panel()
 
+        if node:
+            dpg.split_frame()
+            create_node_widgets(
+                self.bnk,
+                node,
+                lambda s, a, u: self._on_node_changed(a),
+                lambda s, a, u: self.jump_to_node(a),
+                self._on_structure_changed,
+                tag=self._t("attributes_"),
+                parent=self._t("attributes"),
+            )
+
+    def _clear_attributes_panel(self) -> None:
         # Popups and windows are root-level containers and may keep other objects alive through
         # closures. To avoid this we can either:
         # v1) pass callback for registering items for cleanup -> messy
@@ -1753,20 +1767,10 @@ class BanksOfYonder(DpgItem):
             if item:
                 item.destroy()
 
-        delve(self._t("attributes"))
-        dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
-
-        if node:
-            dpg.split_frame()
-            create_node_widgets(
-                self.bnk,
-                node,
-                lambda s, a, u: self._on_node_changed(a),
-                lambda s, a, u: self.jump_to_node(a),
-                self._on_structure_changed,
-                tag=self._t("attributes_"),
-                parent=self._t("attributes"),
-            )
+        # TODO regrettably, this can take a while for e.g. the main music switch container
+        with loading_indicator("loading..."):
+            delve(self._t("attributes"))
+            dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
 
     def _on_node_changed(self, node: HIRCNode) -> None:
         self._hirc_player.update_context()
