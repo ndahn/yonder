@@ -135,29 +135,30 @@ class mass_transfer_dialog(DpgItem):
                     ):
                         target_id = action.external_id
                         break
+                else:
+                    continue
             else:
                 target_id = obj.id
 
-            if target_id:
-                for evt in self._src_bnk.find_events_for(target_id):
-                    play_actions = evt.get_action_nodes(self._src_bnk, ActionType.Play)
+            for evt in self._src_bnk.find_events_for(target_id):
+                play_actions = evt.get_action_nodes(self._src_bnk, ActionType.Play)
 
-                    if play_actions:
-                        for pa in play_actions:
-                            if pa.external_id == target_id:
-                                # Explicitly plays our target_id, should be included
-                                break
-                        else:
-                            if evt.has_action_type(
-                                self._src_bnk, ActionType.StopEO, ActionType.StopE
-                            ):
-                                # Has a play action targeting a different node, don't include it
-                                continue
+                if play_actions:
+                    for pa in play_actions:
+                        if pa.external_id == target_id:
+                            # Explicitly plays our target_id, should be included
+                            break
+                    else:
+                        if evt.has_action_type(
+                            self._src_bnk, ActionType.StopEO, ActionType.StopE
+                        ):
+                            # Has a play action targeting a different node, don't include it
+                            continue
 
-                    if evt.id not in src_ids:
-                        name = evt.get_name()
-                        src_labels.append(name)
-                        dst_labels.append(name)
+                if evt.id not in src_ids:
+                    name = evt.get_name()
+                    src_labels.append(name)
+                    dst_labels.append(name)
 
         dpg.set_value(self._t("source_ids"), "\n".join(src_labels))
         dpg.set_value(self._t("dest_ids"), "\n".join(dst_labels))

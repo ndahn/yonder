@@ -197,6 +197,18 @@ def create_node_widgets(
                         on_node_selected,
                         user_data=user_data,
                     )
+            else:
+                actions = [a for a in bnk.query(node_type=Action) if a.external_id == node.id]
+                if actions:
+                    with dpg.tree_node(label=µ("Actions"), span_full_width=True):
+                        for act in actions:
+                            add_node_link(
+                                bnk,
+                                act,
+                                on_structure_changed,
+                                on_node_selected=on_node_selected,
+                                allow_select=False,
+                            )
 
             dpg.add_spacer(height=3)
             dpg.add_separator()

@@ -234,7 +234,10 @@ class Soundbank:
             return target
 
     def get_wem_path(
-        self, source_id: int, source_type: SourceType = None, search_paths: list[Path] = None
+        self,
+        source_id: int,
+        source_type: SourceType = None,
+        search_paths: list[Path] = None,
     ) -> Path:
         wem = self.bnk_dir / f"{source_id}.wem"
         if source_type == SourceType.Embedded:
@@ -294,7 +297,9 @@ class Soundbank:
         else:
             logger.info(f"Saved {self} to {path}")
 
-    def copy_to(self, folder: Path | str, update_bnk_path: bool = True, backup: bool = True) -> None:
+    def copy_to(
+        self, folder: Path | str, update_bnk_path: bool = True, backup: bool = True
+    ) -> None:
         folder.mkdir(parents=True, exist_ok=True)
         new_bnk_dir = folder / self.name
 
@@ -648,7 +653,7 @@ class Soundbank:
                         yield parent
                     elif not isinstance(parent, ActorMixer):
                         todo.append(pid)
-            
+
             return
 
         # cache nodes by type

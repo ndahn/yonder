@@ -74,8 +74,8 @@ class add_hirc_player_panel(DpgItem):
 
                 dpg.add_spacer(height=2)
 
-                with dpg.group(horizontal=True):
-                    dpg.add_text(µ("Synchronize"))
+                with dpg.group(horizontal=True, horizontal_spacing=4):
+                    dpg.add_text(µ("Synchronize "))
                     with dpg.tooltip(dpg.last_item()):
                         dpg.add_text(
                             µ(
@@ -140,12 +140,18 @@ class add_hirc_player_panel(DpgItem):
                         dpg.add_table_column(width_stretch=True)
 
             with dpg.tree_node(
-                label=µ("RTPCs"), default_open=True, tag=self._t("tree_rtpcs")
+                label=µ("RTPCs"),
+                default_open=True,
+                span_full_width=True,
+                tag=self._t("tree_rtpcs"),
             ):
                 make_gamesync_table("sync_rtpcs")
 
             with dpg.tree_node(
-                label=µ("States"), default_open=True, tag=self._t("tree_states")
+                label=µ("States"),
+                default_open=True,
+                span_full_width=True,
+                tag=self._t("tree_states"),
             ):
                 make_gamesync_table("sync_states")
 
@@ -273,6 +279,7 @@ class add_hirc_player_panel(DpgItem):
                             default_value=value,
                             enabled=not is_live,
                             callback=self._on_rtpc_changed,
+                            width=160,
                             user_data=param,
                         )
 
@@ -311,12 +318,16 @@ class add_hirc_player_panel(DpgItem):
                     with dpg.table_row(
                         filter_key=group, before=before, parent=table
                     ) as row:
-                        known_states = get_selected_game().game_states.get(group, [])
+                        effective_states = sorted(
+                            lookup_name(s, f"#{s}")
+                            for s in active_states[calc_hash(group)]
+                        )
                         row_value = add_state_value_input(
                             group,
-                            known_states,
+                            ["-"] + effective_states,
                             self._on_state_changed,
                             default_value=state_value,
+                            width=160,
                             user_data=group,
                         )
 
