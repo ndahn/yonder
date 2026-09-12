@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 import time
 from bisect import bisect
 from threading import Thread
@@ -8,7 +8,6 @@ from dearpygui import dearpygui as dpg
 
 from yonder import lookup_name, calc_hash, HIRCNode
 from yonder.types.mixins import StateMixin, RtpcMixin, DecisionTreeMixin
-from yonder.game import get_selected_game
 from yonder.gui import style
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -21,12 +20,14 @@ class add_hirc_player_panel(DpgItem):
     def __init__(
         self,
         hirc_player: add_hirc_player,
+        on_player_settings_changed: Callable[[], None] = None,
         *,
         tag: str = None,
     ) -> None:
         super().__init__(tag)
 
         self._hirc_player: add_hirc_player = hirc_player
+        self._on_player_settings_changed_cb = on_player_settings_changed
         self._is_synchronizing = False
         self._contiunous_sync = False
         self._widgets_updating = False
@@ -37,6 +38,18 @@ class add_hirc_player_panel(DpgItem):
 
         self._build()
         hirc_player.set_callback(self._trigger_widgets_update)
+
+    @property
+    def play_full_hierarchy(self) -> bool:
+        return dpg.get_value(self._t("player_full_hierarchy"))
+
+    @property
+    def apply_amx(self) -> bool:
+        return dpg.get_value(self._t("player_apply_amx"))
+
+    def _on_player_settings_changed(self) -> None:
+        if self._on_player_settings_changed_cb:
+            self._on_player_settings_changed_cb()
 
     def _build(self) -> None:
         with dpg.child_window(autosize_x=True, autosize_y=True, tag=self.tag):
@@ -52,13 +65,21 @@ class add_hirc_player_panel(DpgItem):
                 dpg.add_checkbox(
                     label=µ("Play full hierarchy"),
                     default_value=True,
+                    callback=self._on_player_settings_changed,
                     tag=self._t("player_full_hierarchy"),
                 )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(µ("Cascade from root instead of selected node"))
+
                 dpg.add_checkbox(
-                    label=µ("Include AMX hierarchy"),
+                    label=µ("Apply AMX hierarchy"),
                     default_value=True,
-                    tag=self._t("player_include_amx"),
+                    callback=self._on_player_settings_changed,
+                    tag=self._t("player_apply_amx"),
                 )
+                # TODO
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(µ("Only properties for now"))
 
             # Game syncs
             dpg.add_spacer(height=5)
@@ -69,7 +90,7 @@ class add_hirc_player_panel(DpgItem):
                     label=µ("Port"),
                     default_value=27172,
                     width=200,
-                    tag=self._t("player_sync_port"),
+                    tag=self._t("sync_port"),
                 )
 
                 dpg.add_spacer(height=2)
@@ -79,8 +100,9 @@ class add_hirc_player_panel(DpgItem):
                     with dpg.tooltip(dpg.last_item()):
                         dpg.add_text(
                             µ(
-                                "Read game syncs from game (requires yonder_live_states.dll)"
-                            )
+                                "Read states and RTPCs from game (requires yonder_live_states.dll)"
+                            ),
+                            wrap=220,
                         )
 
                     dpg.add_image_button(
@@ -138,6 +160,8 @@ class add_hirc_player_panel(DpgItem):
                         tag=self._t(f"{base_tag}_table"),
                     ):
                         dpg.add_table_column(width_stretch=True)
+
+            # TODO expose base properties
 
             with dpg.tree_node(
                 label=µ("RTPCs"),
@@ -391,7 +415,7 @@ class add_hirc_player_panel(DpgItem):
         Thread(target=self._sync, daemon=True).start()
 
     def _sync(self) -> None:
-        port = dpg.get_value(self._t("player_sync_port"))
+        port = dpg.get_value(self._t("sync_port"))
         last_update = 0
 
         try:

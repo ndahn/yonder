@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.types import Sound, MusicTrack
+from yonder.enums import PropID
 from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
 from yonder.gui import style
@@ -32,6 +33,7 @@ class add_hirc_player(DpgItem):
         self._equalizer: add_equalizer = None
         self._attenuation_plot: add_attenuation_plot = None
         self._voices: list[Sound | MusicTrack] = []
+        self._properties: dict[PropID, float] = {}
         self._rtpcs: dict[int, float] = {}
         self._states: dict[int, int] = {}
         self._distance: float = 0.0
@@ -61,6 +63,7 @@ class add_hirc_player(DpgItem):
             player.close()
 
         self._voices.clear()
+        self._properties.clear()
         self._states.clear()
         self._rtpcs.clear()
 
@@ -83,7 +86,8 @@ class add_hirc_player(DpgItem):
             bnk,
             vgmstream,
             cfg.bankdirs,
-            rtpcs=dict(self._rtpcs),
+            properties=dict(self._properties),
+            rtpc_x=dict(self._rtpcs),
             states=dict(self._states),
             distance=self._distance,
             angle=self._angle,
@@ -112,6 +116,10 @@ class add_hirc_player(DpgItem):
     @property
     def voices(self) -> list[Sound | MusicTrack]:
         return self._voices
+
+    @property
+    def properties(self) -> dict[PropID, float]:
+        return self._properties
 
     @property
     def states(self) -> dict[int, set[int]]:
@@ -146,11 +154,27 @@ class add_hirc_player(DpgItem):
         if self._player:
             self._player.stop()
 
-    def update_context(self) -> None:
+    def update_context(
+        self,
+        *,
+        properties: dict[PropID, float] = None,
+        rtpcs: dict[int, float] = None,
+        states: dict[int, int] = None,
+    ) -> None:
+        if properties:
+            self._properties.update(properties)
+
+        if rtpcs:
+            self._rtpcs.update(rtpcs)
+
+        if states:
+            self._states.update(states)
+
         if self._player:
             ctx = self._player.context
+            ctx.properties.update(self._properties)
+            ctx.rtpc_x.update(self._rtpcs)
             ctx.states.update(self._states)
-            ctx.rtpcs.update(self._rtpcs)
             self._player.apply_context(ctx)
 
     def regenerate(self) -> None:

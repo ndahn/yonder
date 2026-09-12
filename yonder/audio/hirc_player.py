@@ -102,7 +102,7 @@ class HIRCPlayer:
 
                 for _, ref in node.get_references():
                     child = self.context.bank.get(ref)
-                    if child:
+                    if child and child.is_pyo_initialized():
                         todo.append(child)
 
         return sources
@@ -117,14 +117,14 @@ class HIRCPlayer:
     def set_volume(self, vol: float, node_id: int = None) -> None:
         gain = db_to_amp(vol)
         node: Sound | MusicTrack
-        for node in self.collect_voices(True, node_id):
+        for node in self.collect_voices(node_id):
             state = node.pyo_state()
             if state:
                 state.output.master_gain = gain
 
     def set_muted(self, muted: bool, node_id: int = None) -> None:
         node: Sound | MusicTrack
-        for node in self.collect_voices(True, node_id):
+        for node in self.collect_voices(node_id):
             state = node.pyo_state()
             if not state:
                 continue
@@ -139,7 +139,7 @@ class HIRCPlayer:
 
     def seek(self, pos: float, node_id: int = None) -> float:
         node: Sound | MusicTrack
-        for node in self.collect_voices(True, node_id):
+        for node in self.collect_voices(node_id):
             state = node.pyo_state()
             if state:
                 state.output.seek(pos)

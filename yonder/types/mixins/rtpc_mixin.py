@@ -14,13 +14,13 @@ class RtpcMixin:
 
         return default
 
-    def get_rtpc_values(
-        self, params: dict[int, float], default: float = 0.0
+    def get_rtpc_y_values(
+        self, rtpc_x: dict[int, float], default: float = 0.0
     ) -> dict[int, float]:
         ret = {}
 
         for rtpc in self.rtpcs:
-            x = params.get(rtpc.param_id, default)
+            x = rtpc_x.get(rtpc.param_id, default)
             y = eval_curve(rtpc.graph_points, x, rtpc.curve_scaling)
             ret[rtpc.param_id] = y
 

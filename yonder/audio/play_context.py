@@ -4,7 +4,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 from yonder.enums import PropID, AttenuationProperty
-from yonder.util import get_temp_dir, logger
+from yonder.util import get_temp_dir
 from yonder.wem import wem2wav
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ class PlayContext:
     wem_search_paths: list[Path] = field(default_factory=list)
 
     properties: dict[PropID, float] = field(default_factory=dict)
-    rtpcs: dict[int, float] = field(default_factory=dict)
+    rtpc_x: dict[int, float] = field(default_factory=dict)
     states: dict[int, int] = field(default_factory=dict)
     distance: float = 0.0
     angle: float = 0.0
@@ -41,66 +41,79 @@ class PlayContext:
 
         return wav
 
+    def _merge_property(self, prop: PropID, value: float) -> float:
+        if prop.is_accum_additive():
+            return self.properties.get(prop, 0.0) + value
+
+        return value
+
+    def update_properties(
+        self,
+        *,
+        properties: dict[PropID, float] = None,
+        rtpc_y: dict[int, float] = None,
+    ) -> None:
+        if properties:
+            for prop, val in properties.items():
+                self.properties[prop] = self._merge_property(prop, val)
+
+        if rtpc_y:
+            from yonder.game import get_selected_game
+
+            RtpcParams = get_selected_game().rtpc_params
+
+            for param, val in rtpc_y.items():
+                param_enum = RtpcParams(param)
+                try:
+                    prop = PropID[param_enum.name]
+                    self.properties[prop] = self._merge_property(prop, val)
+                except KeyError:
+                    continue
+
     def merge(self, node: HIRCNode | PlayContext) -> PlayContext:
         from yonder.types.hirc_node import HIRCNode
         from yonder.types.mixins import PropertyMixin, RtpcMixin
-        from yonder.game import get_selected_game
 
-        properties = dict(self.properties)
-
-        # RTPCs and States are global and do not need to be copied, we just track their values
-        rtpcs = self.rtpcs
-        states = self.states
-
-        def merge_properties(prop: PropID, val: float) -> None:
-            if prop.is_accum_additive():
-                properties.setdefault(prop, 0.0)
-                properties[prop] += val
-            else:
-                properties[prop] = val
+        ctx = PlayContext(
+            bank=self.bank,
+            vgmstream_exe=self.vgmstream_exe,
+            wem_search_paths=self.wem_search_paths,
+            properties=dict(self.properties),
+            # NOTE RTPCs and States are global and do not need to be copied,
+            # we just track their values
+            rtpc_x=self.rtpc_x,
+            states=self.states,
+            distance=self.distance,
+            angle=self.angle,
+        )
 
         if isinstance(node, HIRCNode):
             if isinstance(node, PropertyMixin):
-                for prop in node.properties:
-                    merge_properties(prop.prop_enum, prop.value)
+                ctx.update_properties(
+                    properties={p.prop_enum: p.value for p in node.properties}
+                )
 
-            # In wwise, each node can modify the property via rtpc, which can easily lead to
+            # In wwise, each node can modify properties via rtpcs, which can easily lead to
             # unintended stacking of adjustments
             if isinstance(node, RtpcMixin):
-                rtpc_values = node.get_rtpc_values(self.rtpcs)
-                RtpcParams = get_selected_game().rtpc_params
+                rtpc_y = node.get_rtpc_y_values(self.rtpc_x)
+                ctx.update_properties(rtpc_y=rtpc_y)
 
-                for param, val in rtpc_values.items():
-                    param_enum = RtpcParams(param)
-                    try:
-                        prop = PropID[param_enum.name]
-                        merge_properties(prop, val)
-                    except KeyError:
-                        continue
+            # TODO apply default states?
 
         elif isinstance(node, PlayContext):
             if self.bank != node.bank:
                 raise ValueError("Cannot merge play contexts with different banks")
 
-            for prop, val in node.properties.items():
-                merge_properties(prop, val)
-
-            rtpcs |= node.rtpcs
-            states |= node.states
+            # NOTE no rtpc game syncs to run our rtpc state through
+            ctx.update_properties(properties=node.properties)
+            ctx.rtpc_x |= node.rtpc_x
+            ctx.states |= node.states
 
         else:
             raise TypeError(f"Invalid merge object {node}")
 
-        return PlayContext(
-            bank=self.bank,
-            vgmstream_exe=self.vgmstream_exe,
-            wem_search_paths=self.wem_search_paths,
-            properties=properties,
-            rtpcs=rtpcs,
-            states=states,
-            distance=self.distance,
-            angle=self.angle,
-        )
+        return ctx
 
     def get_effective_volume(self) -> float:
         vol = self.properties.get(PropID.Volume, 0.0)

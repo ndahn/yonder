@@ -32,7 +32,7 @@ from yonder.hash import (
 )
 from yonder.util import logger, unpack_soundbank, repack_soundbank, get_temp_dir
 from yonder.query import query_nodes
-from yonder.game import set_game, guess_game
+from yonder.game import set_game, guess_game, get_selected_game
 from .config import Config, get_config
 from .helpers import center_window, shorten_path
 from .widgets import (
@@ -525,7 +525,11 @@ class BanksOfYonder(DpgItem):
 
                     with dpg.tab(label=µ("Player"), tag=self._t("player_tab")):
                         self._hirc_player_panel = add_hirc_player_panel(
-                            self._hirc_player, tag=self._t("hirc_player_panel")
+                            self._hirc_player,
+                            on_player_settings_changed=lambda: self._prepare_playback(
+                                self._selected_node
+                            ),
+                            tag=self._t("hirc_player_panel"),
                         )
 
                     with dpg.tab(label=µ("Json"), tag=self._t("json_tab")):
@@ -1876,11 +1880,48 @@ class BanksOfYonder(DpgItem):
     def _regenerate_attributes(self) -> None:
         self._on_node_selected(self._selected_root, True, self._selected_node)
 
-    def _prepare_playback(self, node: HIRCNode) -> None:
+    def _prepare_playback(self, entrypoint: HIRCNode) -> None:
         def run() -> None:
+            nonlocal entrypoint
+
             try:
-                self._hirc_player.set_entrypoint(self.bnk, node)
+                # Find the hierarchy head (directly under the AMX)
+                play_full = self._hirc_player_panel.play_full_hierarchy
+                apply_amx = self._hirc_player_panel.apply_amx
+                properties = None
+
+                # Find the hierarchy head if needed
+                if play_full or apply_amx:
+                    tree = self.bnk.tree
+                    head = entrypoint
+
+                    while True:
+                        pid = next(tree.predecessors(head.id), 0)
+                        parent = self.bnk.get(pid)
+
+                        if not parent or isinstance(parent, ActorMixer):
+                            break
+                        else:
+                            head = parent
+
+                    if play_full:
+                        # Always start playing from the head
+                        entrypoint = head
+
+                    if apply_amx and isinstance(parent, ActorMixer):
+                        # Apply additional info from the AMX for playback
+                        summary = get_selected_game().amx_summary.merge_bank_data(
+                            self.bnk
+                        )
+                        _, amx_info = summary.get_effective_values(parent.id)
+                        properties = dict(amx_info.properties)
+                        # TODO find a way to take RTPCS and states into account, too
+
+                self._hirc_player.set_entrypoint(self.bnk, entrypoint)
                 self._hirc_player_panel.regenerate()
+
+                if properties:
+                    self._hirc_player.update_context(properties=properties)
             except ValueError as e:
                 logger.error(f"HIRC player failed to load: {e}")
                 self._hirc_player.set_enabled(False)

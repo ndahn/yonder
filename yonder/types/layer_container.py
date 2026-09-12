@@ -171,7 +171,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         for child_id in self.children.items:
             child = my_pyo.ctx.bank.get(child_id)
-            
+
             if child:
                 # TODO not sure how to use the layer.initial_rtpc data here
                 # layer = self.get_layer(child_id)
@@ -212,7 +212,7 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             if layer:
                 for info in layer.associated_children:
                     if info.associated_child_id == child_id:
-                        x = ctx.rtpcs.get(layer.rtpc_id)
+                        x = ctx.rtpc_x.get(layer.rtpc_id)
                         y = eval_curve(info.graph_points, x)
                         ctrl.value = y
                         break
