@@ -363,7 +363,7 @@ class mass_transfer_dialog(DpgItem):
                 self._src_bnk,
                 self._dst_bnk,
                 event_map,
-                known_objects=known_objects,
+                blacklist=known_objects,
                 amx_override=amx_override,
             )
             self._dst_bnk.save()

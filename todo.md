@@ -1,9 +1,6 @@
 - test unmangling, send to mmv
-- player panel settings
 - add select att to attenuation widget
 - yonder_live_states.dll
-- mass transfer: duplicates as new
-- mass transfer: pick amx
 - find bank conflicts tool
 - nicer log message popups
 - equalizer bars

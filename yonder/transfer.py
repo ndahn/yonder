@@ -52,13 +52,13 @@ def copy_node_structure(
     dst_bnk: Soundbank,
     entrypoint: HIRCNode,
     *,
-    known_objects: set[str | int] = None,
+    blacklist: set[str | int] = None,
     parent_override: int | HIRCNode = None,
 ) -> list[int]:
-    if not known_objects:
-        known_objects = set()
+    if not blacklist:
+        blacklist = set()
 
-    known_objects = {calc_hash(o) for o in known_objects}
+    blacklist = {calc_hash(o) for o in blacklist}
 
     # Collect the hierarchy responsible for playing the sound(s)
     action_tree = src_bnk.get_subtree(entrypoint, False)
@@ -78,7 +78,7 @@ def copy_node_structure(
     transfer_nodes = []
     for nid in action_tree:
         node = src_bnk.get(nid)
-        if node and node.id not in known_objects and node.id not in dst_bnk:
+        if node and node.id not in blacklist and node.id not in dst_bnk:
             transfer_nodes.append(node.copy())
 
     dst_bnk.add_nodes(*transfer_nodes)
@@ -102,7 +102,7 @@ def copy_node_structure(
         for up_id in upchain:
             # Once we encounter an existing node we can assume the rest of the chain is
             # intact. Child nodes must be inserted *before* the first existing parent.
-            if up_id in known_objects:
+            if up_id in blacklist:
                 break
 
             up_node = dst_bnk.get(up_id)
@@ -152,13 +152,13 @@ def copy_wwise_events(
     dst_bnk: Soundbank,
     wwise_map: dict[Hash, str],
     *,
-    known_objects: set[str | int] = None,
+    blacklist: set[str | int] = None,
     amx_override: int | HIRCNode = None,
 ) -> None:
-    if not known_objects:
-        known_objects = set()
+    if not blacklist:
+        blacklist = set()
 
-    known_objects = {calc_hash(o) for o in known_objects}
+    blacklist = {calc_hash(o) for o in blacklist}
     wems = []
 
     map_str = "\n".join(f"\t{src} -> {dst}" for src, dst in wwise_map.items())
@@ -170,7 +170,7 @@ def copy_wwise_events(
         if not isinstance(evt, Event):
             raise TypeError(f"{wwise_src} is not an Event")
 
-        if evt.id in known_objects or evt.id in dst_bnk:
+        if evt.id in blacklist or evt.id in dst_bnk:
             logger.warning(f"{evt} already exists")
             continue
 
@@ -195,7 +195,7 @@ def copy_wwise_events(
                     src_bnk,
                     dst_bnk,
                     entrypoint,
-                    known_objects=known_objects,
+                    blacklist=blacklist,
                     parent_override=amx_override,
                 )
                 wems.extend(new_wems)
