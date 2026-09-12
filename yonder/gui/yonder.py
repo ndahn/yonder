@@ -80,7 +80,7 @@ from .dialogs.export_sounds_dialog import export_sounds_dialog
 from .dialogs.rename_bank_dialog import rename_bank_dialog
 from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .dialogs.unmangle_soundbanks_dialog import unmangle_soundbanks_dialog
-from .panels.hirc_player_panel import add_hirc_player_widget
+from .panels.hirc_player_panel import add_hirc_player_panel
 from .panels.node_widgets import create_node_widgets
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
@@ -97,6 +97,7 @@ class BanksOfYonder(DpgItem):
         self.globals_map: dict[int, str] = {}
         self._graph_widget: add_graph_widget = None
         self._hirc_player: add_hirc_player = None
+        self._hirc_player_panel: add_hirc_player_panel = None
         self._selected_root: str = None
         self._selected_node: HIRCNode = None
         self._selected_section: Section = None
@@ -523,7 +524,9 @@ class BanksOfYonder(DpgItem):
                         )
 
                     with dpg.tab(label=µ("Player"), tag=self._t("player_tab")):
-                        add_hirc_player_widget(self._hirc_player, tag=self._t("hirc_player_panel"))
+                        self._hirc_player_panel = add_hirc_player_panel(
+                            self._hirc_player, tag=self._t("hirc_player_panel")
+                        )
 
                     with dpg.tab(label=µ("Json"), tag=self._t("json_tab")):
                         self._build_tab_json()
@@ -571,17 +574,19 @@ class BanksOfYonder(DpgItem):
                         """\
                         Supports Lucene-style search queries (<field>=<value>). 
 
-                        - You may use the * wildcard for values
-                        - Field paths are prepended by ** unless quoted
+                        - Use '*' value to search for nodes that have the field
+                        - Or '+' for fields where the value is not 0/False/empty
+                        - Field names are searched anywhere in a node unless quoted
                         - Use [X..Y] to specify a value range
                         - Precede your value with tilde ~ to do a fuzzy search
-                        - Terms may be combined using grouping, OR, NOT. 
-                        - Terms separated by a space are assumed to be AND.
+                        - Terms may be combined using grouping, OR, NOT.
+                        - Terms separated by a space are assumed to be AND
 
                         You may run queries over the following fields:
-                        - id (or hash), type, name
+                        - id (same as hash), type, name
                         - any field name
                         - any field path separated by slashes /
+                        - has=[children / states / rtpcs]
 
                         Examples:
                         - id=*588 OR type=RandomSequenceContainer
@@ -604,9 +609,7 @@ class BanksOfYonder(DpgItem):
                 callback=self._next_events_page,
             )
             dpg.add_spacer(width=10)
-            dpg.add_text(
-                "No soundbank loaded", tag=self._t("events_count")
-            )
+            dpg.add_text("No soundbank loaded", tag=self._t("events_count"))
             dpg.add_spacer(width=10)
             with dpg.group():
                 dpg.add_spacer(height=1)
@@ -620,9 +623,7 @@ class BanksOfYonder(DpgItem):
 
         dpg.add_spacer(height=3)
 
-        with dpg.child_window(
-            autosize_x=True, autosize_y=True, border=False
-        ):
+        with dpg.child_window(autosize_x=True, autosize_y=True, border=False):
             with dpg.table(
                 no_host_extendX=True,
                 resizable=True,
@@ -659,9 +660,7 @@ class BanksOfYonder(DpgItem):
                 callback=self._next_globals_page,
             )
             dpg.add_spacer(width=10)
-            dpg.add_text(
-                "No soundbank loaded", tag=self._t("globals_count")
-            )
+            dpg.add_text("No soundbank loaded", tag=self._t("globals_count"))
             dpg.add_spacer(width=10)
             with dpg.group():
                 dpg.add_spacer(height=1)
@@ -675,9 +674,7 @@ class BanksOfYonder(DpgItem):
 
         dpg.add_spacer(height=3)
 
-        with dpg.child_window(
-            autosize_x=True, autosize_y=True, border=False
-        ):
+        with dpg.child_window(autosize_x=True, autosize_y=True, border=False):
             with dpg.table(
                 no_host_extendX=True,
                 resizable=True,
@@ -1725,6 +1722,7 @@ class BanksOfYonder(DpgItem):
             try:
                 self._hirc_player.set_entrypoint(node, self.bnk)
                 self._hirc_player.set_enabled(True)
+                self._hirc_player_panel.regenerate()
             except ValueError as e:
                 logger.error(f"HIRC player failed to load: {e}")
                 self._hirc_player.set_enabled(False)
@@ -1785,6 +1783,7 @@ class BanksOfYonder(DpgItem):
         self._hirc_player.stop()
         self.regenerate()
         self._hirc_player.set_entrypoint(self._selected_node, self.bnk)
+        self._hirc_player_panel.regenerate()
 
     def jump_to_node(self, node: int | HIRCNode) -> None:
         self._hirc_player.stop()

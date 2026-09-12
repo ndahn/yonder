@@ -35,8 +35,7 @@ class PlayContext:
         if not wav.is_file():
             wem = self.bank.get_wem_path(source_id, search_paths=self.wem_search_paths)
             if not wem:
-                logger.warning(f"Could not locate wem for {source_id}")
-                return None
+                raise ValueError(f"Could not locate wem for {source_id}")
 
             wav = wem2wav(self.vgmstream_exe, wem, tmp)[0]
 

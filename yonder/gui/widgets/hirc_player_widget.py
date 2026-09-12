@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 import time
 from dearpygui import dearpygui as dpg
 
@@ -21,6 +21,7 @@ class add_hirc_player(DpgItem):
         self,
         bnk: Soundbank = None,
         entrypoint: HIRCNode = None,
+        on_new_entrypoint: Callable[[Soundbank, HIRCNode], None] = None,
         *,
         tag: str = 0,
         parent: str = 0,
@@ -29,6 +30,7 @@ class add_hirc_player(DpgItem):
 
         self._bnk: Soundbank = bnk
         self._entrypoint: HIRCNode = entrypoint
+        self._on_new_entrypoint = on_new_entrypoint
         self._dirty: bool = True
         self._player: HIRCPlayer = None
         self._vgmstream_requested: bool = False
@@ -112,12 +114,13 @@ class add_hirc_player(DpgItem):
         )
         self._player.set_equalizer(self._equalizer.values)
 
-        # TODO collect rtpcs and states
-
         self._set_play_button_state(False)
         self.regenerate()
         self.set_enabled(True)
         self._dirty = False
+
+        if self._on_new_entrypoint:
+            self._on_new_entrypoint(self._bnk, self._entrypoint)
 
     @property
     def player(self) -> HIRCPlayer:

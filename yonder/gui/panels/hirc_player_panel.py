@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any
 import time
 from bisect import bisect
 from threading import Thread
@@ -15,7 +15,7 @@ from yonder.gui.widgets.hirc_player_widget import add_hirc_player
 from yonder.gui.widgets.state_value_input import add_state_value_input
 
 
-class add_hirc_player_widget(DpgItem):
+class add_hirc_player_panel(DpgItem):
     def __init__(
         self,
         hirc_player: add_hirc_player,
@@ -46,22 +46,23 @@ class add_hirc_player_widget(DpgItem):
             dpg.add_spacer(height=5)
             dpg.add_separator(label=µ("Settings"))
 
-            dpg.add_checkbox(
-                label=µ("Play from hierarchy head"),
-                default_value=True,
-                tag=self._t("player_play_hierarchy_head"),
-            )
-            dpg.add_checkbox(
-                label=µ("Include AMX hierarchy"),
-                default_value=True,
-                tag=self._t("player_include_amx"),
-            )
-            dpg.add_checkbox(
-                label=µ("Show relevant game syncs only"),
-                default_value=True,
-                callback=self._on_active_only_changed,
-                tag=self._t("player_active_game_syncs_only"),
-            )
+            with dpg.group():
+                dpg.add_checkbox(
+                    label=µ("Play from hierarchy head"),
+                    default_value=True,
+                    tag=self._t("player_play_hierarchy_head"),
+                )
+                dpg.add_checkbox(
+                    label=µ("Include AMX hierarchy"),
+                    default_value=True,
+                    tag=self._t("player_include_amx"),
+                )
+                dpg.add_checkbox(
+                    label=µ("Show relevant game syncs only"),
+                    default_value=True,
+                    callback=self._on_active_only_changed,
+                    tag=self._t("player_active_game_syncs_only"),
+                )
 
             # Game syncs
             dpg.add_spacer(height=5)
@@ -112,7 +113,7 @@ class add_hirc_player_widget(DpgItem):
                         Icons.trash,
                         width=18,
                         height=18,
-                        callback=self._clear_game_syncs,
+                        callback=self.regenerate,
                         tag=self._t("player_sync_clear"),
                     )
                     dpg.add_loading_indicator(
@@ -152,6 +153,20 @@ class add_hirc_player_widget(DpgItem):
             with dpg.tree_node(label=µ("States")):
                 make_gamesync_table("player_states")
 
+        self.regenerate()
+
+    def regenerate(self) -> None:
+        self._set_sync_state(False)
+        self._states.clear()
+        self._rtpcs.clear()
+        
+        dpg.delete_item(self._t("player_rtpcs_table"), slot=1, children_only=True)
+        dpg.delete_item(self._t("player_switches_table"), slot=1, children_only=True)
+        dpg.delete_item(self._t("player_states_table"), slot=1, children_only=True)
+        dpg.set_value(self._t("player_rtpcs_filter"), "")
+        dpg.set_value(self._t("player_switches_filter"), "")
+        dpg.set_value(self._t("player_states_filter"), "")
+
         self._update_player_tab()
 
     def _on_active_only_changed(
@@ -172,13 +187,7 @@ class add_hirc_player_widget(DpgItem):
             for row, _ in self._rtpc_rows.values():
                 dpg.show_item(row)
 
-    def _clear_game_syncs(self) -> None:
-        self._set_sync_state(False)
-        self._states.clear()
-        self._rtpcs.clear()
-        self._update_player_tab()
-
-    def _update_game_syncs_from_player(self) -> None:
+    def _collect_active_game_syncs(self) -> None:
         """Collect game syncs that are relevant to the loaded hierarchy"""
         player = self._hirc_player.player
         if not player:
@@ -196,7 +205,7 @@ class add_hirc_player_widget(DpgItem):
         for state, values in relevant_states.items():
             if state not in self._states:
                 # TODO retrieve default state, too where possible
-                self._states[state] = next(values, 0)
+                self._states[state] = next(iter(values), 0)
 
         for rtpc in relevant_rtpcs:
             self._rtpcs.setdefault(rtpc, 0.0)
@@ -210,7 +219,7 @@ class add_hirc_player_widget(DpgItem):
             self._t("player_info"), f"voices: {len(self._hirc_player.voices)}"
         )
 
-        self._update_game_syncs_from_player()
+        self._collect_active_game_syncs()
 
         if self._rtpcs:
             dpg.show_item(self._t("player_rtpcs"))
@@ -365,7 +374,7 @@ class add_hirc_player_widget(DpgItem):
                                 default_value="timeout",
                                 show=True,
                             )
-                        
+
                         break
         finally:
             if sock:
