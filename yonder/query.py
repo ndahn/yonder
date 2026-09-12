@@ -54,13 +54,26 @@ class _Condition(ABC):
 
 class _FieldCondition(_Condition):
     def __init__(self, field_path: str, value: str):
-        if not field_path.startswith("\"'") and field_path not in (
-            "id",
-            "type",
-            "name",
-            "hash",
-        ):
-            field_path = f"**/{field_path}"
+        if not field_path.startswith("\"'"):
+            if field_path in (
+                "id",
+                "type",
+                "name",
+                "hash",
+            ):
+                pass
+            elif field_path == "has":
+                if value in ("state", "states"):
+                    field_path = "**/state_group_chunks"
+                    value = "+"
+                elif value in ("rtpc", "rtpcs"):
+                    field_path = "**/rtpcs"
+                    value = "+"
+                elif value in ("child", "children"):
+                    field_path = "**/children/items"
+                    value = "+"
+            else:
+                field_path = f"**/{field_path}"
 
         self.field_path = field_path.strip("\"'")
         self.value = value.strip("\"'")
@@ -75,7 +88,7 @@ class _FieldCondition(_Condition):
         if self.field_path == "type":
             return [node.type_name]
 
-        return [str(v) for _, v in node.glob(self.field_path)]
+        return [v for _, v in node.glob(self.field_path)]
 
     def evaluate(self, obj: HIRCNode) -> bool:
         actual_values = self._get_field_values(obj)
@@ -177,6 +190,9 @@ def _match_value(actual_value: str, search_value: str) -> bool:
 
     if search_value == "*":
         return True
+
+    if search_value == "+":
+        return bool(actual_value)
 
     actual_value = str(actual_value)
 
