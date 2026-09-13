@@ -35,12 +35,8 @@ $rtpcs = @($source.rtpcs)
 # states/switches are dicts of group -> list of names, flatten into one list
 function Flatten-GroupDict {
     param($dict)
-    $result = @()
-    if ($null -eq $dict) { return $result }
-    foreach ($key in $dict.Keys) {
-        $result += @($dict[$key])
-    }
-    return $result
+    if ($null -eq $dict) { return @() }
+    return @($dict.Keys)
 }
 
 $states = Flatten-GroupDict $source.states

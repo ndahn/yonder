@@ -93,25 +93,25 @@ impl Tracker {
 
     // queries every tracked sync and assembles a compact json blob
     pub fn query_gamesyncs(&self) -> String {
-        let rtpc: HashMap<_, _> = self
+        let rtpcs: HashMap<_, _> = self
             .rtpcs
             .iter()
             // Could also pass -1 to ignore game-object-specific values
             .filter_map(|id| Some((id, state::get_rtpc(*id, self.game_object_id)?)))
             .collect();
 
-        let state: HashMap<_, _> = self
+        let states: HashMap<_, _> = self
             .states
             .iter()
             .filter_map(|id| Some((id, state::get_state(*id)?)))
             .collect();
 
-        let switch: HashMap<_, _> = self
+        let switches: HashMap<_, _> = self
             .switches
             .iter()
             .filter_map(|id| Some((id, state::get_switch(*id, self.game_object_id)?)))
             .collect();
 
-        serde_json::json!({ "game_objet_id": self.game_object_id, "rtpc": rtpc, "state": state, "switch": switch }).to_string()
+        serde_json::json!({ "game_objet_id": self.game_object_id, "rtpcs": rtpcs, "states": states, "switches": switches }).to_string()
     }
 }
