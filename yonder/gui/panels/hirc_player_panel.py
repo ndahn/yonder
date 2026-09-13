@@ -34,8 +34,8 @@ class add_hirc_player_panel(DpgItem):
         self._widgets_updating = False
         self._states: dict[int, int] = {}
         self._rtpcs: dict[int, float] = {}
-        self._rtpc_rows: dict[str, tuple[int, int]] = {}
         self._state_rows: dict[str, tuple[int, add_state_value_input]] = {}
+        self._rtpc_rows: dict[str, tuple[int, int]] = {}
 
         self._build()
         hirc_player.set_callback(self._trigger_widgets_update)
@@ -206,8 +206,8 @@ class add_hirc_player_panel(DpgItem):
         for _, row_value in self._state_rows.values():
             row_value.destroy()
 
-        self._rtpc_rows.clear()
         self._state_rows.clear()
+        self._rtpc_rows.clear()
 
         dpg.delete_item(self._t("sync_states_table"), slot=1, children_only=True)
         dpg.delete_item(self._t("sync_rtpcs_table"), slot=1, children_only=True)
@@ -287,47 +287,6 @@ class add_hirc_player_panel(DpgItem):
         game_sync_info = get_selected_game().game_syncs
         known_states = game_sync_info.states | game_sync_info.switches
 
-        if self._rtpcs:
-            dpg.show_item(self._t("sync_rtpcs"))
-            table = self._t("sync_rtpcs_table")
-            rtpcs = {lookup_name(r, f"#{r}"): v for r, v in self._rtpcs.items()}
-
-            for param in sorted(rtpcs):
-                show = not active_only or calc_hash(param) in active_rtpcs
-                value = rtpcs[param]
-
-                if param in self._rtpc_rows:
-                    # Row exists, just update the value
-                    row, row_value = self._rtpc_rows[param]
-                    dpg.configure_item(row_value, default_value=value)
-                    dpg.configure_item(row, show=show)
-                else:
-                    # Row does not exist yet, check where to insert it
-                    keys = list(self._rtpc_rows)
-                    idx = bisect(keys, param)
-                    before = 0
-
-                    if keys and idx < len(keys):
-                        # Should be inserted before an existing element
-                        nxt = keys[idx + 1]
-                        before, _ = self._rtpc_rows[nxt]
-
-                    with dpg.table_row(
-                        filter_key=param, show=show, before=before, parent=table
-                    ) as row:
-                        row_value = dpg.add_drag_float(
-                            label=param,
-                            default_value=value,
-                            enabled=not is_live,
-                            callback=self._on_rtpc_changed,
-                            width=160,
-                            user_data=param,
-                        )
-
-                    self._rtpc_rows[param] = (row, row_value)
-        else:
-            dpg.hide_item(self._t("sync_rtpcs"))
-
         if self._states:
             dpg.show_item(self._t("sync_states"))
             table = self._t("sync_states_table")
@@ -383,6 +342,47 @@ class add_hirc_player_panel(DpgItem):
         else:
             dpg.hide_item(self._t("sync_states"))
 
+        if self._rtpcs:
+            dpg.show_item(self._t("sync_rtpcs"))
+            table = self._t("sync_rtpcs_table")
+            rtpcs = {lookup_name(r, f"#{r}"): v for r, v in self._rtpcs.items()}
+
+            for param in sorted(rtpcs):
+                show = not active_only or calc_hash(param) in active_rtpcs
+                value = rtpcs[param]
+
+                if param in self._rtpc_rows:
+                    # Row exists, just update the value
+                    row, row_value = self._rtpc_rows[param]
+                    dpg.configure_item(row_value, default_value=value)
+                    dpg.configure_item(row, show=show)
+                else:
+                    # Row does not exist yet, check where to insert it
+                    keys = list(self._rtpc_rows)
+                    idx = bisect(keys, param)
+                    before = 0
+
+                    if keys and idx < len(keys):
+                        # Should be inserted before an existing element
+                        nxt = keys[idx + 1]
+                        before, _ = self._rtpc_rows[nxt]
+
+                    with dpg.table_row(
+                        filter_key=param, show=show, before=before, parent=table
+                    ) as row:
+                        row_value = dpg.add_drag_float(
+                            label=param,
+                            default_value=value,
+                            enabled=not is_live,
+                            callback=self._on_rtpc_changed,
+                            width=160,
+                            user_data=param,
+                        )
+
+                    self._rtpc_rows[param] = (row, row_value)
+        else:
+            dpg.hide_item(self._t("sync_rtpcs"))
+
     def _set_sync_state(self, synchronizing: bool) -> None:
         self._is_synchronizing = synchronizing
 
@@ -415,15 +415,15 @@ class add_hirc_player_panel(DpgItem):
             for _, row_value in list(self._state_rows.values()):
                 row_value.set_enabled(True)
 
-    def _on_rtpc_changed(self, sender: str, value: float, rtpc: str) -> None:
-        h = calc_hash(rtpc)
-        self._rtpcs[h] = value
-        self._hirc_player.set_game_syncs(self._states, self._rtpcs)
-
     def _on_state_changed(self, sender: str, value: str, state: str) -> None:
         h = calc_hash(state)
         v = calc_hash(value)
         self._states[h] = v
+        self._hirc_player.set_game_syncs(self._states, self._rtpcs)
+
+    def _on_rtpc_changed(self, sender: str, value: float, rtpc: str) -> None:
+        h = calc_hash(rtpc)
+        self._rtpcs[h] = value
         self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
     def _start_stop_game_sync(
@@ -467,9 +467,9 @@ class add_hirc_player_panel(DpgItem):
                     data = json.loads(raw.decode("utf-8").strip())
 
                     # Update the player, switches take priority
-                    self._rtpcs.update({int(k): v for k, v in data.get("rtpcs", {}).items()})
                     self._states.update({int(k): v for k, v in data.get("states", {}).items()})
                     self._states.update({int(k): v for k, v in data.get("switches", {}).items()})
+                    self._rtpcs.update({int(k): v for k, v in data.get("rtpcs", {}).items()})
                     self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
                     self._trigger_widgets_update()
