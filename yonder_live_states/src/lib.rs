@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem, net::UdpSocket, path::PathBuf, time::Duration};
+use std::{ffi::c_void, mem, net::UdpSocket, path::PathBuf};
 
 use serde::Deserialize;
 use windows::{
@@ -15,7 +15,6 @@ mod tracker;
 use tracker::Tracker;
 
 const CONFIG_FILE: &str = "yonder_live_states.yaml";
-const SYNCS_FILE: &str = "game_syncs.txt";
 
 fn fnv1a_lowercase(bytes: impl AsRef<[u8]>) -> u32 {
     bytes.as_ref().iter().fold(2166136261, |hash, byte| {
@@ -29,8 +28,6 @@ struct Config {
     udp_port: u16,
     #[serde(default)]
     game_object_id: u64,
-    #[serde(default = "Config::default_poll_time_ms")]
-    poll_time_ms: u64,
 }
 
 impl Config {
@@ -38,24 +35,18 @@ impl Config {
         27172
     }
 
-    fn default_poll_time_ms() -> u64 {
-        200
-    }
-
     // loads the yaml config, falling back to defaults if something goes awry
     fn load(path: &std::path::Path) -> Self {
         std::fs::read_to_string(path)
             .ok()
             .and_then(|text| serde_yaml::from_str(&text).ok())
-            .unwrap_or(Config { udp_port: Self::default_udp_port(), game_object_id: 0, poll_time_ms: Self::default_poll_time_ms() })
+            .unwrap_or(Config { udp_port: Self::default_udp_port(), game_object_id: 0 })
     }
 }
 
-// create the socket for sending off our collected states
-fn connect(port: u16) -> std::io::Result<UdpSocket> {
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    socket.connect(("127.0.0.1", port))?;
-    Ok(socket)
+// binds a socket to listen for trigger datagrams on the configured port
+fn listen(port: u16) -> std::io::Result<UdpSocket> {
+    UdpSocket::bind(("0.0.0.0", port))
 }
 
 // directory this dll was loaded from
@@ -70,15 +61,16 @@ fn dll_dir(hmodule: HMODULE) -> PathBuf {
 
 fn run(dir: PathBuf) {
     let config = Config::load(&dir.join(CONFIG_FILE));
-    let tracker = Tracker::load(&dir.join(SYNCS_FILE), config.game_object_id);
-    let poll_interval = Duration::from_millis(config.poll_time_ms);
+    let tracker = Tracker::load_from_dir(&dir, config.game_object_id);
 
-    let Ok(socket) = connect(config.udp_port) else { return };
+    let Ok(socket) = listen(config.udp_port) else { return };
+    let mut trigger_buf = [0u8; 512];
 
     loop {
-        let payload = tracker.poll_json();
-        let _ = socket.send(payload.as_bytes());
-        std::thread::sleep(poll_interval);
+        // block until a trigger arrives, then reply to its sender
+        let Ok((_, sender)) = socket.recv_from(&mut trigger_buf) else { continue };
+        let payload = tracker.query_gamesyncs();
+        let _ = socket.send_to(payload.as_bytes(), sender);
     }
 }
 
