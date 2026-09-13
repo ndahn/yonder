@@ -1,6 +1,7 @@
 from __future__ import annotations
 from enum import IntEnum, StrEnum, Enum, auto
 
+# For constants see https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=SDK&id=_ak_constants_8h_source.html
 
 class EnumWithUnknown(IntEnum):
     @classmethod

@@ -40,6 +40,7 @@ pub fn get_rtpc(rtpc_id: u32, game_object_id: u64) -> Option<f32> {
 }
 
 static GET_STATE: LazyLock<Option<extern "system" fn(u32, &mut u32) -> u32>> =
+    // See https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=SDK&id=namespace_a_k_1_1_sound_engine_1_1_query_acf1d46072687826dbc1ff2116a4234c8.html
     LazyLock::new(|| unsafe {
         let module = GetModuleHandleW(PCWSTR::null()).ok()?;
         let export = GetProcAddress(
@@ -50,6 +51,7 @@ static GET_STATE: LazyLock<Option<extern "system" fn(u32, &mut u32) -> u32>> =
     });
 
 static GET_SWITCH: LazyLock<Option<extern "system" fn(u32, u64, &mut u32) -> u32>> =
+    // See https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=SDK&id=namespace_a_k_1_1_sound_engine_1_1_query_a936ecebe49d276b0f05f0c6cb2ee7369.html
     LazyLock::new(|| unsafe {
         let module = GetModuleHandleW(PCWSTR::null()).ok()?;
         let export = GetProcAddress(
@@ -60,6 +62,7 @@ static GET_SWITCH: LazyLock<Option<extern "system" fn(u32, u64, &mut u32) -> u32
     });
 
 static GET_RTPC_VALUE: LazyLock<Option<extern "system" fn(u32, u64, u32, &mut f32, &mut u32) -> u32>> =
+    // See https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=SDK&id=namespace_a_k_1_1_sound_engine_1_1_query_a1149dfe866412f53644e3236639ba951.html
     LazyLock::new(|| unsafe {
         let module = GetModuleHandleW(PCWSTR::null()).ok()?;
         let export = GetProcAddress(

@@ -59,6 +59,7 @@ impl Tracker {
         let rtpc: HashMap<_, _> = self
             .rtpcs
             .iter()
+            // Could also pass -1 to ignore game-object-specific values
             .filter_map(|id| Some((id, state::get_rtpc(*id, self.game_object_id)?)))
             .collect();
 
