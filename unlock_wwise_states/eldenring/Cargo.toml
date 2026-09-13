@@ -2,6 +2,8 @@
 name = "unlock_wwise_states_er"
 version = "0.1.0"
 edition = "2021"
+authors = ["ndahn"]
+license = "GPLv3"
 
 # This crate produces a DLL which can be loaded into Elden Ring.
 [lib]

@@ -1,0 +1,19 @@
+[package]
+name = "yonder-live-states"
+version = "0.1.0"
+edition = "2024"
+authors = ["ndahn"]
+license = "GPLv3"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+windows = { version = "0.62.2", features = [
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemServices",
+] }
+
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"

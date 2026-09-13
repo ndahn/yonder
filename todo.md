@@ -1,5 +1,4 @@
 - yonder_live_states.dll
-- test unmangling, send to mmv
 - nicer log message popups
 - add select att to attenuation widget
 - equalizer bars
