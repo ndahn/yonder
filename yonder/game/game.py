@@ -22,7 +22,7 @@ class GameObjects:
     @classmethod
     def get_game_path(cls, default: Path = _undefined) -> Path:
         try:
-            return find_game_folder(cls.steam_app_id)
+            return find_game_folder(cls.steam_app_id) / "Game"
         except FileNotFoundError:
             if default is not _undefined:
                 return default

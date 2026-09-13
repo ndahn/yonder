@@ -426,7 +426,7 @@ class Soundbank:
     ) -> nx.DiGraph:
         from yonder.types import Action, Event
 
-        if isinstance(entrypoint, int):
+        if not isinstance(entrypoint, HIRCNode):
             entrypoint = self[entrypoint]
 
         g = nx.DiGraph()

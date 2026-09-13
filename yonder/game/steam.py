@@ -47,6 +47,10 @@ def find_game_folder(app_id: int) -> Path:
             content = manifest.read_text()
             match = re.search(r'"installdir"\s+"(.+?)"', content)
             if match:
-                return Path(match.group(1))
+                install_dir = Path(match.group(1))
+                if not install_dir.is_absolute():
+                    install_dir = lib / "steamapps" / "common" / install_dir
+
+                return install_dir
 
     raise FileNotFoundError(f"Could not find game with app ID {app_id}")

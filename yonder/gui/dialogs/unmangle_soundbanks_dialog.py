@@ -1,11 +1,13 @@
 from typing import Any
 from pathlib import Path
 import webbrowser
+import shutil
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.convenience import unmangle_soundbanks
-from yonder.game import GameObjects, get_selected_game, guess_game
+from yonder.enums import Game
+from yonder.game import get_selected_game, guess_game
 from yonder.util import unpack_soundbank, repack_soundbank, logger
 from yonder.gui import style
 from yonder.gui.localization import µ
@@ -31,24 +33,28 @@ class unmangle_soundbanks_dialog(DpgItem):
         game = get_selected_game()
         game_path = game.get_game_path(None)
         self._banks_path = game_path
-        self._detected_game: GameObjects = game if game_path else None
         self._output_path: Path = None
 
         self._build(title)
+
+    @property
+    def selected_game(self) -> Game:
+        try:
+            return Game[dpg.get_value(self._t("selected_game"))]
+        except ValueError:
+            return None
 
     def _on_banks_path_changed(self, sender: str, path: Path, user_data: Any) -> None:
         game = guess_game(path)
         if game is not None:
             self._show_message()
-            self._detected_game = game
             self._banks_path = path
-            dpg.set_value(self._t("detected_game"), game.name)
+            dpg.set_value(self._t("selected_game"), game.name)
             dpg.enable_item(self._t("button_okay"))
         else:
             self._show_message(µ("Could not detect a supported game"))
-            self._detected_game = None
             self._banks_path = None
-            dpg.set_value(self._t("detected_game"), "-")
+            dpg.set_value(self._t("selected_game"), "-")
             dpg.disable_item(self._t("button_okay"))
 
     def _on_output_folder_changed(
@@ -61,14 +67,43 @@ class unmangle_soundbanks_dialog(DpgItem):
         if user:
             return user[0]
 
-        banks_path = self._detected_game.get_banks_path() / "Game"
         try:
-            return next(banks_path.glob(f"**/{bnk_name}.bnk"))
+            return next(self._banks_path.glob(f"**/{bnk_name}.bnk"))
         except StopIteration:
             raise ValueError(f"Could not locate {bnk_name}.bnk")
 
+    def _load_bank_copy(self, path: Path) -> Soundbank:
+        out_path = self._output_path.resolve()
+
+
+        # Do all work on a copy
+        if path.parent.resolve() != out_path:
+            # Clean up any previous files
+            dest = out_path / path.stem
+            if dest.is_dir():
+                shutil.rmtree(dest, ignore_errors=True)
+
+            dest = out_path / (path.stem + ".bnk")
+            if dest.is_file():
+                dest.unlink()
+
+            # Make a fresh copy
+            if path.is_dir():
+                shutil.copytree(path, out_path)
+            else:
+                shutil.copy(path, out_path)
+
+            path = out_path / path.name
+        
+        if not path.is_dir():
+            bnk2json = get_config().locate_bnk2json()
+            path = unpack_soundbank(bnk2json, path)
+
+        return Soundbank.load(path)
+
     def _on_okay(self) -> None:
-        if not self._detected_game:
+        game = self.selected_game
+        if not game:
             self._show_message(µ("Select a valid game path first"))
             return
 
@@ -83,33 +118,29 @@ class unmangle_soundbanks_dialog(DpgItem):
                 # cs_main
                 logger.info("Loading cs_main...")
                 main_path: Path = self._locate_bank("cs_main")
-
-                if not main_path.is_dir():
-                    bnk2json = get_config().locate_bnk2json()
-                    main_path = unpack_soundbank(bnk2json, main_path)
-
-                bnk_main = Soundbank.load(main_path)
+                bnk_main = self._load_bank_copy(main_path)
 
                 # cs_smain
                 logger.info("Loading cs_smain...")
                 smain_path: Path = self._locate_bank("cs_smain")
-
-                if not smain_path.is_dir():
-                    bnk2json = get_config().locate_bnk2json()
-                    smain_path = unpack_soundbank(bnk2json, smain_path)
-
-                bnk_smain = Soundbank.load(smain_path)
+                bnk_smain = self._load_bank_copy(smain_path)
 
                 # Unmangle and save
-                unmangle_soundbanks(bnk_main, bnk_smain, self._detected_game)
-
-                bnk_main.copy_to(self._output_path)
-                bnk_smain.copy_to(self._output_path)
+                unmangle_soundbanks(bnk_main, bnk_smain, game)
+                bnk_main.save()
+                bnk_smain.save()
 
                 if dpg.get_value(self._t("repack")):
-                    bnk2json = get_config().locate_bnk2json()
-                    repack_soundbank(bnk2json, bnk_main)
-                    repack_soundbank(bnk2json, bnk_smain)
+                    try:
+                        bnk2json = get_config().locate_bnk2json()
+                        repack_soundbank(bnk2json, bnk_main.bnk_dir)
+                        repack_soundbank(bnk2json, bnk_smain.bnk_dir)
+                    except Exception as e:
+                        logger.error(f"Repacking failed: {e}")
+                        self._show_message(
+                            µ("Unmangling done, but repacking failed"),
+                            color=style.yellow,
+                        )
 
                 logger.info(f"Modified banks have been saved to {self._output_path}")
             except Exception as e:
@@ -163,18 +194,19 @@ class unmangle_soundbanks_dialog(DpgItem):
             with dpg.tooltip(dpg.last_item()):
                 dpg.add_text(µ("Where to save the modified banks"))
 
+            with dpg.group(horizontal=True):
+                dpg.add_combo(
+                    [g.name for g in Game],
+                    label=µ("Game"),
+                    default_value=get_selected_game().game.name,
+                    tag=self._t("selected_game"),
+                )
+
             dpg.add_checkbox(
                 label=µ("Repack"),
                 default_value=True,
                 tag=self._t("repack"),
             )
-
-            with dpg.group(horizontal=True):
-                dpg.add_text(µ("Detected game: "))
-                dpg.add_text(
-                    self._detected_game.game.name if self._detected_game else "-",
-                    tag=self._t("detected_game"),
-                )
 
             dpg.add_separator()
             add_paragraphs(

@@ -394,6 +394,8 @@ class add_hirc_player(DpgItem):
                 # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("Voices"))
 
+                # TODO plot/draw group for audio visualizer
+
         dpg.add_window(
             popup=True,
             min_size=(100, 20),

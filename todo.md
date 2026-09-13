@@ -1,8 +1,7 @@
-- test unmangling, send to mmv
-- add select att to attenuation widget
 - yonder_live_states.dll
-- find bank conflicts tool
+- test unmangling, send to mmv
 - nicer log message popups
+- add select att to attenuation widget
 - equalizer bars
 - msc branches need to be merged/split when editing their path
 - msc tree edits only need to rebuild msc widgets, no need to regenerate everything
@@ -12,3 +11,4 @@
 - sound builder: + layers
 - overhaul segment and music track node widgets
 - remove old player
+- find bank conflicts tool
