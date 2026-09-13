@@ -435,7 +435,8 @@ class add_hirc_player_panel(DpgItem):
 
             while True:
                 try:
-                    # Wait for submission from dll
+                    # Send a trigger to the dll and wait for the reply
+                    sock.send("get")
                     raw, _ = sock.recvfrom(1024)
                     if not self._is_synchronizing:
                         break
@@ -443,9 +444,9 @@ class add_hirc_player_panel(DpgItem):
                     data = json.loads(raw.decode("utf-8").strip())
 
                     # Update the player, switches take priority
+                    self._rtpcs.update(data.get("rtpcs", {}))
                     self._states.update(data.get("states", {}))
                     self._states.update(data.get("switches", {}))
-                    self._rtpcs.update(data.get("rtpcs", {}))
                     self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
                     # Limit gui update rate

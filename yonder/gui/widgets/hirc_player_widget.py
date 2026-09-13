@@ -1,6 +1,5 @@
 from typing import Any, Callable
 import time
-from threading import Thread
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
