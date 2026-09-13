@@ -140,7 +140,9 @@ class create_boss_track_dialog(DpgItem):
 
         self.msc = selected_msc
         self.current_state_path = ["*" for _ in self.msc.arguments]
-        self.current_state_path[self.bgm_enemy_type_idx] = self._bgm_enemy_type_widget.string_value
+        self.current_state_path[self.bgm_enemy_type_idx] = (
+            self._bgm_enemy_type_widget.string_value
+        )
         self.show_message()
 
     def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
@@ -313,12 +315,12 @@ class create_boss_track_dialog(DpgItem):
                 self._on_music_switch_container_selected,
                 get_node_details=get_details_musicswitchcontainer,
                 node_type=MusicSwitchContainer,
-                extra_query=f"arguments:*/group_id={self.bgm_enemy_type_hash}"
+                extra_query=f"arguments:*/group_id={self.bgm_enemy_type_hash}",
             )
 
             reserved_keys = [
-                x for x in 
-                get_selected_game().game_states.get("BgmEnemyType")
+                x
+                for x in get_selected_game().game_syncs["states"].get("BgmEnemyType")
                 if "reserved" in x.lower()
             ]
             self._bgm_enemy_type_widget = add_state_value_input(

@@ -5,40 +5,77 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import shutil
 
 from yonder.hash import lookup_name
-from yonder.enums import Game
+from yonder.enums import Game, GroupType
 from yonder.types.soundbank import Soundbank
-from yonder.types.base_types import StateChunk, DecisionTreeNode
+from yonder.types.switch_container import SwitchContainer
+from yonder.types.mixins import DecisionTreeMixin, StateMixin, RtpcMixin
 from yonder.util import unpack_soundbank, resource_dir
 
 
-def build_bank_states_summary(bnk: Soundbank) -> dict[str, list[str]]:
-    summary: dict[str, list[str]] = {}
+def build_bank_gamesync_summary(
+    bnk: Soundbank,
+) -> tuple[list[str], dict[str, list[str]], dict[str, list[str]]]:
+    rtpcs: list[str] = []
+    states: dict[str, list[str]] = {}
+    switches: dict[str, list[str]] = {}
 
     for node in bnk:
-        if hasattr(node, "states") and isinstance(node.states, StateChunk):
-            chunk: StateChunk = node.states
-            for group in chunk.state_group_chunks:
-                group_name = lookup_name(group.state_group_id, f"#{group.state_group_id}")
-                states = [lookup_name(s.state_id, f"#{s.state_id}") for s in group.states]
-                summary.setdefault(group_name, []).extend(states)
+        if isinstance(node, RtpcMixin):
+            for rtpc in node.rtpcs:
+                rtpcs.append(rtpc.get_name())
 
-        if hasattr(node, "tree") and isinstance(node.tree, DecisionTreeNode):
+        if isinstance(node, StateMixin):
+            for group in node.states.state_group_chunks:
+                group_name = lookup_name(
+                    group.state_group_id, f"#{group.state_group_id}"
+                )
+                state_values = [
+                    lookup_name(s.state_id, f"#{s.state_id}") for s in group.states
+                ]
+                states.setdefault(group_name, []).extend(state_values)
+
+        if isinstance(node, DecisionTreeMixin):
             # arg: GameSync
-            arguments = [lookup_name(arg.group_id, f"#{arg.group_id}") for arg in node.arguments]
-            todo: list[tuple[DecisionTreeNode, int]] = [(n, 0) for n in node.tree.children]
-            
+            arguments = [
+                lookup_name(arg.group_id, f"#{arg.group_id}") for arg in node.arguments
+            ]
+            todo = [(n, 0) for n in node.tree.children]
+
             while todo:
                 branch, depth = todo.pop()
                 todo.extend((n, depth + 1) for n in branch.children)
 
                 if branch.key > 0:
-                    summary.setdefault(arguments[depth], []).append(branch.name)
+                    if node.group_types[depth] == GroupType.State:
+                        states.setdefault(arguments[depth], []).append(branch.name)
+                    else:
+                        switches.setdefault(arguments[depth], []).append(branch.name)
 
-    return summary
+        if isinstance(node, SwitchContainer):
+            group = lookup_name(node.group_id, f"#{node.group_id}")
+
+            if node.group_type == GroupType.State.value:
+                switch_values = states.setdefault(group, [])
+            else:
+                switch_values = switches.setdefault(group, [])
+
+            default = lookup_name(node.default_switch, f"#{node.default_switch}")
+            switch_values.append(default)
+
+            for switch in node.switch_groups:
+                switch_values.append(
+                    lookup_name(switch.switch_id, f"#{switch.switch_id}")
+                )
+
+    return rtpcs, states, switches
 
 
-def build_gamestate_summary(game_path: Path, bnk2json_exe: Path) -> dict[str, list[str]]:
-    summary = {}
+def build_gamesync_summary(
+    game_path: Path, bnk2json_exe: Path
+) -> dict[str, list[str]]:
+    all_rtpcs: set[str] = set()
+    all_states: dict[str, set[str]] = {}
+    all_switches: dict[str, set[str]] = {}
     banks = list(game_path.glob("**/*.bnk"))
 
     with logging_redirect_tqdm():
@@ -53,14 +90,24 @@ def build_gamestate_summary(game_path: Path, bnk2json_exe: Path) -> dict[str, li
                     unpacked = True
 
                 bnk = Soundbank.load(bnk_file)
-                found = build_bank_states_summary(bnk)
-                for group, states in found.items():
-                    summary.setdefault(group, set()).update(states)
+                rtpcs, states, switches = build_bank_gamesync_summary(bnk)
+
+                all_rtpcs.update(rtpcs)
+
+                for group, group_values in states.items():
+                    all_states.setdefault(group, set()).update(group_values)
+
+                for group, group_values in switches.items():
+                    all_switches.setdefault(group, set()).update(group_values)
 
                 if unpacked:
                     shutil.rmtree(bnk_dir)
 
-    return {k: sorted(v) for k, v in summary.items()}
+    return {
+        "rtpcs": sorted(all_rtpcs),
+        "states": {s: sorted(all_states[s]) for s in sorted(all_states) },
+        "switches": {s: sorted(all_switches[s]) for s in sorted(all_switches) },
+    }
 
 
 def load_gamestate_summary(game: Game) -> dict[str, list[str]]:
@@ -86,5 +133,5 @@ if __name__ == "__main__":
     game_path = Path(sys.argv[2])
     outfile = Path(sys.argv[3])
 
-    summary = build_gamestate_summary(game_path, bnk2json_exe)
+    summary = build_gamesync_summary(game_path, bnk2json_exe)
     json.dump(summary, outfile.open("w"), indent=2)

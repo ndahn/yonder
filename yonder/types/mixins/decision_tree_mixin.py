@@ -87,7 +87,7 @@ class DecisionTreeMixin:
         self,
         pos: int,
         argument: Hash,
-        group_type: GroupType,
+        group_type: GroupType = GroupType.State,
     ) -> None:
         group_id = calc_hash(argument) if isinstance(argument, str) else argument
 

@@ -442,8 +442,9 @@ class add_hirc_player_panel(DpgItem):
 
                     data = json.loads(raw.decode("utf-8").strip())
 
-                    # Update the player
+                    # Update the player, switches take priority
                     self._states.update(data.get("states", {}))
+                    self._states.update(data.get("switches", {}))
                     self._rtpcs.update(data.get("rtpcs", {}))
                     self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 

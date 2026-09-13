@@ -9,5 +9,6 @@
 - doc homepage: title picture
 - sound builder: + layers
 - overhaul segment and music track node widgets
+- generic node widgets
 - remove old player
 - find bank conflicts tool

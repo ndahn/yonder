@@ -16,7 +16,7 @@ class GameObjects:
     steam_app_id: ClassVar[int]
     regbin_key: ClassVar[bytes]
     rtpc_params: ClassVar[type[EnumWithUnknown]]
-    game_states: ClassVar[dict[str, list[str]]]
+    game_syncs: ClassVar[dict[str, dict[str, list[str]]]]
     amx_summary: ClassVar[AmxSummary]
 
     @classmethod
@@ -48,11 +48,11 @@ def get_game_objects(game: Game) -> type[GameObjects]:
     # from .armoredcore6 import GameArmoredCore6
     # AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
     # AC6 steam app id: 1888160
-    
+
     for game_spec in GameObjects.__subclasses__():
         if game_spec.game == game:
             return game_spec
-    
+
     raise ValueError(f"Game {game} is not supported yet")
 
 

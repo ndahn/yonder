@@ -105,7 +105,7 @@ class edit_state_path_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
             # All branches have the same length
-            game_states = get_selected_game().game_states
+            game_states = get_selected_game().game_syncs["states"]
             for i, arg in enumerate(self._arguments):
                 name = self._get_name(arg)
                 values = ["*"] + game_states.get(name, [])

@@ -4,4 +4,4 @@ from .actormixer_summary import (
     load_actormixer_summary,
     build_bank_actormixer_summary,
 )
-from .gamestate_summary import load_gamestate_summary, build_bank_states_summary
+from .gamestate_summary import load_gamestate_summary, build_bank_gamesync_summary

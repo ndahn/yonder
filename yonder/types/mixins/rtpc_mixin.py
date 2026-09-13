@@ -7,10 +7,10 @@ class RtpcMixin:
     # Dummies, just for the type checker
     rtpcs: list[RTPC]
 
-    def get_rtpc_value(self, param: int, x: float, default: float = 0.0) -> float:
+    def get_rtpc_y_value(self, param: int, x: float, default: float = 0.0) -> float:
         for rtpc in self.rtpcs:
             if rtpc.param_id == param:
-                return eval(rtpc.graph_points, x, rtpc.curve_scaling)
+                return eval_curve(rtpc.graph_points, x, rtpc.curve_scaling)
 
         return default
 

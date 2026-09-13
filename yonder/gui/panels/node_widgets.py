@@ -1934,6 +1934,12 @@ def _create_attributes_switchcontainer(
         node.group_id = info[0]
         on_node_changed(base_tag, node, user_data)
 
+    def on_default_switch_changed(
+        sender: str, info: tuple[Hash, str], cb_user_data: Any
+    ) -> None:
+        node.default_switch = info[0]
+        on_node_changed(base_tag, node, user_data)
+
     def on_switch_nodes_changed(
         sender: str, switch_nodes: list[HIRCNode | int], switch: SwitchPackage
     ) -> None:
@@ -1953,6 +1959,9 @@ def _create_attributes_switchcontainer(
         )
         add_hash_widget(
             node.group_id, on_hash_changed=on_groupid_changed, hash_label=µ("Group ID")
+        )
+        add_hash_widget(
+            node.default_switch, on_hash_changed=on_default_switch_changed, hash_label=µ("Default Switch")
         )
 
         with dpg.tree_node(

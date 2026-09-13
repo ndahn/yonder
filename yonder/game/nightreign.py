@@ -78,5 +78,5 @@ class GameNightreign(GameObjects):
         "9a8ee90c4c01a43168a17d9d75e4a7d02107ebcf43d5acb0554f941601b57918"
     )
     rtpc_params = RTPCParameter_Nightreign
-    game_states = load_gamestate_summary(Game.Nightreign)
+    game_syncs = load_gamestate_summary(Game.Nightreign)
     amx_summary = load_actormixer_summary(Game.Nightreign)

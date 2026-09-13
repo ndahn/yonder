@@ -198,5 +198,5 @@ class GameEldenring(GameObjects):
         "99bffc366a6bc8c6f5827d093602d676c42892a01c207fb024d3af4e493fef99"
     )
     rtpc_params = RTPCParameter_EldenRing
-    game_states = load_gamestate_summary(Game.EldenRing)
+    game_syncs = load_gamestate_summary(Game.EldenRing)
     amx_summary = load_actormixer_summary(Game.EldenRing)
