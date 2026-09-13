@@ -320,7 +320,7 @@ class create_boss_track_dialog(DpgItem):
 
             reserved_keys = [
                 x
-                for x in get_selected_game().game_syncs["states"].get("BgmEnemyType")
+                for x in get_selected_game().game_syncs.states.get("BgmEnemyType")
                 if "reserved" in x.lower()
             ]
             self._bgm_enemy_type_widget = add_state_value_input(

@@ -23,7 +23,7 @@ class EnumWithUnknown(IntEnum):
 class Game(Enum):
     EldenRing = 0
     Nightreign = 1
-    # ArmoredCore6 = 2
+    ArmoredCore6 = 2
 
 
 class SoundType(StrEnum):

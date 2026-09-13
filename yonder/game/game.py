@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 
 from yonder.enums import Game, EnumWithUnknown
 from .data.actormixer_summary import AmxSummary
+from .data.gamesync_summary import GameSyncSummary
 from .steam import find_game_folder
 
 
@@ -16,7 +17,7 @@ class GameObjects:
     steam_app_id: ClassVar[int]
     regbin_key: ClassVar[bytes]
     rtpc_params: ClassVar[type[EnumWithUnknown]]
-    game_syncs: ClassVar[dict[str, dict[str, list[str]]]]
+    game_syncs: ClassVar[GameSyncSummary]
     amx_summary: ClassVar[AmxSummary]
 
     @classmethod
@@ -45,9 +46,7 @@ def get_game_objects(game: Game) -> type[GameObjects]:
     # Need to load these for subclass discovery even if we're not using them here
     from .eldenring import GameEldenring  # noqa: F401
     from .nightreign import GameNightreign  # noqa: F401
-    # from .armoredcore6 import GameArmoredCore6
-    # AC6 regbin key: 10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10
-    # AC6 steam app id: 1888160
+    from .armoredcore6 import GameArmoredCore6  # noqa: F401
 
     for game_spec in GameObjects.__subclasses__():
         if game_spec.game == game:

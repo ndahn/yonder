@@ -263,7 +263,7 @@ Area tree:
         if isinstance(arg, int):
             arg = lookup_name(arg, f"#{arg}")
 
-        states = get_selected_game().game_syncs["states"]
+        states = get_selected_game().game_syncs.states
         return ["*"] + states.get(arg, [])
 
     def _rebuild_location_tab(self) -> None:
@@ -344,7 +344,7 @@ Area tree:
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
         """Render one area-arg row: input + combo(no_preview) + locked hint."""
-        values = list(get_selected_game().game_syncs["states"].keys())
+        values = list(get_selected_game().game_syncs.states.keys())
 
         if idx in self._local_state_widgets:
             self._local_state_widgets.pop(idx).destroy()

@@ -153,6 +153,9 @@ class AmxSummary:
 
 
 def build_bank_actormixer_summary(bnk: Soundbank) -> AmxSummary:
+    if not bnk.hirc:
+        return AmxSummary({})
+
     return AmxSummary(
         {
             amx.id: AmxData.from_actormixer(bnk, amx)
@@ -186,21 +189,27 @@ def build_game_actormixer_summary(game_path: Path, bnk2json_exe: Path) -> AmxSum
 
 
 def load_actormixer_summary(game: Game) -> AmxSummary:
-    if game == Game.EldenRing:
-        json_path = resource_dir() / "gamedata" / "er" / "amx.json"
-    elif game == Game.Nightreign:
-        json_path = resource_dir() / "gamedata" / "nr" / "amx.json"
-    else:
-        raise ValueError(f"Game {game} is not supported yet")
+    try:
+        if game == Game.EldenRing:
+            json_path = resource_dir() / "gamedata" / "er" / "amx.json"
+        elif game == Game.Nightreign:
+            json_path = resource_dir() / "gamedata" / "nr" / "amx.json"
+        elif game == Game.ArmoredCore6:
+            json_path = resource_dir() / "gamedata" / "ac6" / "amx.json"
+        else:
+            raise ValueError(f"Game {game} is not supported yet")
 
-    raw: list[dict] = json.load(json_path.open())
-    data: list[AmxData] = [AmxData(**d) for d in raw]
+        raw: list[dict] = json.load(json_path.open())
+        data: list[AmxData] = [AmxData(**d) for d in raw]
 
-    # Fix up property keys
-    for d in data:
-        d.properties = {PropID[k]: v for k, v in d.properties.items()}
+        # Fix up property keys
+        for d in data:
+            d.properties = {PropID[k]: v for k, v in d.properties.items()}
 
-    return AmxSummary({s.nid: s for s in data})
+        return AmxSummary({s.nid: s for s in data})
+    except Exception as e:
+        logger.error(f"{game} AMX summary failed to load: {e}")
+        return AmxSummary({})
 
 
 if __name__ == "__main__":

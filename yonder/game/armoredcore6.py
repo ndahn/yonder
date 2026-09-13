@@ -1,10 +1,11 @@
+from yonder import Game
 from yonder.enums import EnumWithUnknown
-from .game import Game, GameObjects
+from .game import GameObjects
 from .data import load_actormixer_summary, load_gamesync_summary
 
 
-# Presumably the same as in ER?
-class RTPCParameter_Nightreign(EnumWithUnknown):
+# Same as NR, not otherwise verified
+class RTPCParameter_ArmoredCore6(EnumWithUnknown):
     UNKNOWN = -1
     Volume = 0
     # ADDITIVE_PARAMS_START
@@ -66,17 +67,15 @@ class RTPCParameter_Nightreign(EnumWithUnknown):
     UserAuxSendHPF3 = 55
     GameAuxSendLPF = 56
     GameAuxSendHPF = 57
-    Position_PAN_Z_2D = 58
-    BypassAllMetadata = 59
     MaxNumRTPC = 58
 
 
-class GameNightreign(GameObjects):
-    game = Game.Nightreign
-    steam_app_id = 2622380
+class GameArmoredCore6(GameObjects):
+    game = Game.ArmoredCore6
+    steam_app_id = 1888160
     regbin_key = bytes.fromhex(
-        "9a8ee90c4c01a43168a17d9d75e4a7d02107ebcf43d5acb0554f941601b57918"
+        "10ceed477b7cd9d7e6938e114713e787d53913b1d318ec135e4be50504ee10"
     )
-    rtpc_params = RTPCParameter_Nightreign
-    game_syncs = load_gamesync_summary(Game.Nightreign)
-    amx_summary = load_actormixer_summary(Game.Nightreign)
+    rtpc_params = RTPCParameter_ArmoredCore6
+    game_syncs = load_gamesync_summary(Game.ArmoredCore6)
+    amx_summary = load_actormixer_summary(Game.ArmoredCore6)

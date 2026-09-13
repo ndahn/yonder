@@ -3,13 +3,21 @@ import json
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 import shutil
+from dataclasses import dataclass
 
 from yonder.hash import lookup_name
 from yonder.enums import Game, GroupType
 from yonder.types.soundbank import Soundbank
 from yonder.types.switch_container import SwitchContainer
 from yonder.types.mixins import DecisionTreeMixin, StateMixin, RtpcMixin
-from yonder.util import unpack_soundbank, resource_dir
+from yonder.util import unpack_soundbank, resource_dir, logger
+
+
+@dataclass(frozen=True)
+class GameSyncSummary:
+    rtpcs: list[str]
+    states: dict[str, list[str]]
+    switches: dict[str, list[str]]
 
 
 def build_bank_gamesync_summary(
@@ -70,9 +78,7 @@ def build_bank_gamesync_summary(
     return rtpcs, states, switches
 
 
-def build_gamesync_summary(
-    game_path: Path, bnk2json_exe: Path
-) -> dict[str, list[str]]:
+def build_gamesync_summary(game_path: Path, bnk2json_exe: Path) -> dict[str, list[str]]:
     all_rtpcs: set[str] = set()
     all_states: dict[str, set[str]] = {}
     all_switches: dict[str, set[str]] = {}
@@ -105,20 +111,27 @@ def build_gamesync_summary(
 
     return {
         "rtpcs": sorted(all_rtpcs),
-        "states": {s: sorted(all_states[s]) for s in sorted(all_states) },
-        "switches": {s: sorted(all_switches[s]) for s in sorted(all_switches) },
+        "states": {s: sorted(all_states[s]) for s in sorted(all_states)},
+        "switches": {s: sorted(all_switches[s]) for s in sorted(all_switches)},
     }
 
 
-def load_gamestate_summary(game: Game) -> dict[str, list[str]]:
-    if game == Game.EldenRing:
-        json_path = resource_dir() / "gamedata" / "er" / "states.json"
-    elif game == Game.Nightreign:
-        json_path = resource_dir() / "gamedata" / "nr" / "states.json"
-    else:
-        raise ValueError(f"Game {game} is not supported yet")
+def load_gamesync_summary(game: Game) -> GameSyncSummary:
+    try:
+        if game == Game.EldenRing:
+            json_path = resource_dir() / "gamedata" / "er" / "gamesyncs.json"
+        elif game == Game.Nightreign:
+            json_path = resource_dir() / "gamedata" / "nr" / "gamesyncs.json"
+        elif game == Game.ArmoredCore6:
+            json_path = resource_dir() / "gamedata" / "ac6" / "gamesyncs.json"
+        else:
+            raise ValueError(f"Game {game} is not supported yet")
 
-    return json.load(json_path.open())
+        data = json.load(json_path.open())
+        return GameSyncSummary(data["rtpcs"], data["states"], data["switches"])
+    except Exception as e:
+        logger.error(f"{game} gamesync summary failed to load: {e}")
+        return GameSyncSummary([], {}, {})
 
 
 if __name__ == "__main__":
