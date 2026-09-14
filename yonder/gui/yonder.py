@@ -85,6 +85,7 @@ from .panels.node_widgets import create_node_widgets
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 from .widgets.hirc_player_widget import add_hirc_player
+from .widgets.notifications import global_notification_man
 
 
 class BanksOfYonder(DpgItem):
@@ -121,15 +122,7 @@ class BanksOfYonder(DpgItem):
         class LogHandler(logging.Handler):
             def emit(this, record: logging.LogRecord):
                 this.format(record)
-
-                if record.levelno >= logging.ERROR:
-                    color = style.red
-                elif record.levelno >= logging.WARNING:
-                    color = style.yellow
-                else:
-                    color = style.blue
-
-                self.show_notification(record.message, color)
+                global_notification_man.add_notification(record.message, record.levelno)
 
         sys.excepthook = self._handle_exception
         logger.addHandler(LogHandler())
@@ -155,7 +148,7 @@ class BanksOfYonder(DpgItem):
             dpg.stop_dearpygui()
             return
 
-        self.show_notification(str(exc_value), style.red)
+        logger.error(str(exc_value))
         raise exc_value
 
     def _change_language(self, lang: str) -> None:
@@ -534,29 +527,6 @@ class BanksOfYonder(DpgItem):
 
                     with dpg.tab(label=µ("Json"), tag=self._t("json_tab")):
                         self._build_tab_json()
-
-        # Shown now, but will be positioned properly by the welcome message
-        with dpg.window(
-            no_title_bar=True,
-            no_move=True,
-            no_close=True,
-            no_resize=True,
-            no_saved_settings=True,
-            min_size=(10, 10),
-            show=False,
-            tag=self._t("notification_window"),
-        ):
-            with dpg.group(width=-1):
-                dpg.add_text(
-                    "Hello :3", color=style.red, tag=self._t("notification_text")
-                )
-
-        dpg.bind_item_theme(self._t("notification_window"), themes.notification_frame)
-
-        with dpg.handler_registry():
-            dpg.add_mouse_click_handler(
-                callback=lambda s, a, u: dpg.hide_item(self._t("notification_window"))
-            )
 
     def _build_tab_events(self) -> None:
         with dpg.group(horizontal=True):
@@ -1060,21 +1030,6 @@ class BanksOfYonder(DpgItem):
                 )
 
         dpg.set_item_pos(popup, dpg.get_mouse_pos(local=False))
-
-    def show_notification(
-        self, msg: str, color: tuple[int, int, int, int] = style.red
-    ) -> None:
-        w = dpg.get_viewport_width()
-        h = (
-            dpg.get_viewport_height()
-            - dpg.get_item_height(self._t("notification_window"))
-            - 32
-        )
-        # Note: since this is a popup there's no need for a timer to hide it
-        dpg.configure_item(
-            self._t("notification_window"), show=True, pos=(0, h), min_size=(w, 10)
-        )
-        dpg.configure_item(self._t("notification_text"), default_value=msg, color=color)
 
     def _set_component_highlight(self, widget: str, highlight: bool) -> None:
         if highlight:

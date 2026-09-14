@@ -279,6 +279,9 @@ def init_themes():
     with dpg.theme() as themes.notification_frame:
         with dpg.theme_component(dpg.mvAll):
             dpg.add_theme_style(
+                dpg.mvStyleVar_WindowRounding, 5, 5, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_style(
                 dpg.mvStyleVar_WindowPadding, 7, 0, category=dpg.mvThemeCat_Core
             )
             dpg.add_theme_style(

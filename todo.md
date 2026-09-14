@@ -1,5 +1,3 @@
-- yonder_live_states.dll
-- nicer log message popups
 - add select att to attenuation widget
 - equalizer bars
 - msc branches need to be merged/split when editing their path

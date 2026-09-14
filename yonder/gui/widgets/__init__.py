@@ -26,6 +26,7 @@ from .hash_widget import add_hash_widget
 from .hirc_player_widget import add_hirc_player
 from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
+from .notifications import global_notification_man
 from .loading_indicator import loading_indicator
 from .select_node import add_select_node, add_select_actormixer
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
