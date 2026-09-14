@@ -228,6 +228,10 @@ class HIRCNode(DataNode):
         """
         return pyo.Sig(0)
 
+    def is_playing(self) -> bool:
+        my_pyo = self.pyo_state()
+        return my_pyo and my_pyo.playing
+
     def play(self, ctx: PlayContext) -> None:
         """Initialize this node's audio backend and start playback.
 

@@ -53,6 +53,7 @@ nav:
   - Tools:
     - Overview: tools/index.md
     - Simple Sounds: tools/simple_sounds.md
+    - Replace Music: tools/replace_music.md
     - Batch Sound Builder: tools/batch_sound_builder.md 
     - Boss BGMs: tools/boss_bgm.md
     - Area BGMs: tools/area_bgm.md
@@ -60,6 +61,7 @@ nav:
     - Unmangling Soundbanks: tools/unmangle.md
   - Guides:
     - Overview: guides/index.md
+    - Locating Sounds: guides/locating_sounds.md
     - Adding a Sound: guides/adding_sounds.md
     - Custom Soundbanks: guides/custom_banks.md
     - Working with Music: guides/working_with_music.md

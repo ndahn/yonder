@@ -2,8 +2,7 @@
 - equalizer bars
 - msc branches need to be merged/split when editing their path
 - msc tree edits only need to rebuild msc widgets, no need to regenerate everything
-- transition rules missing play pre-entry/post-exit/transition piece
-- special delete case for events
+- transition rules missing transition piece
 - doc homepage: title picture
 - sound builder: + layers
 - overhaul segment and music track node widgets

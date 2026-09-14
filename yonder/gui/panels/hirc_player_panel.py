@@ -4,6 +4,7 @@ from bisect import bisect
 from threading import Thread
 import socket
 import json
+import re
 from dearpygui import dearpygui as dpg
 
 from yonder import lookup_name, calc_hash, HIRCNode
@@ -65,12 +66,12 @@ class add_hirc_player_panel(DpgItem):
             with dpg.group():
                 dpg.add_checkbox(
                     label=µ("Play full hierarchy"),
-                    default_value=True,
+                    default_value=False,
                     callback=self._on_player_settings_changed,
                     tag=self._t("player_full_hierarchy"),
                 )
                 with dpg.tooltip(dpg.last_item()):
-                    dpg.add_text(µ("Cascade from root instead of selected node"))
+                    dpg.add_text(µ("Cascade from the root instead of selected node"))
 
                 dpg.add_checkbox(
                     label=µ("Apply AMX hierarchy"),
@@ -478,15 +479,20 @@ class add_hirc_player_panel(DpgItem):
                         time.sleep(0.1)
                     else:
                         break
-                except TimeoutError:
+                except Exception as e:
                     if self._contiunous_sync:
+                        time.sleep(0.1)
                         continue
                     else:
                         # Don't show the message if we were already supposed to stop
                         if self._is_synchronizing:
+                            status = type(e).__name__
+                            status = status.removesuffix("Error").removesuffix("Exception")
+                            status = re.sub(r"([A-Z]+)", r" \1", status).lower()
+
                             dpg.configure_item(
                                 self._t("sync_status"),
-                                default_value="timeout",
+                                default_value=status,
                                 show=True,
                             )
 

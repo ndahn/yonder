@@ -126,39 +126,10 @@ class mass_transfer_dialog(DpgItem):
         dst_labels += [""] * (num - len(dst_labels))
 
         for nid in src_ids:
-            obj = self._src_bnk.get(nid)
-            target_id = None
+            related_events = self._src_bnk.find_related_events(nid)
 
-            if isinstance(obj, Event):
-                for action in obj.get_action_nodes(self._src_bnk):
-                    if action.action_type_enum in (
-                        ActionType.Play,
-                        ActionType.StopEO,
-                        ActionType.StopE,
-                    ):
-                        target_id = action.external_id
-                        break
-                else:
-                    continue
-            else:
-                target_id = obj.id
-
-            for evt in self._src_bnk.find_events_for(target_id):
-                play_actions = evt.get_action_nodes(self._src_bnk, ActionType.Play)
-
-                if play_actions:
-                    for pa in play_actions:
-                        if pa.external_id == target_id:
-                            # Explicitly plays our target_id, should be included
-                            break
-                    else:
-                        if evt.has_action_type(
-                            self._src_bnk, ActionType.StopEO, ActionType.StopE
-                        ):
-                            # Has a play action targeting a different node, don't include it
-                            continue
-
-                if evt.id not in src_ids:
+            for evt in related_events:
+                if evt not in src_ids:
                     name = evt.get_name()
                     src_labels.append(name)
                     dst_labels.append(name)

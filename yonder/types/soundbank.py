@@ -663,6 +663,49 @@ class Soundbank:
             if node.id in nx.descendants(g, evt.id):
                 yield evt
 
+    def find_related_events(
+        self,
+        node: HIRCNode | int,
+        action_types: ActionType | tuple[ActionType] = (
+            ActionType.Play,
+            ActionType.StopEO,
+            ActionType.StopE,
+        ),
+    ) -> list[Event]:
+        if not isinstance(node, HIRCNode):
+            node = self[node]
+
+        if isinstance(node, Event):
+            for action in node.get_action_nodes(self):
+                if action.action_type_enum in action_types:
+                    target_id = action.external_id
+                    break
+            else:
+                return []
+        else:
+            target_id = node.id
+
+        related = []
+
+        for evt in self._src_bnk.find_events_for(target_id):
+            play_actions = evt.get_action_nodes(self, ActionType.Play)
+
+            if play_actions:
+                for pa in play_actions:
+                    if pa.external_id == target_id:
+                        # Explicitly plays our target_id, should be included
+                        break
+                else:
+                    if evt.has_action_type(
+                        self, ActionType.StopEO, ActionType.StopE
+                    ):
+                        # Has a play action targeting a different node, don't include it
+                        continue
+
+                related.append(evt)
+        
+        return related
+
     def solve(self) -> None:
         from yonder.types import Action, Event
 

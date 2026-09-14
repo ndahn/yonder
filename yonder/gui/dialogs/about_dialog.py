@@ -57,7 +57,7 @@ class about_dialog(DpgItem):
                         color=style.light_grey,
                     )
                     dpg.add_text(
-                        "Vswarte, Raster, Shion, Kidius, \nDasaav, LittleBear, Shiki",
+                        "Vswarte, Raster, Shion, Kidius, \nDasaav, LittleBear, Shiki, ...",
                         indent=10,
                         color=style.light_grey,
                     )

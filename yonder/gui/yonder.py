@@ -13,7 +13,7 @@ import networkx as nx
 import shutil
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank, HIRCNode, Game, lookup_name
+from yonder import Soundbank, HIRCNode, Game
 from yonder.types import (
     Action,
     ActorMixer,
@@ -142,7 +142,7 @@ class BanksOfYonder(DpgItem):
                 lookup_table.save()
 
     def _handle_exception(
-        self, exc_type: Type[Exception], exc_value: Exception, exc_traceback
+        self, exc_type: type[Exception], exc_value: Exception, exc_traceback
     ) -> None:
         if issubclass(exc_type, KeyboardInterrupt):
             dpg.stop_dearpygui()
@@ -228,6 +228,7 @@ class BanksOfYonder(DpgItem):
                 )
 
             dpg.add_separator()
+
             with dpg.menu(label=µ("Bank", "menu"), tag=self._t("menu/bank")):
                 dpg.add_menu_item(
                     label=µ("Rename"),
@@ -244,15 +245,6 @@ class BanksOfYonder(DpgItem):
                     callback=self._bank_solve_hirc,
                     tag=self._t("menu/solve_hirc"),
                 )
-
-                dpg.add_separator()
-                with dpg.menu(label=µ("Game", "menu")):
-                    dpg.add_radio_button(
-                        [g.name for g in Game],
-                        default_value=Game.EldenRing.name,
-                        callback=lambda s, a, u: set_game(Game[a]),
-                        tag=self._t("menu/selected_game"),
-                    )
 
                 dpg.add_separator()
 
@@ -354,6 +346,14 @@ class BanksOfYonder(DpgItem):
                 )
 
                 dpg.add_separator()
+
+                with dpg.menu(label=µ("Presets", "menu")):
+                    dpg.add_radio_button(
+                        [g.name for g in Game],
+                        default_value=Game.EldenRing.name,
+                        callback=lambda s, a, u: set_game(Game[a]),
+                        tag=self._t("menu/selected_game"),
+                    )
 
                 with dpg.menu(
                     label=µ("Language", "menu"),
@@ -2036,34 +2036,42 @@ class BanksOfYonder(DpgItem):
         )
         self.regenerate()
 
-    # TODO
-    def _delete_node(self, node: HIRCNode, cascade: bool) -> None:
-        def on_event_delete_choice(sender: str, choice: int, user_data: Any) -> None:
+    def _do_delete_node(self, node: HIRCNode, cascade: bool) -> None:
+        def do_delete(nodes: list[HIRCNode]):
+            if cascade:
+                for n in nodes:
+                    self.bnk.delete_subtree(n)
+            else:
+                # Deleting all in one will be faster
+                self.bnk.delete_nodes(*nodes)
+
+        def on_delete_related_choice(sender: str, choice: int, related: list[Event]) -> None:
             if choice == 0:
-                pass
+                do_delete([node])
 
             elif choice == 1:
-                pass
+                do_delete([node] + related)
 
         if isinstance(node, Event):
-            # TODO get related events
-            if node.has_action_type(
-                self.bnk, ActionType.Play, ActionType.PlayAndContinue
-            ):
-                pass
-
+            related_events = self.bnk.find_related_events(node)
+            
+            if related_events:
                 simple_choice_dialog(
                     µ("Delete related play/stop events?"),
                     [µ("Yes"), µ("No")],
-                    on_event_delete_choice,
+                    on_delete_related_choice,
+                    user_data=related_events,
                 )
+                return
+
+        do_delete(node)
 
     def node_delete(self) -> None:
         if not self._selected_node:
             return
 
         parent = self.bnk.get_parent(self._selected_node)
-        self.bnk.delete_nodes(self._selected_node)
+        self._do_delete_node(self._selected_node, False)
         logger.info(µ("Deleted {node}", "log").format(node=self._selected_node))
 
         self._on_node_selected(None, True, parent)
@@ -2075,7 +2083,7 @@ class BanksOfYonder(DpgItem):
 
         with loading_indicator(µ("Working...")):
             parent = self.bnk.get_parent(self._selected_node)
-            self.bnk.delete_subtree(self._selected_node)
+            self._do_delete_node(self._selected_node, True)
 
         logger.info(
             µ("Deleted {node} and exclusive children").format(node=self._selected_node)

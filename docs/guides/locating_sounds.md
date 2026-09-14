@@ -1,6 +1,6 @@
 # Locating Sounds
 
-Locating sounds can be tough if you don't know what you're looking for. As described on the [events page](../wwise/events.md), the game constructs short strings that are hashed and sent to Wwise, triggering various actions. These strings can be anything, but usually follow the pattern `Play_<type><number>`, where `<type>` is a Fromsoft-defined category (e.g. `c` for character, `s` for sfx, etc., see [sound types](../wwise/events.md#sound-types)), and `<number` is an arbitrary 9-digit number padded with 0s. This number often includes e.g. the character's ID in the beginning, but this is by no means required.
+Locating sounds can be tough if you don't know what you're looking for. As described on the [events page](../wwise/events.md), the game constructs short strings that are hashed and sent to Wwise, triggering various actions. These strings can be anything, but usually follow the pattern `Play_<type><number>`, where `<type>` is a Fromsoft-defined category (e.g. `c` for character, `s` for sfx, etc., see [sound types](../wwise/events.md#sound-types)), and `<number` is an arbitrary 9-digit number padded with 0s. This number often includes e.g. the character's ID in the beginning, but this is by no means required. It has no relation whatsoever to the sound's filename.
 
 !!! bug
 

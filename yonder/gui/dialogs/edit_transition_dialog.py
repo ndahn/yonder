@@ -9,7 +9,7 @@ from yonder.util import deepmerge
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.helpers import dpg_section
-from yonder.gui.widgets import DpgItem
+from yonder.gui.widgets import DpgItem, add_select_node
 
 
 # https://www.audiokinetic.com/en/public-library/2025.1.8_9170/?source=Help&id=transitions_tab_music_objects
@@ -82,7 +82,7 @@ class edit_transition_dialog(DpgItem):
 
         for node_id in getattr(self._rule, rule_key):
             self._add_id_row(table, node_id, rule_key)
-        
+
         self._add_id_footer(table, rule_key)
         dpg.configure_item(
             table, height=min(150, 30 + len(getattr(self._rule, rule_key)) * 30)
@@ -98,9 +98,7 @@ class edit_transition_dialog(DpgItem):
             )
 
     def _add_id_footer(self, table: str, rule_key: str) -> None:
-        missing = sorted(
-            set(self._targets).difference(getattr(self._rule, rule_key))
-        )
+        missing = sorted(set(self._targets).difference(getattr(self._rule, rule_key)))
         if not missing:
             return
 
@@ -183,7 +181,15 @@ class edit_transition_dialog(DpgItem):
                 ),
                 tag=self._t("edit_transition/src_fade_curve"),
             )
-            
+            dpg.add_checkbox(
+                label=µ("Play post-exit"),
+                default_value=bool(src.play_post_exit),
+                callback=lambda s, a, u: setattr(
+                    self._src_rule, "play_post_exit", bool(a)
+                ),
+                tag=self._t("edit_transition/src_play_post_exit"),
+            )
+
             if lock_sync_type:
                 sync_type = f"{src.sync_type.name} (locked)"
             else:
@@ -236,6 +242,16 @@ class edit_transition_dialog(DpgItem):
                 ),
                 tag=self._t("edit_transition/dst_fade_curve"),
             )
+            dpg.add_checkbox(
+                label=µ("Play pre-entry"),
+                default_value=dst.play_pre_entry,
+                callback=lambda s, a, u: setattr(
+                    self._dst_rule, "play_pre_entry", bool(a)
+                ),
+                tag=self._t("edit_transition/dst_play_pre_entry"),
+            )
+
+            # TODO music transition piece
 
             dpg_section(
                 "Affected nodes",
