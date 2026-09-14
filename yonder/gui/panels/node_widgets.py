@@ -108,6 +108,7 @@ def create_node_widgets(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, int | HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     tag: str = 0,
     parent: str = 0,
@@ -222,6 +223,7 @@ def create_node_widgets(
                     on_node_changed,
                     on_node_selected,
                     on_structure_changed,
+                    pin_nodes,
                     base_tag=tag,
                     user_data=user_data,
                 )
@@ -604,6 +606,7 @@ def _create_type_specific_attributes(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -615,6 +618,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -628,6 +632,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -642,6 +647,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -653,6 +659,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -664,6 +671,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -675,6 +683,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -686,6 +695,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -697,6 +707,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -708,6 +719,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -719,6 +731,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -730,6 +743,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -741,6 +755,7 @@ def _create_type_specific_attributes(
             on_node_changed,
             on_node_selected,
             on_structure_changed,
+            pin_nodes,
             base_tag=base_tag,
             user_data=user_data,
         )
@@ -757,6 +772,7 @@ def _create_attributes_action(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -854,6 +870,7 @@ def _create_attributes_attenuation(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1013,6 +1030,7 @@ def _create_attributes_event(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1091,6 +1109,7 @@ def _create_attributes_layercontainer(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1153,6 +1172,7 @@ def _create_attributes_musicrandomsequencecontainer(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1183,12 +1203,12 @@ def _create_attributes_musicswitchcontainer(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
     from yonder.gui.dialogs.edit_state_path_dialog import edit_state_path_dialog
-    from yonder.gui.dialogs.choice_dialog import simple_choice_dialog
 
     names = {
         a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments
@@ -1235,55 +1255,50 @@ def _create_attributes_musicswitchcontainer(
     def on_delete_branch(
         sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
     ) -> None:
-        simple_choice_dialog(
-            µ("What to delete?"),
-            [µ("Branch & orphans"), µ("Branch only")],
-            on_delete_branch_nodes_decision,
-            title=µ("Delete branch"),
-            user_data=info,
-        )
-
-    def on_delete_branch_nodes_decision(
-        sender: str, choice: int, info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
         branch, path = info
         node.remove_branch(path)
         logger.info(f"Removed branch {branch.name}")
         on_node_changed(base_tag, node, user_data)
 
-        if choice != 0:
-            # Tree changed, need to regenerate the widgets
-            on_structure_changed()
-            return
-
-        nodes: set[DecisionTreeNode] = set()
+        # Search for orphaned nodes and pin them
+        orphans: set[DecisionTreeNode] = set()
         todo = [branch]
 
         while todo:
             fork = todo.pop()
             if fork.node_id > 0:
-                nodes.add(fork.node_id)
+                orphans.add(fork.node_id)
             todo.extend(fork.children)
 
-        for n in list(nodes):
-            nodes.update(bnk.get_subtree(n).nodes)
+        if orphans:
+            for n in list(orphans):
+                orphans.update(bnk.get_subtree(n).nodes)
 
-        bnk.delete_nodes(*nodes)
-        logger.info(f"Deleted {len(nodes)} nodes related to branch {branch.name}")
+            pin_nodes(orphans)
+            logger.info(f"Pinned {len(orphans)} nodes which are now orphaned")
+            on_structure_changed()
+
+    def on_insert_decision_confirm(
+        sender: str, arg_hash: tuple[int, str], info: tuple[DecisionTreeNode, list[Hash]]
+    ) -> None:
+        h, name = arg_hash
+        _, path = info
+        node.insert_argument(len(path), h, GroupType.State)
+        names[h] = name
         on_structure_changed()
 
     def on_insert_decision(
         sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
     ) -> None:
-        # TODO confirm
-        _, path = info
-        node.insert_argument(len(path), 999999, GroupType.State)
-        on_structure_changed()
+        from yonder.gui.dialogs.choice_dialog import pick_hash_dialog
+
+        pick_hash_dialog(
+            0, on_insert_decision_confirm, user_data=info,
+        )
 
     def on_remove_decision(
         sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
     ) -> None:
-        # TODO confirm
         _, path = info
         arg = node.arguments[len(path) - 1].group_id
         node.remove_argument(arg)
@@ -1446,6 +1461,7 @@ def _create_attributes_musicsegment(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1584,6 +1600,7 @@ def _create_attributes_musictrack(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     user_data: Any = None,
     base_tag: str = 0,
@@ -1712,6 +1729,7 @@ def _create_attributes_randomsequencecontainer(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1813,6 +1831,7 @@ def _create_attributes_sound(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1841,6 +1860,7 @@ def _create_attributes_state(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,
@@ -1943,6 +1963,7 @@ def _create_attributes_switchcontainer(
     on_node_changed: Callable[[str, HIRCNode, Any], None],
     on_node_selected: Callable[[str, HIRCNode, Any], None],
     on_structure_changed: Callable[[], None],
+    pin_nodes: Callable[[list[HIRCNode]], None],
     *,
     base_tag: str = 0,
     user_data: Any = None,

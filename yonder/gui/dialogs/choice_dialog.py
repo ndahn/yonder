@@ -4,8 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder.gui import style
 from yonder.gui.localization import µ
 from yonder.gui.helpers import center_window
-from yonder.gui.widgets import add_paragraphs
-from yonder.gui.widgets import DpgItem
+from yonder.gui.widgets import DpgItem, add_hash_widget, add_paragraphs
 
 
 _undefined = object()
@@ -136,5 +135,44 @@ class simple_combo_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Okay", "button"), callback=on_okay, tag=self._t("okay")
                 )
+
+        center_window(dialog)
+
+
+class pick_hash_dialog(DpgItem):
+    def __init__(
+        self,
+        default_value: int | str = 0,
+        callback: Callable[[str, tuple[int, str], Any], None] = None,
+        *,
+        title: str = "Rename Bank",
+        tag: str = None,
+        user_data: Any = None,
+    ) -> str:
+        super().__init__(tag)
+
+        def on_okay() -> None:
+            dpg.delete_item(dialog)
+            if callback:
+                callback(
+                    self.tag,
+                    (hash_widget.hash_value, hash_widget.string_value),
+                    user_data,
+                )
+
+        with dpg.window(
+            label=title,
+            modal=True,
+            width=340,
+            height=160,
+            no_saved_settings=True,
+            tag=self.tag,
+            on_close=lambda: dpg.delete_item(dialog),
+        ) as dialog:
+            hash_widget = add_hash_widget(default_value, None, horizontal=False)
+
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
+            dpg.add_button(label=µ("Okay"), callback=on_okay)
 
         center_window(dialog)

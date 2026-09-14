@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Type
+from typing import Any, Iterable
 import sys
 import os
 import logging
@@ -713,7 +713,7 @@ class BanksOfYonder(DpgItem):
         ):
             dpg.add_menu_item(
                 label=µ("Pin", "menu"),
-                callback=lambda s, a, u: self.add_pinned_object(self._selected_node),
+                callback=lambda s, a, u: self.add_pinned_objects(self._selected_node),
                 tag=self._t("context/pin"),
             )
             with dpg.menu(label=µ("Compare", "compare")):
@@ -897,34 +897,38 @@ class BanksOfYonder(DpgItem):
         for row in deleted:
             dpg.delete_item(row)
 
-    def add_pinned_object(self, node: int | HIRCNode) -> None:
-        if node is None:
-            return
+    def add_pinned_objects(self, nodes: HIRCNode | int | list[HIRCNode | int]) -> None:
+        if not isinstance(nodes, Iterable):
+            nodes = [nodes]
 
-        if not isinstance(node, HIRCNode):
-            node = self.bnk[node]
+        for node in nodes:
+            if node is None:
+                continue
 
-        if dpg.does_item_exist(self._t(f"pin_{node.id}")):
-            # Already pinned
-            return
+            if not isinstance(node, HIRCNode):
+                node = self.bnk[node]
 
-        def on_select(sender: str):
-            # No selection
-            dpg.set_value(sender, False)
+            if dpg.does_item_exist(self._t(f"pin_{node.id}")):
+                # Already pinned
+                continue
 
-        with dpg.table_row(
-            # For some reason self.pinned_objects_table doesn't work?
-            parent=self._t("pinned_objects_table"),
-            tag=self._t(f"pin_{node.id}"),
-            user_data=node.id,
-        ):
-            dpg.add_selectable(
-                label=str(node),
-                span_columns=True,
-                callback=on_select,
+            def on_select(sender: str):
+                # No selection
+                dpg.set_value(sender, False)
+
+            with dpg.table_row(
+                # For some reason self.pinned_objects_table doesn't work?
+                parent=self._t("pinned_objects_table"),
+                tag=self._t(f"pin_{node.id}"),
                 user_data=node.id,
-            )
-            dpg.bind_item_handler_registry(dpg.last_item(), self._t("pin_registry"))
+            ):
+                dpg.add_selectable(
+                    label=str(node),
+                    span_columns=True,
+                    callback=on_select,
+                    user_data=node.id,
+                )
+                dpg.bind_item_handler_registry(dpg.last_item(), self._t("pin_registry"))
 
     def remove_pinned_object(self, node: int | HIRCNode) -> None:
         if isinstance(node, HIRCNode):
@@ -942,7 +946,7 @@ class BanksOfYonder(DpgItem):
         orphans = self.bnk.find_orphans()
         logger.info(µ("Found {num} orphaned nodes").format(num=len(orphans)))
         for node in orphans:
-            self.add_pinned_object(node)
+            self.add_pinned_objects(node)
 
     def on_pin_selected(self, sender: str, app_data: str, user_data: Any) -> None:
         _, selectable = app_data
@@ -1705,6 +1709,7 @@ class BanksOfYonder(DpgItem):
                 lambda s, a, u: self._on_node_changed(a),
                 lambda s, a, u: self.jump_to_node(a),
                 self._on_structure_changed,
+                self.add_pinned_objects,
                 tag=self._t("attributes_"),
                 parent=self._t("attributes"),
             )
@@ -1935,7 +1940,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
-            self.add_pinned_object(node)
+            self.add_pinned_objects(node)
             self._selected_node.attach(node)
             logger.info(
                 µ("Attached new node {node} to {parent}").format(
@@ -1981,7 +1986,7 @@ class BanksOfYonder(DpgItem):
 
             self.bnk.add_nodes(*nodes)
             for n in nodes:
-                self.add_pinned_object(n)
+                self.add_pinned_objects(n)
 
             nodes[0].parent = self._selected_node
             self._selected_node.attach(nodes[0])
@@ -2150,7 +2155,7 @@ class BanksOfYonder(DpgItem):
 
         if not dpg.does_item_exist(tag):
             dlg = compare_nodes_dialog(
-                pin_callback=self.add_pinned_object,
+                pin_callback=self.add_pinned_objects,
                 jump_callback=self.jump_to_node,
                 tag=tag,
             )
@@ -2200,7 +2205,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_node_created(node: HIRCNode) -> None:
-            self.add_pinned_object(node)
+            self.add_pinned_objects(node)
             logger.info(µ("Created node {node}", "log").format(node=node))
             self.regenerate()
 
@@ -2240,7 +2245,7 @@ class BanksOfYonder(DpgItem):
 
         def on_events_created(nodes: list[HIRCNode]) -> None:
             for n in nodes:
-                self.add_pinned_object(n)
+                self.add_pinned_objects(n)
 
             logger.info(µ("Created new event {node}", "log").format(node=nodes[0]))
             self.regenerate()
@@ -2257,8 +2262,8 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_sound_created(play_evt: Event, stop_evt: Event) -> None:
-            self.add_pinned_object(play_evt)
-            self.add_pinned_object(stop_evt)
+            self.add_pinned_objects(play_evt)
+            self.add_pinned_objects(stop_evt)
 
             logger.info(
                 µ("Created new simple sound {name}").format(
@@ -2281,8 +2286,8 @@ class BanksOfYonder(DpgItem):
 
         def on_batch_created(groups: list[tuple[Event, Event]]) -> None:
             for g in groups:
-                self.add_pinned_object(g[0])
-                self.add_pinned_object(g[1])
+                self.add_pinned_objects(g[0])
+                self.add_pinned_objects(g[1])
 
             logger.info(µ("Created {num} simple sounds").format(num=len(groups)))
 
@@ -2300,7 +2305,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_boss_track_created(bgm_enemy_type: str, nodes: list[HIRCNode]) -> None:
-            self.add_pinned_object(nodes[0])
+            self.add_pinned_objects(nodes[0])
             logger.info(
                 µ("Added boss bgm for {bgm_enemy_type}").format(
                     bgm_enemy_type=bgm_enemy_type
@@ -2320,7 +2325,7 @@ class BanksOfYonder(DpgItem):
             return
 
         def on_area_track_created(nodes: list[HIRCNode]) -> None:
-            self.add_pinned_object(nodes[0])
+            self.add_pinned_objects(nodes[0])
             logger.info(µ("Added area track {name}", "log").format(name=nodes[0]))
             self.regenerate()
             self.jump_to_node(nodes[0])

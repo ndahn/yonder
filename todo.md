@@ -1,7 +1,5 @@
 - add select att to attenuation widget
 - equalizer bars
-- msc branches need to be merged/split when editing their path
-- msc tree edits only need to rebuild msc widgets, no need to regenerate everything
 - transition rules missing transition piece
 - doc homepage: title picture
 - sound builder: + layers
