@@ -67,6 +67,20 @@ class DecisionTreeMixin:
 
         return ret
 
+    def get_tree_nodes_at_depth(self, depth: int) -> list[DecisionTreeNode]:
+        ret = []
+        todo = [(self.tree, 0)]
+
+        while todo:
+            node, d = todo.pop()
+
+            if d == depth:
+                ret.append(node)
+            elif d < depth:
+                todo.extend((c, d + 1) for c in node.children)
+
+        return ret
+
     def get_argument_pos(self, arg: Hash) -> int:
         if isinstance(arg, str):
             arg = calc_hash(arg)

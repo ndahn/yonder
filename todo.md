@@ -9,3 +9,4 @@
 - generic node widgets
 - remove old player
 - find bank conflicts tool
+- translations

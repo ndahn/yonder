@@ -54,6 +54,7 @@ class add_transition_matrix(DpgItem):
         label: str = "Transition Rules",
         rule_template: MusicTransitionRule = None,
         fixed_sync_type: SyncType = None,
+        initial_height: int = 400,
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
@@ -93,15 +94,27 @@ class add_transition_matrix(DpgItem):
         if label:
             dpg.add_text(label, parent=parent, tag=self._t("transition_matrix/title"))
 
-        dpg.add_table(
-            header_row=True,
-            no_pad_innerX=True,
-            scrollX=True,
-            scrollY=True,
-            policy=dpg.mvTable_SizingFixedFit,
+        with dpg.child_window(
+            border=False,
+            autosize_x=True,
+            resizable_y=True,
+            height=initial_height,
+            horizontal_scrollbar=True,
             parent=parent,
-            tag=self._tag,
-        )
+        ):
+            with dpg.child_window(
+                border=False,
+                auto_resize_x=True,
+                auto_resize_y=True,
+            ):
+                dpg.add_table(
+                    header_row=True,
+                    no_pad_innerX=True,
+                    scrollX=False,
+                    scrollY=False,
+                    policy=dpg.mvTable_SizingFixedFit,
+                    tag=self._tag,
+                )
 
         self.regenerate()
 
@@ -191,8 +204,10 @@ class add_transition_matrix(DpgItem):
 
     def _register_context_menu(self, btn: str, cell_info: tuple[int, int, int]) -> None:
         registry = f"{btn}_handlers"
+
         if not dpg.does_item_exist(registry):
             dpg.add_item_handler_registry(tag=registry)
+
         dpg.add_item_clicked_handler(
             dpg.mvMouseButton_Right,
             callback=self._open_context_menu,

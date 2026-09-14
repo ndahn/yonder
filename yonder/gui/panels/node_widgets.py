@@ -1208,10 +1208,16 @@ def _create_attributes_musicswitchcontainer(
     def on_node_key_changed(
         sender: str, info: tuple[int, str], branch: tuple[DecisionTreeNode, int, str]
     ) -> None:
-        # TODO this is too naive, we need a way to merge and split off branches
-        # e.g. if the key matches an already existing key of a child at the same level
-        tree_node = branch[0]
-        tree_node.key = info[0]
+        tree_node, level, _ = branch
+        new_key = info[0]
+        siblings = node.get_tree_nodes_at_depth(level)
+
+        for sib in siblings:
+            if sib is not tree_node and sib.key == new_key:
+                logger.error(f"A node with key {info} already exists in level {level}")
+                return
+
+        tree_node.key = new_key
         update_branch_label(sender, branch, None)
 
     def on_add_branch(
@@ -1301,9 +1307,11 @@ def _create_attributes_musicswitchcontainer(
         parent.node_id = selected.id if selected else 0
         on_node_changed(base_tag, node, user_data)
 
-    def bind_context_menu(
-        item: str, tree_node: DecisionTreeNode, level: int, path: list[Hash]
+    def open_context_menu(
+        sender: str, app_data: Any, info: tuple[DecisionTreeNode, int, str, str]
     ) -> None:
+        item, tree_node, level, path = info
+
         arg = node.arguments[level]
         arg_name = names[arg.group_id]
         if tree_node.key == 0:
@@ -1311,8 +1319,13 @@ def _create_attributes_musicswitchcontainer(
         else:
             val_name = lookup_name(tree_node.key, "<?>")
 
-        # TODO will the popup be cleaned up?
-        with dpg.popup(item, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)):
+        with dpg.window(
+            popup=True,
+            min_size=(100, 50),
+            pos=dpg.get_mouse_pos(local=False),
+            no_saved_settings=True,
+            on_close=lambda: dpg.delete_item(context_menu),
+        ) as context_menu:
             dpg.add_text(arg_name)
             add_hash_widget(
                 tree_node.key,
@@ -1325,8 +1338,9 @@ def _create_attributes_musicswitchcontainer(
             )
             dpg.add_separator()
 
+            # TODO add options to merge with/split from branch
             dpg.add_menu_item(
-                label=µ("Add branch"),
+                label=µ("Create branch"),
                 callback=on_add_branch,
                 user_data=(tree_node, path),
             )
@@ -1336,12 +1350,12 @@ def _create_attributes_musicswitchcontainer(
                 user_data=(tree_node, path),
             )
             dpg.add_menu_item(
-                label=µ("Insert decision"),
+                label=µ("Insert decision level"),
                 callback=on_insert_decision,
                 user_data=(tree_node, path),
             )
             dpg.add_menu_item(
-                label=µ("Remove decision"),
+                label=µ("Remove decision level"),
                 callback=on_remove_decision,
                 user_data=(tree_node, path),
             )
@@ -1374,8 +1388,21 @@ def _create_attributes_musicswitchcontainer(
                 for child in children:
                     delve(child, level + 1, path)
 
-        bind_context_menu(dpg_item, tree_node, level, path)
+        # Won't get cleaned up, but better than one popup per decision tree node
+        registry = f"{base_tag}_msc_ctx_{path}"
+        if not dpg.does_item_exist(registry):
+            dpg.add_item_handler_registry(tag=registry)
+
+        dpg.add_item_clicked_handler(
+            dpg.mvMouseButton_Right,
+            callback=open_context_menu,
+            user_data=(dpg_item, tree_node, level, path),
+            parent=registry,
+        )
+        dpg.bind_item_handler_registry(dpg_item, registry)
+
         update_branch_label(None, (tree_node, level, dpg_item), None)
+
 
     with dpg.group():
         dpg.add_combo(
