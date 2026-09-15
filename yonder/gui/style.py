@@ -128,6 +128,7 @@ muted_green = RGBA(80, 180, 120, 255)
 muted_violet = RGBA(140, 90, 180, 255)
 muted_yellow = RGBA(200, 180, 60, 255)
 muted_teal = RGBA(60, 180, 180, 255)
+muted_ocean = RGBA(36, 107, 107, 255)
 muted_rose = RGBA(200, 80, 120, 255)
 muted_sky = RGBA(48, 70, 100, 255)
 

@@ -717,6 +717,7 @@ class add_player_table_compact(DpgItem):
         selected_row_color: style.RGBA = style.muted_purple,
         on_add: Callable[[str, tuple[int, Path, list[Path]], Any], None] = None,
         on_remove: Callable[[str, tuple[int, Path, list[Path]], Any], None] = None,
+        on_select: Callable[[str, tuple[int, Path, list[Path]], Any], None] = None,
         show_clear: bool = False,
         parent: str | int = 0,
         tag: str | int = 0,
@@ -732,6 +733,7 @@ class add_player_table_compact(DpgItem):
         )
         self._on_add = on_add
         self._on_remove = on_remove
+        self._on_select = on_select
         self._user_data = user_data
         self.player = None  # single shared add_wav_player instance
 
@@ -776,6 +778,8 @@ class add_player_table_compact(DpgItem):
     def _on_track_selected(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         _, path, _ = info
         self.player.set_file(path)
+        if self._on_select:
+            self._on_select(self.tag, info, self._user_data)
 
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         if self._on_add:

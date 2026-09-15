@@ -174,6 +174,13 @@ class create_batch_sound_builder_dialog(DpgItem):
         self._w_groups.refresh()
         self._refresh_layers_table()
 
+    def _on_track_selected(self, idx: int) -> None:
+        g = self._groups[self._selected_group]
+        table = self._t("layers_table")
+        
+        for i in range(len(g.layers)):
+            dpg.highlight_table_row(table, i, style.muted_purple if i == idx else (0, 0, 0, 0))
+
     def _refresh_layers_table(self) -> None:
         table = self._t("layers_table")
         dpg.delete_item(table, children_only=True, slot=0)
@@ -259,6 +266,8 @@ class create_batch_sound_builder_dialog(DpgItem):
             self._w_soundfiles.select(0)
         else:
             self._w_soundfiles.select(None)
+
+        self._refresh_layers_table()
 
     # === Batch Operations ==========
 
@@ -465,7 +474,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     with dpg.child_window(
                         width=260, height=510, auto_resize_x=False, autosize_y=True
                     ):
-                        dpg_section(µ("Groups"), color=style.muted_blue, spacer=0)
+                        dpg_section(µ("Groups"), color=style.muted_teal, spacer=0)
                         self._w_groups = add_widget_table(
                             self._groups,
                             self._group_to_row,
@@ -473,7 +482,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                             on_add=lambda s, a, u: self._groups.append(a[1]),
                             on_remove=lambda s, a, u: self._groups.pop(a[0]),
                             on_select=lambda s, a, u: self.select_group(a[0]),
-                            selected_row_color=style.muted_blue,
+                            selected_row_color=style.muted_ocean,
                             height=300,
                             add_item_label=µ("Add Group"),
                             columns=[µ("Name"), µ("Files")],
@@ -605,6 +614,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                             label=µ("Sound Files"),
                             on_add=lambda s, a, u: self._on_track_added(a[1]),
                             on_remove=lambda s, a, u: self._on_track_removed(a[0]),
+                            on_select=lambda s, a, u: self._on_track_selected(a[0]),
                             add_item_label=µ("+ Add Sounds"),
                             selected_row_color=style.muted_purple,
                             show_clear=True,
