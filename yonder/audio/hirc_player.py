@@ -44,9 +44,6 @@ class HIRCPlayer:
         self._master.out()
         self._server.start()
 
-        # Initialized when needed
-        self._spectrum: pyo.Spectrum = None
-
         # Important for proper exit
         atexit.register(self.close)
 
@@ -80,15 +77,13 @@ class HIRCPlayer:
 
         atexit.unregister(self.close)
 
-    def set_spectrum_analyzer(self, cb: Callable[[list[list[float]]], None]) -> None:
-        if self._spectrum:
-            self._spectrum.setFunction(cb)
-        else:
-            self._spectrum = pyo.Spectrum(self._master, function=cb)
-
     @property
     def playing(self) -> bool:
         return self._playing
+
+    @property
+    def out(self) -> pyo.PyoObject:
+        return self._master
 
     def collect_voices(
         self, start_from: int | HIRCNode = None

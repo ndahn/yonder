@@ -38,7 +38,6 @@ class HIRCNode(DataNode):
     body_type: ClassVar[int] = 0
     id: InitVar[int]
     _header: HIRCNodeHeader = field(init=False)
-    pyo.Spectrum
 
     def __post_init__(self, id: int):
         if isinstance(id, dict):

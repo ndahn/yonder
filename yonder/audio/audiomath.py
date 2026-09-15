@@ -5,13 +5,16 @@ import pyo
 
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import (
-    PropID,
     RtpcAccum,
     WwiseCutoffFrequencies,
     CurveInterpolation,
     CurveScaling,
 )
 from yonder.interpolation import interpolate
+
+
+# Lowest volume threshold in Wwise
+DB_FLOOR = -93.0
 
 
 def db_to_amp(db: float) -> float:

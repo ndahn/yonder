@@ -62,7 +62,7 @@ class add_interpolation_curve(DpgItem):
         y_label: str = "y",
         tag: str = None,
         user_data: Any = None,
-    ) -> None:
+    ):
         super().__init__(tag)
 
         self._curve: GraphCurve = deepcopy(initial_curve)

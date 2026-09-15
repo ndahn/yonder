@@ -7,10 +7,12 @@ from yonder.types import Sound, MusicTrack
 from yonder.enums import PropID
 from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
+from yonder.audio.analysis import BarEqualizer
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
+from yonder.gui.widgets.bar_equalizer_widget import add_bar_equalizer
 from .dpg_item import DpgItem
 from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
@@ -28,6 +30,8 @@ class add_hirc_player(DpgItem):
 
         self._on_player_state_changed = on_player_state_changed
         self._player: HIRCPlayer = None
+        self._bar_eq: BarEqualizer = None
+        self._bar_eq_widget: add_bar_equalizer = None
         self._vgmstream_requested: bool = False
         self._equalizer: add_equalizer = None
         self._attenuation_plot: add_attenuation_plot = None
@@ -96,6 +100,7 @@ class add_hirc_player(DpgItem):
             entrypoint, ctx, lambda: self._set_play_button_state(False)
         )
         self._player.set_equalizer(self._equalizer.values)
+        self._bar_eq = BarEqualizer(self._player.out, 16)
 
         self.regenerate()
         self.set_enabled(True)
@@ -176,6 +181,20 @@ class add_hirc_player(DpgItem):
             ctx.states.update(self._states)
             self._player.apply_context(ctx)
 
+    def _update_visualizer(self) -> None:
+        amps = self._bar_eq.get_levels()
+        self._bar_eq_widget.set_amplitudes(amps)
+
+        if (
+            not self._player
+            or not self._player.playing
+            and all(abs(x) <= 1e-6 for x in amps)
+        ):
+            # Not playing anymore and all amplitudes have calmed down
+            return
+
+        dpg.set_frame_callback(dpg.get_frame_count() + 3, self._update_visualizer)
+
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)
         dpg.delete_item(self._t("popup_states"), children_only=True)
@@ -236,6 +255,9 @@ class add_hirc_player(DpgItem):
         dpg.configure_item(
             self._t("btn_play"), texture_tag=Icons.pause if playing else Icons.play
         )
+
+        if playing:
+            self._update_visualizer()
 
         if self._on_player_state_changed:
             self._on_player_state_changed()
@@ -393,7 +415,8 @@ class add_hirc_player(DpgItem):
                 # with dpg.tooltip(dpg.last_item(), delay=.3):
                 #    dpg.add_text(µ("Voices"))
 
-                # TODO plot/draw group for audio visualizer
+                # Audio visualizer
+                self._bar_eq_widget = add_bar_equalizer()
 
         dpg.add_window(
             popup=True,
