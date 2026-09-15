@@ -519,6 +519,7 @@ class BanksOfYonder(DpgItem):
                     with dpg.tab(label=µ("Player"), tag=self._t("player_tab")):
                         self._hirc_player_panel = add_hirc_player_panel(
                             self._hirc_player,
+                            self.jump_to_node,
                             on_player_settings_changed=lambda: self._prepare_playback(
                                 self._selected_node
                             ),

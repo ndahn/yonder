@@ -10,6 +10,7 @@ from dearpygui import dearpygui as dpg
 from yonder import lookup_name, calc_hash, HIRCNode
 from yonder.types.mixins import StateMixin, RtpcMixin, DecisionTreeMixin
 from yonder.game import get_selected_game
+from yonder.util import format_hierarchy
 from yonder.gui import style
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -22,6 +23,7 @@ class add_hirc_player_panel(DpgItem):
     def __init__(
         self,
         hirc_player: add_hirc_player,
+        jump_to_node: Callable[[HIRCNode | int], None],
         on_player_settings_changed: Callable[[], None] = None,
         *,
         tag: str = None,
@@ -29,6 +31,7 @@ class add_hirc_player_panel(DpgItem):
         super().__init__(tag)
 
         self._hirc_player: add_hirc_player = hirc_player
+        self._jump_to_node = jump_to_node
         self._on_player_settings_changed_cb = on_player_settings_changed
         self._is_synchronizing = False
         self._contiunous_sync = False
@@ -57,7 +60,7 @@ class add_hirc_player_panel(DpgItem):
         with dpg.child_window(autosize_x=True, autosize_y=True, tag=self.tag):
             # Player info
             dpg.add_separator(label=µ("Info"))
-            dpg.add_text(tag=self._t("player_info"))
+            dpg.add_group(tag=self._t("player_info"))
 
             # Player settings
             dpg.add_spacer(height=5)
@@ -90,9 +93,7 @@ class add_hirc_player_panel(DpgItem):
                     tag=self._t("active_gamesyncs_only"),
                 )
                 with dpg.tooltip(dpg.last_item()):
-                    dpg.add_text(
-                        µ("Only show game syncs relevant to current playback")
-                    )
+                    dpg.add_text(µ("Only show game syncs relevant to current playback"))
 
             # Game syncs
             dpg.add_spacer(height=5)
@@ -272,13 +273,42 @@ class add_hirc_player_panel(DpgItem):
         self._widgets_updating = True
         Thread(target=run, daemon=True).start()
 
+    def _describe_playback(self) -> str:
+        info = self._t("player_info")
+        dpg.delete_item(info, children_only=True)
+        entrypoint = self._hirc_player.entrypoint
+
+        if not entrypoint or not entrypoint.is_playing():
+            dpg.add_text("voices: 0", parent=info)
+            return
+
+        def place_line(prefix: str, symbol: str, node: HIRCNode) -> str:
+            dpg.add_button(
+                label=f"{prefix}{symbol} {node}",
+                small=True,
+                callback=lambda s, a, u: self._jump_to_node(u),
+                user_data=node.id,
+            )
+            dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
+            return ""
+
+        bnk = self._hirc_player.bank
+        g = entrypoint.describe_playback_structure(bnk)
+        voices = [n for n in g if g.nodes[n]["type"] in ("Sound", "MusicTrack")]
+
+        dpg.push_container_stack(info)
+        dpg.add_text(f"voices: {len(voices)}")
+        dpg.add_spacer(height=1)
+        dpg.add_text(str(entrypoint))
+        # We slightly abuse this here by not rendering a string but instead placing widgets
+        format_hierarchy(bnk, g, short=True, to_line=place_line)
+        dpg.pop_container_stack()
+
     def _update_player_tab(self) -> None:
         is_live = self._is_synchronizing
 
-        # TODO info text, active voices, etc
-        dpg.set_value(
-            self._t("player_info"), f"voices: {len(self._hirc_player.voices)}"
-        )
+        # Playback overview
+        self._describe_playback()
 
         # Game syncs that are relevant for playback right now
         # Don't collect all syncs used *somewhere* as this can take multiple seconds
@@ -324,8 +354,7 @@ class add_hirc_player_panel(DpgItem):
                     ) as row:
                         if group_id in active_states:
                             state_values = sorted(
-                                lookup_name(s, f"#{s}")
-                                for s in active_states[group_id]
+                                lookup_name(s, f"#{s}") for s in active_states[group_id]
                             )
                         else:
                             state_values = known_states.get(group_id, [state_value])
@@ -468,9 +497,15 @@ class add_hirc_player_panel(DpgItem):
                     data = json.loads(raw.decode("utf-8").strip())
 
                     # Update the player, switches take priority
-                    self._states.update({int(k): v for k, v in data.get("states", {}).items()})
-                    self._states.update({int(k): v for k, v in data.get("switches", {}).items()})
-                    self._rtpcs.update({int(k): v for k, v in data.get("rtpcs", {}).items()})
+                    self._states.update(
+                        {int(k): v for k, v in data.get("states", {}).items()}
+                    )
+                    self._states.update(
+                        {int(k): v for k, v in data.get("switches", {}).items()}
+                    )
+                    self._rtpcs.update(
+                        {int(k): v for k, v in data.get("rtpcs", {}).items()}
+                    )
                     self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 
                     self._trigger_widgets_update()
@@ -487,7 +522,9 @@ class add_hirc_player_panel(DpgItem):
                         # Don't show the message if we were already supposed to stop
                         if self._is_synchronizing:
                             status = type(e).__name__
-                            status = status.removesuffix("Error").removesuffix("Exception")
+                            status = status.removesuffix("Error").removesuffix(
+                                "Exception"
+                            )
                             status = re.sub(r"([A-Z]+)", r" \1", status).lower()
 
                             dpg.configure_item(

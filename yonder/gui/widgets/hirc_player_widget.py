@@ -242,14 +242,14 @@ class add_hirc_player(DpgItem):
 
     def _on_ctrl_seek_zero(self) -> None:
         if self._player:
-            self._player.seek(0, None)
+            self._player.seek(0, False, None)
 
     def _on_ctrl_stop(self) -> None:
         if not self._player:
             return
 
         self._player.stop()
-        self._player.seek(0, None)
+        self._player.seek(0, False, None)
         self._set_play_button_state(False)
 
     def _on_ctrl_play_pause(self) -> None:
@@ -267,11 +267,11 @@ class add_hirc_player(DpgItem):
 
     def _on_ctrl_forward_10s(self) -> None:
         if self._player:
-            self._player.seek(self._player.pos + 10.0, None)
+            self._player.seek(+10.0, True, None)
 
     def _on_ctrl_forward_30s(self) -> None:
         if self._player:
-            self._player.seek(self._player.pos + 30.0, None)
+            self._player.seek(+30.0, True, None)
 
     def _open_ctrl_popup(self, sender: str, app_data: str, tag: Any) -> None:
         pos = dpg.get_item_rect_min(sender)
@@ -311,14 +311,14 @@ class add_hirc_player(DpgItem):
         if self._player:
             self._player.set_volume(vol, voice_id)
 
-    def _toggle_voice(self, sender: str, muted: bool, voice_id: int) -> None:
+    def _toggle_voice(self, sender: str, unmuted: bool, voice_id: int) -> None:
         if not self._player:
             return
 
-        self._player.set_muted(muted, voice_id)
+        self._player.set_muted(not unmuted, voice_id)
         tag = self._t(f"voice_volume_{voice_id}")
 
-        if muted:
+        if unmuted:
             dpg.enable_item(tag)
         else:
             dpg.disable_item(tag)

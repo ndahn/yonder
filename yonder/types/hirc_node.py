@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, ClassVar, Callable, TYPE_CHECKING
+import networkx as nx
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
@@ -9,6 +10,7 @@ from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
 
 if TYPE_CHECKING:
+    from yonder import Soundbank
     from yonder.audio.play_context import PlayContext
 
 
@@ -211,6 +213,30 @@ class HIRCNode(DataNode):
         else:
             release()
 
+    def describe_playback_structure(self, bnk: Soundbank) -> nx.DiGraph:
+        g = nx.DiGraph()
+        if not self.is_playing():
+            return g
+
+        todo: list[tuple[HIRCNode, int]] = [(self, 0)]
+
+        while todo:
+            node, level = todo.pop()
+            g.add_node(
+                node.id,
+                type=node.type_name,
+                level=level,
+                output=str(node.pyo_state().output),
+            )
+
+            for _, ref in node.get_references():
+                child = bnk.get(ref)
+                if child and child.is_playing():
+                    g.add_edge(node.id, child.id)
+                    todo.append((child, level + 1))
+
+        return g
+
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
         """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
 
@@ -312,7 +338,7 @@ class HIRCNode(DataNode):
             node = ctx.bank.get(ref)
             if node and node.id not in seen:
                 seen.add(node.id)
-                # TODO is_pyo_initialized might be better, but might catch nodes that 
+                # TODO is_pyo_initialized might be better, but might catch nodes that
                 # can't even finish
                 state = node.pyo_state()
                 if state and state.playing:

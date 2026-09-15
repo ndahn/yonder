@@ -1,8 +1,9 @@
+- describe playback structure
 - translations
-- add select att to attenuation widget
 - equalizer bars
-- transition rules missing transition piece
 - doc homepage: title picture
+- add select att to attenuation widget
+- transition rules missing transition piece
 - generic node widgets
 - remove old player
 - find bank conflicts tool

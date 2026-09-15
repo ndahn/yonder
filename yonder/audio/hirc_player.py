@@ -7,7 +7,7 @@ from typing import Callable
 # pip install -i https://test.pypi.org/simple/ pyo
 import pyo
 
-from yonder.types import Soundbank, HIRCNode, Sound, MusicTrack
+from yonder.types import HIRCNode, Sound, MusicTrack
 from yonder.util import logger
 from .audiomath import db_to_amp
 from .equalizer import Equalizer
@@ -94,25 +94,31 @@ class HIRCPlayer:
         self, start_from: int | HIRCNode = None
     ) -> list[Sound | MusicTrack]:
         if not start_from:
-            start_from = self.entrypoint.id
+            start_from = self.entrypoint
+
+        bnk = self.context.bank
+        if not isinstance(start_from, HIRCNode):
+            start_from = bnk.get(start_from)
+
+        if not start_from:
+            return []
 
         sources = []
         todo = [start_from]
 
         while todo:
-            node_id = todo.pop()
-            node = self.context.bank.get(node_id)
+            node = todo.pop()
 
             if not node:
                 continue
 
-            if isinstance(node, (Sound, MusicTrack)):
+            if isinstance(node, (Sound, MusicTrack)) and node not in sources:
                 sources.append(node)
 
-                for _, ref in node.get_references():
-                    child = self.context.bank.get(ref)
-                    if child and child.is_pyo_initialized():
-                        todo.append(child)
+            for _, ref in node.get_references():
+                child = bnk.get(ref)
+                if child and child.is_pyo_initialized():
+                    todo.append(child)
 
         return sources
 
@@ -146,12 +152,13 @@ class HIRCPlayer:
             else:
                 voice.master_gain = self._voice_gains.get(node.id, 1.0)
 
-    def seek(self, pos: float, node_id: int = None) -> float:
+    def seek(self, pos: float, relative: bool, node_id: int = None) -> float:
         node: Sound | MusicTrack
         for node in self.collect_voices(node_id):
             state = node.pyo_state()
             if state:
-                state.output.seek(pos)
+                new_pos = state.output.pos + pos if relative else pos
+                state.output.seek(new_pos)
 
     def play(self, dur: float = 0, delay: float = 0) -> None:
         if self._playing:
@@ -161,8 +168,8 @@ class HIRCPlayer:
         node_out = self.entrypoint.pyo(self.context).output
         self.entrypoint.play(self.context)
 
-        # Notice when playback ends on its own. Triggers armed here may outlive 
-        # this play (e.g. when the user stops early), so the epoch invalidates 
+        # Notice when playback ends on its own. Triggers armed here may outlive
+        # this play (e.g. when the user stops early), so the epoch invalidates
         # them instead of letting them finish a later play
         self._play_epoch += 1
         epoch = self._play_epoch
