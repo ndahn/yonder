@@ -143,6 +143,7 @@ class themes:
     transparent_button = None
     no_padding = None
     player_plot = None
+    graph_view = None
     plot_blue = None
     plot_red = None
     plot_fit_padding = None
@@ -412,6 +413,23 @@ def init_themes():
                 dpg.mvPlotStyleVar_FitPadding, 0.05, 0.2, category=dpg.mvThemeCat_Plots
             )
 
+    with dpg.theme() as themes.graph_view:
+        with dpg.theme_component(dpg.mvPlot):
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_PlotPadding, 0, 0, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_LabelPadding, 0, 4, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_AnnotationPadding,
+                1,
+                1,
+                category=dpg.mvThemeCat_Plots,
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_FitPadding, 0.2, 0.2, category=dpg.mvThemeCat_Plots
+            )
 
 class HighContrastColorGenerator:
     """Generates RGB colors with a certain distance apart so that subsequent colors are visually distinct."""

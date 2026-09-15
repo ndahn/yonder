@@ -168,7 +168,7 @@ class add_graph_widget(DpgItem):
                 no_menus=True,
             )
 
-        dpg.bind_item_theme(self._tag, style.themes.player_plot)
+        dpg.bind_item_theme(self._tag, style.themes.graph_view)
 
         with dpg.handler_registry() as reg:
             dpg.add_mouse_click_handler(

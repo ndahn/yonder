@@ -1,4 +1,3 @@
-- translations
 - doc homepage: title picture
 ---
 - add select att to attenuation widget
