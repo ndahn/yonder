@@ -44,7 +44,7 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        nodes: int | list[int],
+        nodes: int | list[int] = None,
         playback_mode: PlaybackMode = PlaybackMode.Random,
         random_mode: RandomMode = RandomMode.Standard,
         loop_count: int = 1,

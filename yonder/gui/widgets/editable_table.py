@@ -188,7 +188,6 @@ class add_widget_table(DpgItem):
                     label=" ",
                     callback=self._on_select_clicked,
                     user_data=idx,
-                    small=True,
                 )
                 self._sel_buttons[idx] = btn
 
@@ -266,7 +265,7 @@ class add_widget_table(DpgItem):
         # Refresh first in case an outside caller needs the updated table state
         self.refresh()
         if self._on_remove:
-            self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
+            self._on_remove(self.tag, (idx, prev, self.items), self._user_data)
 
     def _on_add_item_done(self, result: _T) -> None:
         if result is None:
@@ -277,7 +276,7 @@ class add_widget_table(DpgItem):
 
         self.refresh()
         if self._on_add:
-            self._on_add(self.tag, (pos, result, self._values), self._user_data)
+            self._on_add(self.tag, (pos, result, self.items), self._user_data)
 
     def _on_add_clicked(self) -> None:
         self._new_item(self._on_add_item_done)
@@ -288,7 +287,7 @@ class add_widget_table(DpgItem):
 
         self.refresh()
         if self._on_remove:
-            self._on_remove(self.tag, (0, None, self._values), self._user_data)
+            self._on_remove(self.tag, (0, None, self.items), self._user_data)
 
     def _on_select_clicked(self, sender: int, app_data: Any, idx: int) -> None:
         if self._selected_idx >= 0:
@@ -308,7 +307,7 @@ class add_widget_table(DpgItem):
     @property
     def items(self) -> list[_T]:
         """Current item list (read-only copy)."""
-        return self._values
+        return list(self._values)
 
     @items.setter
     def items(self, items: list[_T]) -> None:
@@ -327,7 +326,7 @@ class add_widget_table(DpgItem):
         pos = len(self._values)
         self._values.append(item)
         if fire_callbacks and self._on_add:
-            self._on_add(self.tag, (pos, item, self._values), self._user_data)
+            self._on_add(self.tag, (pos, item, self.items), self._user_data)
         self.refresh()
 
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
@@ -338,7 +337,7 @@ class add_widget_table(DpgItem):
         elif idx < self._selected_idx:
             self._selected_idx -= 1
         if fire_callbacks and self._on_remove:
-            self._on_remove(self.tag, (idx, prev, self._values), self._user_data)
+            self._on_remove(self.tag, (idx, prev, self.items), self._user_data)
         self.refresh()
 
     def clear(self, *, fire_callbacks: bool = False) -> None:
@@ -346,7 +345,7 @@ class add_widget_table(DpgItem):
         self._selected_idx = -1
         self._values.clear()
         if fire_callbacks and self._on_remove:
-            self._on_remove(self.tag, (0, None, self._values), self._user_data)
+            self._on_remove(self.tag, (0, None, self.items), self._user_data)
         self.refresh()
 
 
@@ -716,6 +715,8 @@ class add_player_table_compact(DpgItem):
         add_item_label: str = "+ Add Tracks",
         get_row_label: Callable[[int], str] = None,
         selected_row_color: style.RGBA = style.muted_purple,
+        on_add: Callable[[str, tuple[int, Path, list[Path]], Any], None] = None,
+        on_remove: Callable[[str, tuple[int, Path, list[Path]], Any], None] = None,
         show_clear: bool = False,
         parent: str | int = 0,
         tag: str | int = 0,
@@ -729,6 +730,8 @@ class add_player_table_compact(DpgItem):
         self._get_row_label = get_row_label or (
             lambda i: µ("Track #{idx}").format(idx=i)
         )
+        self._on_add = on_add
+        self._on_remove = on_remove
         self._user_data = user_data
         self.player = None  # single shared add_wav_player instance
 
@@ -775,10 +778,14 @@ class add_player_table_compact(DpgItem):
         self.player.set_file(path)
 
     def _on_track_added(self, sender: str, info: tuple, cb_user_data: Any) -> None:
+        if self._on_add:
+            self._on_add(self.tag, info, self._user_data)
         if self._on_filepaths_changed:
             self._on_filepaths_changed(self.tag, self._table.items, self._user_data)
 
     def _on_track_removed(self, sender: str, info: tuple, cb_user_data: Any) -> None:
+        if self._on_remove:
+            self._on_remove(self.tag, info, self._user_data)
         if self._on_filepaths_changed:
             self._on_filepaths_changed(self.tag, self._table.items, self._user_data)
 

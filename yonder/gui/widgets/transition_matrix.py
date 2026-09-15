@@ -113,7 +113,7 @@ class add_transition_matrix(DpgItem):
                     scrollX=False,
                     scrollY=False,
                     policy=dpg.mvTable_SizingFixedFit,
-                    tag=self._tag,
+                    tag=self.tag,
                 )
 
         self.regenerate()
@@ -297,16 +297,16 @@ class add_transition_matrix(DpgItem):
         if is_new:
             self.rules.append(rule)
         if self._on_transition_rules_changed:
-            self._on_transition_rules_changed(self._tag, self.rules, self._user_data)
+            self._on_transition_rules_changed(self.tag, self.rules, self._user_data)
         self.regenerate()
 
     # === Public ========================================================
 
     def regenerate(self) -> None:
         """Rebuild the full matrix from the node's current transition rules."""
-        dpg.delete_item(self._tag, children_only=True, slot=0)
-        dpg.delete_item(self._tag, children_only=True, slot=1)
-        dpg.push_container_stack(self._tag)
+        dpg.delete_item(self.tag, children_only=True, slot=0)
+        dpg.delete_item(self.tag, children_only=True, slot=1)
+        dpg.push_container_stack(self.tag)
 
         children = [-1] + list(self.targets)
         cell_size = self._cell_size
@@ -314,7 +314,7 @@ class add_transition_matrix(DpgItem):
         table_h = min(
             400, 60 + self._cell_size * 1.8 + len(self.targets) * (self._cell_size + 5)
         )
-        dpg.configure_item(self._tag, height=table_h)
+        dpg.configure_item(self.tag, height=table_h)
 
         # Row-label column (no header — header row shows destination IDs)
         dpg.add_table_column()

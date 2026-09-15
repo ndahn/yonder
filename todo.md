@@ -1,10 +1,9 @@
+- translations
 - add select att to attenuation widget
 - equalizer bars
 - transition rules missing transition piece
 - doc homepage: title picture
-- sound builder: + layers
-- overhaul segment and music track node widgets
 - generic node widgets
 - remove old player
 - find bank conflicts tool
-- translations
+- overhaul segment and music track node widgets

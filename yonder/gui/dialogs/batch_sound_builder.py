@@ -8,7 +8,6 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, Hash
 from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
-from yonder.query import query_nodes
 from yonder.enums import PropID, RandomMode, PlaybackMode, SoundType
 from yonder.util import logger
 from yonder.wem import wav2wem
@@ -33,6 +32,7 @@ from .file_dialog import open_multiple_dialog
 class BatchGroup:
     name: str = None
     actormixer: int = 0
+    layers: list[int] = field(default_factory=list)
     soundtype: SoundType = SoundType.Sfx
     playback_mode: PlaybackMode = PlaybackMode.Random
     random_mode: RandomMode = RandomMode.Standard
@@ -154,12 +154,77 @@ class create_batch_sound_builder_dialog(DpgItem):
         g.name = name
         self._w_groups.refresh()
 
-    def _on_soundfiles_changed(
-        self, sender: str, soundfiles: list[Path], user_data: Any
-    ) -> None:
+    def _on_track_added(self, track: Path) -> None:
         g = self._groups[self._selected_group]
-        g.soundfiles = soundfiles
+        g.soundfiles.append(track)
+        g.layers.append(len(g.layers))
         self._w_groups.refresh()
+        self._refresh_layers_table()
+
+    def _on_track_removed(self, idx: int) -> None:
+        g = self._groups[self._selected_group]
+        del g.soundfiles[idx]
+        del g.layers[idx]
+
+        # Condense
+        for i, layer in enumerate(g.layers):
+            if layer >= idx:
+                g.layers[i] = layer - 1
+
+        self._w_groups.refresh()
+        self._refresh_layers_table()
+
+    def _refresh_layers_table(self) -> None:
+        table = self._t("layers_table")
+        dpg.delete_item(table, children_only=True, slot=0)
+        dpg.delete_item(table, children_only=True, slot=1)
+
+        g = self._groups[self._selected_group]
+
+        # First column
+        dpg.add_table_column(init_width_or_weight=70, parent=table)
+
+        # One column per layer
+        for layer in range(len(g.soundfiles)):
+            dpg.add_table_column(
+                label=µ("Layer {idx}").format(idx=layer),
+                angled_header=True,
+                width_fixed=True,
+                init_width_or_weight=30,
+                parent=table,
+                tag=self._t(f"layer_col_{layer}"),
+            )
+
+        # One row per soundfile
+        for item_idx, layer in enumerate(g.layers):
+            with dpg.table_row(parent=table, tag=self._t(f"layer_row_{item_idx}")):
+                path = g.soundfiles[item_idx]
+                dpg.add_text(path.stem)
+
+                for col_idx in range(len(g.soundfiles)):
+                    dpg.add_checkbox(
+                        default_value=(col_idx == layer),
+                        callback=self._on_layer_assignment_changed,
+                        user_data=(item_idx, col_idx),
+                    )
+
+    def _on_layer_assignment_changed(
+        self, sender: str, selected: bool, info: tuple[int, int]
+    ) -> None:
+        if not selected:
+            # Disallow unselecting
+            dpg.set_value(sender, True)
+            return
+
+        item_idx, selected_idx = info
+        g = self._groups[self._selected_group]
+        g.layers[item_idx] = selected_idx
+
+        # Update the checkboxes
+        checkboxes = dpg.get_item_children(self._t(f"layer_row_{item_idx}"), slot=1)[1:]
+
+        for idx, item in enumerate(checkboxes):
+            dpg.set_value(item, idx == selected_idx)
 
     # === Table Management ===============
 
@@ -295,6 +360,7 @@ class create_batch_sound_builder_dialog(DpgItem):
 
         names_seen: set[str] = set()
 
+        # Verify that all groups are valid
         for idx, g in enumerate(self._groups):
             if not g.soundfiles:
                 self.show_message(
@@ -356,6 +422,7 @@ class create_batch_sound_builder_dialog(DpgItem):
                     self._make_name("", g.soundtype, g.name),
                     g.soundfiles,
                     amx,
+                    layers=g.layers,
                     playback_mode=g.playback_mode,
                     random_mode=g.random_mode,
                     properties=g.properties,
@@ -386,144 +453,162 @@ class create_batch_sound_builder_dialog(DpgItem):
             tag=self.tag,
             on_close=lambda: dpg.delete_item(self.tag),
         ):
-            with dpg.group(horizontal=True):
-                # Left panel: group list + bulk ops
-                with dpg.child_window(
-                    width=260, height=510, auto_resize_x=False, auto_resize_y=True
-                ):
-                    dpg_section(µ("Groups"), color=style.muted_blue, spacer=0)
-                    self._w_groups = add_widget_table(
-                        self._groups,
-                        self._group_to_row,
-                        new_item=lambda cb: cb(BatchGroup(self._new_group_name())),
-                        on_add=lambda s, a, u: self._groups.append(a[1]),
-                        on_remove=lambda s, a, u: self._groups.pop(a[0]),
-                        on_select=lambda s, a, u: self.select_group(a[0]),
-                        selected_row_color=style.muted_blue,
-                        height=300,
-                        add_item_label=µ("Add Group"),
-                        columns=[µ("Name"), µ("Files")],
-                        header_row=True,
-                    )
+            # This lets the contents scale when the window is resized
+            with dpg.child_window(
+                border=False,
+                autosize_x=True,
+                auto_resize_y=True,
+                height=-130,
+            ):
+                with dpg.group(horizontal=True):
+                    # Left panel: group list + bulk ops
+                    with dpg.child_window(
+                        width=260, height=510, auto_resize_x=False, autosize_y=True
+                    ):
+                        dpg_section(µ("Groups"), color=style.muted_blue, spacer=0)
+                        self._w_groups = add_widget_table(
+                            self._groups,
+                            self._group_to_row,
+                            new_item=lambda cb: cb(BatchGroup(self._new_group_name())),
+                            on_add=lambda s, a, u: self._groups.append(a[1]),
+                            on_remove=lambda s, a, u: self._groups.pop(a[0]),
+                            on_select=lambda s, a, u: self.select_group(a[0]),
+                            selected_row_color=style.muted_blue,
+                            height=300,
+                            add_item_label=µ("Add Group"),
+                            columns=[µ("Name"), µ("Files")],
+                            header_row=True,
+                        )
 
-                    dpg.add_separator()
-                    dpg.add_spacer(height=2)
+                        dpg.add_separator()
+                        dpg.add_spacer(height=2)
 
-                    dpg.add_combo(
-                        [str(st) for st in SoundType],
-                        label=µ("Type"),
-                        default_value=str(SoundType.Sfx),
-                        tag=self._t("bulk/soundtype"),
-                        width=180,
-                    )
-                    dpg.add_input_text(
-                        label=µ("Start"),
-                        default_value="000000000",
-                        decimal=True,
-                        width=180,
-                        tag=self._t("bulk/start"),
-                    )
-                    dpg.add_input_int(
-                        label=µ("Step"),
-                        default_value=100,
-                        width=180,
-                        tag=self._t("bulk/step"),
-                    )
-
-                    dpg.add_checkbox(
-                        label=µ("Detect group names"),
-                        default_value=True,
-                        tag=self._t("bulk/detect_filenames"),
-                    )
-                    with dpg.tooltip(dpg.last_item()):
-                        dpg.add_text(µ("Recognizes filenames like s100200300_bang"))
-
-                    dpg.add_button(
-                        label=µ("Groups from Files", "button"),
-                        callback=self._batch_groups_from_files,
-                        tag=self._t("groups_from_files"),
-                    )
-
-                # Right panel: per-group settings
-                with dpg.child_window(
-                    width=-1,
-                    height=510,
-                    auto_resize_y=True,
-                ):
-                    dpg_section(
-                        "",
-                        color=style.muted_purple,
-                        spacer=0,
-                        tag=self._t("group_label"),
-                    )
-
-                    # Name + type on one row
-                    with dpg.group(horizontal=True):
                         dpg.add_combo(
                             [str(st) for st in SoundType],
+                            label=µ("Type"),
                             default_value=str(SoundType.Sfx),
-                            callback=self._on_soundtype_changed,
-                            tag=self._t("soundtype"),
-                            width=120,
+                            tag=self._t("bulk/soundtype"),
+                            width=180,
                         )
                         dpg.add_input_text(
-                            label=µ("Name"),
-                            hint=µ("Leave empty to generate from first audio file"),
-                            callback=self._on_name_changed,
-                            tag=self._t("name"),
-                            width=192,
+                            label=µ("Start"),
+                            default_value="000000000",
+                            decimal=True,
+                            width=180,
+                            tag=self._t("bulk/start"),
+                        )
+                        dpg.add_input_int(
+                            label=µ("Step"),
+                            default_value=100,
+                            width=180,
+                            tag=self._t("bulk/step"),
                         )
 
-                    dpg.add_spacer(height=4)
+                        dpg.add_checkbox(
+                            label=µ("Detect group names"),
+                            default_value=True,
+                            tag=self._t("bulk/detect_filenames"),
+                        )
+                        with dpg.tooltip(dpg.last_item()):
+                            dpg.add_text(µ("Recognizes filenames like s100200300_bang"))
 
-                    from yonder.gui.widgets.select_node import add_select_actormixer
-
-                    self._w_actormixer = add_select_actormixer(
-                        self._bnk,
-                        "ActorMixer",
-                        self._make_setter("actormixer", lambda info: info.nid),
-                        tag=self._t("actormixer"),
-                    )
-
-                    dpg.add_combo(
-                        [p.name for p in PlaybackMode],
-                        label=µ("Playback Mode"),
-                        callback=self._make_setter(
-                            "playback_mode", lambda v: PlaybackMode[v]
-                        ),
-                        tag=self._t("playback_mode"),
-                        width=160,
-                    )
-                    dpg.add_combo(
-                        [r.name for r in RandomMode],
-                        label=µ("Random Mode"),
-                        callback=self._make_setter(
-                            "random_mode", lambda v: RandomMode[v]
-                        ),
-                        tag=self._t("random_mode"),
-                        width=160,
-                    )
-
-                    dpg.add_spacer(height=4)
-
-                    with dpg.tree_node(label=µ("Properties")):
-                        self._w_properties = add_properties_table(
-                            {},
-                            self._make_setter("properties"),
-                            label=None,
-                            tag=self._t("properties"),
+                        dpg.add_button(
+                            label=µ("Groups from Files", "button"),
+                            callback=self._batch_groups_from_files,
+                            tag=self._t("groups_from_files"),
                         )
 
-                    dpg.add_spacer(height=4)
+                    # Right panel: per-group settings
+                    with dpg.child_window(
+                        width=-1,
+                        height=510,
+                        autosize_y=True,
+                    ):
+                        dpg_section(
+                            "",
+                            color=style.muted_purple,
+                            spacer=0,
+                            tag=self._t("group_label"),
+                        )
 
-                    self._w_soundfiles = add_player_table_compact(
-                        [],
-                        self._on_soundfiles_changed,
-                        label=µ("Sound Files"),
-                        add_item_label=µ("+ Add Sounds"),
-                        selected_row_color=style.muted_purple,
-                        show_clear=True,
-                    )
+                        # Name + type on one row
+                        with dpg.group(horizontal=True):
+                            dpg.add_combo(
+                                [str(st) for st in SoundType],
+                                default_value=str(SoundType.Sfx),
+                                callback=self._on_soundtype_changed,
+                                tag=self._t("soundtype"),
+                                width=120,
+                            )
+                            dpg.add_input_text(
+                                label=µ("Name"),
+                                hint=µ("Leave empty to generate from first audio file"),
+                                callback=self._on_name_changed,
+                                tag=self._t("name"),
+                                width=192,
+                            )
+
+                        dpg.add_spacer(height=4)
+
+                        from yonder.gui.widgets.select_node import add_select_actormixer
+
+                        self._w_actormixer = add_select_actormixer(
+                            self._bnk,
+                            "ActorMixer",
+                            self._make_setter("actormixer", lambda info: info.nid),
+                            tag=self._t("actormixer"),
+                        )
+
+                        dpg.add_combo(
+                            [p.name for p in PlaybackMode],
+                            label=µ("Playback Mode"),
+                            callback=self._make_setter(
+                                "playback_mode", lambda v: PlaybackMode[v]
+                            ),
+                            tag=self._t("playback_mode"),
+                            width=160,
+                        )
+                        dpg.add_combo(
+                            [r.name for r in RandomMode],
+                            label=µ("Random Mode"),
+                            callback=self._make_setter(
+                                "random_mode", lambda v: RandomMode[v]
+                            ),
+                            tag=self._t("random_mode"),
+                            width=160,
+                        )
+
+                        dpg.add_spacer(height=4)
+
+                        with dpg.tree_node(label=µ("Properties")):
+                            self._w_properties = add_properties_table(
+                                {},
+                                self._make_setter("properties"),
+                                label=None,
+                                tag=self._t("properties"),
+                            )
+
+                        with dpg.tree_node(label=µ("Layers")):
+                            dpg.add_table(
+                                header_row=True,
+                                no_pad_innerX=True,
+                                scrollX=False,
+                                scrollY=False,
+                                policy=dpg.mvTable_SizingFixedFit,
+                                tag=self._t("layers_table"),
+                            )
+
+                        dpg.add_spacer(height=4)
+
+                        self._w_soundfiles = add_player_table_compact(
+                            [],
+                            label=µ("Sound Files"),
+                            on_add=lambda s, a, u: self._on_track_added(a[1]),
+                            on_remove=lambda s, a, u: self._on_track_removed(a[0]),
+                            add_item_label=µ("+ Add Sounds"),
+                            selected_row_color=style.muted_purple,
+                            show_clear=True,
+                        )
 
             dpg.add_separator()
             add_paragraphs(
@@ -554,7 +639,9 @@ class create_batch_sound_builder_dialog(DpgItem):
                     user_data="https://ndahn.github.io/yonder/tools/batch_sound_builder/",
                 )
                 with dpg.tooltip(dpg.last_item()):
-                    dpg.add_text("https://ndahn.github.io/yonder/tools/batch_sound_builder/")
+                    dpg.add_text(
+                        "https://ndahn.github.io/yonder/tools/batch_sound_builder/"
+                    )
 
     @property
     def groups(self) -> list[BatchGroup]:

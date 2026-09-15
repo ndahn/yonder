@@ -9,6 +9,7 @@ from yonder.types import (
     Action,
     ActorMixer,
     RandomSequenceContainer,
+    LayerContainer,
     Sound,
     MusicSwitchContainer,
     MusicRandomSequenceContainer,
@@ -142,6 +143,7 @@ def create_simple_sound(
     wems: list[Path] | Path,
     actor_mixer: int | ActorMixer,
     *,
+    layers: list[int] = None,
     playback_mode: PlaybackMode = PlaybackMode.Random,
     random_mode: RandomMode = RandomMode.Standard,
     loop_count: int = 1,
@@ -160,6 +162,8 @@ def create_simple_sound(
         Audio files to add.
     actor_mixer : int | Node
         The ActorMixer to attach the new RandomSequenceContainer to.
+    layers : list[int]
+        If specified this must match the length of `wems`. Wems with matching layer IDs in this list will be grouped under the same layer, and thus play in parallel.
     avoid_repeats : bool, optional
         If True the container will avoid playing the same sound twice in a row.
     properties : dict[str, float], optional
@@ -173,10 +177,22 @@ def create_simple_sound(
     if f"Play_{event_name}" in bnk:
         raise ValueError(f"Wwise event 'Play_{event_name}' already exists")
 
+    if layers:
+        if len(layers) != len(wems):
+            raise ValueError("Length of layers must match length of wems")
+    else:
+        layers = list(range(len(wems)))
+
     if isinstance(wems, Path):
         wems = [wems]
 
-    rsc = RandomSequenceContainer.new(
+    def make_sound(w: Path, rsc: RandomSequenceContainer) -> Sound:
+        w = bnk.add_wem(w, SourceType.Embedded)
+        snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
+        rsc.add_playlist_item(snd)
+        return snd
+
+    master_rsc = RandomSequenceContainer.new(
         bnk.new_id(),
         None,
         playback_mode=playback_mode,
@@ -187,40 +203,56 @@ def create_simple_sound(
         props=properties,
     )
 
-    sounds = []
-    for w in wems:
-        w = bnk.add_wem(w, SourceType.Embedded)
-        snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
-        rsc.add_playlist_item(snd)
-        sounds.append(snd)
+    nodes = []
+    layer_map = {}
+    for wem, layer in zip(wems, layers):
+        layer_map.setdefault(layer, []).append(wem)
+
+    for layer, wems in layer_map.items():
+        if len(wems) == 1:
+            # Directly attach to the master RSC
+            nodes.append(make_sound(wems[0], master_rsc))
+        else:
+            # Create layer container -> RSC -> Sound (Fromsoft-style)
+            lc = LayerContainer.new(bnk.new_id(), parent=master_rsc.id)
+            master_rsc.children.add(lc.id)
+            nodes.append(lc)
+
+            for w in wems:
+                rsc = RandomSequenceContainer.new(
+                    bnk.new_id(), avoid_repeat_count=1, parent=lc.id
+                )
+                lc.children.add(rsc.id)
+                snd = make_sound(w, rsc)
+                nodes.extend((rsc, snd))
 
     play = Event.new(f"Play_{event_name}")
-    play_action = Action.new_play_action(bnk.new_id(), rsc.id, bnk.bank_id)
+    play_action = Action.new_play_action(bnk.new_id(), master_rsc.id, bnk.bank_id)
     play.actions.append(play_action.id)
 
     stop = Event.new(f"Stop_{event_name}")
-    stop_action = Action.new_stop_action(bnk.new_id(), rsc.id)
+    stop_action = Action.new_stop_action(bnk.new_id(), master_rsc.id)
     stop.actions.append(stop_action.id)
 
     # Add the RSC to the actor mixer
     if isinstance(actor_mixer, int):
         if actor_mixer == 0:
             logger.warning(
-                f"No ActorMixer specified for RSC {rsc.id} of new sound {event_name}"
+                f"No ActorMixer specified for RSC {master_rsc.id} of new sound {event_name}"
             )
         else:
             actor_mixer = bnk.get(actor_mixer)
             if not actor_mixer:
                 logger.warning(
-                    f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, consider adding the RSC's ID ({rsc.id}) to its children!"
+                    f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, consider adding the RSC's ID ({master_rsc.id}) to its children!"
                 )
 
     if isinstance(actor_mixer, HIRCNode):
-        actor_mixer.attach(rsc)
+        actor_mixer.attach(master_rsc)
 
     # Add nodes to soundbank
-    bnk.add_nodes(rsc, *sounds, play, play_action, stop, stop_action)
-    return ((play, stop), rsc, sounds)
+    bnk.add_nodes(master_rsc, *nodes, play, play_action, stop, stop_action)
+    return ((play, stop), master_rsc, nodes)
 
 
 def _setup_bgm(
@@ -454,7 +486,9 @@ def _set_index_transition_ids(
                 trans.destination_ids[idx] = true_id
 
 
-def _get_unique_name(bnk: Soundbank, base: str, suffixes: list[int | str] = None) -> str:
+def _get_unique_name(
+    bnk: Soundbank, base: str, suffixes: list[int | str] = None
+) -> str:
     if suffixes:
         for val in suffixes:
             if isinstance(val, int):
@@ -834,8 +868,7 @@ def create_custom_music_event(
 
 
 def unmangle_soundbanks(main: Soundbank, smain: Soundbank, game: Game) -> Soundbank:
-    """Fixes some shenanigans FS caused in their soundbanks, making it difficult or impossible to add custom music (especially in NR).
-    """
+    """Fixes some shenanigans FS caused in their soundbanks, making it difficult or impossible to add custom music (especially in NR)."""
     # Both NR and ER have a duplicate ambience structure in cs_smain which is actually
     # incomplete. The true one in cs_main takes priority, but it's confusing to have
     logger.info("Removing duplicate ambient structure from cs_smain")
