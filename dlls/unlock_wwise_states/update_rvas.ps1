@@ -6,7 +6,7 @@ param(
     [string] $Output  # optional
 )
 
-$raw = & "$PSScriptRoot\..\..\external\fsrs\binary-mapper.exe" map --profile $Profile --exe $Exe --output rust 2>&1
+$raw = & "$PSScriptRoot\..\fsrs\binary-mapper.exe" map --profile $Profile --exe $Exe --output rust 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Error "binary-mapper failed (exit $LASTEXITCODE):`n$raw"
     exit $LASTEXITCODE

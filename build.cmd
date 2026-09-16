@@ -13,4 +13,5 @@ COPY README.md dist\
 COPY unlock_wwise_states\eldenring\unlock_wwise_states_er.dll dist\
 REM COPY icon.ico dist\
 ROBOCOPY resources dist\resources /E
+ROBOCOPY external dist\external /E
 REM ROBOCOPY docs dist\docs

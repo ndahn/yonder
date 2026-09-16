@@ -1,7 +1,10 @@
 # The Misty Shores of Yonder
-A tool for editing Wwise soundbanks, primarily developed for Elden Ring & Nightreign. Now with [documentation](https://ndahn.github.io/yonder/)!
 
-![](docs/assets/images/screenshot.png)
+> [!TIP]
+> A tool for editing Wwise soundbanks, primarily developed for Elden Ring & Nightreign. 
+> Now with [documentation](https://ndahn.github.io/yonder/)!
+
+![](docs/assets/images/yonder.png)
 
 ---
 
