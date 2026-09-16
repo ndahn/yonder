@@ -30,12 +30,12 @@ Yonder was originally written as a library providing classes and functions to ma
 To get started, I suggest you take a look at the code in [convenience.py](yonder/convenience.py) which will cover a lot of the functionality. The most central code parts can be found in the [soundbank.py](yonder/types/soundbank.py), [node.py](yonder/types/base_types.py), and [hirc_node.py](yonder/types/hirc_node.py) units. I did not add proper documentation (yet), so if you need help, feel free to reach out.
 
 ## A Word on AI
-95% of Yonder was written by me by hand without the help of any AI tools. The remaining 5% are some of the more tedious widgets and some of the audio math that I lack understanding of. I don't expect others to do the same, but the least anyone can do is make a [conscious decision](CONTRIBUTING.AI.md) on what they let AI do for them.
+95% of Yonder was written by me by hand without the help of any AI tools. The remaining 5% are some of the more tedious widgets and some of the audio math that I lack understanding of. I don't expect others to do the same, but the least you can do is make a [conscious decision](CONTRIBUTING.AI.md) on what to let AI do for you.
 
 ## Future Work
 If you have an earthshattering need for a particular feature in mind, it's best to create an issue here on Github. In case your burning desire doesn't go *that* far after all, feel free to contact me on the [?ServerName?](https://discord.gg/wzMynmW) discord *@Managarm*.
 
 # Hall of Fame
-This app would not have been possible without the invaluable help and prior work by [Vswarte](https://github.com/vswarte/), **Shion** and [DaSaav](https://github.com/Dasaav-dsv/). A huge shoutout also goes to **Themyys**, **Raster**, **LittleBear**, **Shiki**, and many others for their very help and support while developing this. 
+This app would not have been possible without the invaluable help and prior work by [Vswarte](https://github.com/vswarte/), **Shion** and [DaSaav](https://github.com/Dasaav-dsv/). A huge shoutout also goes to **Themyys**, **Raster**, **LittleBear**, **Shiki**, and many others for their help and support while developing this. 
 
 Thanks! ~
