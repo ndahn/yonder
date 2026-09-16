@@ -1,8 +1,0 @@
-- doc homepage: title picture
----
-- add select att to attenuation widget
-- transition rules missing transition piece
-- generic node widgets
-- remove old player
-- find bank conflicts tool
-- overhaul segment and music track node widgets

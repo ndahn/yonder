@@ -31,3 +31,7 @@ Most soundbank edits will just come down to this: knowing what you want to do, a
 !!! tip
 
     Once you've made some edits you need to first **save** the soundbank (which writes your edits to the extracted `soundbank.json`), then **repack** it (which converts it back to a `.bnk`). Both of these actions can be triggered from the *File* menu - a backup will be created. *Always check the terminal output to see if there are any issues!*
+
+As you explore a soundbank you will probably find that some feature you want to edit is not exposed as a widget. In these cases you can always edit the *Json* in the panel on right by hand, then hit apply. There is no undo-function right now, but as long as you don't switch to another node you can hit *reset* to return the node to its most recent state.
+
+As mentioned before, Wwise is extremly powerful and has A LOT of features I am not even aware of. If you encounter something you find interesting, try searching for it in their [library](https://www.audiokinetic.com/en/public-library/) first.
