@@ -2,11 +2,11 @@ use std::{ffi::c_void, mem, net::UdpSocket, path::PathBuf};
 
 use serde::Deserialize;
 use windows::{
+    core::BOOL,
     Win32::{
         Foundation::{HINSTANCE, HMODULE, MAX_PATH},
         System::{LibraryLoader::GetModuleFileNameW, SystemServices::DLL_PROCESS_ATTACH},
     },
-    core::BOOL,
 };
 
 mod state;
@@ -28,6 +28,8 @@ struct Config {
     udp_port: u16,
     #[serde(default)]
     game_object_id: u64,
+    #[serde(default)]
+    gamesyncs_file: String,
 }
 
 impl Config {
@@ -40,7 +42,11 @@ impl Config {
         std::fs::read_to_string(path)
             .ok()
             .and_then(|text| serde_yaml::from_str(&text).ok())
-            .unwrap_or(Config { udp_port: Self::default_udp_port(), game_object_id: 0 })
+            .unwrap_or(Config {
+                udp_port: Self::default_udp_port(),
+                game_object_id: 0,
+                gamesyncs_file: "".to_string(),
+            })
     }
 }
 
@@ -61,14 +67,22 @@ fn dll_dir(hmodule: HMODULE) -> PathBuf {
 
 fn run(dir: PathBuf) {
     let config = Config::load(&dir.join(CONFIG_FILE));
-    let tracker = Tracker::load_from_dir(&dir, config.game_object_id);
+    let gamesync_path = dir.join(&config.gamesyncs_file);
+    let tracker = match config.gamesyncs_file.is_empty() {
+        true => Tracker::load_from_dir(&dir, config.game_object_id),
+        false => Tracker::load(&gamesync_path, config.game_object_id),
+    };
 
-    let Ok(socket) = listen(config.udp_port) else { return };
+    let Ok(socket) = listen(config.udp_port) else {
+        return;
+    };
     let mut trigger_buf = [0u8; 512];
 
     loop {
         // block until a trigger arrives, then reply to its sender
-        let Ok((_, sender)) = socket.recv_from(&mut trigger_buf) else { continue };
+        let Ok((_, sender)) = socket.recv_from(&mut trigger_buf) else {
+            continue;
+        };
         let payload = tracker.query_gamesyncs();
         let _ = socket.send_to(payload.as_bytes(), sender);
     }
@@ -82,6 +96,6 @@ unsafe extern "system" fn DllMain(hmodule: HINSTANCE, reason: u32, _: *mut c_voi
         let dir = dll_dir(hmodule);
         std::thread::spawn(move || run(dir));
     }
- 
+
     true.into()
 }

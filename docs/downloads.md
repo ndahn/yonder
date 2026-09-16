@@ -16,19 +16,17 @@ path=<path/to/your_lib.dll>
 Allows using custom state strings for [boss music](tools/boss_bgm.md#unlocking-additional-states). The source code can be found [here](https://github.com/ndahn/yonder/blob/main/unlock_wwise_states/).
 
 [:fontawesome-regular-circle-down:&nbsp; Elden Ring](assets/downloads/unlock_wwise_states_er.dll){ .md-button .md-button-small }
-[:fontawesome-regular-circle-down:&nbsp; Nightreign ](assets/downloads/unlock_wwise_states_nr.dll){ .md-button .md-button-small }
+[:fontawesome-regular-circle-down:&nbsp; Nightreign ](assets/downloads/unlock_wwise_states_nr.zip){ .md-button .md-button-small }
 
 ### Read Game Syncs
 
-Reads the game's current [game syncs](wwise/game_syncs.md) and streams them to Yonder. For switches the player character is used by default, but you can create the following entry in a file called `mana.yaml` before starting the game:
+Reads the game's current [game syncs](wwise/game_syncs.md) and streams them to Yonder. For switches the player character is used by default, but you can adjust this by changing the `game_object_id` in the (optional) config file.
 
-```yaml
-yonder:
-    # Set to any chr ID, e.g. 8000 for Torrent
-    game_sync_chr_id: 8000
-```
+[:fontawesome-regular-circle-down:&nbsp; Any Game](assets/downloads/yonder_live_states.zip){ .md-button .md-button-small }
 
-[:fontawesome-regular-circle-down:&nbsp; Elden Ring](){ .md-button .md-button-small }
+!!! danger
+
+    The dll will read the first yaml file where the name starts with `gamesyncs`; so either place only one such file next to it, or specify the `gamesyncs_dict` key in the config.
 
 ## Mysteries
 
