@@ -23,6 +23,7 @@ class RowDescriptor:
 def get_foldable_row_descriptor(row: str) -> RowDescriptor:
     if not dpg.does_item_exist(row):
         return None
+
     data = dpg.get_item_user_data(row)
     return data if isinstance(data, RowDescriptor) else None
 
@@ -74,6 +75,9 @@ def is_row_index_visible(table, row_level: int, row_idx: int = -1) -> bool:
 def is_row_visible(table: str, row: str | int) -> bool:
     if not is_foldable_row(row):
         return True
+
+    if isinstance(row, str):
+        row = dpg.get_alias_id(row)
 
     desc = get_foldable_row_descriptor(row)
     rows = dpg.get_item_children(table, slot=1)
@@ -195,8 +199,29 @@ def set_foldable_row_status(row: str, expanded: bool) -> None:
         _on_row_clicked(desc.button, expanded, desc)
 
 
-@contextmanager
-def table_tree_node(
+def push_table_tree_level(table: str = None) -> int:
+    if not table:
+        table = dpg.top_container_stack()
+
+    cur_level = dpg.get_item_user_data(table) or 0
+    dpg.set_item_user_data(table, cur_level + 1)
+
+    return cur_level + 1
+
+
+def pop_table_tree_level(table: str = None) -> int:
+    if not table:
+        table = dpg.top_container_stack()
+
+    cur_level = dpg.get_item_user_data(table) or 0
+    if cur_level > 0:
+        dpg.set_item_user_data(table, cur_level - 1)
+        return cur_level - 1
+
+    return 0
+
+
+def add_table_tree_node(
     label: str,
     *,
     table: str = None,
@@ -205,8 +230,10 @@ def table_tree_node(
     before: str = 0,
     on_click_callback: Callable[[str, bool, Any], None] = None,
     on_fold_callback: Callable[[str, bool, RowDescriptor], None] = None,
+    span_columns: bool = False,
+    leaf: bool = False,
     user_data: Any = None,
-) -> Generator[RowDescriptor, None, None]:
+) -> RowDescriptor:
     if not table:
         table = dpg.top_container_stack()
 
@@ -242,14 +269,47 @@ def table_tree_node(
                 small=True,
                 callback=_on_row_clicked,
                 user_data=descriptor,
+                show=not leaf,
                 tag=button,
             )
+            if leaf:
+                dpg.add_spacer(width=14)
+
             dpg.add_selectable(
                 label=label,
+                span_columns=span_columns,
                 callback=on_click_callback,
                 tag=selectable,
                 user_data=user_data,
             )
+
+    return descriptor
+
+
+@contextmanager
+def table_tree_node(
+    label: str,
+    *,
+    table: str = None,
+    folded: bool = True,
+    tag: str = 0,
+    before: str = 0,
+    on_click_callback: Callable[[str, bool, Any], None] = None,
+    on_fold_callback: Callable[[str, bool, RowDescriptor], None] = None,
+    user_data: Any = None,
+) -> Generator[RowDescriptor, None, None]:
+    cur_level = dpg.get_item_user_data(table) or 0
+    descriptor = add_table_tree_node(
+        label,
+        table=table,
+        folded=folded,
+        tag=tag,
+        before=before,
+        on_click_callback=on_click_callback,
+        on_fold_callback=on_fold_callback,
+        user_data=user_data,
+    )
+
     try:
         dpg.set_item_user_data(table, cur_level + 1)
         yield descriptor

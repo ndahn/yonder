@@ -4,6 +4,7 @@ from pathlib import Path
 from copy import deepcopy
 from dataclasses import dataclass, field
 from collections import Counter
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
@@ -20,9 +21,10 @@ from yonder.convenience import (
     StateCtrl,
     StateProperty,
 )
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.wem import wav2wem
 from yonder.gui import style
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import (
@@ -33,6 +35,7 @@ from yonder.gui.widgets import (
     add_widget_table,
     loading_indicator,
     add_transition_matrix,
+    add_state_value_input,
     yay,
 )
 from yonder.gui.widgets.select_node import get_details_musicswitchcontainer
@@ -82,10 +85,14 @@ class _BgmInfo:
                 raise ValueError(f"Unknown state property mode {p.mode}")
 
         if normal.modifiers:
-            normal.default = Counter(m.value for m in normal.modifiers).most_common(1)[0][0]
+            normal.default = Counter(m.value for m in normal.modifiers).most_common(1)[
+                0
+            ][0]
 
         if battle.modifiers:
-            battle.default = Counter(m.value for m in battle.modifiers).most_common(1)[0][0]
+            battle.default = Counter(m.value for m in battle.modifiers).most_common(1)[
+                0
+            ][0]
 
         return (default, normal, battle)
 
@@ -132,7 +139,7 @@ def _build_tree(
 ) -> DecisionNode:
     """Construct a uniform-depth DecisionNode tree from flat TrackEntry rows.
 
-    All leaves sit at depth ``len(active_args)``. Each level groups entries
+    All leafs sit at depth ``len(active_args)``. Each level groups entries
     by their condition value for that level's arg; None is the wildcard branch.
     """
     root = DecisionNode()
@@ -218,17 +225,12 @@ class create_area_bgm_dialog(DpgItem):
         self.local_args: list[str] = []
         self._bgm_tracks: list[_BgmInfo] = []
 
+        self._area_state_widgets: dict[int, add_state_value_input] = {}
+        self._local_state_widgets: dict[int, add_state_value_input] = {}
+
         self._build(title)
 
     # === Helpers ===========================================================
-
-    def _get_area_mscs(self, filt: str) -> list[MusicSwitchContainer]:
-        valid_msc_arg_hash = calc_hash("BgmPlaceType")
-        return list(
-            self.bnk.query(
-                f"type=MusicSwitchContainer arguments:*/group_id={valid_msc_arg_hash} {filt}"
-            )
-        )
 
     def _conditions_summary(
         self,
@@ -261,10 +263,15 @@ Area tree:
         if isinstance(arg, int):
             arg = lookup_name(arg, f"#{arg}")
 
-        return ["*"] + GameObjects.GameStates.get(arg, [])
+        states = get_selected_game().game_syncs.states
+        return ["*"] + states.get(arg, [])
 
     def _rebuild_location_tab(self) -> None:
         """Regenerate the per-argument input rows after an MSC change."""
+        for widget in self._area_state_widgets.values():
+            widget.destroy()
+
+        self._area_state_widgets.clear()
         dpg.delete_item(self._t("location_args_group"), children_only=True)
 
         if not self.msc:
@@ -279,27 +286,22 @@ Area tree:
             name = lookup_name(arg.group_id, f"#{arg.group_id}")
             values = self._get_values_for_arg(arg.group_id)
 
-            with dpg.group(horizontal=True):
-                dpg.add_input_text(
-                    default_value=_WILDCARD,
-                    width=160,
-                    tag=self._t(f"location_val:{idx}"),
-                    callback=self._on_area_val_changed,
-                    user_data=idx,
-                )
-                dpg.add_combo(
-                    values,
-                    no_preview=True,
-                    callback=self._on_area_val_changed,
-                    user_data=idx,
-                )
+            widget = add_state_value_input(
+                name,
+                values,
+                self._on_area_val_changed,
+                default_value=_WILDCARD,
+                custom_values={"*": 0},
+                width=160,
+                user_data=idx,
+            )
+            self._area_state_widgets[idx] = widget
 
-                dpg.add_text(name)
-                if name in ("BgmPlaceType", "CommonPlaceType"):
-                    dpg.bind_item_theme(
-                        dpg.last_item(),
-                        style.themes.get_color_theme(style.light_orange),
-                    )
+            if name in ("BgmPlaceType", "CommonPlaceType"):
+                dpg.bind_item_theme(
+                    dpg.last_item(),
+                    style.themes.get_color_theme(style.light_orange),
+                )
 
         dpg.pop_container_stack()
 
@@ -338,30 +340,25 @@ Area tree:
 
     def _on_area_val_changed(self, sender: str, value: str, idx: int) -> None:
         self.local_args[idx] = value
-        input_tag = self._t(f"location_val:{idx}")
-        if dpg.does_item_exist(input_tag) and sender != input_tag:
-            dpg.set_value(input_tag, value)
-
         self._update_summary()
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
         """Render one area-arg row: input + combo(no_preview) + locked hint."""
-        values = list(GameObjects.GameStates.keys())
-        with dpg.group(horizontal=True):
-            dpg.add_input_text(
-                default_value=arg,
-                width=200,
-                callback=self._on_local_arg_name_changed,
-                tag=self._t(f"area_state:{idx}"),
-                user_data=idx,
-            )
-            dpg.add_combo(
-                values,
-                no_preview=True,
-                callback=self._on_local_arg_name_changed,
-                tag=self._t(f"area_state_combo:{idx}"),
-                user_data=idx,
-            )
+        values = list(get_selected_game().game_syncs.states.keys())
+
+        if idx in self._local_state_widgets:
+            self._local_state_widgets.pop(idx).destroy()
+
+        widget = add_state_value_input(
+            None,
+            values,
+            self._on_local_arg_name_changed,
+            default_value=arg,
+            custom_values={"*": 0},
+            width=200,
+            user_data=idx,
+        )
+        self._local_state_widgets[idx] = widget
 
     def _new_local_arg(self, done: Callable[[str], None]) -> None:
         arg = "<empty>"
@@ -375,8 +372,6 @@ Area tree:
         for entry in self._bgm_tracks:
             entry.state_path.setdefault(value, _WILDCARD)
 
-        dpg.set_value(self._t(f"area_state:{idx}"), value)
-        dpg.set_value(self._t(f"area_state_combo:{idx}"), value)
         self._update_local_branch_labels()
         self._update_summary()
 
@@ -494,20 +489,22 @@ Area tree:
         done(
             _BgmInfo(
                 _BgmVariant(
-                    None, props=[
+                    None,
+                    props=[
                         _BgmProp(PropID.HPF, 2.0, "battle"),
                         _BgmProp(PropID.LPF, 2.0, "battle"),
                         _BgmProp(PropID.Priority, 2.0, "battle", True),
                         _BgmProp(PropID.Volume, 2.0, "battle", True),
-                    ]
+                    ],
                 ),
                 _BgmVariant(
-                    None, props=[
+                    None,
+                    props=[
                         _BgmProp(PropID.HPF, -400.0, "regular"),
                         _BgmProp(PropID.LPF, -400.0, "regular"),
                         _BgmProp(PropID.Priority, -400.0, "regular", True),
                         _BgmProp(PropID.Volume, -400.0, "regular", True),
-                    ]
+                    ],
                 ),
                 state_path=self._get_default_state_path(),
             )
@@ -657,7 +654,7 @@ Area tree:
         entry = self._bgm_tracks[idx]
         state_args = self.area_args
 
-        # build a synthetic state_path list aligned to the area args
+        # build a state_path list aligned with the area args
         current_path = [entry.state_path.get(a, _WILDCARD) for a in state_args]
 
         def _on_path_selected(_sender: str, state_path: list[str], _ud: Any) -> None:
@@ -778,8 +775,8 @@ Area tree:
     def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
-            width=640,
-            height=640,
+            width=520,
+            height=570,
             no_saved_settings=True,
             tag=self.tag,
             on_close=lambda: dpg.delete_item(self.tag),
@@ -790,21 +787,55 @@ Area tree:
                 self._build_tab_tracks()
                 self._build_tab_summary()
 
+            dpg.add_separator()
+            dpg.add_spacer(height=2)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label=µ("Let there be light!", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("btn_okay"),
+                )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/area_bgm/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/area_bgm/")
+
+    def _edit_area_transition_rule(self) -> None:
+        tag = self._t("edit_area_transition_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
+        edit_transition_dialog(
+            self.area_transition,
+            [],
+            self._on_area_transition_changed,
+            lock_sync_type=True,
+            tag=tag,
+        )
+        center_window(tag, 0.2, 0.2)
+
     def _build_tab_area_selector(self) -> None:
         with dpg.tab(label=µ("Area Selector")):
             dpg.add_spacer(height=4)
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-125,
+                height=-165,
             ):
-                dpg.add_text(µ("MusicSwitchContainer"))
+                valid_msc_arg_hash = calc_hash("BgmPlaceType")
                 add_select_node(
-                    self._get_area_mscs,
+                    self.bnk,
                     "MusicSwitchContainer",
                     self._on_msc_selected,
                     get_node_details=get_details_musicswitchcontainer,
                     node_type=MusicSwitchContainer,
+                    extra_query=f"arguments:*/group_id={valid_msc_arg_hash}",
+                    textbox_width=200,
                 )
 
                 dpg.add_spacer(height=4)
@@ -823,12 +854,7 @@ Area tree:
                     )
                     dpg.add_button(
                         label=µ("Edit"),
-                        callback=lambda s, a, u: edit_transition_dialog(
-                            self.area_transition,
-                            [],
-                            self._on_area_transition_changed,
-                            lock_sync_type=True,
-                        ),
+                        callback=self._edit_area_transition_rule,
                         tag=self._t("btn_edit_area_transition"),
                     )
 
@@ -853,7 +879,7 @@ Area tree:
             with dpg.child_window(
                 border=False,
                 autosize_x=True,
-                height=-90,
+                height=-130,
             ):
                 dpg.add_spacer(height=4)
                 self._area_states_table = add_widget_table(
@@ -920,13 +946,6 @@ Area tree:
                 tag=self._t("notification"),
                 show=False,
                 color=style.red,
-            )
-
-            dpg.add_spacer(height=4)
-            dpg.add_button(
-                label=µ("Let there be light!", "button"),
-                callback=self._on_okay,
-                tag=self._t("btn_okay"),
             )
 
     def _make_callback(

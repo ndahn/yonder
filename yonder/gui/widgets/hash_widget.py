@@ -30,7 +30,7 @@ class add_hash_widget(DpgItem):
     allow_edit_name : bool
         Whether the string input field is editable.
     string_label : str
-        DPG label for the string field.
+        DPG label for the string field. Not shown in horizontal mode.
     hash_label : str
         DPG label for the hash field.
     width : int

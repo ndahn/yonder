@@ -1,5 +1,6 @@
 from typing import Any
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
@@ -7,25 +8,37 @@ from yonder.types import Event
 from yonder.transfer import copy_wwise_events
 from yonder.hash import calc_hash
 from yonder.util import repack_soundbank, logger, unpack_soundbank
+from yonder.enums import Game, ActionType
+from yonder.game import get_game_objects
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_generic_widget, add_paragraphs, loading_indicator, yay
+from yonder.gui.widgets import (
+    DpgItem,
+    add_generic_widget,
+    add_paragraphs,
+    loading_indicator,
+    add_select_actormixer,
+    yay,
+)
 from yonder.gui.helpers import shorten_path, dpg_section
 from yonder.gui.config import get_config
-from .select_nodes_dialog import select_nodes_of_type
+from .select_nodes_dialog import select_nodes_dialog
 
 
 class mass_transfer_dialog(DpgItem):
     def __init__(
         self,
+        src_bnk: Soundbank = None,
+        dst_bnk: Soundbank = None,
         *,
         title: str = "Transfer Sounds",
         tag: str = None,
     ) -> str:
         super().__init__(tag)
 
-        self._src_bnk: Soundbank = None
-        self._dst_bnk: Soundbank = None
+        self._src_bnk: Soundbank = src_bnk
+        self._dst_bnk: Soundbank = dst_bnk
+        self._amx_override: add_select_actormixer = None
 
         self._build(title)
 
@@ -34,7 +47,7 @@ class mass_transfer_dialog(DpgItem):
             if path.suffix == ".bnk":
                 bnk2json = get_config().locate_bnk2json()
                 path = unpack_soundbank(bnk2json, path)
-            
+
             self._src_bnk = Soundbank.load(path)
 
     def _on_dest_bnk_selected(self, sender: str, path: Path, user_data: Any) -> None:
@@ -42,8 +55,9 @@ class mass_transfer_dialog(DpgItem):
             if path.suffix == ".bnk":
                 bnk2json = get_config().locate_bnk2json()
                 path = unpack_soundbank(bnk2json, path)
-            
+
             self._dst_bnk = Soundbank.load(path)
+            self._amx_override.set_bank(self._dst_bnk)
 
     def _select_nodes(self) -> None:
         if not self._src_bnk:
@@ -51,29 +65,44 @@ class mass_transfer_dialog(DpgItem):
             return
 
         self.show_message()
-        select_nodes_of_type(
-            self._src_bnk,
-            Event,
-            self._on_nodes_selected,
-            get_node_label=lambda n: n.get_name(f"#{n.id}"),
+        select_nodes_dialog(
+            lambda s: self._src_bnk.query(s, node_type=Event),
+            lambda s, a, u: self._add_transfer_ids(a),
+            get_node_label=lambda n: n.get_name(),
             multiple=True,
             return_labels=True,
         )
 
-    def _swap_banks(self) -> None:
+    def _select_all_new(self) -> None:
         if not self._src_bnk:
-            self.show_message(µ("No source bank selected", "msg"))
+            self.show_message("No source bank selected")
             return
 
         if not self._dst_bnk:
-            self.show_message(µ("No destination bank selected", "msg"))
+            self.show_message("No destination bank seleced")
             return
 
-        self.show_message()
+        new_ids = [
+            e.get_name()
+            for e in self._src_bnk.query(node_type=Event)
+            if e.id not in self._dst_bnk
+        ]
+        self._add_transfer_ids(new_ids)
+
+    def _swap_banks(self) -> None:
+        if not self._src_bnk and not self._dst_bnk:
+            return
+
         self._src_bnk, self._dst_bnk = self._dst_bnk, self._src_bnk
 
-        dpg.set_value(self._t("source_bnk"), shorten_path(self._src_bnk.json_path))
-        dpg.set_value(self._t("dest_bnk"), shorten_path(self._dst_bnk.json_path))
+        dpg.set_value(
+            self._t("source_bnk"),
+            shorten_path(self._src_bnk.json_path) if self._src_bnk else "",
+        )
+        dpg.set_value(
+            self._t("dest_bnk"),
+            shorten_path(self._dst_bnk.json_path) if self._dst_bnk else "",
+        )
 
     def _swap_ids(self) -> None:
         src_labels = dpg.get_value(self._t("source_ids"))
@@ -81,9 +110,103 @@ class mass_transfer_dialog(DpgItem):
         dpg.set_value(self._t("source_ids"), dst_labels)
         dpg.set_value(self._t("dest_ids"), src_labels)
 
-    def _on_nodes_selected(
-        self, sender: str, selected: list[str], user_data: Any
-    ) -> None:
+    def _collect_events(self) -> None:
+        src_labels: list[str] = dpg.get_value(self._t("source_ids")).splitlines()
+        dst_labels: list[str] = dpg.get_value(self._t("dest_ids")).splitlines()
+
+        src_ids = []
+        for line in src_labels:
+            if not line.startswith(("Play_", "Stop_", "#")):
+                line = "Play_" + line
+
+            src_ids.append(self._line_to_hash(line))
+
+        num = max(len(src_labels), len(dst_labels))
+        src_labels += [""] * (num - len(src_labels))
+        dst_labels += [""] * (num - len(dst_labels))
+
+        for nid in src_ids:
+            related_events = self._src_bnk.find_related_events(nid)
+
+            for evt in related_events:
+                if evt not in src_ids:
+                    name = evt.get_name()
+                    src_labels.append(name)
+                    dst_labels.append(name)
+
+        dpg.set_value(self._t("source_ids"), "\n".join(src_labels))
+        dpg.set_value(self._t("dest_ids"), "\n".join(dst_labels))
+
+    def _get_event_map(self, skip_invalid: bool) -> dict[str, str]:
+        event_map = {}
+        src_ids = self._prune_ids(dpg.get_value(self._t("source_ids")).splitlines())
+        dst_ids = self._prune_ids(dpg.get_value(self._t("dest_ids")).splitlines())
+
+        if len(src_ids) != len(dst_ids):
+            if skip_invalid:
+                num = min(len(src_ids), len(dst_ids))
+                src_ids = src_ids[:num]
+                dst_ids = dst_ids[:num]
+            else:
+                raise ValueError(µ("Source and destination IDs not balanced"))
+
+        if not src_ids:
+            return {}
+
+        if not skip_invalid and not self._src_bnk:
+            raise ValueError(µ("no source bank selected"))
+
+        skip = set()
+
+        for idx, line in enumerate(src_ids):
+            src_play_id = self._line_to_hash(line)
+            if src_play_id not in self._src_bnk:
+                if skip_invalid:
+                    skip.add(idx)
+                else:
+                    raise ValueError(
+                        µ("{name} not found in source bank").format(name=line)
+                    )
+
+        if not skip_invalid and not self._dst_bnk:
+            raise ValueError(µ("no destination bank selected"))
+
+        for idx, line in enumerate(dst_ids):
+            dst_play_id = self._line_to_hash(line)
+            if dst_play_id in self._dst_bnk:
+                if skip_invalid:
+                    skip.add(idx)
+                else:
+                    raise ValueError(
+                        µ("{name} already exists in destination bank").format(name=line)
+                    )
+
+        for idx, (sid, did) in enumerate(zip(src_ids, dst_ids)):
+            if idx in skip:
+                continue
+
+            src_explicit = sid.startswith(("Play_", "Stop_", "#"))
+            dst_explicit = did.startswith(("Play_", "Stop_", "#"))
+            if src_explicit != dst_explicit:
+                if not skip_invalid:
+                    raise ValueError(
+                        µ("Cannot pair explicit with implicit event names")
+                    )
+
+            if src_explicit:
+                event_map[self._line_to_hash(sid)] = did
+            else:
+                play_evt = f"Play_{sid}"
+                if play_evt in self._src_bnk:
+                    event_map[play_evt] = f"Play_{did}"
+
+                stop_evt = f"Stop_{sid}"
+                if stop_evt in self._src_bnk:
+                    event_map[stop_evt] = f"Stop_{did}"
+
+        return event_map
+
+    def _add_transfer_ids(self, selected: list[str]) -> None:
         src_labels: list[str] = dpg.get_value(self._t("source_ids")).splitlines()
         src_ids = set()
         new_items = []
@@ -165,9 +288,6 @@ class mass_transfer_dialog(DpgItem):
         )
 
     def _on_okay(self) -> None:
-        dpg.hide_item(self._t("button_save"))
-        dpg.hide_item(self._t("button_repack"))
-
         if not self._src_bnk:
             self.show_message(µ("No source bank selected", "msg"))
             return
@@ -176,98 +296,59 @@ class mass_transfer_dialog(DpgItem):
             self.show_message(µ("No destination bank selected", "msg"))
             return
 
-        src_ids = self._prune_ids(dpg.get_value(self._t("source_ids")).splitlines())
-        dst_ids = self._prune_ids(dpg.get_value(self._t("dest_ids")).splitlines())
-
-        if not src_ids:
-            self.show_message(µ("No source IDs selected", "msg"))
-            return
-
-        if len(src_ids) != len(dst_ids):
-            self.show_message(
-                µ(
-                    "Source and destination IDs not balanced",
-                    "msg",
-                )
-            )
-            return
-
-        for line in src_ids:
-            src_play_id = self._line_to_hash(line)
-            if src_play_id not in self._src_bnk:
-                self.show_message(
-                    µ("{name} not found in source bank", "msg").format(name=line)
-                )
-                return
-
-        for line in dst_ids:
-            if line.startswith("#"):
-                self.show_message(
-                    µ(
-                        "Destination IDs cannot be hashes",
-                        "msg",
-                    )
-                )
-                return
-
-            dst_play_id = self._line_to_hash(line)
-            if dst_play_id in self._dst_bnk:
-                self.show_message(
-                    µ("{name} already exists in destination bank", "msg").format(
-                        name=line
-                    )
-                )
-                return
-
         # Resolve the user inputs to specific events
-        event_map = {}
-        for sid, did in zip(src_ids, dst_ids):
-            src_explicit = sid.startswith(("Play_", "Stop_", "#"))
-            dst_explicit = did.startswith(("Play_", "Stop_"))
-            if src_explicit != dst_explicit:
-                self.show_message(
-                    µ(
-                        "Cannot pair explicit with implicit event names",
-                        "msg",
-                    )
-                )
-                return
+        try:
+            event_map = self._get_event_map(False)
+        except ValueError as e:
+            self.show_message(str(e))
+            return
 
-            if src_explicit:
-                event_map[self._line_to_hash(sid)] = did
-            else:
-                play_evt = f"Play_{sid}"
-                if play_evt in self._src_bnk:
-                    event_map[play_evt] = f"Play_{did}"
-
-                stop_evt = f"Stop_{sid}"
-                if stop_evt in self._src_bnk:
-                    event_map[stop_evt] = f"Stop_{did}"
+        if not event_map:
+            self.show_message(µ("No events to transfer", "msg"))
+            return
 
         self.show_message()
         with loading_indicator(µ("Transferring")):
-            copy_wwise_events(self._src_bnk, self._dst_bnk, event_map)
+            known_objects = set()
+
+            # Skip any AMX (and busses) known to already exist in that game
+            if dpg.get_value(self._t("skip_known_objects")):
+                game = Game[dpg.get_value(self._t("game"))]
+
+                if dpg.get_value(self._t("skip_main_bank_objects")):
+                    for nid, amx in get_game_objects(
+                        game
+                    ).amx_summary.actormixers.items():
+                        if amx.bank in ("init", "cs_main", "cs_smain", "vcmain"):
+                            known_objects.add(nid)
+                else:
+                    known_objects = set(
+                        get_game_objects(game).amx_summary.actormixers.keys()
+                    )
+
+            amx_override = None
+            if dpg.get_value(self._t("enable_amx_override")):
+                amx_override = self._amx_override.selected_node
+
+            copy_wwise_events(
+                self._src_bnk,
+                self._dst_bnk,
+                event_map,
+                blacklist=known_objects,
+                amx_override=amx_override,
+            )
+            self._dst_bnk.save()
+
+            try:
+                bnk2json_exe = get_config().locate_bnk2json()
+                repack_soundbank(bnk2json_exe, self._dst_bnk.bnk_dir)
+            except ValueError:
+                logger.warning(
+                    "bnk2json not found, your soundbank has NOT been repacked yet"
+                )
 
         logger.info(f"Transferred {len(event_map)} sounds to {self._dst_bnk.name}")
-        dpg.show_item(self._t("button_save"))
-        dpg.show_item(self._t("button_repack"))
         yay()
-
-    def _on_save(self) -> None:
-        self._dst_bnk.save()
-
-    def _on_repack(self) -> None:
-        try:
-            bnk2json = get_config().locate_bnk2json()
-        except Exception:
-            self.show_message(
-                µ(
-                    "bnk2json is required for repacking",
-                    "msg",
-                )
-            )
-        else:
-            repack_soundbank(bnk2json, self._dst_bnk.bnk_dir)
 
     def _build(self, title: str):
         with dpg.window(
@@ -283,6 +364,7 @@ class mass_transfer_dialog(DpgItem):
                 Path,
                 µ("Source Soundbank"),
                 self._on_source_bnk_selected,
+                default=self._src_bnk.json_path if self._src_bnk else None,
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },
@@ -292,6 +374,7 @@ class mass_transfer_dialog(DpgItem):
                 Path,
                 µ("Destination Soundbank"),
                 self._on_dest_bnk_selected,
+                default=self._dst_bnk.json_path if self._dst_bnk else None,
                 filetypes={
                     µ("Soundbanks (.bnk, .json)", "filetypes"): ["*.bnk", "*.json"]
                 },
@@ -329,6 +412,33 @@ class mass_transfer_dialog(DpgItem):
                     tag=self._t("button_select_ids"),
                 )
                 dpg.add_button(
+                    label=µ("Select New"),
+                    callback=self._select_all_new,
+                    tag=self._t("button_select_new"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "Add events from the source bank that are not in the destination bank yet"
+                        ),
+                        wrap=440,
+                    )
+                dpg.add_button(
+                    label=µ("Collect Events"),
+                    callback=self._collect_events,
+                    tag=self._t("collect_events"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "Pull in related events, e.g. a Stop-event when only a Play-event was specified"
+                        ),
+                        wrap=440,
+                    )
+
+                dpg.add_spacer(width=1)
+
+                dpg.add_button(
                     label=µ("Swap Banks"),
                     callback=self._swap_banks,
                     tag=self._t("button_swap_banks"),
@@ -339,6 +449,52 @@ class mass_transfer_dialog(DpgItem):
                     tag=self._t("button_swap_ids"),
                 )
 
+            dpg.add_spacer(height=1)
+
+            with dpg.tree_node(label=µ("Advanced")):
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        default_value=True,
+                        label=µ("Skip known playback objects for"),
+                        tag=self._t("skip_known_objects"),
+                    )
+                    with dpg.tooltip(dpg.last_item()):
+                        dpg.add_text(
+                            µ(
+                                "ActorMixers and busses are stored in cs_main/init. Enabling this will not transfer objects already known to exist in the specified game."
+                            ),
+                            wrap=440,
+                        )
+
+                    dpg.add_combo(
+                        [g.name for g in Game],
+                        default_value=Game.EldenRing.name,
+                        width=110,
+                        tag=self._t("game"),
+                    )
+
+                dpg.add_checkbox(
+                    label=µ("Skip objects from main banks only"),
+                    default_value=True,
+                    tag=self._t("skip_main_bank_objects"),
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        µ(
+                            "When skipping known objects, only skip objects from init, cs_main, cs_smain, and vcmain."
+                        ),
+                        wrap=440,
+                    )
+
+                with dpg.group(horizontal=True):
+                    dpg.add_checkbox(
+                        label=µ("Parent targets to new ActorMixer"),
+                        default_value=False,
+                        tag=self._t("enable_amx_override"),
+                    )
+                    self._amx_override = add_select_actormixer(textbox_width=160)
+
+            dpg.add_spacer(height=1)
             dpg.add_separator()
             add_paragraphs(
                 µ(
@@ -364,14 +520,9 @@ class mass_transfer_dialog(DpgItem):
                     tag=self._t("button_okay"),
                 )
                 dpg.add_button(
-                    label=µ("Save", "button"),
-                    callback=self._on_save,
-                    show=False,
-                    tag=self._t("button_save"),
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/mass_transfer/",
                 )
-                dpg.add_button(
-                    label=µ("Repack", "button"),
-                    callback=self._on_repack,
-                    show=False,
-                    tag=self._t("button_repack"),
-                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/mass_transfer/")

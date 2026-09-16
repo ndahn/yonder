@@ -1,0 +1,120 @@
+site_name: Yonder
+repo_url: https://github.com/ndahn/yonder
+site_url: https://ndahn.github.io/yonder/
+site_author: Nikolas Dahn
+site_description: "A graphical editor for wwise soundbanks"
+copyright: Nikolas Dahn
+theme:
+  favicon: assets/images/icon.png
+  logo: assets/images/icon.png
+  name: material
+  custom_dir: docs/overrides
+  font:
+    text: Noto Sans
+  features:
+    - announce.dismiss
+    - content.code.copy
+    - header.autohide
+    - navigation.tabs
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tracking
+    - navigation.top
+    - search.highlight
+    - search.share
+    - search.suggest
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: light blue
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - About: about.md
+  - Wwise:
+    - Soundbanks: wwise/soundbanks.md
+    - Node Types: wwise/node_types.md
+    - Events: wwise/events.md
+    - Sounds: wwise/sounds.md
+    - Music: wwise/music.md
+    - Globals: wwise/globals.md
+    - Game Syncs: wwise/game_syncs.md
+    - Units: wwise/units.md
+  - Yonder:
+    - How to Yonder: yonder/howto.md
+    - About Hashes: yonder/hashes.md
+    - Game Presets: yonder/games.md
+    - Playback: yonder/playback.md
+  - Tools:
+    - Overview: tools/index.md
+    - Simple Sounds: tools/simple_sounds.md
+    - Replace Music: tools/replace_music.md
+    - Batch Sound Builder: tools/batch_sound_builder.md 
+    - Boss BGMs: tools/boss_bgm.md
+    - Area BGMs: tools/area_bgm.md
+    - Transfering Sounds: tools/mass_transfer.md
+    - Unmangling Soundbanks: tools/unmangle.md
+  - Guides:
+    - Overview: guides/index.md
+    - Locating Sounds: guides/locating_sounds.md
+    - Adding a Sound: guides/adding_sounds.md
+    - Custom Soundbanks: guides/custom_banks.md
+    - Working with Music: guides/working_with_music.md
+    - Setting up Attenuations: guides/attenuation_setup.md
+  - Downloads: downloads.md
+  - Troubles?: troubles.md
+  #- API Reference
+
+exclude_docs: "!/templates/"
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+          python:
+            options:
+              docstring_style: numpy
+              show_signature_annotations: true
+              separate_signature: true
+              show_source: false
+              show_symbol_type_heading: true
+              show_symbol_type_toc: true
+              scoped_crossrefs: true
+  #- api-autonav:
+  #    modules: ["yonder"]
+  #    nav_item_prefix: ""
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      toc_depth: "1-3"
+      permalink: true
+  # Python Markdown Extensions
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

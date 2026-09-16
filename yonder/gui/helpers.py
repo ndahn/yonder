@@ -3,14 +3,10 @@ import sys
 import os
 from typing import Any, Iterable
 from pathlib import Path
-import shutil
-import tempfile
-import atexit
 from copy import deepcopy
 import subprocess
 from dearpygui import dearpygui as dpg
 
-from yonder.util import logger
 from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import CurveInterpolation
 from yonder.gui.localization import µ
@@ -18,15 +14,6 @@ from yonder.gui import style
 
 
 url_regex = r"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)"
-
-_tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
-atexit.register(lambda t: t.is_dir() and shutil.rmtree(t), _tmp_dir)
-logger.info(f"Temporary files will be stored in {_tmp_dir}")
-
-
-def get_temp_dir() -> Path:
-    _tmp_dir.mkdir(parents=True, exist_ok=True)
-    return _tmp_dir
 
 
 def estimate_drawn_text_size(
@@ -45,7 +32,17 @@ def estimate_drawn_text_size(
     return w, h
 
 
-def center_window(window: str, parent: str = None) -> None:
+def center_window(
+    window: str,
+    xratio: float = 0.5,
+    yratio: float = 0.5,
+    *,
+    parent: str = None,
+    split_frame: bool = True,
+) -> None:
+    if split_frame:
+        dpg.split_frame()
+
     if parent:
         dpos = dpg.get_item_pos(parent)
         dsize = dpg.get_item_rect_size(parent)
@@ -58,8 +55,8 @@ def center_window(window: str, parent: str = None) -> None:
     dpg.set_item_pos(
         window,
         (
-            dpos[0] + (dsize[0] - psize[0]) / 2,
-            dpos[1] + (dsize[1] - psize[1]) / 2,
+            dpos[0] + (dsize[0] - psize[0]) * xratio,
+            dpos[1] + (dsize[1] - psize[1]) * yratio,
         ),
     )
 

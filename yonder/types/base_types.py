@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator, TypeVar, Generic
+from typing import Any, Iterator, TypeVar, Generic, TYPE_CHECKING
 from dataclasses import dataclass, field
 
 from yonder.hash import Hash, lookup_name, calc_hash
@@ -19,8 +19,12 @@ from yonder.enums import (
     RtpcType,
     CurveScaling,
     SourceType,
-    PluginId,
+    EffectPlugin,
+    RandomSequenceMode,
 )
+
+if TYPE_CHECKING:
+    from .hirc_node import HIRCNode
 
 
 _T = TypeVar("_T")
@@ -28,6 +32,8 @@ _T = TypeVar("_T")
 
 @dataclass(slots=True)
 class _ItemContainer(Generic[_T]):
+    items: list[_T]
+
     def add(self, item: _T) -> None:
         from .hirc_node import HIRCNode
 
@@ -72,6 +78,9 @@ class _ItemContainer(Generic[_T]):
 
     def __len__(self) -> int:
         return len(self.items)
+
+    def __bool__(self) -> bool:
+        return bool(self.items)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [(f"items:{i}", item) for i, item in enumerate(self.items)]
@@ -278,12 +287,14 @@ class ClipAutomation:
     clip_index: int = 0
     auto_type: ClipAutomationType = ClipAutomationType.Volume
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
 
 @dataclass(slots=True)
 class IAkPlugin:
-    plugin_id: PluginId = PluginId.VORBIS
+    plugin_id: EffectPlugin = EffectPlugin.VORBIS
     dll_name_length: int = 0
     dll_name: str = ""
 
@@ -354,8 +365,8 @@ class FXChunk:
 @dataclass(slots=True)
 class PropRangedModifier:
     prop_type: int = 0
-    min: float = 0.0
-    max: float = 0.0
+    min: float | None = 0.0
+    max: float | None = 0.0
 
 
 @dataclass(slots=True)
@@ -533,9 +544,14 @@ class RTPC:
     curve_id: int = 0
     curve_scaling: CurveScaling = CurveScaling.None_
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
     def get_name(self, default: Any = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return lookup_name(self.id, default)
 
     def get_references(self) -> list[tuple[str, int]]:
@@ -545,14 +561,14 @@ class RTPC:
         return []
 
     def __str__(self) -> str:
-        from yonder.game import GameObjects
+        from yonder.game import get_selected_game
 
         try:
-            param = GameObjects.RTPCParameter(self.param_id).name
+            param = get_selected_game().rtpc_params(self.param_id).name
         except KeyError:
             param = str(self.param_id)
 
-        name = self.get_name(f"#{self.id}")
+        name = self.get_name()
         return f"{name} ({param})"
 
 
@@ -677,7 +693,7 @@ class MediaInformation:
 
 @dataclass(slots=True)
 class BankSourceData:
-    plugin: PluginId = PluginId.VORBIS
+    plugin: EffectPlugin = EffectPlugin.VORBIS
     source_type: SourceType = SourceType.Embedded
     media_information: MediaInformation = field(
         default_factory=lambda: MediaInformation(source_id=0)
@@ -811,7 +827,7 @@ class SwitchNodeParams:
     unk13: bool = False
     unk14: bool = False
     unk15: bool = False
-    unk16: bool = False
+    unk16: bool = True
     fade_out_time: int = 0
     fade_in_time: int = 0
 
@@ -867,7 +883,9 @@ class DecisionTreeNode:
 class AssociatedChildData:
     associated_child_id: int = 0
     graph_point_count: int = 1
-    graph_points: list[RTPCGraphPoint] = field(default_factory=lambda: [RTPCGraphPoint()])
+    graph_points: list[RTPCGraphPoint] = field(
+        default_factory=lambda: [RTPCGraphPoint()]
+    )
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("associated_child_id", self.associated_child_id)]
@@ -917,13 +935,124 @@ class MusicTransNodeParams:
         default_factory=lambda: [MusicTransitionRule()]
     )
 
+    def add_transition_rule(
+        self,
+        source_ids: int | list[int] = -1,
+        dest_ids: int | list[int] = -1,
+        sync_type: SyncType = SyncType.Immediate,
+        source_transition_time: int = 0,
+        source_fade_offset: int = 0,
+        source_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        source_play_post_exit: bool = False,
+        dest_transition_time: int = 0,
+        dest_fade_offset: int = 0,
+        dest_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
+        dest_play_pre_entry: bool = False,
+        transition_segment: int = 0,
+    ) -> MusicTransitionRule:
+        """Add a transition rule between segments.
+
+        Parameters
+        ----------
+        source_ids : int | list[int], default = -1
+            Source segment IDs (-1 = any).
+        dest_ids : int | list[int], default = -1
+            Destination segment IDs (-1 = any).
+        source_transition_time : int, default=0
+            Source fade out time in ms.
+        source_fade_offset : int, default=0
+            Delay in ms before the source starts fading out.
+        source_fade_curve : str, default=CurveInterpolation.Linear
+            Source fade out curve type.
+        sync_type : SyncType, default=SyncType.Immediate
+            Marker sync type.
+        dest_transition_time : int, default=0
+            Destination fade out time in ms.
+        dest_fade_offset : int, default=0
+            Delay in ms before the destination starts fading in.
+        dest_fade_curve : str, default=CurveInterpolation.Linear
+            Destination fade in curve type.
+        transition_segment: int | Node, default=0
+            A MusicSegment to play during the transition.
+        """
+        if isinstance(source_ids, int):
+            source_ids = [source_ids]
+
+        if isinstance(dest_ids, int):
+            dest_ids = [dest_ids]
+
+        rule = MusicTransitionRule(
+            source_ids=source_ids,
+            destination_ids=dest_ids,
+            source_transition_rule=MusicTransSrcRule(
+                transition_time=source_transition_time,
+                fade_curve=source_fade_curve,
+                fade_offet=source_fade_offset,
+                sync_type=sync_type,
+                play_post_exit=1 if source_play_post_exit else 0,
+            ),
+            destination_transition_rule=MusicTransDstRule(
+                transition_time=dest_transition_time,
+                fade_curve=dest_fade_curve,
+                fade_offet=dest_fade_offset,
+                play_pre_entry=1 if dest_play_pre_entry else 0,
+            ),
+        )
+
+        if transition_segment:
+            rule.transition_object.segment_id = transition_segment
+
+        self.transition_rules.append(rule)
+        return rule
+
+    def get_transition_rule(
+        self, src: int | HIRCNode = None, dst: int | HIRCNode = None
+    ) -> MusicTransitionRule:
+        """Return the most specific matching transition rule.
+
+        Specificity: exact+exact > exact+wildcard > wildcard+exact > wildcard+wildcard. First encountered wins among equal scores.
+        """
+        from .hirc_node import HIRCNode
+
+        if isinstance(src, HIRCNode):
+            src = src.id
+
+        if isinstance(dst, HIRCNode):
+            dst = dst.id
+
+        best_rule = None
+        best_score = -1
+
+        for rule in self.transition_rules:
+            src_match = src in rule.source_ids
+            dst_match = dst in rule.destination_ids
+            src_wild = -1 in rule.source_ids
+            dst_wild = -1 in rule.destination_ids
+
+            if src_match and dst_match:
+                score = 3
+            elif src_match and dst_wild:
+                score = 2
+            elif src_wild and dst_match:
+                score = 1
+            elif src_wild and dst_wild:
+                score = 0
+            else:
+                continue
+
+            if score > best_score:
+                best_score = score
+                best_rule = rule
+
+        return best_rule
+
 
 @dataclass(slots=True)
 class MusicRanSeqPlaylistItem:
     segment_id: int = 0
     playlist_item_id: int = 0
     child_count: int = 0
-    ers_type: int = 0
+    ers_type: int = RandomSequenceMode.Inherit.value
     loop_base: int = 0
     loop_min: int = 0
     loop_max: int = 0
@@ -931,6 +1060,10 @@ class MusicRanSeqPlaylistItem:
     avoid_repeat_count: int = 0
     use_weight: int = 0
     shuffle: int = 0
+
+    @property
+    def ers_type_enum(self) -> RandomSequenceMode:
+        return RandomSequenceMode(self.ers_type)
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("segment_id", self.segment_id)]
@@ -944,4 +1077,7 @@ class MusicMarkerWwise:
     string: str = ""
 
     def get_name(self, default: Any = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return lookup_name(self.id, default)

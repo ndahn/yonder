@@ -4,11 +4,11 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank, HIRCNode
 from yonder.util import parse_state_path
 from yonder.hash import lookup_name
-from yonder.game import GameObjects
+from yonder.game import get_selected_game
 from yonder.types.base_types import GameSync
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_select_node
+from yonder.gui.widgets import DpgItem, add_select_node, add_state_value_input
 from yonder.gui.widgets.select_node import get_details_generic
 
 
@@ -73,6 +73,7 @@ class edit_state_path_dialog(DpgItem):
         self._raw = raw
         self._leaf_node_id: int = node_id or 0
         self._window: str = None
+        self._state_inputs: dict[int, add_state_value_input] = {}
 
         self._build(title, state_path, hide_node_id, node_id)
 
@@ -104,22 +105,20 @@ class edit_state_path_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:
             # All branches have the same length
+            game_states = get_selected_game().game_syncs.states
             for i, arg in enumerate(self._arguments):
                 name = self._get_name(arg)
-                values = ["*"] + GameObjects.GameStates.get(name, [])
+                values = ["*"] + game_states.get(name, [])
 
-                with dpg.group(horizontal=True):
-                    dpg.add_input_text(
-                        label=name,
-                        default_value=state_path[i] if state_path else "*",
-                        tag=self._t(f"arg_{name}"),
-                    )
-                    dpg.add_combo(
-                        values,
-                        no_preview=True,
-                        callback=lambda a, s, u: dpg.set_value(self._t(f"arg_{u}"), s),
-                        user_data=name,
-                    )
+                widget = add_state_value_input(
+                    name,
+                    values,
+                    None,
+                    default_value=state_path[i] if state_path else "*",
+                    custom_values={"*": 0},
+                    tag=self._t(f"arg_{name}"),
+                )
+                self._state_inputs[arg] = widget
 
             dpg.add_spacer(height=3)
             if not hide_node_id:
@@ -129,7 +128,7 @@ class edit_state_path_dialog(DpgItem):
                         tag=self._t("node_enabled"),
                     )
                     add_select_node(
-                        self._get_nodes,
+                        self._bnk,
                         "Node",
                         self._on_node_selected,
                         get_node_details=get_details_generic,
@@ -151,9 +150,6 @@ class edit_state_path_dialog(DpgItem):
 
     # === DPG callbacks =================================================
 
-    def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
-        yield from self._bnk.query(filt)
-
     def _on_node_selected(
         self, sender: str, leaf_node: int | HIRCNode, ud: Any
     ) -> None:
@@ -167,17 +163,17 @@ class edit_state_path_dialog(DpgItem):
             self.show_message(µ("Leaf node ID not set", "msg"))
             return
 
-        keys: list[str] = []
+        keys: list[int] = []
         for arg in self._arguments:
-            name = self._get_name(arg)
-            key = dpg.get_value(self._t(f"arg_{name}"))
+            key = self._state_inputs[arg].value
             if not key:
                 self.show_message(µ("Keys must not be empty", "msg"))
                 return
+
             keys.append(key)
 
-        if self._raw:
-            keys = parse_state_path(keys)
+        if not self._raw:
+            keys = [lookup_name(k, f"#{k}") for k in keys]
 
         self.show_message()
         self._callback(self._tag, keys, self._leaf_node_id)

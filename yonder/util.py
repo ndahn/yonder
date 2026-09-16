@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Callable, TYPE_CHECKING, get_args
 import sys
+import os
 import re
 from pathlib import Path
 from dataclasses import dataclass, is_dataclass, fields
@@ -11,13 +12,15 @@ import builtins
 import logging
 import subprocess
 import shutil
+import atexit
+import tempfile
 import networkx as nx
 
 from yonder.enums import SoundType
 from yonder.hash import calc_hash
 
 if TYPE_CHECKING:
-    from yonder import Soundbank
+    from yonder import Soundbank, HIRCNode
 
 
 logging.basicConfig(
@@ -31,11 +34,15 @@ logging.basicConfig(
 logger = logging.getLogger("yonder")
 
 
+_tmp_dir: Path = None
+_max_tmp_size_mb: int = 300
+
+
 def resource_dir() -> Path:
     # TODO move resources into yonder, then use the lines below to access them
     # from importlib.resources import files
     # path = files("your_package") / "resources" / "your_file.ext"
-    # 
+    #
     # And in the pyproject.toml:
     # [tool.setuptools.package-data]
     # "yonder" = ["resources/**/*"]
@@ -45,11 +52,55 @@ def resource_dir() -> Path:
     return Path(__file__).parent.parent / "resources"
 
 
+def externals_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent / "external"
+
+    return Path(__file__).parent.parent / "external"
+
+
 def resource_data(res_path: str, binary: bool = False) -> str | bytes:
     res = resource_dir() / res_path
     if binary:
         return res.read_bytes()
     return res.read_text(encoding="utf8")
+
+
+def set_max_temp_size(size_mb: int) -> None:
+    global _max_tmp_size_mb
+    _max_tmp_size_mb = size_mb
+
+
+def get_max_temp_size() -> int:
+    return _max_tmp_size_mb
+
+
+def get_temp_dir() -> Path:
+    global _tmp_dir
+
+    if _tmp_dir is None:
+        _tmp_dir = Path(tempfile.gettempdir()).absolute() / "yonder"
+        _tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Cleanup our cache everytime it's accessed
+    if _max_tmp_size_mb > 0:
+        wavs = list(_tmp_dir.glob("*.wav"))
+        total = sum(p.stat().st_size for p in wavs) / (1024**2)
+
+        if total > _max_tmp_size_mb:
+            # Delete oldest files first
+            wavs.sort(key=os.path.getctime)
+
+            while wavs and total > _max_tmp_size_mb:
+                try:
+                    f = wavs.pop()
+                    size = f.stat().st_size / (1024**2)
+                    f.unlink(missing_ok=True)
+                    total -= size
+                except PermissionError:
+                    continue
+
+    return _tmp_dir
 
 
 def unpack_soundbank(bnk2json_exe: Path, bnk_path: Path) -> Path:
@@ -80,38 +131,46 @@ def is_event_name_valid(name: str) -> bool:
     return bool(re.match(rf"{SoundType.values()}[0-9]+"))
 
 
-def format_hierarchy(bnk: Soundbank, graph: nx.DiGraph) -> str:
+def format_hierarchy(
+    bnk: Soundbank,
+    graph: nx.DiGraph,
+    *,
+    short: bool = False,
+    to_line: Callable[[str, str, HIRCNode | str], str] = None,
+) -> str:
     visited = set()
     ret = ""
+
+    if not to_line:
+        to_line = lambda p, s, n: f"{p}{s} {n}"
 
     def delve(nid: Any, prefix: str):
         nonlocal ret
 
         if nid in visited:
-            return
+            return ""
 
         visited.add(nid)
         children = list(graph.successors(nid))
+        angle = "└─" if short else "└──"
+        branch = "├─" if short else "├──"
+        indent = "  " if short else "    "
 
         for i, child_id in enumerate(children):
             is_last = i == len(children) - 1
-            branch = "└──" if is_last else "├──"
+            symbol = angle if is_last else branch
             node = bnk.get(child_id, f"#{child_id}")
-            ret += f"{prefix}{branch} {node}\n"
+            ret += to_line(prefix, symbol, node) + "\n"
 
-            new_prefix = prefix + ("    " if is_last else "│   ")
+            new_prefix = prefix + (indent if is_last else "│" + indent[1:])
             delve(child_id, new_prefix)
 
     # Find root node
     roots = [n for n in graph.nodes() if graph.in_degree(n) == 0]
     if not roots:
-        logger.warning("Could not determine root node")
-        return
+        return ""
 
     root = roots[0]
-    if len(roots) > 1:
-        logger.warning(f"Multiple roots found, using {root}")
-
     delve(root, "")
     return ret.rstrip("\n")
 
@@ -170,7 +229,7 @@ def deepmerge(base: dataclass, updates: dataclass, exclude: set[str] = None) -> 
         for f in fields(obj):
             if exclude and f.name in exclude:
                 continue
-            
+
             # skip read-only properties
             if hasattr(type(obj), f.name):
                 true_field_type = type(getattr(type(obj), f.name))
@@ -211,9 +270,12 @@ def deepmerge(base: dataclass, updates: dataclass, exclude: set[str] = None) -> 
 def get_module_for_field(obj, field_name: str) -> str:
     """Walk the MRO to find which class originally declared a dataclass field."""
     for cls in reversed(type(obj).mro()):
-        if hasattr(cls, '__dataclass_fields__') and field_name in cls.__dataclass_fields__:
+        if (
+            hasattr(cls, "__dataclass_fields__")
+            and field_name in cls.__dataclass_fields__
+        ):
             return cls.__module__
-    
+
     # Fallback
     return obj.__module__
 
@@ -222,16 +284,18 @@ def get_module_for_field(obj, field_name: str) -> str:
 def resolve_typehint(hint: str, context_module: str | object) -> type:
     if isinstance(hint, type):
         return hint
-    
+
     # get_type_hints can have some weird effects I don't want to encounter again,
     # like two different versions of the same class, so we use a much simpler way
     if isinstance(context_module, str):
         module = sys.modules[context_module]
-    
+
     return eval(hint, vars(module))
 
 
-def to_typed_dict(data: dataclass, resolve_strings: bool) -> dict[str, tuple[type, Any]]:
+def to_typed_dict(
+    data: dataclass, resolve_strings: bool
+) -> dict[str, tuple[type, Any]]:
     def delve(d: Any) -> Any:
         if is_dataclass(d):
             ret = {}

@@ -64,6 +64,7 @@ class add_states_table(StateMixin, DpgItem):
         self._on_value_changed = on_value_changed
         self._user_data = user_data
         self._jump_to = jump_to
+        self._popups: list[str] = []
 
         if label:
             dpg.add_text(label)
@@ -71,6 +72,10 @@ class add_states_table(StateMixin, DpgItem):
         self._properties_table: add_widget_table = None
         self._states_table: add_widget_table = None
         self._build()
+
+    def destroy(self):
+        for popup in self._popups:
+            self._delete_item(popup)
 
     # === Internal ======================================================
 
@@ -139,8 +144,12 @@ class add_states_table(StateMixin, DpgItem):
             name = lookup_name(h, f"#{h}")
             dpg.set_item_label(item_tag, name)
 
+        popup = self._t(f"{item_tag}_popup")
         with dpg.popup(
-            item_tag, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)
+            item_tag,
+            mousebutton=dpg.mvMouseButton_Right,
+            min_size=(100, 50),
+            tag=popup,
         ):
             add_hash_widget(
                 getattr(obj, attr),
@@ -149,6 +158,8 @@ class add_states_table(StateMixin, DpgItem):
                 string_label=label,
                 width=120,
             )
+        
+        self._popups.append(popup)
 
     # === Properties ======================================================
 
@@ -309,9 +320,9 @@ class add_states_table(StateMixin, DpgItem):
             return new
 
         with dpg.tree_node(label=name, span_full_width=True) as tree_node:
-            # TODO use a node link instead, usually states should not be shared
+            # TODO Should we enforce 1:1 relationships to states?
             add_select_node(
-                self._bnk.query,
+                self._bnk,
                 µ("State").format(num_references=referees),
                 self._make_setter(state_value, "state_instance_id", lambda n: n.id),
                 jump_to=self._jump_to,
@@ -327,7 +338,9 @@ class add_states_table(StateMixin, DpgItem):
             if state:
                 for i, prop in properties.items():
                     has_override = state and (i in state.parameters)
-                    value_widget_id = self._get_state_prop_value_widgets(state, prop)[-1]
+                    value_widget_id = self._get_state_prop_value_widgets(state, prop)[
+                        -1
+                    ]
                     label = µ("Default") if prop is _default_prop else prop.name
 
                     enabled = bool(state)

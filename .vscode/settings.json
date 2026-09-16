@@ -1,4 +1,5 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda"
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "cmake.sourceDirectory": "E:/Games/Elden Ring/Modding/Tools/yonder/unlock_wwise_states/nightreign"
 }

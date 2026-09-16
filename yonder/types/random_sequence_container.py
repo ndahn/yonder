@@ -1,25 +1,29 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import ClassVar
+import random
+from dataclasses import dataclass, field
+import pyo
 
 from yonder.hash import Hash
 from yonder.enums import PropID, RandomMode, PlaybackMode
 from yonder.util import logger
+from yonder.audio import PlayContext, PlaybackState
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
     Children,
     PropBundle,
+    PropRangedModifier,
     Playlist,
     PlaylistItem,
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
+class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 5
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     loop_count: int = 1
@@ -40,7 +44,7 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     def new(
         cls,
         nid: Hash,
-        nodes: int | list[int],
+        nodes: int | list[int] = None,
         playback_mode: PlaybackMode = PlaybackMode.Random,
         random_mode: RandomMode = RandomMode.Standard,
         loop_count: int = 1,
@@ -68,6 +72,10 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/sounds/#random-sequence-container"
+
+    @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
 
@@ -82,6 +90,10 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         return self.node_base_params.node_initial_params.prop_initial_values
 
     @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.node_base_params.node_initial_params.prop_ranged_modifiers.entries
+
+    @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
 
@@ -92,10 +104,16 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     def add_playlist_item(self, child_id: int | HIRCNode) -> None:
         if isinstance(child_id, HIRCNode):
             child_id = child_id.id
-        
+
         child_id = int(child_id)
         self.children.add(child_id)
         self.playlist.add(PlaylistItem(child_id))
+
+    def pick_random_child(self) -> tuple[int, PlaylistItem]:
+        # TODO respect random mode, no repeats, etc
+        weights = [p.weight for p in self.playlist]
+        idx = random.choices(range(len(self.playlist)), weights)[0]
+        return (idx, self.playlist[idx])
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -116,7 +134,7 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             self.children.remove(other)
 
             indices = []
-            for idx, item in enumerate((self.playlist)):
+            for idx, item in enumerate(self.playlist):
                 if item.play_id == other:
                     indices.append(idx)
 
@@ -130,3 +148,54 @@ class RandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
     @property
     def random_mode_enum(self) -> RandomMode:
         return RandomMode(self.random_mode)
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
+        fader = pyo.InputFader(pyo.Sig(0))
+        my_pyo.cache["fader"] = fader
+        return pyo.Sig(fader)
+
+    # NOTE once playlist continuation (loop_count, sequence advance) is
+    # implemented, this class must override register_end_trigger so child ends
+    # are consumed here instead of bubbling up
+    def play(self, ctx: PlayContext, force_playlist_idx: int = -1) -> None:
+        if not self.playlist:
+            return
+
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.cache["fader"]
+        prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))
+
+        if force_playlist_idx >= 0:
+            playlist_item = self.playlist[force_playlist_idx]
+        else:
+            # TODO need to keep state depending on random mode
+            _, playlist_item = self.pick_random_child()
+
+        xfade = (
+            max(
+                [
+                    ctx.properties.get(PropID.FadeOutTime, 0.0),
+                    ctx.properties.get(PropID.FadeInTime, 0.0),
+                    50,
+                ]
+            )
+            / 1000
+        )
+        
+        child = ctx.bank.get(playlist_item.play_id)
+        if child:
+            child.play(ctx)
+            fader.setInput(child.pyo(ctx).output, xfade)
+            my_pyo.cache["prev_node"] = child.id
+        else:
+            fader.setInput(pyo.Sig(0), 0.5)
+
+        # Don't kill the voice we just started
+        if prev_node and prev_node != child:
+            prev_node.release_pyo(ctx, xfade + 0.1)
+
+        my_pyo.play()

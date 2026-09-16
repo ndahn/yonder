@@ -1,5 +1,6 @@
 from typing import Any, Callable
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
@@ -8,18 +9,18 @@ from yonder.convenience import create_simple_sound
 from yonder.types import Event, ActorMixer
 from yonder.enums import PropID, PlaybackMode, RandomMode
 from yonder.wem import wav2wem
+from yonder.game.data import AmxData
 from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.localization import µ
 from yonder.gui.widgets import (
     DpgItem,
     add_properties_table,
-    add_select_node,
+    add_select_actormixer,
     add_player_table,
     add_paragraphs,
     yay,
 )
-from yonder.gui.widgets.select_node import ActorMixerDetailProvider
 
 
 class create_simple_sound_dialog(DpgItem):
@@ -93,12 +94,10 @@ class create_simple_sound_dialog(DpgItem):
             )
 
             # Actor mixer selector
-            add_select_node(
-                self._bnk.query,
+            add_select_actormixer(
+                self._bnk,
                 µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
-                node_type=ActorMixer,
-                get_node_details=ActorMixerDetailProvider(self._bnk),
                 tag=self._t("actor_mixer"),
             )
 
@@ -157,6 +156,13 @@ class create_simple_sound_dialog(DpgItem):
                     callback=self._on_okay,
                     tag=self._t("simple_sound/button_okay"),
                 )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/simple_sounds/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/simple_sounds/")
 
     # === DPG callbacks =================================================
 
@@ -165,9 +171,9 @@ class create_simple_sound_dialog(DpgItem):
             return
         dpg.set_value(self._t("hash"), str(calc_hash(new_name)))
 
-    def _on_amx_selected(self, sender: str, amx: ActorMixer, ud: Any) -> None:
-        if amx:
-            dpg.set_value(self._t("actor_mixer"), amx.id)
+    def _on_amx_selected(self, sender: str, info: AmxData, ud: Any) -> None:
+        if info:
+            dpg.set_value(self._t("actor_mixer"), info.nid)
 
     def _on_properties_changed(
         self, sender: str, new_properties: dict[PropID, float], ud: Any

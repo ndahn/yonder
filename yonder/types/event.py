@@ -1,13 +1,14 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, ClassVar, TYPE_CHECKING
 import re
 from dataclasses import dataclass, field
-from typing import ClassVar, TYPE_CHECKING
+import pyo
 
 from yonder.hash import Hash
-from yonder.enums import SoundType
+from yonder.enums import SoundType, ActionType
+from yonder.audio import PlayContext, PlaybackState
 from .hirc_node import HIRCNode
-from .action import Action, ActionType
+from .action import Action
 
 if TYPE_CHECKING:
     from .soundbank import Soundbank
@@ -15,8 +16,8 @@ if TYPE_CHECKING:
 
 @dataclass(repr=False, eq=False)
 class Event(HIRCNode):
-    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=WwiseFundamentalApproach&id=understanding_events"
-    
+    """Events are signals wwise uses to start, stop or change audio playback."""
+
     body_type: ClassVar[int] = 4
     action_count: int = 0
     actions: list[int] = field(default_factory=list)
@@ -24,6 +25,22 @@ class Event(HIRCNode):
     @classmethod
     def new(cls, nid: Hash, actions: list[int] = None) -> Event:
         return Event(nid, actions=actions or [])
+
+    def get_action_nodes(
+        self, bnk: Soundbank, *action_types: ActionType
+    ) -> list[Action]:
+        ret = []
+
+        for aid in self.actions:
+            action: Action = bnk.get(aid)
+            if action and (not action_types or action.action_type_enum in action_types):
+                ret.append(action)
+
+        return ret
+
+    @property
+    def wwise_link(self):
+        return "https://ndahn.github.io/yonder/wwise/events/"
 
     def get_wwise_name(self, default: Any = None) -> str:
         name = self.name
@@ -46,9 +63,9 @@ class Event(HIRCNode):
     def has_action_type(self, bnk: Soundbank, *types: ActionType | str | int) -> bool:
         for val in types:
             if isinstance(val, ActionType):
-                type_id = val.type_id
+                type_id = val.value
             elif isinstance(val, str):
-                type_id = ActionType[val].type_id
+                type_id = ActionType[val].value
             else:
                 type_id = val
 
@@ -73,7 +90,11 @@ class Event(HIRCNode):
                 # Play events reference another event
                 ret.add(act.external_id)
             # TODO not sure what E, EO, AEO, etc. stand for
-            elif act.action_type_enum in (ActionType.Play, ActionType.StopEO, ActionType.PauseEO):
+            elif act.action_type_enum in (
+                ActionType.Play,
+                ActionType.StopEO,
+                ActionType.PauseEO,
+            ):
                 # Collect other actions referencing the same target
                 edges = bnk.tree.in_edges(act.external_id)
                 for event_id, _ in edges:
@@ -81,7 +102,7 @@ class Event(HIRCNode):
                     if parent and isinstance(parent, Action):
                         actions.add(event_id)
 
-        # Get the events for the actions we found      
+        # Get the events for the actions we found
         for aid in actions:
             edges = bnk.tree.in_edges(aid)
             # Only events can hold actions
@@ -112,6 +133,22 @@ class Event(HIRCNode):
 
         if other in self.actions:
             self.actions.remove(other)
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
+        ctx = my_pyo.ctx
+        return sum(n.pyo(ctx).output for n in self.get_action_nodes(ctx.bank))
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        ctx = my_pyo.ctx
+
+        for action in self.get_action_nodes(ctx.bank):
+            action.play(ctx)
+
+        my_pyo.play()
 
     def __str__(self) -> str:
         return super().__str__()

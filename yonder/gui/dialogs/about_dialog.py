@@ -43,20 +43,22 @@ class about_dialog(DpgItem):
                         color=style.light_grey,
                     )
                     dpg.add_button(
-                        label="https://github.com/ndahn/yonder",
+                        label="https://ndahn.github.io/yonder/",
                         small=True,
                         callback=lambda: webbrowser.open(
-                            "https://github.com/ndahn/yonder"
+                            "https://ndahn.github.io/yonder/"
                         ),
                     )
                     dpg.bind_item_theme(dpg.last_item(), style.themes.link_button)
 
+                    dpg.add_spacer(height=5)
                     dpg.add_text(
-                        µ("Bugs, questions, feature request?"),
+                        µ("Many thanks to these fine folks:"),
                         color=style.light_grey,
                     )
                     dpg.add_text(
-                        µ("Find me on ?ServerName? @Managarm!"),
+                        "Vswarte, Raster, Shion, Kidius, \nDasaav, LittleBear, Shiki, ...",
+                        indent=10,
                         color=style.light_grey,
                     )
 

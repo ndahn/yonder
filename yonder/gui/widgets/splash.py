@@ -31,5 +31,5 @@ def add_splash(*, tag: str = None, **window_args) -> str:
             dpg.add_image("yonder_splash", width=400, height=275)
             dpg.add_text(f"Banks of Yonder v{__version__}", color=style.white, pos=(100, 240))
 
-    center_window(dialog)
+    center_window(dialog, split_frame=False)
     return dialog

@@ -1,8 +1,0 @@
-- jump-to -> select -> regenerate broken in cs_main
-- transition rules missing play pre-entry/post-exit/transition piece
-- selecting pin should cause jump to?
-- msc branches need to be merged/split when editing their path
-- msc tree edits only need to rebuild msc widgets, no need to regenerate everything
-- jump-to is not reliable
-- special delete case for events
-- better hints for actormixers ()

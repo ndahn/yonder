@@ -51,7 +51,8 @@ class settings_dialog(DpgItem):
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             with dpg.tree_node(label=µ("General"), default_open=True):
-                dpg.add_slider_double(
+                # FIXME deprecated
+                dpg.add_drag_double(
                     label=µ("Playback Volume"),
                     default_value=config.playback_volume,
                     min_value=0.1,
@@ -59,6 +60,15 @@ class settings_dialog(DpgItem):
                     clamped=True,
                     no_input=True,
                     callback=lambda s, a, u: setattr(config, "playback_volume", a),
+                )
+                dpg.add_input_int(
+                    label=µ("Max. Cache Size (MB)"),
+                    default_value=config.max_cache_size_mb,
+                    min_value=0,
+                    max_value=1000,
+                    min_clamped=True,
+                    max_clamped=False,
+                    callback=lambda s, a, u: setattr(config, "max_cache_size_mb", a),
                 )
 
             dpg.add_spacer(height=5)
@@ -71,7 +81,7 @@ class settings_dialog(DpgItem):
                     "bnk2json",
                     lambda s, a, u: setattr(config, "bnk2json_exe", str(a)),
                     default=shorten_path(config.bnk2json_exe),
-                    filetypes={"bnk2json.exe": "bnk2json.exe"},
+                    filetypes={"bnk2json": "bnk2json*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
@@ -85,7 +95,7 @@ class settings_dialog(DpgItem):
                     "wwise",
                     lambda s, a, u: setattr(config, "wwise_exe", str(a)),
                     default=shorten_path(config.wwise_exe),
-                    filetypes={"WwiseConsole.exe": "WwiseConsole.exe"},
+                    filetypes={"WwiseConsole*": "WwiseConsole*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(
@@ -99,7 +109,7 @@ class settings_dialog(DpgItem):
                     "vgmstream",
                     lambda s, a, u: setattr(config, "vgmstream_exe", str(a)),
                     default=shorten_path(config.vgmstream_exe),
-                    filetypes={"vgmstream-cli.exe": "vgmstream-cli.exe"},
+                    filetypes={"vgmstream-cli": "vgmstream-cli*"},
                 )
                 with dpg.tooltip(w):
                     dpg.add_text(

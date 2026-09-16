@@ -1,4 +1,4 @@
-from yonder import Soundbank, HIRCNode, Hash
+from yonder import Soundbank, HIRCNode, Hash, calc_hash
 from yonder.types import Event, Action, Sound, MusicTrack
 from yonder.wem import import_wems
 from yonder.util import format_hierarchy, logger
@@ -51,7 +51,15 @@ def copy_node_structure(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     entrypoint: HIRCNode,
+    *,
+    blacklist: set[str | int] = None,
+    parent_override: int | HIRCNode = None,
 ) -> list[int]:
+    if not blacklist:
+        blacklist = set()
+
+    blacklist = {calc_hash(o) for o in blacklist}
+
     # Collect the hierarchy responsible for playing the sound(s)
     action_tree = src_bnk.get_subtree(entrypoint, False)
     tree_str = format_hierarchy(src_bnk, action_tree)
@@ -70,35 +78,46 @@ def copy_node_structure(
     transfer_nodes = []
     for nid in action_tree:
         node = src_bnk.get(nid)
-        if node and node.id not in dst_bnk:
+        if node and node.id not in blacklist and node.id not in dst_bnk:
             transfer_nodes.append(node.copy())
 
     dst_bnk.add_nodes(*transfer_nodes)
 
-    # Go upwards through the parents chain and see what needs to be transferred
-    upchain = src_bnk.get_parent_chain(entrypoint)
-    upchain_str = "\n".join(
-        [f" ⤷ {up_id} ({repr(src_bnk[up_id])})" for up_id in reversed(upchain)]
-    )
-    logger.info(f"\nThe parent chain consists of the following nodes:\n{upchain_str}\n")
+    if parent_override:
+        if hasattr(entrypoint, "parent"):
+            entrypoint.parent = parent_override
+        else:
+            logger.warning(f"Parent override is set, but {entrypoint} has no parent")
+    else:
+        # Go upwards through the parents chain and see what needs to be transferred
+        upchain = src_bnk.get_parent_chain(entrypoint)
+        upchain_str = "\n".join(
+            [f" ⤷ {up_id} ({repr(src_bnk[up_id])})" for up_id in reversed(upchain)]
+        )
+        logger.info(
+            f"\nThe parent chain consists of the following nodes:\n{upchain_str}\n"
+        )
 
-    up_child = entrypoint
-    for up_id in upchain:
-        # Once we encounter an existing node we can assume the rest of the chain is
-        # intact. Child nodes must be inserted *before* the first existing parent.
-        up_node = dst_bnk.get(up_id)
-        if up_node:
+        up_child = entrypoint
+        for up_id in upchain:
+            # Once we encounter an existing node we can assume the rest of the chain is
+            # intact. Child nodes must be inserted *before* the first existing parent.
+            if up_id in blacklist:
+                break
+
+            up_node = dst_bnk.get(up_id)
+            if up_node:
+                up_node.children.add(up_child.id)
+                break
+
+            # First time we encounter upchain node, clear the children, as non-existing items
+            # will make the soundbank invalid
+            up_node = src_bnk[up_id].copy()
+            up_node.children.clear()
             up_node.children.add(up_child.id)
-            break
+            dst_bnk.add_nodes(up_node)
 
-        # First time we encounter upchain node, clear the children, as non-existing items
-        # will make the soundbank invalid
-        up_node = src_bnk[up_id].copy()
-        up_node.children.clear()
-        up_node.children.add(up_child.id)
-        dst_bnk.add_nodes(up_node)
-
-        up_child = up_node
+            up_child = up_node
 
     return wems
 
@@ -132,8 +151,14 @@ def copy_wwise_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     wwise_map: dict[Hash, str],
-    save: bool = True,
+    *,
+    blacklist: set[str | int] = None,
+    amx_override: int | HIRCNode = None,
 ) -> None:
+    if not blacklist:
+        blacklist = set()
+
+    blacklist = {calc_hash(o) for o in blacklist}
     wems = []
 
     map_str = "\n".join(f"\t{src} -> {dst}" for src, dst in wwise_map.items())
@@ -143,7 +168,11 @@ def copy_wwise_events(
     for wwise_src, wwise_dst in wwise_map.items():
         evt: Event = src_bnk[wwise_src]
         if not isinstance(evt, Event):
-            raise ValueError(f"{wwise_src} is not an Event")
+            raise TypeError(f"{wwise_src} is not an Event")
+
+        if evt.id in blacklist or evt.id in dst_bnk:
+            logger.warning(f"{evt} already exists")
+            continue
 
         # Copy the event and its actions
         evt = copy_event(src_bnk, dst_bnk, evt, wwise_dst)
@@ -160,24 +189,29 @@ def copy_wwise_events(
                 )
                 continue
 
-            entrypoint = src_bnk[action.external_id]
-            new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
-            wems.extend(new_wems)
+            entrypoint = src_bnk.get(action.external_id)
+            if entrypoint:
+                new_wems = copy_node_structure(
+                    src_bnk,
+                    dst_bnk,
+                    entrypoint,
+                    blacklist=blacklist,
+                    parent_override=amx_override,
+                )
+                wems.extend(new_wems)
+            else:
+                logger.warning(
+                    f"Could not find action target {action.external_id} in source bank"
+                )
 
-    # Save and verify
-    if save:
-        # Save already solves and verifies
-        dst_bnk.save()
+    # Verify, always a good idea
+    logger.info("\nVerifying soundbank...")
+    dst_bnk.solve()
+    severity = dst_bnk.verify()
+    if severity > 0:
+        logger.warning(" - some issues were found in your soundbank. Check the log!")
     else:
-        logger.info("\nVerifying soundbank...")
-        dst_bnk.solve()
-        severity = dst_bnk.verify()
-        if severity > 0:
-            logger.warning(
-                " - some issues were found in your soundbank. Check the log!"
-            )
-        else:
-            logger.info(" - seems surprisingly fine :o\n")
+        logger.info(" - seems surprisingly fine :o\n")
 
     # Copy WEMs
     copy_wems(src_bnk, dst_bnk, wems)
@@ -190,7 +224,6 @@ def copy_structures_with_new_events(
     src_bnk: Soundbank,
     dst_bnk: Soundbank,
     nodes: dict[HIRCNode, str],
-    save: bool = False,
 ) -> None:
     wems = []
 
@@ -211,19 +244,15 @@ def copy_structures_with_new_events(
         new_wems = copy_node_structure(src_bnk, dst_bnk, entrypoint)
         wems.extend(new_wems)
 
-    # Save and verify
-    if save:
-        # Save already solves and verifies
-        dst_bnk.save()
+    # Verify
+    logger.info("\nVerifying soundbank...")
+    dst_bnk.solve()
+    issues = dst_bnk.verify()
+    if issues:
+        for issue in issues:
+            logger.warning(f" - {issue}")
     else:
-        logger.info("\nVerifying soundbank...")
-        dst_bnk.solve()
-        issues = dst_bnk.verify()
-        if issues:
-            for issue in issues:
-                logger.warning(f" - {issue}")
-        else:
-            logger.info(" - seems surprisingly fine :o\n")
+        logger.info(" - seems surprisingly fine :o\n")
 
     # Copy WEMs
     copy_wems(src_bnk, dst_bnk, wems)

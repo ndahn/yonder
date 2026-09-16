@@ -1,10 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
+import pyo
 
 from yonder.hash import Hash
-from yonder.enums import PropID
+from yonder.enums import PropID, RtpcType
 from yonder.util import logger
+from yonder.audio import PlayContext, PlaybackState
+from yonder.audio.audiomath import eval_curve
 from .hirc_node import HIRCNode
 from .base_types import (
     NodeBaseParams,
@@ -12,16 +15,18 @@ from .base_types import (
     Layer,
     AssociatedChildData,
     PropBundle,
+    PropRangedModifier,
     RTPC,
     StateChunk,
+    RTPCGraphPoint,
 )
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
-    wwise_link: ClassVar[str] = "https://www.audiokinetic.com/en/public-library/2025.1.7_9143/?source=Help&id=defining_contents_and_behavior_of_blend_container"
-    
+class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
+    """Manages transitions between crossfade groups (layers), where each node in a group will get their own fade curve driven by a single RTPC."""
+
     body_type: ClassVar[int] = 9
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -51,6 +56,10 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/sounds/#layer-container"
+
+    @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
 
@@ -65,6 +74,10 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
         return self.node_base_params.node_initial_params.prop_initial_values
 
     @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.node_base_params.node_initial_params.prop_ranged_modifiers.entries
+
+    @property
     def rtpcs(self) -> list[RTPC]:
         return self.node_base_params.initial_rtpc.rtpcs
 
@@ -72,14 +85,42 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
     def states(self) -> StateChunk:
         return self.node_base_params.state_chunk
 
-    def add_layer(self, nodes: list[int]) -> Layer:
-        self.layers.append(
-            Layer(associated_children=[AssociatedChildData(int(nid)) for nid in nodes])
-        )
-        for nid in nodes:
+    def add_layer(
+        self,
+        layer_id: int,
+        nodes: list[int | HIRCNode],
+        rtpc_id: int = 0,
+        rtpc_type: RtpcType = RtpcType.GameParameter,
+        curves: dict[int, list[RTPCGraphPoint]] = None,
+    ) -> Layer:
+        """Add a blend track covering all `nodes`.
+
+        A layer is a crossfade group, and each node in the group will get their own fade curve driven by a single RTPC. Children that merely play together don't need a layer.
+        """
+        if any(layer.layer_id == layer_id for layer in self.layers):
+            raise ValueError(f"layer_id {layer_id} is already used")
+
+        curves = curves or {}
+        assoc = []
+
+        for node in nodes:
+            nid = node.id if isinstance(node, HIRCNode) else int(node)
+            points = list(curves.get(nid, []))
+            assoc.append(AssociatedChildData(nid, len(points), points))
             self.children.add(nid)
 
-    def get_layer(self, child: HIRCNode | int) -> bool:
+        layer = Layer(
+            layer_id=layer_id,
+            rtpc_id=rtpc_id,
+            rtpc_type=rtpc_type,
+            associated_childen_count=len(assoc),
+            associated_children=assoc,
+        )
+
+        self.layers.append(layer)
+        return layer
+
+    def get_layer(self, child: HIRCNode | int) -> Layer:
         if isinstance(child, HIRCNode):
             child = child.id
 
@@ -93,7 +134,7 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
 
         return None
 
-    def attach(self, other: int | HIRCNode, custom: bool = True) -> None:
+    def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -102,10 +143,7 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
             other.parent = self.id
             other = other.id
 
-        if custom:
-            self.add_layer([int(other)])
-        else:
-            self.children.add(int(other))
+        self.children.add(int(other))
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -114,5 +152,71 @@ class LayerContainer(StateMixin, PropertyMixin, HIRCNode):
         if other in self.children:
             self.children.remove(other)
             for layer in self.layers:
-                if other in layer.associated_children:
-                    layer.associated_children.remove(other)
+                layer.associated_children = [
+                    a
+                    for a in layer.associated_children
+                    if a.associated_child_id != other
+                ]
+
+    def validate(self) -> None:
+        for layer in self.layers:
+            if layer.layer_id == 0:
+                raise ValueError(
+                    f"{self}: corrupted layers found, you probably want to remove those"
+                )
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
+        mixer = pyo.Mixer(outs=1, chnls=2)
+        controls = {}
+
+        for child_id in self.children.items:
+            child = my_pyo.ctx.bank.get(child_id)
+
+            if child:
+                # TODO not sure how to use the layer.initial_rtpc data here
+                # layer = self.get_layer(child_id)
+                # rtpc_defaults = {r.param_id: r for r in layer.initial_rtpc.rtpcs}
+                ctrl = pyo.SigTo(1)
+                controls[child_id] = ctrl
+                child_pyo = child.pyo(my_pyo.ctx).output
+                mixer.addInput(child_id, child_pyo * ctrl)
+                mixer.setAmp(child_id, 0, 1)
+
+        my_pyo.cache["controls"] = controls
+        # NOTE a mixer by itself is not an output object
+        return mixer.mix()
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        self.update_playback(ctx)
+
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child:
+                child.play(ctx)
+
+        my_pyo.play()
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        controls: dict[int, pyo.SigTo] = my_pyo.cache["controls"]
+
+        for child_id in self.children.items:
+            layer = self.get_layer(child_id)
+            ctrl = controls[child_id]
+
+            if layer:
+                for info in layer.associated_children:
+                    if info.associated_child_id == child_id:
+                        x = ctx.rtpc_x.get(layer.rtpc_id)
+                        y = eval_curve(info.graph_points, x)
+                        ctrl.value = y
+                        break
+            else:
+                ctrl.value = 1
+
+        super().update_playback(ctx)

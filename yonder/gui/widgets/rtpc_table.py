@@ -3,8 +3,9 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RtpcType, RtpcAccum, CurveScaling
-from yonder.game import GameObjects
-from yonder.types.base_types import RTPC, RTPCGraphPoint
+from yonder.game import get_selected_game
+from yonder.types.base_types import RTPC
+from yonder.gui.icons import Icons
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
 from .hash_widget import add_hash_widget
@@ -48,12 +49,17 @@ class add_rtpc_table(DpgItem):
         self._rtpcs = rtpcs
         self._on_value_changed = on_value_changed
         self._user_data = user_data
+        self._popups: list[str] = []
 
         if label:
             dpg.add_text(label)
 
         dpg.add_child_window(auto_resize_y=True, tag=self._tag)
         self.refresh()
+
+    def destroy(self):
+        for popup in self._popups:
+            self._delete_item(popup)
 
     # === Internal ======================================================
 
@@ -86,15 +92,19 @@ class add_rtpc_table(DpgItem):
     def _update_label(self, sender: str, info: tuple[RTPC, str, Any], ud: Any) -> None:
         rtpc = info[0]
         idx = self._rtpcs.index(rtpc)
-        
+
         dpg.set_item_label(
             self._item_tag(idx, "tree_node"),
             str(rtpc).ljust(50),
         )
 
     def _bind_context_menu(self, item_tag: str, rtpc: RTPC) -> None:
+        popup = self._t(f"{item_tag}_popup")
         with dpg.popup(
-            item_tag, mousebutton=dpg.mvMouseButton_Right, min_size=(100, 50)
+            item_tag,
+            mousebutton=dpg.mvMouseButton_Right,
+            min_size=(100, 50),
+            tag=popup,
         ):
             add_hash_widget(
                 rtpc.id,
@@ -104,6 +114,8 @@ class add_rtpc_table(DpgItem):
                 user_data=rtpc,
                 width=120,
             )
+
+        self._popups.append(popup)
 
     def _add_row(self, idx: int, rtpc: RTPC) -> None:
         with dpg.group(horizontal=True, parent=self._tag):
@@ -126,9 +138,11 @@ class add_rtpc_table(DpgItem):
                         callback=self._make_setter(rtpc, "rtpc_accum"),
                         tag=self._item_tag(idx, "rtpc_accum"),
                     )
+
+                    rtpc_enum = get_selected_game().rtpc_params
                     add_incomplete_int_enum(
-                        GameObjects.RTPCParameter,
-                        GameObjects.RTPCParameter(rtpc.param_id),
+                       rtpc_enum,
+                       rtpc_enum(rtpc.param_id),
                         "<unknown>",
                         self._make_setter(
                             rtpc, "param_id", callback=self._update_label
@@ -154,8 +168,8 @@ class add_rtpc_table(DpgItem):
                         )
                     dpg.add_spacer(height=5)
 
-            dpg.add_button(
-                label="x",
+            dpg.add_image_button(
+                Icons.trash,
                 callback=self._on_remove_clicked,
                 user_data=idx,
             )

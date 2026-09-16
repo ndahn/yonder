@@ -6,12 +6,12 @@ from yonder.hash import Hash
 from yonder.enums import PropID
 from yonder.util import logger
 from .hirc_node import HIRCNode
-from .base_types import NodeBaseParams, Children, PropBundle, RTPC, StateChunk
-from .mixins import PropertyMixin, StateMixin
+from .base_types import NodeBaseParams, Children, PropBundle, PropRangedModifier, RTPC, StateChunk
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class ActorMixer(StateMixin, PropertyMixin, HIRCNode):
+class ActorMixer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 7
     node_base_params: NodeBaseParams = field(default_factory=NodeBaseParams)
     children: Children = field(default_factory=Children)
@@ -39,6 +39,10 @@ class ActorMixer(StateMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/globals/"
+
+    @property
     def parent(self) -> int:
         return self.node_base_params.direct_parent_id
 
@@ -51,6 +55,10 @@ class ActorMixer(StateMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.node_base_params.node_initial_params.prop_ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:

@@ -38,6 +38,9 @@ class State(HIRCNode):
     def has_param_for(self, prop_idx: int) -> bool:
         return prop_idx in self.parameters
 
+    def has_default(self) -> bool:
+        return (0 in self.parameters)
+
     def get_default(self) -> float:
         return self.get_param(0)
 
@@ -76,4 +79,4 @@ class State(HIRCNode):
 
     def validate(self) -> None:
         if len(self.parameters) != len(self.values):
-            raise ValueError("parameters and values must be the same length")
+            raise ValueError(f"{self}: parameters and values must be the same length")

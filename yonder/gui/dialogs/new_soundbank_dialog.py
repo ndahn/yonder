@@ -1,5 +1,6 @@
 from typing import Any, Callable
 from pathlib import Path
+import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
@@ -107,6 +108,13 @@ class new_soundbank_dialog(DpgItem):
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label=µ("Onto Eternity!"), callback=self._on_okay)
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/guides/custom_banks/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/guides/custom_banks/")
 
     # === Public ========================================================
 

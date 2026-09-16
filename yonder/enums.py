@@ -1,4 +1,29 @@
-from enum import IntEnum, StrEnum
+from __future__ import annotations
+from enum import IntEnum, StrEnum, Enum, auto
+
+# For constants see https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=SDK&id=_ak_constants_8h_source.html
+
+class EnumWithUnknown(IntEnum):
+    @classmethod
+    def _missing_(cls, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"{value} is not a valid {cls.__name__} value")
+
+        tmp = int.__new__(cls, value)
+        tmp._name_ = "UNKNOWN"
+        tmp._value_ = value
+        return tmp
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, type(self)) and self.name == "UNKNOWN":
+            return other.name == "UNKNOWN"
+        return super().__eq__(other)
+
+
+class Game(Enum):
+    EldenRing = 0
+    Nightreign = 1
+    ArmoredCore6 = 2
 
 
 class SoundType(StrEnum):
@@ -27,6 +52,112 @@ class SoundType(StrEnum):
         return f"{self.name} ({self.value})"
 
 
+class ActionType(IntEnum):
+    None_ = 0x0000
+    SetState = 0x1204
+    BypassFXM = 0x1A02
+    BypassFXO = 0x1A03
+    ResetBypassFXM = 0x1B02
+    ResetBypassFXO = 0x1B03
+    ResetBypassFXALL = 0x1B04
+    ResetBypassFXALLO = 0x1B05
+    ResetBypassFXAE = 0x1B08
+    ResetBypassFXAEO = 0x1B09
+    SetSwitch = 0x1901
+    UseStateE = 0x1002
+    UnuseStateE = 0x1102
+    Play = 0x0403
+    PlayAndContinue = 0x0503
+    StopE = 0x0102
+    StopEO = 0x0103
+    StopALL = 0x0104
+    StopALLO = 0x0105
+    StlopAE = 0x0108
+    StopAEO = 0x0109
+    PauseE = 0x0202
+    PauseEO = 0x0203
+    PauseALL = 0x0204
+    PauseALLO = 0x0205
+    PauseAE = 0x0208
+    PauseAEO = 0x0209
+    ResumeE = 0x0302
+    ResumeEO = 0x0303
+    ResumeALL = 0x0304
+    ResumeALLO = 0x0305
+    ResumeAE = 0x0308
+    ResumeAEO = 0x0309
+    BreakE = 0x1C02
+    BreakEO = 0x1C03
+    MuteM = 0x0602
+    MuteO = 0x0603
+    UnmuteM = 0x0702
+    UnmuteO = 0x0703
+    UnmuteALL = 0x0704
+    UnmuteALLO = 0x0705
+    UnmuteAE = 0x0708
+    UnmuteAEO = 0x0709
+    SetVolumeM = 0x0A02
+    SetVolumeO = 0x0A03
+    ResetVolumeM = 0x0B02
+    ResetVolumeO = 0x0B03
+    ResetVolumeALL = 0x0B04
+    ResetVolumeALLO = 0x0B05
+    ResetVolumeAE = 0x0B08
+    ResetVolumeAEO = 0x0B09
+    SetPitchM = 0x0802
+    SetPitchO = 0x0803
+    ResetPitchM = 0x0902
+    ResetPitchO = 0x0903
+    ResetPitchALL = 0x0904
+    ResetPitchALLO = 0x0905
+    ResetPitchAE = 0x0908
+    ResetPitchAEO = 0x0909
+    SetLPFM = 0x0E02
+    SetLPFO = 0x0E03
+    ResetLPFM = 0x0F02
+    ResetLPFO = 0x0F03
+    ResetLPFALL = 0x0F04
+    ResetLPFALLO = 0x0F05
+    ResetLPFAE = 0x0F08
+    ResetLPFAEO = 0x0F09
+    SetHPFM = 0x2002
+    SetHPFO = 0x2003
+    ResetHPFM = 0x3002
+    ResetHPFO = 0x3003
+    ResetHPFALL = 0x3004
+    ResetHPFALLO = 0x3005
+    ResetHPFAE = 0x3008
+    ResetHPFAEO = 0x3009
+    SetBusVolumeM = 0x0C02
+    SetBusVolumeO = 0x0C03
+    ResetBusVolumeM = 0x0D02
+    ResetBusVolumeO = 0x0D03
+    ResetBusVolumeALL = 0x0D04
+    ResetBusVolumeAE = 0x0D08
+    StopEvent = 0x1511
+    PauseEvent = 0x1611
+    ResumeEvent = 0x1711
+    Duck = 0x1820
+    Trigger = 0x1D00
+    TriggerO = 0x1D01
+    SeekE = 0x1E02
+    SeekEO = 0x1E03
+    SeekALL = 0x1E04
+    SeekALLO = 0x1E05
+    SeekAE = 0x1E08
+    SeekAEO = 0x1E09
+    ResetPlaylistE = 0x2202
+    ResetPlaylistEO = 0x2203
+    SetGameParameter = 0x1302
+    SetGameParameterO = 0x1303
+    ResetGameParameter = 0x1402
+    ResetGameParameterO = 0x1403
+    Release = 0x1F02
+    ReleaseO = 0x1F03
+    Unk2102 = 0x2102
+    PlayEvent = 0x2103
+
+
 class CurveInterpolation(IntEnum):
     Log3 = 0x0
     Sine = 0x1
@@ -47,16 +178,24 @@ class CurveScaling(IntEnum):
     DBToLin = 0x4
 
 
-# TODO guessed
-class CurveParameters(IntEnum):
-    None_ = -1
-    Volume1 = 0
-    LPF = 1
-    Volume2 = 2
-    HPF = 3
-    Spread = 4
-    Focus = 5
-    Reserved = 6
+# NOTE quite different in more recent versions of wwise, but ER and NR are using 2019.2 (v135)
+class AttenuationProperty(IntEnum):
+    Volume = 0
+    AuxSendGame = 1
+    AuxSendUser = 2
+    LPF = 3
+    HPF = 4
+    Spread = 5
+    Focus = 6
+
+
+# NOTE Unused for now, more meant for documentation purposes
+class AttenuationDrivers(IntEnum):
+    Distance = 0
+    Obstruction = 1
+    Occlusion = 2
+    Diffraction = 3
+    Transmission = 4
 
 
 class RandomMode(IntEnum):
@@ -64,9 +203,40 @@ class RandomMode(IntEnum):
     Shuffle = 1
 
 
+class RandomSequenceMode(IntEnum):
+    ContinuousSequence = 0
+    StepSequence = 1
+    ContinuousRandom = 2
+    StepRandom = 3
+    Inherit = 0xFFFFFFFF
+
+
 class PlaybackMode(IntEnum):
     Random = 0
     Sequence = 1
+
+
+class MusicTrackType(EnumWithUnknown):
+    Normal = 0
+    # Expected to also contain the following modes:
+    # - RandomStep
+    # - SequenceStep
+    # - Switch
+
+
+class Units(Enum):
+    None_ = auto()
+    Count = auto()
+    Ratio = auto()
+    Percent = auto()
+    ID = auto()
+    dB = auto()
+    Hz = auto()
+    Cents = auto()
+    Seconds = auto()
+    Milliseconds = auto()
+    Meters = auto()
+    Degrees = auto()
 
 
 class PropID(IntEnum):
@@ -141,6 +311,117 @@ class PropID(IntEnum):
     AttenuationID = 0x46
     PositioningTypeBlend = 0x47
     ReflectionBusVolume = 0x48
+
+    def is_accum_additive(self) -> bool:
+        return self in [
+            PropID.Volume,
+            PropID.LFE,
+            PropID.Pitch,
+            PropID.BusVolume,
+            PropID.InitialDelay,
+            PropID.MakeUpGain,
+            PropID.MidiTransposition,
+            PropID.MidiVelocityOffset,
+            PropID.PlaybackSpeed,
+            PropID.MuteRatio,
+            # These *could* use a different accumulation behavior, see
+            # https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_filter_behavior
+            PropID.LPF,
+            PropID.HPF,
+            PropID.OutputBusHPF,
+            PropID.OutputBusLPF,
+            PropID.UserAuxSendLPF0,
+            PropID.UserAuxSendLPF1,
+            PropID.UserAuxSendLPF2,
+            PropID.UserAuxSendLPF3,
+            PropID.UserAuxSendHPF0,
+            PropID.UserAuxSendHPF1,
+            PropID.UserAuxSendHPF2,
+            PropID.UserAuxSendHPF3,
+            PropID.GameAuxSendLPF,
+            PropID.GameAuxSendHPF,
+        ]
+
+    def is_accum_maximum(self) -> bool:
+        # Just in case we need it
+        return False
+
+    @property
+    def unit(self) -> Units:
+        # TODO A lot of these are guessed, need examples to verify
+        return {
+            PropID.Volume: Units.dB,
+            PropID.LFE: Units.None_,
+            PropID.Pitch: Units.Cents,
+            PropID.LPF: Units.Percent,
+            PropID.HPF: Units.Percent,
+            PropID.BusVolume: Units.dB,
+            PropID.MakeUpGain: Units.Ratio,
+            PropID.Priority: Units.None_,
+            PropID.PriorityDistanceOffset: Units.Meters,
+            PropID.MuteRatio: Units.Ratio,
+            PropID.PanLR: Units.Percent,
+            PropID.PanFR: Units.Percent,
+            PropID.CenterPCT: Units.Percent,
+            PropID.DelayTime: Units.Milliseconds,
+            PropID.TransitionTime: Units.Milliseconds,
+            PropID.Probability: Units.Percent,
+            PropID.DialogueMode: Units.None_,
+            PropID.UserAuxSendVolume0: Units.dB,
+            PropID.UserAuxSendVolume1: Units.dB,
+            PropID.UserAuxSendVolume2: Units.dB,
+            PropID.UserAuxSendVolume3: Units.dB,
+            PropID.GameAuxSendVolume: Units.dB,
+            PropID.OutputBusVolume: Units.dB,
+            PropID.OutputBusHPF: Units.Percent,
+            PropID.OutputBusLPF: Units.Percent,
+            PropID.HDRBusThreshold: Units.dB,
+            PropID.HDRBusRatio: Units.Ratio,
+            PropID.HDRBusReleaseTime: Units.Milliseconds,
+            PropID.HDRBusGameParam: Units.None_,
+            PropID.HDRBusGameParamMin: Units.None_,
+            PropID.HDRBusGameParamMax: Units.None_,
+            PropID.HDRActiveRange: Units.None_,
+            PropID.LoopStart: Units.Milliseconds,
+            PropID.LoopEnd: Units.Milliseconds,
+            PropID.TrimInTime: Units.Milliseconds,
+            PropID.TrimOutTime: Units.Milliseconds,
+            PropID.FadeInTime: Units.Milliseconds,
+            PropID.FadeOutTime: Units.Milliseconds,
+            PropID.FadeInCurve: Units.None_,
+            PropID.FadeOutCurve: Units.None_,
+            PropID.LoopCrossfadeDuration: Units.Milliseconds,
+            PropID.CrossfadeUpCurve: Units.None_,
+            PropID.CrossfadeDownCurve: Units.None_,
+            PropID.MidiTrackingRootNote: Units.None_,
+            PropID.MidiPlayOnNoteType: Units.None_,
+            PropID.MidiTransposition: Units.Cents,
+            PropID.MidiVelocityOffset: Units.Cents,
+            PropID.MidiKeyRangeMin: Units.Cents,
+            PropID.MidiKeyRangeMax: Units.Cents,
+            PropID.MidiVelocityRangeMin: Units.Cents,
+            PropID.MidiVelocityRangeMax: Units.Cents,
+            PropID.MidiChannelMask: Units.None_,
+            PropID.PlaybackSpeed: Units.Cents,
+            PropID.MidiTempoSource: Units.None_,
+            PropID.MidiTargetNode: Units.ID,
+            PropID.AttachedPluginFXID: Units.ID,
+            PropID.Loop: Units.None_,
+            PropID.InitialDelay: Units.Milliseconds,
+            PropID.UserAuxSendLPF0: Units.Percent,
+            PropID.UserAuxSendLPF1: Units.Percent,
+            PropID.UserAuxSendLPF2: Units.Percent,
+            PropID.UserAuxSendLPF3: Units.Percent,
+            PropID.UserAuxSendHPF0: Units.Percent,
+            PropID.UserAuxSendHPF1: Units.Percent,
+            PropID.UserAuxSendHPF2: Units.Percent,
+            PropID.UserAuxSendHPF3: Units.Percent,
+            PropID.GameAuxSendLPF: Units.Percent,
+            PropID.GameAuxSendHPF: Units.Percent,
+            PropID.AttenuationID: Units.ID,
+            PropID.PositioningTypeBlend: Units.None_,
+            PropID.ReflectionBusVolume: Units.dB,
+        }[self]
 
 
 # TODO these should be used by the TimeModulator instead of PropID
@@ -339,7 +620,7 @@ class SourceType(IntEnum):
     Streaming = 0x2
 
 
-class PluginId(IntEnum):
+class EffectPlugin(IntEnum):
     None_ = 0x00000000
     BANK = 0x00000001
     PCM = 0x00010001
@@ -441,127 +722,119 @@ class PluginId(IntEnum):
     CrankcaseREVModelPlayer = 0x01A01052
 
 
+class EffectPluginType(EnumWithUnknown):
+    Source = 2
+    Effect = 3
+
+
 class MarkerId(IntEnum):
     # We don't know the string values of these
     LoopStart = 43573010
     LoopEnd = 1539036744
 
 
-# Seems to be a fixed sequence, probably hashes
-SWITCH_GROUP_IDS = [
-    3542429633,
-    2515591576,
-    866585565,
-    847446114,
-    1150349822,
-    1902202008,
-    483902209,
-    1441934824,
-    514904032,
-    56759204,
-    3126989719,
-    1489354423,
-    3905525753,
-    1971625096,
-    3637915147,
-    1616602882,
-    3894496501,
-    3481581068,
-    2271924278,
-    1004196637,
-    1442528243,
-    4013339729,
-    2796307820,
-    613742101,
-    525485163,
-    4192883481,
-    1292925647,
-    518062628,
-    1025216116,
-    1568474447,
-    2596938600,
-    4206702229,
-    3559404471,
-    1784841708,
-    3765513826,
-    2037129417,
-    4272577682,
-    2135765449,
-    2599511129,
-    2613716188,
-    2613716189,
-    2613716190,
-    1538950451,
-    2078827875,
-    1575902214,
-    1476027921,
-    4236723293,
-    1933317553,
-    4053036951,
-    4017163688,
-    2004483904,
-    4019004407,
-    412461880,
-    2108245638,
-    1945499476,
-    2862950052,
-    1836395786,
-    1888528824,
-    1462887001,
-    33890273,
-    1563051363,
-    909606183,
-    3977549511,
-    1508413002,
-    16109090,
-    2003766585,
-    2522610764,
-    473615746,
-    3159832036,
-    4184793337,
-    2418102691,
-    3331638571,
-    1605139770,
-    520439139,
-    3225389263,
-    447954687,
-    3692604948,
-    3779067511,
-    2426704050,
-    1922044877,
-    3079245127,
-    3787844203,
-    2653478244,
-    3991679221,
-    532698448,
-    32379660,
-    1454810063,
-    1257305533,
-    1089779977,
-    2115764262,
-    1323658502,
-    3336129037,
-    2814860561,
-    2081655754,
-    3005002201,
-    4125122048,
-    518912088,
-    4068273420,
-    1089688443,
-    1431954419,
-    3956179598,
-    2326066381,
-    437457885,
-    1695064557,
-    567805169,
-    4002554925,
-    24264894,
-    1993718132,
-    1575440872,
-    4271758898,
-    997184810,
-    1291441777,
-    597197681,
-    1012311631,
-    940968422,
-]
+# Cutoff frequencies for low pass filters:
+# From https://www.audiokinetic.com/en/public-library/2025.1.9_9197/?source=Help&id=associating_low_pass_filter_values_with_their_corresponding_cutoff_frequencies
+WwiseCutoffFrequencies = {
+    0: 20000,
+    1: 19567,
+    2: 19133,
+    3: 18700,
+    4: 18267,
+    5: 17833,
+    6: 17400,
+    7: 16967,
+    8: 16533,
+    9: 16100,
+    10: 15667,
+    11: 15233,
+    12: 14800,
+    13: 14367,
+    14: 13933,
+    15: 13500,
+    16: 13067,
+    17: 12633,
+    18: 12200,
+    19: 11767,
+    20: 11333,
+    21: 10900,
+    22: 10467,
+    23: 10033,
+    24: 9600,
+    25: 9167,
+    26: 8733,
+    27: 8300,
+    28: 7867,
+    29: 7433,
+    30: 7000,
+    31: 6422,
+    32: 5892,
+    33: 5405,
+    34: 4959,
+    35: 4550,
+    36: 4174,
+    37: 3829,
+    38: 3513,
+    39: 3223,
+    40: 2957,
+    41: 2713,
+    42: 2489,
+    43: 2283,
+    44: 2095,
+    45: 1922,
+    46: 1763,
+    47: 1618,
+    48: 1484,
+    49: 1361,
+    50: 1249,
+    51: 1146,
+    52: 1051,
+    53: 964,
+    54: 885,
+    55: 812,
+    56: 745,
+    57: 683,
+    58: 627,
+    59: 575,
+    60: 528,
+    61: 484,
+    62: 444,
+    63: 407,
+    64: 374,
+    65: 343,
+    66: 315,
+    67: 289,
+    68: 265,
+    69: 243,
+    70: 223,
+    71: 204,
+    72: 188,
+    73: 172,
+    74: 158,
+    75: 145,
+    76: 133,
+    77: 122,
+    78: 112,
+    79: 103,
+    80: 94,
+    81: 86,
+    82: 79,
+    83: 73,
+    84: 67,
+    85: 61,
+    86: 56,
+    87: 51,
+    88: 47,
+    89: 43,
+    90: 40,
+    91: 36,
+    92: 33,
+    93: 31,
+    94: 28,
+    95: 26,
+    96: 24,
+    97: 22,
+    98: 20,
+    99: 18,
+    100: 17,
+}

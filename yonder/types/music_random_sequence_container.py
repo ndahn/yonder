@@ -1,27 +1,30 @@
 from __future__ import annotations
+from typing import Callable, ClassVar
 from dataclasses import dataclass, field
-from typing import ClassVar
+import networkx as nx
+import pyo
 
 from yonder.hash import global_id_generator, Hash
-from yonder.enums import PropID, CurveInterpolation, SyncType
+from yonder.enums import PropID, RandomSequenceMode
 from yonder.util import logger
+from yonder.audio import PlayContext, PlaybackState
+from yonder.audio.mrsc_playlist_state import PlaylistState
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicRanSeqPlaylistItem,
     MusicTransNodeParams,
     PropBundle,
+    PropRangedModifier,
     Children,
     MusicTransitionRule,
-    MusicTransSrcRule,
-    MusicTransDstRule,
     RTPC,
     StateChunk,
 )
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
+class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
     music_trans_node_params: MusicTransNodeParams = field(
         default_factory=MusicTransNodeParams
@@ -34,12 +37,12 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         cls,
         nid: Hash,
         playlist: list[int, list[int]] = None,
-        root_ers_type: int = 0,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicRandomSequenceContainer:
         if playlist:
-            items = cls.make_playlist(playlist, root_ers_type=root_ers_type)
+            items = cls.make_playlist(playlist, ers_type=ers_type)
         else:
             items = []
 
@@ -55,6 +58,14 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
 
         obj.parent = parent
         return obj
+
+    @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/music/#music-random-sequence-container"
+
+    @property
+    def transition_rules(self) -> list[MusicTransitionRule]:
+        return self.music_trans_node_params.transition_rules
 
     @property
     def parent(self) -> int:
@@ -75,23 +86,61 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_initial_values
 
     @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.music_trans_node_params.music_node_params.node_base_params.node_initial_params.prop_ranged_modifiers.entries
+
+    @property
     def rtpcs(self) -> list[RTPC]:
         return self.music_trans_node_params.music_node_params.node_base_params.initial_rtpc.rtpcs
 
     @property
     def states(self) -> StateChunk:
-        return self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        return (
+            self.music_trans_node_params.music_node_params.node_base_params.state_chunk
+        )
 
-    def set_playlist(self, items: list, root_ers_type: int = 0) -> None:
-        playlist = self.make_playlist(items, root_ers_type)
+    def set_playlist(
+        self,
+        items: list,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
+    ) -> None:
+        playlist = self.make_playlist(items, ers_type)
         self.playlist_items = playlist
         self.music_trans_node_params.music_node_params.children.items = [
             p.segment_id for p in playlist if p.segment_id > 0
         ]
 
+    @property
+    def root_ers_type(self) -> RandomSequenceMode:
+        if not self.playlist_items:
+            return RandomSequenceMode.ContinuousSequence
+
+        return self.playlist_items[0].ers_type_enum
+
+    def get_playlist_tree(self) -> nx.DiGraph:
+        g = nx.DiGraph()
+        idx = 0
+
+        while idx < len(self.playlist_items):
+            item = self.playlist_items[idx]
+            g.add_node(item.playlist_item_id, item=item)
+
+            for child in self.playlist_items[idx + 1 : idx + 1 + item.child_count]:
+                # TODO make sure the child exists
+                g.add_node(child.playlist_item_id, item=child)
+                g.add_edge(
+                    item.playlist_item_id,
+                    child.playlist_item_id,
+                    mode=item.ers_type_enum,
+                )
+            idx += item.child_count + 1
+
+        return g
+
     @staticmethod
     def make_playlist(
-        items: list, root_ers_type: int = 0
+        items: list,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
     ) -> list[MusicRanSeqPlaylistItem]:
         def assemble(
             item: int | list | tuple,
@@ -103,23 +152,30 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
                     MusicRanSeqPlaylistItem(
                         item,
                         global_id_generator(),
-                        ers_type=4294967295,
+                        ers_type=RandomSequenceMode.Inherit.value,
                         parent=parent_id,
                     )
                 )
             else:
-                group_ers = 0 if isinstance(item, list) else 1
+                if isinstance(item[0], RandomSequenceMode):
+                    group_ers = item[0]
+                    item = item[1:]
+                elif isinstance(item, list):
+                    group_ers = RandomSequenceMode.ContinuousSequence
+                else:
+                    group_ers = RandomSequenceMode.ContinuousRandom
+
                 group_node = MusicRanSeqPlaylistItem(
                     0,
                     global_id_generator(),
-                    ers_type=group_ers,
+                    ers_type=group_ers.value,
                     parent=parent_id,
                 )
                 playlist.append(group_node)
                 for child in item:
                     assemble(child, playlist, group_node.playlist_item_id)
 
-        playlist = [MusicRanSeqPlaylistItem(0, 0, ers_type=root_ers_type)]
+        playlist = [MusicRanSeqPlaylistItem(0, 0, ers_type=ers_type.value)]
         for child in items:
             assemble(child, playlist, playlist[-1].playlist_item_id)
 
@@ -134,7 +190,7 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
         shuffle: bool = False,
         avoid_repeat_count: int = 0,
         loop_base: bool = False,
-        ers_type: int = 4294967295,
+        ers_type: RandomSequenceMode = RandomSequenceMode.Inherit,
         parent: int | MusicRanSeqPlaylistItem = 0,
     ) -> MusicRanSeqPlaylistItem:
         """Associates a segment with this playlist for random/sequential playback. A playlist is actually a flattened tree structure where children inherit settings from their parents. Use the parent parameter to associate child items to their parents.
@@ -151,8 +207,8 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             Whether to use weight when shuffling. Always True for the first playlist item.
         avoid_repeat : int, default=0
             Number of recent items to avoid repeating.
-        ers_type : int, default=0
-            Playlist playback type (0 - sequence, 1 - random, 2 - shuffle, 4294967295 - inherit).
+        ers_type : RandomSequenceMode, default=RandomSequenceMode.Inherit
+            Playlist playback type.
         parent : int, default=0
             Which playlist item to associate the new item with (0 - root).
         """
@@ -169,15 +225,15 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             if parent > 0:
                 raise ValueError("parent cannot be set for first playlist item")
 
-            if ers_type == 4294967295:
-                ers_type = 0
+            if ers_type == RandomSequenceMode.Inherit:
+                ers_type = RandomSequenceMode.ContinuousSequence
 
             use_weight = True
 
         new_item = MusicRanSeqPlaylistItem(
             segment_id,
             playlist_item_id,
-            ers_type=ers_type,
+            ers_type=ers_type.value,
             loop_base=1 if loop_base else 0,
             weight=weight,
             use_weight=1 if use_weight else 0,
@@ -205,76 +261,6 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             self.children.add(segment_id)
 
         return new_item
-
-    def add_transition_rule(
-        self,
-        source_ids: int | list[int] = -1,
-        dest_ids: int | list[int] = -1,
-        sync_type: SyncType = SyncType.Immediate,
-        source_transition_time: int = 0,
-        source_fade_offset: int = 0,
-        source_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
-        source_play_post_exit: bool = False,
-        dest_transition_time: int = 0,
-        dest_fade_offset: int = 0,
-        dest_fade_curve: CurveInterpolation = CurveInterpolation.Linear,
-        dest_play_pre_entry: bool = False,
-        transition_segment: int = 0,
-    ) -> MusicTransitionRule:
-        """Add a transition rule between segments.
-
-        Parameters
-        ----------
-        source_ids : int | list[int], default = -1
-            Source segment IDs (-1 = any).
-        dest_ids : int | list[int], default = -1
-            Destination segment IDs (-1 = any).
-        source_transition_time : int, default=0
-            Source fade out time in ms.
-        source_fade_offset : int, default=0
-            Delay in ms before the source starts fading out.
-        source_fade_curve : str, default=CurveInterpolation.Linear
-            Source fade out curve type.
-        sync_type : SyncType, default=SyncType.Immediate
-            Marker sync type.
-        dest_transition_time : int, default=0
-            Destination fade out time in ms.
-        dest_fade_offset : int, default=0
-            Delay in ms before the destination starts fading in.
-        dest_fade_curve : str, default=CurveInterpolation.Linear
-            Destination fade in curve type.
-        transition_segment: int | Node, default=0
-            A MusicSegment to play during the transition.
-        """
-        if isinstance(source_ids, int):
-            source_ids = [source_ids]
-
-        if isinstance(dest_ids, int):
-            dest_ids = [dest_ids]
-
-        rule = MusicTransitionRule(
-            source_ids=source_ids,
-            destination_ids=dest_ids,
-            source_transition_rule=MusicTransSrcRule(
-                transition_time=source_transition_time,
-                fade_curve=source_fade_curve,
-                fade_offet=source_fade_offset,
-                sync_type=sync_type,
-                play_post_exit=1 if source_play_post_exit else 0,
-            ),
-            destination_transition_rule=MusicTransDstRule(
-                transition_time=dest_transition_time,
-                fade_curve=dest_fade_curve,
-                fade_offet=dest_fade_offset,
-                play_pre_entry=1 if dest_play_pre_entry else 0,
-            ),
-        )
-
-        if transition_segment:
-            rule.transition_object.segment_id = transition_segment
-
-        self.music_trans_node_params.transition_rules.append(rule)
-        return rule
 
     def attach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -318,3 +304,93 @@ class MusicRandomSequenceContainer(StateMixin, PropertyMixin, HIRCNode):
             ]
 
         return ret
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.InputFader:
+        fader = pyo.InputFader(pyo.Sig(0))
+        my_pyo.cache["fader"] = fader
+        return pyo.Sig(fader)
+
+    def play(self, ctx: PlayContext) -> None:
+        if not self.playlist_items:
+            return
+
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        my_pyo.play()
+        self._play_next(ctx)
+
+    def _play_next(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if not my_pyo.playing:
+            return
+
+        ctx = my_pyo.ctx
+        fader: pyo.InputFader = my_pyo.cache["fader"]
+
+        state: PlaylistState = my_pyo.cache.get("playlist_state")
+        if not state:
+            playlist = self.get_playlist_tree()
+            state = PlaylistState(playlist)
+            my_pyo.cache["playlist_state"] = state
+
+        item = state.current_item
+        prev_node = None
+        if item:
+            prev_node = ctx.bank.get(item.segment_id)
+
+        while not state.finished:
+            item = state.get_next_item()
+            if not item:
+                break
+
+            node = ctx.bank.get(item.segment_id)
+            if node:
+                # Full transition support is a bit much for yonder, but we can do crossfades
+                # TODO crossfade curves if we want to be fancy
+                rule = self.music_trans_node_params.get_transition_rule(prev_node, node)
+                xfade = (
+                    max(
+                        [
+                            rule.source_transition_rule.transition_time,
+                            rule.destination_transition_rule.transition_time,
+                            50,
+                        ]
+                    )
+                    / 1000
+                )
+
+                # TODO Not respecting Step modes, but should be fine for now
+                node.register_end_trigger(ctx, self._play_next, xfade, 1)
+                node.play(ctx)
+                fader.setInput(node.pyo(ctx).output, xfade)
+
+                # Wait for the fader to finish
+                if prev_node:
+                    prev_node.release_pyo(ctx, xfade + 0.1)
+
+                break
+            else:
+                logger.warning(f"Segment {item.segment_id} not found, skipping")
+
+        if state.finished:
+            fader.setInput(pyo.Sig(0))
+
+            for cb in my_pyo.cache.pop("end_callbacks", []):
+                cb(ctx)
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+    ) -> bool:
+        """The playlist advances through its segments on its own, so external callbacks only fire once the playlist is exhausted. Infinite playlists never fire; `before` and `max_triggers` are ignored."""
+        my_pyo = self.pyo_state()
+        if not my_pyo or not my_pyo.playing:
+            return False
+
+        my_pyo.cache.setdefault("end_callbacks", []).append(callback)
+        return True

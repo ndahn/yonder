@@ -1,0 +1,8760 @@
+[
+  {
+    "nid": 1043320427,
+    "bank": "aeg009_200",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 877906112,
+    "bank": "cs_c4900",
+    "parent": 0,
+    "bus": 2623632643,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        56
+      ],
+      "1437246667": [
+        0,
+        43
+      ],
+      "830115334": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 132591641,
+    "bank": "AEG568_226",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 613164644.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 592483838,
+    "bank": "AEG568_226",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1012335883.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 582900655,
+    "bank": "AEG583_700",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 358398239.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 91129097,
+    "bank": "AEG596_515",
+    "parent": 222142377,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 222142377,
+    "bank": "AEG596_515",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 993100644,
+    "bank": "AEG596_515",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 8.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 702855096.0
+    },
+    "rtpcs": {
+      "247135359": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 1025924136,
+    "bank": "AEG596_515",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 8.0,
+      "AttenuationID": 424991782.0
+    },
+    "rtpcs": {
+      "247135359": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 953256836,
+    "bank": "AEG599_706",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 6.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 927756297.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1048288470,
+    "bank": "AEG599_720",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 537236227,
+    "bank": "AEG599_904",
+    "parent": 877906112,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 122426782,
+    "bank": "AEG599_909",
+    "parent": 877906112,
+    "bus": 2623632643,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "AttenuationID": 27968350.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 61849273,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 393239870,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 230835558,
+    "bank": "cs_main",
+    "parent": 0,
+    "bus": 436743010,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ],
+      "1240670792": [
+        0,
+        56
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 464419602,
+    "bank": "AEG930_020",
+    "parent": 877906112,
+    "bus": 2623632643,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 965522229,
+    "bank": "cs_c2100",
+    "parent": 829282515,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 829282515,
+    "bank": "cs_c2100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 620767765.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 152600961,
+    "bank": "cs_c7600",
+    "parent": 0,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1240670792": [
+        0,
+        56
+      ],
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 1004727062,
+    "bank": "cs_c2140",
+    "parent": 162461918,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 162461918,
+    "bank": "cs_c2140",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 646319692,
+    "bank": "cs_c2150",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -11.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 629017698,
+    "bank": "cs_c2270",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -5.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 175794753,
+    "bank": "cs_c2271",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 787372324.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 49501468,
+    "bank": "cs_c2500",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 375565133,
+    "bank": "cs_c3000",
+    "parent": 763012178,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 763012178,
+    "bank": "cs_c3000",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 773590426,
+    "bank": "cs_c3010",
+    "parent": 870337109,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {
+      "3903002603": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 870337109,
+    "bank": "cs_c3010",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.5,
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 494031312,
+    "bank": "cs_c3050",
+    "parent": 494413631,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 494413631,
+    "bank": "cs_c3050",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 180484699,
+    "bank": "cs_c3060",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 904934999,
+    "bank": "cs_c3070",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 358782910,
+    "bank": "cs_c3080",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 452934681.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 503698775,
+    "bank": "cs_c3100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 832770959.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 583875670,
+    "bank": "cs_c3150",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 876173634,
+    "bank": "cs_c3170",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 932052330,
+    "bank": "cs_c3170",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 658739078,
+    "bank": "cs_c3181",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 113784935,
+    "bank": "cs_c3207",
+    "parent": 152600961,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 8395845,
+    "bank": "cs_c3252",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 974140091.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 365996272,
+    "bank": "cs_c3250",
+    "parent": 159438506,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 159438506,
+    "bank": "cs_c3250",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 974140091.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 87888857,
+    "bank": "cs_c3252",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 481271865,
+    "bank": "cs_c3252",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 974140091.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 781422320,
+    "bank": "cs_c3300",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 393380306,
+    "bank": "cs_c3320",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1030640265.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1015210599,
+    "bank": "cs_c3320",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 67475951,
+    "bank": "cs_c3350",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 226662209,
+    "bank": "cs_c3360",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 145795173,
+    "bank": "cs_c3370",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 858159637,
+    "bank": "cs_c3400",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 360582469,
+    "bank": "cs_c3450",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 79183138,
+    "bank": "cs_c3460",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 602347575,
+    "bank": "cs_c3470",
+    "parent": 24309142,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": -500.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 24309142,
+    "bank": "cs_c3470",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 612104986,
+    "bank": "cs_c3500",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 203574955,
+    "bank": "cs_c3550",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 696450119,
+    "bank": "cs_c3560",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1068800242,
+    "bank": "cs_c3560",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 148381770,
+    "bank": "cs_c3600",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 315136623,
+    "bank": "cs_c3610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 444500274,
+    "bank": "cs_c3610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 623889256,
+    "bank": "cs_c3610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 632340360,
+    "bank": "cs_c3610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 465196161,
+    "bank": "cs_c3650",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 796859362,
+    "bank": "cs_c3660",
+    "parent": 386220913,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -9.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 386220913,
+    "bank": "cs_c3660",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 548628384,
+    "bank": "cs_c3661",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 638820324,
+    "bank": "cs_c3664",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 434654671,
+    "bank": "cs_c3670",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 338744509,
+    "bank": "cs_c3700",
+    "parent": 686238733,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 1064772957.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 686238733,
+    "bank": "cs_c3700",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 202393768,
+    "bank": "cs_c3730",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 403212130,
+    "bank": "cs_c3750",
+    "parent": 131980517,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 131980517,
+    "bank": "cs_c3750",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1235493,
+    "bank": "cs_c3800",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 236448408,
+    "bank": "cs_c3810",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": 600.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 576279489,
+    "bank": "cs_c3810",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 150386979,
+    "bank": "cs_c3850",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 67845579,
+    "bank": "cs_c3900",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 340836567,
+    "bank": "cs_c3910",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 56024189.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 745280050,
+    "bank": "cs_c3950",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 279072865,
+    "bank": "cs_c3970",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 879139648,
+    "bank": "cs_c4000",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 475420879,
+    "bank": "cs_c4020",
+    "parent": 566972230,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 807637401.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 566972230,
+    "bank": "cs_c4020",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 410686588.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 971253621,
+    "bank": "cs_c4040",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 301721603,
+    "bank": "cs_c4050",
+    "parent": 840962341,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "LPF": 40.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 840962341,
+    "bank": "cs_c4050",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 452934681.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 875832568,
+    "bank": "cs_c4060",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 452934681.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 796755123,
+    "bank": "cs_c4070",
+    "parent": 462848971,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 462848971,
+    "bank": "cs_c4070",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 79905854,
+    "bank": "cs_c4090",
+    "parent": 823808921,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 4.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 333832614,
+    "bank": "cs_c4090",
+    "parent": 823808921,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 823808921,
+    "bank": "cs_c4090",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 14697079,
+    "bank": "cs_c4090",
+    "parent": 1000172027,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1001343841,
+    "bank": "cs_c4090",
+    "parent": 1000172027,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1000172027,
+    "bank": "cs_c4090",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.0,
+      "Pitch": 700.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 39571,
+    "bank": "cs_c4100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 443033980,
+    "bank": "cs_c4100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 690363729,
+    "bank": "cs_c4100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 187894689,
+    "bank": "cs_c4101",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 16228242,
+    "bank": "cs_c4120",
+    "parent": 861221792,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 285299189,
+    "bank": "cs_c4120",
+    "parent": 861221792,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 795266780,
+    "bank": "cs_c4120",
+    "parent": 861221792,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 861221792,
+    "bank": "cs_c4120",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 309505581.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 16675050,
+    "bank": "cs_c4130",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 981517191,
+    "bank": "cs_c4140",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 453857997,
+    "bank": "cs_c4150",
+    "parent": 681888272,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 681888272,
+    "bank": "cs_c4150",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 87509791,
+    "bank": "cs_c4160",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 747022377,
+    "bank": "cs_c4170",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": -1200.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 926384204,
+    "bank": "cs_c4170",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 800490439,
+    "bank": "cs_c4180",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 685007829,
+    "bank": "cs_c4190",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1037518512,
+    "bank": "cs_c4200",
+    "parent": 215027186,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 711338139.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 215027186,
+    "bank": "cs_c4200",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 264469591.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 8848019,
+    "bank": "cs_c4200",
+    "parent": 1018388915,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1037420868.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1018388915,
+    "bank": "cs_c4200",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 733166508,
+    "bank": "cs_c4201",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 518022408,
+    "bank": "cs_c4210",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "3903002603": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 787534557,
+    "bank": "cs_c4210",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 822193922,
+    "bank": "cs_c4220",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 932841878,
+    "bank": "cs_c4220",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 342622689,
+    "bank": "cs_c4240",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": -700.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 398740209,
+    "bank": "cs_c4240",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 954101078,
+    "bank": "cs_c4240",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 348478327,
+    "bank": "cs_c4260",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 300984318,
+    "bank": "cs_c4270",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 730405099,
+    "bank": "cs_c4280",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 737003312,
+    "bank": "cs_c4290",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 348743022,
+    "bank": "cs_c4300",
+    "parent": 646960448,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 646960448,
+    "bank": "cs_c4300",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 6142732,
+    "bank": "cs_c4310",
+    "parent": 186827021,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": -500.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 220126927,
+    "bank": "cs_c4310",
+    "parent": 186827021,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 186827021,
+    "bank": "cs_c4310",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 776230663,
+    "bank": "cs_c4320",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 537677364,
+    "bank": "cs_c4340",
+    "parent": 459384700,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 635318940,
+    "bank": "cs_c4340",
+    "parent": 459384700,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 459384700,
+    "bank": "cs_c4340",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 315786035.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 831008609,
+    "bank": "cs_c4350",
+    "parent": 838350920,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 838350920,
+    "bank": "cs_c4350",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 503219121,
+    "bank": "cs_c4370",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 524521694,
+    "bank": "cs_c3200",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 226346041,
+    "bank": "cs_c4380",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 388922962,
+    "bank": "cs_c4380",
+    "parent": 449334433,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 449334433,
+    "bank": "cs_c4380",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {
+      "1573950492": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 944765069,
+    "bank": "cs_c4380",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 541160134,
+    "bank": "cs_c4381",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 52244713,
+    "bank": "cs_c4420",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 929144720,
+    "bank": "cs_c4430",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 319789748,
+    "bank": "cs_c4440",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 394705549,
+    "bank": "cs_c4440",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": -500.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 862273190,
+    "bank": "cs_c4450",
+    "parent": 125685720,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 543044752.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 125685720,
+    "bank": "cs_c4450",
+    "parent": 152600961,
+    "bus": 2329288837,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 925450546.0
+    },
+    "rtpcs": {
+      "1573950493": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 239672944,
+    "bank": "cs_c4460",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1047480057.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 462306684,
+    "bank": "cs_c4470",
+    "parent": 962657486,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 962657486,
+    "bank": "cs_c4470",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 463336451.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 925715999,
+    "bank": "cs_c4480",
+    "parent": 632377888,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "Pitch": 500.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 632377888,
+    "bank": "cs_c4480",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 519503562,
+    "bank": "cs_c4490",
+    "parent": 994016962,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 904850447.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 994016962,
+    "bank": "cs_c4490",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 149893510,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 455721174.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 226389388,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 890086770.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 396720814,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 68737147.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 654098830,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 275489635.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 759560761,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 953812927.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 801716313,
+    "bank": "cs_c4500",
+    "parent": 865857238,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 217918145.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 865857238,
+    "bank": "cs_c4500",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 214085408.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 506938147,
+    "bank": "cs_c4501",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 409931249.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 327929960,
+    "bank": "cs_c4503",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 868768710.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 939121068,
+    "bank": "cs_c4509",
+    "parent": 973824272,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 28307797.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 973824272,
+    "bank": "cs_c4509",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 337601229.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 704792638,
+    "bank": "cs_c4510",
+    "parent": 930108959,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 531085272.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 733363436,
+    "bank": "cs_c4510",
+    "parent": 930108959,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 761912624.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 804979431,
+    "bank": "cs_c4510",
+    "parent": 930108959,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 39426255.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 930108959,
+    "bank": "cs_c4510",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 1061176566.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 739206084,
+    "bank": "cs_c4550",
+    "parent": 32553592,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 770506870,
+    "bank": "cs_c4550",
+    "parent": 32553592,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 32553592,
+    "bank": "cs_c4550",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 463336451.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 921896273,
+    "bank": "cs_c4560",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 779932460,
+    "bank": "cs_c4570",
+    "parent": 697312456,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 697312456,
+    "bank": "cs_c4570",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 785368478,
+    "bank": "cs_c4570",
+    "parent": 957699836,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 957699836,
+    "bank": "cs_c4570",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 537233146,
+    "bank": "cs_c4600",
+    "parent": 137378152,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1030640265.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 137378152,
+    "bank": "cs_c4770",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 649477204,
+    "bank": "cs_c4601",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 693718378,
+    "bank": "cs_c4601",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 109139779.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 777462023,
+    "bank": "cs_c4602",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 974587851,
+    "bank": "cs_c4602",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": 200.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 109139779.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 308648123,
+    "bank": "cs_c4620",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 1030640265.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 648880207,
+    "bank": "cs_c4630",
+    "parent": 510119476,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 510119476,
+    "bank": "cs_c4630",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 698205792.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 133474561,
+    "bank": "cs_c4640",
+    "parent": 977619701,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 974158208,
+    "bank": "cs_c4640",
+    "parent": 977619701,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 205465588.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 977619701,
+    "bank": "cs_c4640",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 54279006.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 166788483,
+    "bank": "cs_c4650",
+    "parent": 586723631,
+    "bus": 0,
+    "aux1": 3125543356,
+    "aux2": 3125543359,
+    "aux3": 3125543358,
+    "aux4": 3125543353,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 586723631,
+    "bank": "cs_c4650",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1072985637.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 958420188,
+    "bank": "cs_c4660",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 511727698.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 144839889,
+    "bank": "cs_c4670",
+    "parent": 437784824,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 437784824,
+    "bank": "cs_c4670",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 64635763,
+    "bank": "cs_c4680",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 553248409,
+    "bank": "cs_c4690",
+    "parent": 507661917,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 507661917,
+    "bank": "cs_c4690",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 601173875,
+    "bank": "cs_c4770",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 506175048.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 986247389,
+    "bank": "cs_c2130",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.5,
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 986268837,
+    "bank": "cs_c4800",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 140086695.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 474331972,
+    "bank": "cs_c4810",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 751116396,
+    "bank": "cs_c4820",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 211040376,
+    "bank": "cs_c4900",
+    "parent": 4339470,
+    "bus": 0,
+    "aux1": 965907223,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": 1.0,
+      "AttenuationID": 1025408307.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 308351851,
+    "bank": "cs_c4900",
+    "parent": 4339470,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 910388153.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 565977134,
+    "bank": "cs_m60",
+    "parent": 4339470,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 953239322,
+    "bank": "cs_c4900",
+    "parent": 4339470,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 595495134.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 4339470,
+    "bank": "cs_m60",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 563094463.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 463034875,
+    "bank": "cs_c4901",
+    "parent": 641563284,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 786084663.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 583606776,
+    "bank": "cs_c4901",
+    "parent": 641563284,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 202541212.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 721694686,
+    "bank": "cs_c4901",
+    "parent": 641563284,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 171654385.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 807584397,
+    "bank": "cs_c4901",
+    "parent": 641563284,
+    "bus": 0,
+    "aux1": 965907223,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": 1.0,
+      "AttenuationID": 1060786987.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 641563284,
+    "bank": "cs_c4901",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.5,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 906246228.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 84723778,
+    "bank": "cs_c4910",
+    "parent": 720965742,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 199445699,
+    "bank": "cs_c4910",
+    "parent": 720965742,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 223789297,
+    "bank": "cs_c4910",
+    "parent": 720965742,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 944828011,
+    "bank": "cs_c4910",
+    "parent": 720965742,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 720965742,
+    "bank": "cs_c4910",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 491355620.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 204626672,
+    "bank": "cs_c4950",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 1013146305,
+    "bank": "cs_c4950",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 960876744.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 352997817,
+    "bank": "cs_c4980",
+    "parent": 490879285,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 490879285,
+    "bank": "cs_c4980",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 464394082,
+    "bank": "cs_c5010",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 135575903,
+    "bank": "cs_c5040",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 398761012,
+    "bank": "cs_c5070",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 223906446.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 717077131,
+    "bank": "cs_c5080",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 260693128,
+    "bank": "cs_c5090",
+    "parent": 632356747,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 632356747,
+    "bank": "cs_c5090",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 936471518,
+    "bank": "cs_c5110",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 805538506,
+    "bank": "cs_c5160",
+    "parent": 384968936,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "LPF": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1035157245,
+    "bank": "cs_c5160",
+    "parent": 384968936,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "LPF": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 384968936,
+    "bank": "cs_c5160",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 247722571,
+    "bank": "cs_c5190",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "HPF": 30.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 787372324.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 538477309,
+    "bank": "cs_c5190",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 77821917,
+    "bank": "cs_c5210",
+    "parent": 978986009,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 978986009,
+    "bank": "cs_c5210",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 139565086,
+    "bank": "cs_c5240",
+    "parent": 507511091,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -9.0,
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 632090221,
+    "bank": "cs_c5240",
+    "parent": 507511091,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -9.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 507511091,
+    "bank": "cs_c5240",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 321329729,
+    "bank": "cs_c5250",
+    "parent": 568045123,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 568045123,
+    "bank": "cs_c5250",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 47504240,
+    "bank": "cs_c5310",
+    "parent": 98347967,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0,
+      "Pitch": -500.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 98347967,
+    "bank": "cs_c5310",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 366403567,
+    "bank": "cs_c5310",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 135415922,
+    "bank": "cs_c5810",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 286159768,
+    "bank": "cs_c5820",
+    "parent": 624236768,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 624236768,
+    "bank": "cs_c5820",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 637512790.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 976988181,
+    "bank": "cs_c5830",
+    "parent": 999541735,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 999541735,
+    "bank": "cs_c5830",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 33333002,
+    "bank": "cs_c5860",
+    "parent": 1010777285,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 129438269.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 285192516,
+    "bank": "cs_c5860",
+    "parent": 1010777285,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 813920131.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 788297783,
+    "bank": "cs_c5860",
+    "parent": 1010777285,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 455721174.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 850030503,
+    "bank": "cs_c5860",
+    "parent": 1010777285,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 974532963.0
+    },
+    "rtpcs": {
+      "1099690345": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 852004724,
+    "bank": "cs_c5860",
+    "parent": 1010777285,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 631918034.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1010777285,
+    "bank": "cs_c5860",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 44456899.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 867343421,
+    "bank": "cs_c5870",
+    "parent": 158858838,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 158858838,
+    "bank": "cs_c5870",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 452934681.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 322858205,
+    "bank": "cs_c5870",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 286493067,
+    "bank": "cs_c5900",
+    "parent": 1027446708,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 527600817,
+    "bank": "cs_c5900",
+    "parent": 1027446708,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1027446708,
+    "bank": "cs_c5900",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 934515078,
+    "bank": "cs_c6060",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 787372324.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 646319693,
+    "bank": null,
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 139926393,
+    "bank": "cs_c7000",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 787372324.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 475602246,
+    "bank": "cs_c7100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 65250964,
+    "bank": "cs_c7500",
+    "parent": 35553096,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 12.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 35553096,
+    "bank": "cs_c7500",
+    "parent": 377858245,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "Priority": 60.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 573686299,
+    "bank": "cs_c7500",
+    "parent": 377858245,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 713260706.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1043890888,
+    "bank": "cs_c7500",
+    "parent": 587990998,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 9.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 587990998,
+    "bank": "cs_c7500",
+    "parent": 377858245,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 183483045.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 690459659,
+    "bank": "cs_c7500",
+    "parent": 377858245,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 779892619,
+    "bank": "cs_c7500",
+    "parent": 377858245,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 4.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 377858245,
+    "bank": "cs_c7500",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.5,
+      "AttenuationID": 458680560.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 393537410,
+    "bank": "cs_c7510",
+    "parent": 982825236,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.5
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 573817851,
+    "bank": "cs_c7510",
+    "parent": 982825236,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.5,
+      "Pitch": -80.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 982825236,
+    "bank": "cs_c7510",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.5,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 852657003.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 829463748,
+    "bank": "cs_c7530",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 25.0,
+      "AttenuationID": 144282918.0,
+      "PositioningTypeBlend": 85.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 223126702,
+    "bank": "cs_c7540",
+    "parent": 244911369,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "AttenuationID": 598545292.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 244911369,
+    "bank": "cs_c7540",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 510721919,
+    "bank": "cs_c7561",
+    "parent": 953454021,
+    "bus": 2299321487,
+    "aux1": 2241973003,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "OutputBusVolume": -6.0,
+      "AttenuationID": 1039930806.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 600210225,
+    "bank": "cs_c7561",
+    "parent": 953454021,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 476643724.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 953454021,
+    "bank": "cs_c7561",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 621203279.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 140731991,
+    "bank": "cs_c7580",
+    "parent": 472275605,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 736310846.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 730193930,
+    "bank": "cs_c7580",
+    "parent": 472275605,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 60.0,
+      "PriorityDistanceOffset": -100.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 346102893.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 472275605,
+    "bank": "cs_c7580",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 718282983.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 201083030,
+    "bank": "cs_c7610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 351898921,
+    "bank": "cs_c7610",
+    "parent": 384719496,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 1001669773.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 384719496,
+    "bank": "cs_c7610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 615625074,
+    "bank": "cs_c7610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 46188800,
+    "bank": "cs_c7610",
+    "parent": 1001247286,
+    "bus": 0,
+    "aux1": 2352684120,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 707966386.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 273554556,
+    "bank": "cs_c7610",
+    "parent": 1001247286,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 435367118,
+    "bank": "cs_c7610",
+    "parent": 1001247286,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 995572914.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 928758576,
+    "bank": "cs_c7610",
+    "parent": 1001247286,
+    "bus": 0,
+    "aux1": 2352684120,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "AttenuationID": 509265918.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1001247286,
+    "bank": "cs_c7610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 19926814,
+    "bank": "cs_c7610",
+    "parent": 1047900753,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 484156753.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1047900753,
+    "bank": "cs_c7610",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 234662761,
+    "bank": "cs_c7620",
+    "parent": 619699944,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 541687807.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 262572556,
+    "bank": "cs_c7620",
+    "parent": 619699944,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 60.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 699697620.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 439115627,
+    "bank": "cs_c7620",
+    "parent": 619699944,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 104714605.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 775210947,
+    "bank": "cs_c7620",
+    "parent": 619699944,
+    "bus": 0,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 373600536.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 921621484,
+    "bank": "cs_c7620",
+    "parent": 619699944,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 699414255.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 619699944,
+    "bank": "cs_c7620",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 403126359,
+    "bank": "cs_c7700",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 559415670.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 477710231,
+    "bank": "cs_c7710",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 284368880,
+    "bank": "cs_c7720",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 496341377,
+    "bank": "cs_c7800",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 938934351,
+    "bank": "cs_c7810",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 700532474,
+    "bank": "cs_c7820",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0,
+      "AttenuationID": 935173868.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 934302629,
+    "bank": "cs_c7900",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 350007305,
+    "bank": "cs_c7910",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 51108710.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        0
+      ],
+      "830115334": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 844748492,
+    "bank": "cs_c7910",
+    "parent": 152600961,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 603610054.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 288175888,
+    "bank": "cs_c7920",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 87849576,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 977260183.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 226479016,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "UserAuxSendVolume0": -9.0,
+      "AttenuationID": 256197514.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 419919995,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 2352684120,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 6.0,
+      "AttenuationID": 152502623.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 515340165,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 2352684120,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "UserAuxSendVolume0": -12.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 733865625,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 2352684120,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 9.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 803510219,
+    "bank": "cs_c7930",
+    "parent": 659267240,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 659267240,
+    "bank": "cs_c7930",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 890773395.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 194647028,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0,
+      "HPF": 35.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "2250136691": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 855533467,
+    "bank": "Hero09",
+    "parent": 0,
+    "bus": 1069431850,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        56
+      ],
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 468763617,
+    "bank": "cs_c8100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 981851728.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 978859100,
+    "bank": "cs_c8100",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 713277698,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 262473819.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 710857031,
+    "bank": "cs_m10",
+    "parent": 111976331,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 111976331,
+    "bank": "cs_m10",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 456184319,
+    "bank": "cs_m11",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 278790869,
+    "bank": "cs_m10",
+    "parent": 0,
+    "bus": 1788190166,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {
+      "1240670792": [
+        0,
+        56
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 533387618,
+    "bank": "cs_m12",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 630346031,
+    "bank": "cs_m13",
+    "parent": 717267958,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 717267958,
+    "bank": "cs_m13",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 287351243,
+    "bank": "cs_m13_020",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 478097293,
+    "bank": "cs_m15",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 329746353,
+    "bank": "cs_m18",
+    "parent": 975253487,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 4.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 140148135.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 975253487,
+    "bank": "cs_m18",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 122869312,
+    "bank": "cs_m10",
+    "parent": 857148195,
+    "bus": 1069431850,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 5.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 266769178.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 928710772,
+    "bank": "cs_m19",
+    "parent": 932384483,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 726294890.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 932384483,
+    "bank": "cs_m19",
+    "parent": 857148195,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 857148195,
+    "bank": "cs_m10",
+    "parent": 278790869,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 211833737,
+    "bank": "cs_c7520",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 6.5,
+      "AttenuationID": 800576772.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 267859518,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 65056114,
+    "bank": "cs_m64",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 52203369,
+    "bank": "cs_m60",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 99549629,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 531253968,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 688230123,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 565698791.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 809133016,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.5
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 919323028,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1047060021,
+    "bank": "cs_m64",
+    "parent": 793949566,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0,
+      "Priority": 60.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 309229141.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 793949566,
+    "bank": "cs_m64",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 280952880,
+    "bank": "cs_m60_010",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 289027468,
+    "bank": "cs_m60_020",
+    "parent": 807529003,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 395501524.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 807529003,
+    "bank": "cs_m60_020",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 246604486,
+    "bank": "cs_m60_030",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 901748538,
+    "bank": "cs_m60_040",
+    "parent": 358690018,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 120447689.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 358690018,
+    "bank": "cs_m60_040",
+    "parent": 269487860,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 186996683,
+    "bank": "cs_m60_040",
+    "parent": 449812058,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 573988928.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 326033462,
+    "bank": "cs_m60_040",
+    "parent": 449812058,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 63886226.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 449812058,
+    "bank": "cs_m60_040",
+    "parent": 269487860,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 269487860,
+    "bank": "cs_m60_040",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 638869909.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 56187457,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 118735161,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 3695558217,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -4.0,
+      "AttenuationID": 653390006.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 517013648,
+    "bank": "cs_m64",
+    "parent": 267859518,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 6.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 54550794.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 132426610,
+    "bank": "cs_m64",
+    "parent": 483080615,
+    "bus": 0,
+    "aux1": 3695558217,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "UserAuxSendVolume0": 4.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 334724515,
+    "bank": "cs_m64",
+    "parent": 483080615,
+    "bus": 0,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 6.0,
+      "Pitch": -330.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": 7.0,
+      "AttenuationID": 882217089.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 483080615,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": 6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 527291035,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1043878976,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1072088987,
+    "bank": "cs_m64",
+    "parent": 65056114,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 487598147.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 6322740,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 422221831.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 81369419,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 175056945.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 118651285,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 126737162.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 704885600,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 714300274,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 983258061,
+    "bank": "cs_main",
+    "parent": 61849273,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 265618848.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 230258876,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 1802970398,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 242229278,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 2623632643,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "1437246667": [
+        0,
+        43
+      ],
+      "830115334": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 910339453,
+    "bank": "cs_main",
+    "parent": 311317705,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 311317705,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 1788190166,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 46387047,
+    "bank": "cs_main",
+    "parent": 699973671,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {
+      "2250136691": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 739367457,
+    "bank": "cs_main",
+    "parent": 699973671,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.5,
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 463336451.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 903774868,
+    "bank": "cs_main",
+    "parent": 699973671,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 975961113,
+    "bank": "cs_main",
+    "parent": 699973671,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 543044752.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 983501886,
+    "bank": "cs_main",
+    "parent": 699973671,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -20.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 452934681.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 699973671,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 2299321487,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 921882382.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 980303759,
+    "bank": "cs_main",
+    "parent": 785894704,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 102325338.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 785894704,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 1784196969,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.5,
+      "Priority": 55.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 1050796747.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ],
+      "1240670792": [
+        0,
+        56
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 706500693,
+    "bank": "cs_main",
+    "parent": 842313849,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 842313849,
+    "bank": "cs_main",
+    "parent": 230835558,
+    "bus": 2599410046,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {
+      "3295650298": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 278717724,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 452703324.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 457703656,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 464855001.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 538477870,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0,
+      "Priority": 60.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 305229184,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 4.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 417639556,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 436455579,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 663574350,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 698921558,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 703543093,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 982426785,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -9.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1040519811,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -11.5,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1043953278,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -5.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 1073482447,
+    "bank": "cs_main",
+    "parent": 544357673,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 544357673,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 1069431850,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -5.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ],
+      "2250136691": [
+        0,
+        0
+      ],
+      "770201764": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 67794906,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "1630613026": [
+        0,
+        2
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 281731033,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 872056012,
+    "bank": "cs_main",
+    "parent": 497819310,
+    "bus": 3739175678,
+    "aux1": 942828841,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": 2.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {
+      "2752886531": [
+        0,
+        39
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 497819310,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 527811136,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.5,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 546453922,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1060020966,
+    "bank": "cs_main",
+    "parent": 1051298669,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1051298669,
+    "bank": "cs_main",
+    "parent": 855533467,
+    "bus": 1069431850,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0
+    },
+    "rtpcs": {
+      "2250136691": [
+        0,
+        0
+      ],
+      "770201764": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 778760622,
+    "bank": "cs_sm60",
+    "parent": 272149743,
+    "bus": 1788190166,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 272149743,
+    "bank": "cs_sm60",
+    "parent": 278790869,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 917023068,
+    "bank": "Hero01",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1036554784,
+    "bank": "Hero10",
+    "parent": 0,
+    "bus": 1069431850,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 845742150.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 934979808,
+    "bank": "Hero02",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 442876514,
+    "bank": "Hero03",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 266643970,
+    "bank": "Hero04",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 52781010,
+    "bank": "Hero05",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 623599187,
+    "bank": "Hero06",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 112338150,
+    "bank": "Hero07",
+    "parent": 326093588,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 133709741,
+    "bank": "Hero07",
+    "parent": 326093588,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 323386203,
+    "bank": "Hero07",
+    "parent": 326093588,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -5.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 411189861,
+    "bank": "Hero07",
+    "parent": 326093588,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 326093588,
+    "bank": "Hero07",
+    "parent": 347757686,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 101298943,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 297756488,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 343561811,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 889046512,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 915268777,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1005898392,
+    "bank": "Hero07",
+    "parent": 421616695,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 421616695,
+    "bank": "Hero07",
+    "parent": 347757686,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 400800127,
+    "bank": "Hero07",
+    "parent": 974452444,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Pitch": 800.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 655594947,
+    "bank": "Hero07",
+    "parent": 974452444,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 829433492,
+    "bank": "Hero07",
+    "parent": 974452444,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 869085079,
+    "bank": "Hero07",
+    "parent": 974452444,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 974452444,
+    "bank": "Hero07",
+    "parent": 347757686,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1027483810,
+    "bank": "Hero07",
+    "parent": 347757686,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 347757686,
+    "bank": "Hero07",
+    "parent": 232239277,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 398588302,
+    "bank": "Hero07",
+    "parent": 232239277,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 900599715,
+    "bank": "Hero07",
+    "parent": 232239277,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 232239277,
+    "bank": "Hero07",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 149187500,
+    "bank": "Hero08",
+    "parent": 870419845,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -1.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 830393152,
+    "bank": "Hero08",
+    "parent": 837481787,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 837481787,
+    "bank": "Hero08",
+    "parent": 870419845,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 944221094,
+    "bank": "Hero08",
+    "parent": 870419845,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 977062003,
+    "bank": "Hero08",
+    "parent": 870419845,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 870419845,
+    "bank": "Hero08",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.1
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 622437009,
+    "bank": "Hero09",
+    "parent": 444892421,
+    "bus": 1802970398,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0,
+      "CenterPCT": 50.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 53456448,
+    "bank": "Hero09",
+    "parent": 782094438,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -4.0,
+      "Priority": 10.0,
+      "PriorityDistanceOffset": 0.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 474368675,
+    "bank": "Hero09",
+    "parent": 782094438,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 782094438,
+    "bank": "Hero09",
+    "parent": 444892421,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 995505312,
+    "bank": "Hero09",
+    "parent": 444892421,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 444892421,
+    "bank": "Hero09",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 873296590,
+    "bank": "vcmain",
+    "parent": 358758978,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -6.0,
+      "PriorityDistanceOffset": -49.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 569450472.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 358758978,
+    "bank": "vcmain",
+    "parent": 0,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -16.0,
+      "AttenuationID": 321981612.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 664664366,
+    "bank": "Hero10",
+    "parent": 1036554784,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 1004588775.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 335436656,
+    "bank": "s10_00_0020",
+    "parent": 0,
+    "bus": 3735027030,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "Priority": 80.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 531983591,
+    "bank": "cs_c2130",
+    "parent": 986247389,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {
+      "830115334": [
+        0,
+        43
+      ],
+      "1437246667": [
+        0,
+        43
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 660775867,
+    "bank": "cs_c2130",
+    "parent": 986247389,
+    "bus": 4251783213,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 497093382.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 503776247,
+    "bank": "cs_c3201",
+    "parent": 152600961,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 918318638,
+    "bank": "cs_c3210",
+    "parent": 152600961,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 203107347,
+    "bank": "cs_c3671",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 750211505,
+    "bank": "cs_c4750",
+    "parent": 187115395,
+    "bus": 3965536909,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 187115395,
+    "bank": "cs_c4750",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 633069523.0
+    },
+    "rtpcs": {
+      "830115334": [
+        0,
+        0
+      ],
+      "1437246667": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 336549086,
+    "bank": "cs_c7560",
+    "parent": 496496910,
+    "bus": 3170124113,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0,
+      "Priority": 80.0,
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 659812440.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 496496910,
+    "bank": "cs_c7560",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "AttenuationID": 294805965.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 645674585,
+    "bank": "cs_c7560",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0,
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 41622849.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 294591765,
+    "bank": "cs_c7600",
+    "parent": 757011691,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 423057032,
+    "bank": "cs_c7600",
+    "parent": 757011691,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 669934101.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 753457926,
+    "bank": "cs_c7600",
+    "parent": 757011691,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0,
+      "LPF": 35.0,
+      "PriorityDistanceOffset": -49.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 757011691,
+    "bank": "cs_c7600",
+    "parent": 152600961,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 1.0,
+      "PriorityDistanceOffset": -49.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -96.0,
+      "GameAuxSendVolume": -6.0,
+      "AttenuationID": 543044752.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 459437083,
+    "bank": "cs_m10",
+    "parent": 111976331,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 534086073,
+    "bank": "cs_m10",
+    "parent": 111976331,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 960722582,
+    "bank": "cs_m10",
+    "parent": 710857031,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1052400514,
+    "bank": "cs_m10",
+    "parent": 874273336,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "AttenuationID": 455591651.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 874273336,
+    "bank": "cs_m10",
+    "parent": 111976331,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 123528659,
+    "bank": "vc101",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 253896799,
+    "bank": "vc101",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 342882024,
+    "bank": "vc102",
+    "parent": 164843058,
+    "bus": 0,
+    "aux1": 1853589643,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 4.0,
+      "PanFR": 76.59,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -12.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 164843058,
+    "bank": "vc102",
+    "parent": 358758978,
+    "bus": 0,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "CenterPCT": 50.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 540788940,
+    "bank": "vc102",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {},
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 216450094,
+    "bank": "vc103",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 368672737,
+    "bank": "vc103",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "GameAuxSendVolume": -12.0
+    },
+    "rtpcs": {
+      "2375980958": [
+        0,
+        3
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 574410512,
+    "bank": "vc313",
+    "parent": 358758978,
+    "bus": 0,
+    "aux1": 719093136,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -3.0,
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -3.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0,
+      "PositioningTypeBlend": 0.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 602581557,
+    "bank": "vc313",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 0.1,
+      "Priority": 80.0,
+      "GameAuxSendVolume": -12.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1033223305,
+    "bank": "vc105",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 1056364945,
+    "bank": "vc105",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "GameAuxSendVolume": -12.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 628633791,
+    "bank": "vc106",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 860983186,
+    "bank": "vc106",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "CenterPCT": 50.0,
+      "AttenuationID": 146272751.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 836323647,
+    "bank": "vc107",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 925379424,
+    "bank": "vc107",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "GameAuxSendVolume": -12.0
+    },
+    "rtpcs": {
+      "2375980958": [
+        0,
+        0
+      ]
+    },
+    "states": {}
+  },
+  {
+    "nid": 323430769,
+    "bank": "vc108",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 757991377,
+    "bank": "vc108",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 269127024.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 13816581,
+    "bank": "vc109",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -16.0,
+      "AttenuationID": 991425611.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 444165442,
+    "bank": "vc109",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 1853589643,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -12.0,
+      "GameAuxSendVolume": -16.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 321710730,
+    "bank": "vc110",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.5,
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -16.0,
+      "AttenuationID": 142755116.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 545077843,
+    "bank": "vc110",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -16.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 617471433,
+    "bank": "vc209",
+    "parent": 358758978,
+    "bus": 1017377641,
+    "aux1": 3524127397,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -2.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -2.0,
+      "AttenuationID": 784834208.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 640915576,
+    "bank": "vc210",
+    "parent": 264885192,
+    "bus": 2641034796,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 3.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 264885192,
+    "bank": "vc210",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 1000003165.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 999923680,
+    "bank": "vc210",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 162377778,
+    "bank": "vc309",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 439232600,
+    "bank": "vc309",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "HPF": 10.0,
+      "Priority": 80.0,
+      "GameAuxSendVolume": -20.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 185292530,
+    "bank": "vc311",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 3639472402,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": 2.0,
+      "LPF": 37.0,
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -8.0,
+      "GameAuxSendVolume": -12.0,
+      "OutputBusVolume": -3.0,
+      "AttenuationID": 483125625.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 763780963,
+    "bank": "vc311",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 318854798,
+    "bank": "vc312",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 528538126,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "LPF": 35.0,
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "UserAuxSendVolume0": -10.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 99577457.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 704067094,
+    "bank": "vc312",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 337347057,
+    "bank": "vc313",
+    "parent": 483624647,
+    "bus": 0,
+    "aux1": 3770122600,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "LPF": 30.0,
+      "UserAuxSendVolume0": -12.0,
+      "AttenuationID": 128683589.0,
+      "PositioningTypeBlend": 40.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 781912216,
+    "bank": "vc313",
+    "parent": 483624647,
+    "bus": 0,
+    "aux1": 719093136,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "UserAuxSendVolume0": -1.0,
+      "AttenuationID": 767237485.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 868209483,
+    "bank": "vc313",
+    "parent": 483624647,
+    "bus": 0,
+    "aux1": 3822118266,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "UserAuxSendVolume0": -12.0,
+      "AttenuationID": 854026978.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 483624647,
+    "bank": "vc313",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 639380624.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 822982453,
+    "bank": "vc313",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 161834152,
+    "bank": "vc314",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 106423263.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 238821247,
+    "bank": "vc314",
+    "parent": 358758978,
+    "bus": 2975624521,
+    "aux1": 0,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Priority": 80.0,
+      "CenterPCT": 50.0,
+      "GameAuxSendVolume": -12.0,
+      "AttenuationID": 926154817.0
+    },
+    "rtpcs": {},
+    "states": {}
+  },
+  {
+    "nid": 731725613,
+    "bank": "vcmain",
+    "parent": 358758978,
+    "bus": 1862294529,
+    "aux1": 3822118266,
+    "aux2": 0,
+    "aux3": 0,
+    "aux4": 0,
+    "properties": {
+      "Volume": -5.0,
+      "Pitch": -6.0,
+      "LPF": 25.0,
+      "Priority": 80.0,
+      "UserAuxSendVolume0": 9.0,
+      "GameAuxSendVolume": -6.0
+    },
+    "rtpcs": {},
+    "states": {}
+  }
+]

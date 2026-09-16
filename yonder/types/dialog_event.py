@@ -9,13 +9,14 @@ from .base_types import (
     GameSync,
     DecisionTreeNode,
     PropBundle,
+    PropRangedModifier,
     PropRangedModifiers,
 )
-from .mixins import PropertyMixin
+from .mixins import PropertyMixin, DecisionTreeMixin
 
 
 @dataclass(repr=False, eq=False)
-class DialogueEvent(PropertyMixin, HIRCNode):
+class DialogueEvent(DecisionTreeMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 15
     probability: int = 100
     tree_depth: int = 0
@@ -41,6 +42,10 @@ class DialogueEvent(PropertyMixin, HIRCNode):
     def properties(self) -> list[PropBundle]:
         return self.prop_bundle
 
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.ranged_modifiers.entries
+
     def get_tree_size(self) -> int:
         num_tree_nodes = 1
         todo = [self.tree]
@@ -51,7 +56,7 @@ class DialogueEvent(PropertyMixin, HIRCNode):
 
     def validate(self) -> None:
         if len(self.group_types) != len(self.arguments):
-            raise ValueError("Found mismatch between group_types and arguments")
+            raise ValueError(f"{self}: found mismatch between group_types and arguments")
 
         # TODO verify all branches have the correct depth
 

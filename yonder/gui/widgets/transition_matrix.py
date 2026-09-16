@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder.types.base_types import MusicTransitionRule
 from yonder.enums import SyncType
 from yonder.gui import style
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from yonder.gui.dialogs.edit_transition_dialog import edit_transition_dialog
 from .dpg_item import DpgItem
@@ -53,6 +54,7 @@ class add_transition_matrix(DpgItem):
         label: str = "Transition Rules",
         rule_template: MusicTransitionRule = None,
         fixed_sync_type: SyncType = None,
+        initial_height: int = 400,
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
@@ -92,15 +94,27 @@ class add_transition_matrix(DpgItem):
         if label:
             dpg.add_text(label, parent=parent, tag=self._t("transition_matrix/title"))
 
-        dpg.add_table(
-            header_row=True,
-            no_pad_innerX=True,
-            scrollX=True,
-            scrollY=True,
-            policy=dpg.mvTable_SizingFixedFit,
+        with dpg.child_window(
+            border=False,
+            autosize_x=True,
+            resizable_y=True,
+            height=initial_height,
+            horizontal_scrollbar=True,
             parent=parent,
-            tag=self._tag,
-        )
+        ):
+            with dpg.child_window(
+                border=False,
+                auto_resize_x=True,
+                auto_resize_y=True,
+            ):
+                dpg.add_table(
+                    header_row=True,
+                    no_pad_innerX=True,
+                    scrollX=False,
+                    scrollY=False,
+                    policy=dpg.mvTable_SizingFixedFit,
+                    tag=self.tag,
+                )
 
         self.regenerate()
 
@@ -127,8 +141,7 @@ class add_transition_matrix(DpgItem):
     ) -> tuple[int, MusicTransitionRule]:
         """Return ``(index, rule)`` of the most specific matching rule.
 
-        Specificity: exact+exact > exact+wildcard > wildcard+exact >
-        wildcard+wildcard. First encountered wins among equal scores.
+        Specificity: exact+exact > exact+wildcard > wildcard+exact > wildcard+wildcard. First encountered wins among equal scores.
         """
         best_idx = -1
         best_rule = None
@@ -191,8 +204,10 @@ class add_transition_matrix(DpgItem):
 
     def _register_context_menu(self, btn: str, cell_info: tuple[int, int, int]) -> None:
         registry = f"{btn}_handlers"
+
         if not dpg.does_item_exist(registry):
             dpg.add_item_handler_registry(tag=registry)
+
         dpg.add_item_clicked_handler(
             dpg.mvMouseButton_Right,
             callback=self._open_context_menu,
@@ -206,6 +221,11 @@ class add_transition_matrix(DpgItem):
     def _add_rule_for_cell(
         self, sender: str, app_data: Any, cell_info: tuple[int, int, int]
     ) -> None:
+        tag = self._t("add_rule_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         src, dst, _ = cell_info
         new_rule = deepcopy(self._rule_template)
         new_rule.source_ids = [src]
@@ -217,7 +237,9 @@ class add_transition_matrix(DpgItem):
             self._on_rule_changed,
             lock_sync_type=self._fixed_sync_type is not None,
             user_data=True,
+            tag=tag
         )
+        center_window(tag, 0.2, 0.2)
 
     def _delete_rule_for_cell(
         self, sender: str, app_data: Any, cell_info: tuple[int, int, int]
@@ -252,31 +274,39 @@ class add_transition_matrix(DpgItem):
     def _open_edit_transition_dialog(
         self, sender: str, app_data: Any, rule: MusicTransitionRule
     ) -> None:
+        tag = self._t(f"edit_rule_dialog_{id(rule)}")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         is_new = not rule
         if is_new:
             rule = deepcopy(self._rule_template)
+
         edit_transition_dialog(
             rule,
             self.targets,
             self._on_rule_changed,
             lock_sync_type=self._fixed_sync_type is not None,
             user_data=is_new,
+            tag=tag,
         )
+        center_window(tag, 0.2, 0.2)
 
     def _on_rule_changed(self, sender: str, rule: dict, is_new: bool) -> None:
         if is_new:
             self.rules.append(rule)
         if self._on_transition_rules_changed:
-            self._on_transition_rules_changed(self._tag, self.rules, self._user_data)
+            self._on_transition_rules_changed(self.tag, self.rules, self._user_data)
         self.regenerate()
 
     # === Public ========================================================
 
     def regenerate(self) -> None:
         """Rebuild the full matrix from the node's current transition rules."""
-        dpg.delete_item(self._tag, children_only=True, slot=0)
-        dpg.delete_item(self._tag, children_only=True, slot=1)
-        dpg.push_container_stack(self._tag)
+        dpg.delete_item(self.tag, children_only=True, slot=0)
+        dpg.delete_item(self.tag, children_only=True, slot=1)
+        dpg.push_container_stack(self.tag)
 
         children = [-1] + list(self.targets)
         cell_size = self._cell_size
@@ -284,7 +314,7 @@ class add_transition_matrix(DpgItem):
         table_h = min(
             400, 60 + self._cell_size * 1.8 + len(self.targets) * (self._cell_size + 5)
         )
-        dpg.configure_item(self._tag, height=table_h)
+        dpg.configure_item(self.tag, height=table_h)
 
         # Row-label column (no header — header row shows destination IDs)
         dpg.add_table_column()

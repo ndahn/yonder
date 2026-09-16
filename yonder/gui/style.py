@@ -20,6 +20,10 @@ class RGBA(tuple):
         return super().__new__(cls, (color_or_r, g, b, a))
 
     @classmethod
+    def create_gradient(cls, start: RGBA, to: RGBA, steps: int) -> list[RGBA]:
+        return [start.mix(to, i / steps) for i in range(steps)]
+
+    @classmethod
     def from_floats(cls, r: float, g: float, b: float, a: float = 1.0) -> RGBA:
         return RGBA(int(r * 255), int(g * 255), int(b * 255), int(a * 255))
 
@@ -70,10 +74,10 @@ class RGBA(tuple):
 
     def mix(self, other: "tuple | RGBA", ratio: float = 0.5) -> RGBA:
         alpha = other[3] if len(other) > 3 else 255
-        r = ratio * self.r + (1 - ratio) * other[0]
-        g = ratio * self.g + (1 - ratio) * other[1]
-        b = ratio * self.b + (1 - ratio) * other[2]
-        a = ratio * self.a + (1 - ratio) * alpha
+        r = (1 - ratio) * self.r + ratio * other[0]
+        g = (1 - ratio) * self.g + ratio * other[1]
+        b = (1 - ratio) * self.b + ratio * other[2]
+        a = (1 - ratio) * self.a + ratio * alpha
         return RGBA(r, g, b, a)
 
     def shift(self, amount: int) -> RGBA:
@@ -124,6 +128,7 @@ muted_green = RGBA(80, 180, 120, 255)
 muted_violet = RGBA(140, 90, 180, 255)
 muted_yellow = RGBA(200, 180, 60, 255)
 muted_teal = RGBA(60, 180, 180, 255)
+muted_ocean = RGBA(36, 107, 107, 255)
 muted_rose = RGBA(200, 80, 120, 255)
 muted_sky = RGBA(48, 70, 100, 255)
 
@@ -132,12 +137,16 @@ class themes:
     notification_frame = None
     item_default = None
     item_highlight = None
+    node_link_enabled = None
+    node_link_disabled = None
     link_button = None
     transparent_button = None
     no_padding = None
     player_plot = None
+    graph_view = None
     plot_blue = None
     plot_red = None
+    plot_fit_padding = None
 
     @cache
     @staticmethod
@@ -147,6 +156,52 @@ class themes:
         with dpg.theme() as theme:
             with dpg.theme_component(item_type):
                 dpg.add_theme_color(property, color)
+
+        return theme
+
+    @cache
+    @staticmethod
+    def make_slider_theme(color: RGBA, handle_color: RGBA = None) -> str:
+        if handle_color is None:
+            handle_color = color.brightness(0.7).shift(0.2)
+
+        with dpg.theme() as theme:
+            with dpg.theme_component(0):
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, color)
+                dpg.add_theme_color(dpg.mvThemeCol_SliderGrab, handle_color)
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, color.shift(0.2))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, color.shift(0.1))
+
+        return theme
+
+    @cache
+    @staticmethod
+    def make_link_theme(alignment: float = 0, color: RGBA = light_blue) -> str:
+        with dpg.theme() as theme:
+            with dpg.theme_component(0):
+                dpg.add_theme_style(
+                    dpg.mvStyleVar_ButtonTextAlign, alignment, category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_style(
+                    dpg.mvStyleVar_CellPadding, 1, 1, category=dpg.mvThemeCat_Core
+                )
+
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_Text, color, category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_Button, (0, 0, 0, 0), category=dpg.mvThemeCat_Core
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonHovered,
+                    (255, 255, 255, 40),
+                    category=dpg.mvThemeCat_Core,
+                )
+                dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonActive,
+                    (255, 255, 255, 80),
+                    category=dpg.mvThemeCat_Core,
+                )
 
         return theme
 
@@ -226,6 +281,9 @@ def init_themes():
     with dpg.theme() as themes.notification_frame:
         with dpg.theme_component(dpg.mvAll):
             dpg.add_theme_style(
+                dpg.mvStyleVar_WindowRounding, 5, 5, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_style(
                 dpg.mvStyleVar_WindowPadding, 7, 0, category=dpg.mvThemeCat_Core
             )
             dpg.add_theme_style(
@@ -248,6 +306,45 @@ def init_themes():
             )
             dpg.add_theme_color(
                 dpg.mvThemeCol_Border, light_green, category=dpg.mvThemeCat_Core
+            )
+        with dpg.theme_component(dpg.mvAll, enabled_state=False):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, muted_green, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, muted_green, category=dpg.mvThemeCat_Core
+            )
+
+    with dpg.theme() as themes.node_link_enabled:
+        with dpg.theme_component(dpg.mvAll):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, light_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, light_blue, category=dpg.mvThemeCat_Core
+            )
+        with dpg.theme_component(dpg.mvAll, enabled_state=False):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, light_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, light_blue, category=dpg.mvThemeCat_Core
+            )
+
+    with dpg.theme() as themes.node_link_disabled:
+        with dpg.theme_component(dpg.mvAll):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, muted_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, muted_blue, category=dpg.mvThemeCat_Core
+            )
+        with dpg.theme_component(dpg.mvAll, enabled_state=False):
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Text, muted_blue, category=dpg.mvThemeCat_Core
+            )
+            dpg.add_theme_color(
+                dpg.mvThemeCol_Border, muted_blue, category=dpg.mvThemeCat_Core
             )
 
     with dpg.theme() as themes.link_button:
@@ -292,6 +389,12 @@ def init_themes():
                 dpg.mvPlotCol_Line, orange, category=dpg.mvThemeCat_Plots
             )
 
+    with dpg.theme() as themes.plot_fit_padding:
+        with dpg.theme_component():
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_FitPadding, 0.25, 0.25, category=dpg.mvThemeCat_Plots
+            )
+
     with dpg.theme() as themes.player_plot:
         with dpg.theme_component(dpg.mvPlot):
             dpg.add_theme_style(
@@ -310,6 +413,23 @@ def init_themes():
                 dpg.mvPlotStyleVar_FitPadding, 0.05, 0.2, category=dpg.mvThemeCat_Plots
             )
 
+    with dpg.theme() as themes.graph_view:
+        with dpg.theme_component(dpg.mvPlot):
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_PlotPadding, 0, 0, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_LabelPadding, 0, 4, category=dpg.mvThemeCat_Plots
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_AnnotationPadding,
+                1,
+                1,
+                category=dpg.mvThemeCat_Plots,
+            )
+            dpg.add_theme_style(
+                dpg.mvPlotStyleVar_FitPadding, 0.2, 0.2, category=dpg.mvThemeCat_Plots
+            )
 
 class HighContrastColorGenerator:
     """Generates RGB colors with a certain distance apart so that subsequent colors are visually distinct."""
@@ -343,7 +463,7 @@ class HighContrastColorGenerator:
         """Generates the next high-contrast color."""
         self.hue = (self.hue + self.hue_step) % 1
         r, g, b = colorsys.hsv_to_rgb(self.hue, self.saturation, self.value)
-        return (int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
+        return RGBA(int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
 
     def __call__(self, key: Any = None) -> tuple[int, int, int]:
         """Allows calling the instance directly to get the next color."""

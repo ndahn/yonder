@@ -1,25 +1,30 @@
 from __future__ import annotations
+from typing import ClassVar, Callable
 from dataclasses import dataclass, field
-from typing import ClassVar
+import pyo
 
 from yonder.hash import calc_hash, Hash
 from yonder.enums import PropID, MarkerId
 from yonder.util import logger
+from yonder.audio import PlayContext, PlaybackState
 from .hirc_node import HIRCNode
 from .base_types import (
     MusicNodeParams,
     PropBundle,
+    PropRangedModifier,
     Children,
     MusicMarkerWwise,
     RTPC,
     StateChunk,
 )
 from .music_track import MusicTrack
-from .mixins import PropertyMixin, StateMixin
+from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
 @dataclass(repr=False, eq=False)
-class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
+class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
+    """Segments are playback elements of determined length that contain one or more music tracks. A segment's tracks will play in parallel, while each track's clips will (usually) play in sequence."""
+
     body_type: ClassVar[int] = 10
     music_node_params: MusicNodeParams = field(default_factory=MusicNodeParams)
     duration: float = 0.0
@@ -54,6 +59,10 @@ class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
         return obj
 
     @property
+    def wwise_link(self):
+        return "https://ndahn.github.io/yonder/wwise/music/#segments-tracks"
+
+    @property
     def parent(self) -> int:
         return self.music_node_params.node_base_params.direct_parent_id
 
@@ -70,6 +79,10 @@ class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
     @property
     def properties(self) -> list[PropBundle]:
         return self.music_node_params.node_base_params.node_initial_params.prop_initial_values
+
+    @property
+    def property_ranges(self) -> list[PropRangedModifier]:
+        return self.music_node_params.node_base_params.node_initial_params.prop_ranged_modifiers.entries
 
     @property
     def rtpcs(self) -> list[RTPC]:
@@ -155,3 +168,114 @@ class MusicSegment(StateMixin, PropertyMixin, HIRCNode):
 
         if not missing_ok:
             raise ValueError(f"Marker {mid} not found")
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
+        ctx = my_pyo.ctx
+        out = []
+
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child:
+                out.append(child.pyo(ctx).output)
+
+        my_pyo.cache["clock"] = pyo.Phasor(1000 / self.duration).stop()
+        if out:
+            return sum(out)
+
+        return pyo.Sig(0)
+
+    def play(self, ctx: PlayContext) -> None:
+        my_pyo = self.pyo(ctx)
+        if my_pyo.playing:
+            return
+
+        ctx = my_pyo.ctx
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node:
+                node.play(ctx)
+
+        # segments have a fixed duration independent from their tracks' duration
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        offset = my_pyo.cache.get("pause_time", 0.0)
+        clock.freq = 1000 / self.duration
+        clock.phase = offset
+
+        self.register_end_trigger(ctx, self._on_segment_end, fire_on_loop=True)
+
+        clock.play()
+        my_pyo.play()
+
+    def _on_segment_end(self, ctx: PlayContext) -> None:
+        # TODO this will probably cause a gap, but we'll have to change the
+        # source/control design to fix this
+        self.stop(ctx)
+        self.pyo(ctx).cache["pause_time"] = 0.0
+        loop = ctx.properties.get(PropID.Loop)
+
+        for child_id in self.children.items:
+            child = ctx.bank.get(child_id)
+            if child and hasattr(child, "seek"):
+                child.seek(ctx, 0)
+
+        if loop is not None:
+            self.play(ctx)
+
+    def stop(self, ctx: PlayContext) -> None:
+        if not self.is_pyo_initialized():
+            return
+
+        super().stop(ctx)
+
+        my_pyo = self.pyo(ctx)
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        my_pyo.cache["pause_time"] = clock.get()
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+        fire_on_loop: bool = False,
+    ) -> bool:
+        if not self.is_pyo_initialized():
+            return False
+
+        my_pyo = self.pyo(ctx)
+        ctx = my_pyo.ctx
+        cb_objects: list[pyo.PyoObject] = []
+        num_trig = 0
+
+        def on_trigger(ctx: PlayContext) -> None:
+            nonlocal num_trig
+
+            # A looping segment restarts instead of ending, only our loop 
+            # handler still needs the trigger
+            if not fire_on_loop and ctx.properties.get(PropID.Loop) is not None:
+                return
+
+            callback(ctx)
+            num_trig += 1
+
+            # Cleanup the trigger objects if we've been triggered enough times
+            if max_triggers > 0 and num_trig >= max_triggers:
+                state = self.pyo_state()
+                storage = state.cache.get("triggers", {}) if state else {}
+
+                for obj in storage.pop(storage_key, []):
+                    obj.stop()
+
+        # Trigger when this segment is only x seconds away from its end
+        th = (self.duration - abs(before)) / self.duration
+        clock: pyo.Phasor = my_pyo.cache["clock"]
+        trigger_signal = pyo.Thresh(clock, threshold=th)
+        cb_objects.append(trigger_signal)
+        cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
+
+        storage: dict = my_pyo.cache.setdefault("triggers", {})
+        storage_key = max(storage.keys(), default=-1) + 1
+        storage[storage_key] = cb_objects
+
+        return True

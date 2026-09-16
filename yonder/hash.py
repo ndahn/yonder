@@ -135,7 +135,7 @@ def get_bank_lookup_table_path(bnk: "str | Soundbank") -> Path:
     from yonder import Soundbank
 
     if isinstance(bnk, Soundbank):
-        name = bnk.get_name()
+        name = bnk.get_name("")
         if not name:
             name = bnk.bnk_dir.name
     else:
@@ -188,7 +188,13 @@ def fnv_1a(input: str) -> Hash:
     return result
 
 
-def calc_hash(input: str) -> Hash:
+def calc_hash(input: int | str) -> Hash:
+    if isinstance(input, int):
+        return input
+    
+    if input.startswith("#") and input[1:].isdigit():
+        return int(input[1:])
+
     h = fnv_1a(input)
 
     if _active_table is not None and h not in _active_table:

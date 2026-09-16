@@ -1,10 +1,17 @@
 from __future__ import annotations
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Callable, TYPE_CHECKING
+import networkx as nx
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
+import pyo
 
-from .mixins import DataNode
+from yonder.audio.playback_state import PlaybackState
+from .mixins.data_node import DataNode
 from .serialization import _serialize_value, _deserialize_fields
 from .object_id import ObjectId
+
+if TYPE_CHECKING:
+    from yonder import Soundbank
+    from yonder.audio.play_context import PlayContext
 
 
 @dataclass(slots=True)
@@ -60,7 +67,18 @@ class HIRCNode(DataNode):
     def type_name(self) -> str:
         return type(self).__name__
 
+    @property
+    def type_name_short(self) -> str:
+        return "".join(s for s in self.type_name if s.isupper())
+
+    @property
+    def wwise_link(self) -> str:
+        return None
+
     def get_name(self, default: str = None) -> str:
+        if default is None:
+            default = f"#{self.id}"
+
         return self._header.id.get_name(default)
 
     def to_dict(self) -> dict:
@@ -135,6 +153,212 @@ class HIRCNode(DataNode):
 
         return delve(self)
 
+    def pyo(self, ctx: PlayContext) -> PlaybackState:
+        # TODO the repetitive merging seems unwarranted, maybe only do it in
+        # update_playback and return the stored context from PyoState instead?
+        ctx = ctx.merge(self)
+
+        my_pyo = getattr(self, "_pyo", None)
+        if my_pyo is None:
+            my_pyo = PlaybackState(ctx)
+            my_pyo.output = self._build_pyo(my_pyo)
+            self._pyo = my_pyo
+
+        my_pyo.ctx = ctx
+        return my_pyo
+
+    def is_pyo_initialized(self) -> bool:
+        return hasattr(self, "_pyo")
+
+    def pyo_state(self) -> PlaybackState | None:
+        """Return this node's playback state without merging a context or initializing the audio backend. Prefer this over `pyo` for read-only access, since `pyo` overwrites the stored context with a fresh merge of whatever context is passed in."""
+        return getattr(self, "_pyo", None)
+
+    def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
+        """Release all pyo objects created by this node, if any. With a positive delay this happens asynchronously after that many seconds, giving pyo enough time to finish processing the object. A delay of 0 releases synchronously, which is required when the server is stopped or about to stop, since the scheduled callback would never fire."""
+        if hasattr(self, "_release_cb"):
+            from yonder.util import logger
+
+            logger.warning(f"Double free of {self}")
+            return
+
+        if not self.is_pyo_initialized():
+            # No need to go deeper, large trees like a MusicSwitchContainer can take a long time
+            # to traverse entirely
+            return
+
+        def release():
+            nonlocal ctx
+
+            # Don't merge, just forward
+            self.stop(ctx)
+
+            if hasattr(self, "_pyo"):
+                delattr(self, "_pyo")
+
+            # Don't call pyo() here to avoid reinitializing the audio backend
+            ctx = ctx.merge(self)
+            for _, ref in self.get_references():
+                node = ctx.bank.get(ref)
+                if node:
+                    # Don't forward the delay
+                    node.release_pyo(ctx, 0)
+
+            if hasattr(self, "_release_cb"):
+                del self._release_cb
+
+        if delay > 0:
+            self._release_cb = pyo.CallAfter(release, delay)
+        else:
+            release()
+
+    def describe_playback_structure(self, bnk: Soundbank) -> nx.DiGraph:
+        g = nx.DiGraph()
+        if not self.is_playing():
+            return g
+
+        todo: list[tuple[HIRCNode, int]] = [(self, 0)]
+
+        while todo:
+            node, level = todo.pop()
+            g.add_node(
+                node.id,
+                type=node.type_name,
+                level=level,
+                output=str(node.pyo_state().output),
+            )
+
+            for _, ref in node.get_references():
+                child = bnk.get(ref)
+                if child and child.is_playing():
+                    g.add_edge(node.id, child.id)
+                    todo.append((child, level + 1))
+
+        return g
+
+    def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:
+        """Create any pyo objects this node needs to fulfill its audio functions. If child nodes are involved in playback they should be initialized here by calling `child.pyo(my_pyo.ctx)`.
+
+        This should be implemented by deriving classes. Note that this must always return a valid pyo object. Return `pyo.Sig(0)` if you have nothing to play.
+
+        Parameters
+        ----------
+        my_pyo: PyoState
+            Object for storing pyo objects until they are released and additional data as needed.
+
+        Returns
+        -------
+        pyo.PyoObject
+            Whatever signal this node wants to add into playback. In most cases this will be one of the children's pyo object, possibly with some filters applied.
+        """
+        return pyo.Sig(0)
+
+    def is_playing(self) -> bool:
+        my_pyo = self.pyo_state()
+        return my_pyo and my_pyo.playing
+
+    def play(self, ctx: PlayContext) -> None:
+        """Initialize this node's audio backend and start playback.
+
+        This should be implemented by deriving classes. The first call in the implementation should always go to `self.pyo` to initialize the backend and retrieve the updated context and pyo objects. The last call should go to `play` on the object's pyo object.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The current playback context.
+        """
+        pass
+
+    def stop(self, ctx: PlayContext) -> None:
+        if self.is_pyo_initialized():
+            my_pyo = self.pyo(ctx)
+            my_pyo.stop()
+            ctx = my_pyo.ctx
+        else:
+            ctx = ctx.merge(self)
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.is_pyo_initialized():
+                node.stop(ctx)
+
+    def update_playback(self, ctx: PlayContext) -> None:
+        """Called when the context changed (properties, rtpcs, states, etc).
+
+        Deriving classes may override this to react to state changes, but should still call `super` to cascade down.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The updated playback context.
+        """
+        # Merge manually to avoid initializing pyo if we don't actually need it
+        ctx = ctx.merge(self)
+
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.is_pyo_initialized():
+                node.update_playback(ctx)
+
+    def register_end_trigger(
+        self,
+        ctx: PlayContext,
+        callback: Callable[[PlayContext], None],
+        before: float = 0,
+        max_triggers: int = 1,
+    ) -> bool:
+        """Register a callback to fire when this node's playback ends.
+
+        By default the end triggers of all actively playing children are bundled: the callback fires once, after the last of them has ended. This covers all pass-through and multi-voice types (Event, Action, containers). Nodes that produce their own end signal (Sound, MusicTrack, MusicSegment) override this, as must containers whose playback continues past a child's end (e.g. MusicRandomSequenceContainer).
+
+        Note that bundling assumes one-shot semantics; `before` and `max_triggers` are simply forwarded and only meaningful when registering directly on a node with its own end signal.
+
+        Parameters
+        ----------
+        ctx : PlayContext
+            The current playback context.
+        callback : Callable[[PlayContext], None]
+            Called with the context of the last child to end. Runs in pyo's trigger thread.
+        before : float
+            Fire the callback this many seconds before the actual end.
+        max_triggers : int
+            Detach the trigger after this many calls, 0 means never.
+
+        Returns
+        -------
+        bool
+            True if an end trigger was armed. False means the callback can never fire, usually because nothing is playing.
+        """
+        ctx = ctx.merge(self)
+
+        children: list[HIRCNode] = []
+        seen: set[int] = set()
+        for _, ref in self.get_references():
+            node = ctx.bank.get(ref)
+            if node and node.id not in seen:
+                seen.add(node.id)
+                # TODO is_pyo_initialized might be better, but might catch nodes that
+                # can't even finish
+                state = node.pyo_state()
+                if state and state.playing:
+                    children.append(node)
+
+        pending = len(children)
+        if not pending:
+            return False
+
+        def on_child_end(child_ctx: PlayContext) -> None:
+            nonlocal pending
+            pending -= 1
+            if pending == 0:
+                callback(child_ctx)
+
+        for node in children:
+            if not node.register_end_trigger(ctx, on_child_end, before, max_triggers):
+                pending -= 1
+
+        return pending > 0
+
     def __hash__(self) -> int:
         return self.id
 
@@ -147,11 +371,11 @@ class HIRCNode(DataNode):
         return self.id < other.id
 
     def __str__(self) -> str:
-        label = "".join(s for s in self.type_name if s.isupper())
-        name = self.get_name(None)
+        type_name = self.type_name_short
+        name = self.get_name("")
         if name:
-            return f"[{label}] {name} #{self.id}"
-        return f"[{label}] #{self.id}"
+            return f"[{type_name}] {name} #{self.id}"
+        return f"[{type_name}] #{self.id}"
 
     def __repr__(self) -> str:
         name = self.get_name("<?>")

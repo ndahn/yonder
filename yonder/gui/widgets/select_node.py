@@ -1,67 +1,21 @@
 from __future__ import annotations
-from typing import Any, Callable, Type, Iterable
+from typing import Any, Callable, Iterable
 from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
-from yonder.types import Soundbank, ActorMixer, Event, MusicSwitchContainer
+from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
 from yonder.hash import lookup_name
+from yonder.game import get_selected_game
+from yonder.game.data import AmxData, build_bank_actormixer_summary
+from yonder.gui import style
+from yonder.gui.icons import Icons
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
-from yonder.gui.dialogs.select_nodes_dialog import select_nodes_dialog
+from yonder.gui.dialogs.select_nodes_dialog import (
+    select_nodes_dialog,
+    select_actormixer,
+)
 from .dpg_item import DpgItem
-
-
-class ActorMixerDetailProvider:
-    def __init__(self, bnk: Soundbank):
-        self.bnk = bnk
-        self._cache: dict[int, list[int]] = {}
-
-        for amx in bnk.query("type=ActorMixer"):
-            self._load_details(amx)
-
-    def _load_details(self, amx: ActorMixer) -> None:
-        from yonder.types import ActorMixer
-
-        todo: list[HIRCNode] = [amx]
-        dependents = set()
-
-        while todo:
-            node = todo.pop()
-            if not hasattr(node, "children"):
-                continue
-
-            for child_id in node.children:
-                child = self.bnk.get(child_id)
-                if not child:
-                    continue
-
-                if isinstance(child, ActorMixer):
-                    dependents.add(child_id)
-                else:
-                    dependents.update(
-                        evt.id for evt, _ in self.bnk.find_event_subgraphs_for(child)
-                    )
-
-        ret = sorted(dependents)
-        self._cache[node.id] = ret
-        return ret
-
-    def __call__(self, amx: ActorMixer) -> list[str]:
-        dependents = self._cache.get(amx.id)
-        if dependents is None:
-            dependents = self._load_details(amx)
-
-        used_by = []
-        for n in dependents[:10]:
-            node = self.bnk[n]
-            if isinstance(node, Event):
-                used_by.append("Event " + self.bnk[n].get_wwise_name(f"#{n}"))
-            else:
-                used_by.append(node.get_name(f"{node.type_name} #{node.id}"))
-
-        if len(dependents) > 10:
-            used_by.append("...")
-
-        return [µ("Used by:")] + used_by
 
 
 def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
@@ -71,7 +25,7 @@ def get_details_musicswitchcontainer(msc: MusicSwitchContainer) -> list[str]:
 
 
 def get_details_generic(node: HIRCNode) -> list[str]:
-    details = [node.get_name(f"#{node.id}")]
+    details = [node.get_name()]
 
     if hasattr(node, "children"):
         details.append(µ("Children: {num}").format(num=len(node.children)))
@@ -92,17 +46,19 @@ def get_details_generic(node: HIRCNode) -> list[str]:
 class add_select_node(DpgItem):
     def __init__(
         self,
-        get_items: Callable[[str], Iterable[HIRCNode]],
-        label: str,
-        callback: Callable[[str, HIRCNode | list[HIRCNode], Any], None],
+        bnk: Soundbank = None,
+        label: str = None,
+        callback: Callable[[str, int | HIRCNode | list[HIRCNode], Any], None] = None,
         *,
         get_node_details: Callable[[HIRCNode], list[str]] = None,
+        allow_select: bool = True,
         jump_to: Callable[[str, HIRCNode, Any], None] = None,
         create_new: Callable[[], HIRCNode] = None,
         multiple: bool = False,
-        default: HIRCNode = None,
-        node_type: Type[HIRCNode] = None,
+        default: HIRCNode | str = None,
+        node_type: type[HIRCNode] = None,
         node_filter: Callable[[HIRCNode], bool] = None,
+        extra_query: str = None,
         readonly: bool = True,
         textbox_width: int = 0,
         parent: str = 0,
@@ -111,40 +67,41 @@ class add_select_node(DpgItem):
     ) -> str:
         super().__init__(tag)
 
-        self._get_items = get_items
-        self._node_filter = node_filter
+        if default and bnk and not isinstance(default, HIRCNode):
+            default = bnk.get(default, default)
+
+        self._bnk = bnk
         self._callback = callback
+        self._selected_node = default
         self._user_data = user_data
         self._multiple = multiple
         self._readonly = readonly
         self._node_type = node_type
+        self._node_filter = node_filter
+        self._extra_query = extra_query
         self._get_node_details = get_node_details
+        self._allow_select = allow_select
         self._jump_to = jump_to
         self._create_new = create_new
 
-        if isinstance(default, HIRCNode):
-            default = default.id
-
-        if default is None:
-            default = "0"
-
-        default = str(default)
-
         self._build(label, default, readonly, textbox_width, parent)
+
+    def destroy(self):
+        self._delete_item(self._t("context_popup"))
 
     # === Build =================
 
     def _build(
         self,
         label: str,
-        default: HIRCNode,
+        default: HIRCNode | str,
         readonly: bool,
         textbox_width: int,
         parent: str,
     ):
         with dpg.group(horizontal=True, parent=parent):
             dpg.add_input_text(
-                default_value=default,
+                default_value=str(default),
                 decimal=True,
                 readonly=readonly,
                 enabled=not readonly,
@@ -154,33 +111,44 @@ class add_select_node(DpgItem):
                 tag=self.tag,
             )
 
-            if self._jump_to or self._create_new:
-                with dpg.popup(dpg.last_item(), min_size=(100, 20)):
-                    if self._jump_to:
-                        dpg.add_menu_item(
-                            label=µ("Jump To"),
-                            callback=lambda s, a, u: self._jump_to(
-                                self.tag, self.selected_node, self._user_data
-                            ),
-                        )
+            if self._create_new:
+                with dpg.popup(
+                    dpg.last_item(), min_size=(100, 20), tag=self._t("context_popup")
+                ):
+                    dpg.add_menu_item(
+                        label=µ("Create New"),
+                        callback=lambda s, a, u: self._on_node_selected(
+                            self.tag, self._create_new(), self._user_data
+                        ),
+                        tag=self._t("create_new_button"),
+                    )
 
-                    if self._create_new:
-                        dpg.add_menu_item(
-                            label=µ("Create New"),
-                            callback=lambda s, a, u: self._on_node_selected(
-                                self.tag, self._create_new(), self._user_data
-                            ),
-                        )
+            if self._allow_select:
+                dpg.add_image_button(
+                    Icons.select16,
+                    callback=self._select_node,
+                    tag=self._t("select_button"),
+                )
 
-            dpg.add_button(
-                arrow=True,
-                direction=dpg.mvDir_Right,
-                callback=self._select_node,
-            )
-            dpg.add_text(label)
+            if self._jump_to:
+                dpg.add_image_button(
+                    Icons.jump16,
+                    callback=lambda s, a, u: self._jump_to(
+                        self.tag, self._selected_node, self._user_data
+                    ),
+                    tag=self._t("jump_to_button"),
+                )
+
+            if label:
+                dpg.add_text(label)
+
+        self._update_widget_state()
 
     def _get_nodes(self, filt: str) -> Iterable[HIRCNode]:
-        for node in self._get_items(filt):
+        if self._extra_query:
+            filt += " " + self._extra_query
+
+        for node in self._bnk.query(filt, self._node_type):
             if self._node_type and not isinstance(node, self._node_type):
                 continue
 
@@ -190,41 +158,146 @@ class add_select_node(DpgItem):
             yield node
 
     def _on_node_edit(self, sender: str, name: str, user_data: Any) -> None:
+        if not name:
+            name = 0
+        else:
+            node = self._bnk.get(name)
+            if not node:
+                name = name.removeprefix("#")
+
+                if name.isdigit():
+                    node = int(name)
+                else:
+                    # Not a valid node identifier
+                    return
+
+        self.selected_node = node
         if self._callback:
-            self._callback(self.tag, name, user_data)
+            self._callback(self.tag, node, user_data)
 
     def _on_node_selected(self, sender: str, node: HIRCNode, user_data: Any) -> None:
-        dpg.set_value(self.tag, str(node.id))
+        self.selected_node = node
         if self._callback:
             self._callback(self.tag, node, self._user_data)
 
     def _select_node(
         self,
     ) -> None:
+        tag = self._t("select_node_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.focus_item(tag)
+            return
+
         select_nodes_dialog(
             self._get_nodes,
             self._on_node_selected,
             get_node_details=self._get_node_details,
             multiple=self._multiple,
             user_data=self._user_data,
+            tag=tag,
         )
+        center_window(tag, 0.2, 0.2)
+
+    def _update_widget_state(self) -> None:
+        if isinstance(self._selected_node, HIRCNode):
+            dpg.bind_item_theme(self.tag, style.themes.node_link_enabled)
+            if self._jump_to:
+                dpg.configure_item(
+                    self._t("jump_to_button"), tint_color=style.white, enabled=True
+                )
+        else:
+            dpg.bind_item_theme(self.tag, style.themes.node_link_disabled)
+            if self._jump_to:
+                dpg.configure_item(
+                    self._t("jump_to_button"),
+                    tint_color=style.light_grey,
+                    enabled=False,
+                )
 
     # === Public accessors =================
 
+    def set_bank(self, bnk: Soundbank, fire_callback: bool = True) -> None:
+        # Update the bank and keep the node selected if it still exists in that bank
+        nid = self.selected_node
+        if isinstance(nid, HIRCNode):
+            nid = nid.id
+
+        self._bnk = bnk
+        if bnk:
+            self.selected_node = bnk.get(nid)
+
+        if fire_callback and self._callback:
+            self._callback(self.tag, self.selected_node, self._user_data)
+
     @property
-    def selected_node(self) -> int:
-        val = dpg.get_value(self.tag)
-        try:
-            return int(val)
-        except Exception:
-            return None
+    def selected_node(self) -> int | HIRCNode:
+        node = self._selected_node
+
+        if not isinstance(self._selected_node, HIRCNode):
+            node = self._bnk.get(node, node)
+
+        return node
 
     @selected_node.setter
     def selected_node(self, node: int | HIRCNode) -> None:
-        if isinstance(node, HIRCNode):
-            node = node.id
+        dpg.set_value(self.tag, str(node))
+        self._selected_node = node
+        self._update_widget_state()
 
-        if node is not None:
-            node = int(node)
 
-        dpg.set_value(self.tag, node)
+class add_select_actormixer(add_select_node):
+    def __init__(
+        self,
+        bnk: Soundbank = None,
+        label: str = None,
+        callback: Callable[[str, AmxData | list[AmxData], Any], None] = None,
+        *,
+        amx_filter: Callable[[ActorMixer], bool] = None,
+        current_bank_only: bool = False,
+        multiple: bool = False,
+        default: ActorMixer | int = None,
+        readonly: bool = True,
+        textbox_width: int = 0,
+        parent: str = 0,
+        tag: str = 0,
+        user_data: Any = None,
+    ) -> str:
+        super().__init__(
+            bnk,
+            label,
+            callback,
+            multiple=multiple,
+            default=default,
+            readonly=readonly,
+            textbox_width=textbox_width,
+            parent=parent,
+            tag=tag,
+            user_data=user_data,
+        )
+
+        self._amx_filter = amx_filter
+        self._current_bank_only = current_bank_only
+
+    def _select_node(self):
+        if self._bnk:
+            bank_name = self._bnk.name
+            extra = {bank_name: build_bank_actormixer_summary(self._bnk)}
+            top = [bank_name]
+        else:
+            bank_name = None
+            extra = None
+            top = None
+            
+        select_actormixer(
+            self._on_node_selected,
+            default_summary_key=bank_name,
+            extra_summaries=extra,
+            top_banks=top,
+            multiple=self._multiple,
+            user_data=self._user_data,
+        )
+
+    def _on_node_selected(self, sender: str, info: AmxData, user_data: Any) -> None:
+        dpg.set_value(self.tag, lookup_name(info.nid, f"#{info.nid}"))
+        if self._callback:
+            self._callback(self.tag, info, self._user_data)

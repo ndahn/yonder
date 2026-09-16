@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generator, Iterator
+from typing import Any, Generator, Iterator, TYPE_CHECKING
 from pathlib import Path
 from random import randrange
 from collections import deque
@@ -10,25 +10,14 @@ import networkx as nx
 from yonder.hash import Hash, calc_hash, lookup_name
 from yonder.util import logger, resource_data
 from yonder.query import query_nodes
-from yonder.enums import SourceType
+from yonder.enums import SourceType, ActionType
 
 from .sections import Section, BKHDSection, HIRCSection, STIDSection
 from .hirc_node import HIRCNode
 from .serialization import serialize, deserialize, verify_values, WrongValueTypeError
-from .action import ActionType
 
-from . import (
-    Action,
-    Event,
-    LayerContainer,
-    MusicRandomSequenceContainer,
-    MusicSwitchContainer,
-    MusicSegment,
-    MusicTrack,
-    RandomSequenceContainer,
-    Sound,
-    SwitchContainer,
-)
+if TYPE_CHECKING:
+    from yonder.types import Event
 
 
 class Soundbank:
@@ -62,6 +51,11 @@ class Soundbank:
         table = self._id2index
         table.clear()
 
+        if "HIRC" not in self.sections:
+            logger.warning(f"Bank {self.name} does not have a HIRC")
+            self._tree = nx.DiGraph()
+            return
+
         for idx, obj in enumerate(self.hirc.objects):
             table[obj.id] = idx
             if obj.name:
@@ -74,15 +68,17 @@ class Soundbank:
         return self._tree
 
     @classmethod
-    def load(cls, bnk_path: Path | str) -> Soundbank:
-        bnk_path: Path = Path(bnk_path).absolute()
-        if bnk_path.suffix == ".bnk":
-            bnk_path = bnk_path.parent / bnk_path.stem
+    def load(cls, json_or_dir: Path | str) -> Soundbank:
+        json_or_dir: Path = Path(json_or_dir).absolute()
+        if json_or_dir.suffix == ".bnk":
+            json_or_dir = json_or_dir.parent / json_or_dir.stem
+            if not json_or_dir.is_dir():
+                raise ValueError(f"Bank {json_or_dir.name} is not unpacked")
 
-        if bnk_path.is_dir():
-            json_path = bnk_path / "soundbank.json"
+        if json_or_dir.is_dir():
+            json_path = json_or_dir / "soundbank.json"
         else:
-            json_path = bnk_path
+            json_path = json_or_dir
 
         with json_path.open(encoding="utf-8") as f:
             bnk_data = json.load(f)
@@ -100,12 +96,12 @@ class Soundbank:
     @property
     def bkhd(self) -> BKHDSection:
         """Section of bank metadata."""
-        return self.sections["BKHD"]
+        return self.sections.get("BKHD")
 
     @property
     def hirc(self) -> HIRCSection:
         """Section of audio nodes."""
-        return self.sections["HIRC"]
+        return self.sections.get("HIRC")
 
     @property
     def stid(self) -> STIDSection:
@@ -125,14 +121,16 @@ class Soundbank:
         return self.bkhd.bank_name
 
     def get_name(self, default: str = None) -> str:
+        if default is None:
+            default = f"#{self.bank_id}"
+
         return self.bkhd.get_bank_name(default)
 
     def rename_bank(self, new_id: str | int, rename_dir: bool) -> None:
         old_id = self.bank_id
         hash_val = calc_hash(new_id) if isinstance(new_id, str) else new_id
-        action: Action
 
-        for action in self.query("type=Action"):
+        for action in self.query(node_type="Action"):
             if getattr(action.params, "bank_id", None) == old_id:
                 action.params.bank_id = hash_val
 
@@ -155,14 +153,16 @@ class Soundbank:
         return self.json_path.parent
 
     def sound_sources(self) -> list[tuple[int, SourceType]]:
+        from yonder.types import Sound, MusicTrack
+
         source_ids = []
         sound: Sound
         track: MusicTrack
 
-        for sound in self.query("type=Sound"):
+        for sound in self.query(node_type=Sound):
             source_ids.append((sound.source_id, sound.bank_source_data.source_type))
 
-        for track in self.query("type=MusicTrack"):
+        for track in self.query(node_type=MusicTrack):
             source_ids.extend(
                 [(src.source_ids, src.source_type) for src in track.sources]
             )
@@ -233,21 +233,28 @@ class Soundbank:
             )
             return target
 
-    def get_wem_path(self, source_id: int, source_type: SourceType) -> Path:
+    def get_wem_path(
+        self,
+        source_id: int,
+        source_type: SourceType = None,
+        search_paths: list[Path] = None,
+    ) -> Path:
         wem = self.bnk_dir / f"{source_id}.wem"
         if source_type == SourceType.Embedded:
-            return wem
+            if wem.is_file():
+                return wem
+            return None
 
         # Find the largest external wem (if any)
-        wem = self.bnk_dir.parent / "wem" / str(source_id)[:2] / f"{source_id}.wem"
-        if wem.is_file():
-            return wem
+        if search_paths is None:
+            search_paths = []
 
-        wem = self.bnk_dir / f"{source_id}.wem"
-        if wem.is_file():
-            return wem
+        search_paths = [self.bnk_dir, self.bnk_dir.parent / "wem"] + search_paths
+        candidates = []
+        for p in search_paths:
+            candidates.extend(Path(p).glob(f"**/{source_id}.wem"))
 
-        return None
+        return max(candidates, key=lambda f: f.stat().st_size, default=None)
 
     def delete_unused_wems(self) -> None:
         used = set(self.sound_sources())
@@ -289,6 +296,22 @@ class Soundbank:
             logger.info(f"Saved {self} to {path}, a backup was created")
         else:
             logger.info(f"Saved {self} to {path}")
+
+    def copy_to(
+        self, folder: Path | str, update_bnk_path: bool = True, backup: bool = True
+    ) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        new_bnk_dir = folder / self.name
+
+        if backup and new_bnk_dir.is_dir():
+            shutil.copy(new_bnk_dir, str(new_bnk_dir) + ".bak")
+
+        shutil.copytree(self.bnk_dir, new_bnk_dir)
+        with (new_bnk_dir / "soundbank.json").open("w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+        if update_bnk_path:
+            self.json_path = new_bnk_dir / "soundbank.json"
 
     def new_id(self) -> int:
         while True:
@@ -401,7 +424,9 @@ class Soundbank:
         children_only: bool = True,
         include_external: bool = False,
     ) -> nx.DiGraph:
-        if isinstance(entrypoint, int):
+        from yonder.types import Action, Event
+
+        if not isinstance(entrypoint, HIRCNode):
             entrypoint = self[entrypoint]
 
         g = nx.DiGraph()
@@ -484,15 +509,41 @@ class Soundbank:
 
         return upchain
 
-    def query(self, query: str) -> Generator[HIRCNode, None, None]:
-        yield from query_nodes(self.hirc.objects, query)
+    def query(
+        self, query: str = None, node_type: str | type = None
+    ) -> Generator[HIRCNode, None, None]:
+        if node_type:
+            if isinstance(node_type, type):
+                node_type = node_type.__name__
+
+            node_type = node_type.lower()
+            candidates = [
+                n for n in self.hirc.objects if n.type_name.lower() == node_type
+            ]
+        else:
+            candidates = self.hirc.objects
+
+        if query:
+            yield from query_nodes(candidates, query)
+        else:
+            yield from candidates
 
     def query_one(self, query: str, default: Any = None) -> HIRCNode:
         return next(self.query(query), default)
 
     def find_orphans(self) -> list[HIRCNode]:
-        g = self.tree
+        from yonder.types import (
+            LayerContainer,
+            MusicRandomSequenceContainer,
+            MusicSwitchContainer,
+            MusicSegment,
+            MusicTrack,
+            RandomSequenceContainer,
+            Sound,
+            SwitchContainer,
+        )
 
+        g = self.tree
         search_types = {
             c.__name__
             for c in (
@@ -516,10 +567,63 @@ class Soundbank:
 
         return ret
 
+    def get_branch_root(self, node: int | HIRCNode) -> HIRCNode:
+        from . import Event, Action
+
+        if isinstance(node, HIRCNode):
+            node = node.id
+
+        n = self.get(node)
+        if not n:
+            return None
+
+        # Search an event for a play or stop action
+        if isinstance(n, Event):
+            for aid in n.actions:
+                action: Action = self.get(aid)
+                if action and action.action_type_enum in (
+                    ActionType.Play,
+                    ActionType.StopE,
+                    ActionType.StopEO,
+                ):
+                    return self.get(action.external_id)
+            else:
+                # Not an event that actually plays anything
+                return None
+        # Check if the action can be played
+        elif isinstance(n, Action):
+            if n.action_type_enum in (
+                ActionType.Play,
+                ActionType.StopE,
+                ActionType.StopEO,
+            ):
+                return self.get(n.external_id)
+            else:
+                return None
+
+        # Not an event or action, go up the chain until we find the root
+        root = node
+        while True:
+            parent_ids = list(self.tree.predecessors(root))
+            if not parent_ids:
+                return root
+
+            parent = parent_ids[0]
+            if parent <= 0 or parent not in self:
+                return root
+
+            parent_node = self.get(parent)
+            if parent_node and parent_node.type_name == "ActorMixer":
+                return root
+
+            root = parent
+
     def find_events(
         self, action_type: ActionType = ActionType.Play
     ) -> Generator[HIRCNode, None, None]:
-        events: list[Event] = list(self.query("type=Event"))
+        from yonder.types import Action, Event
+
+        events: list[Event] = list(self.query(node_type=Event))
         for evt in events:
             for aid in evt.actions:
                 action: Action = self[aid]
@@ -527,28 +631,84 @@ class Soundbank:
                     yield evt
                     break
 
-    def find_event_subgraphs_for(
-        self, node: int | HIRCNode
-    ) -> Generator[tuple[Event, nx.DiGraph], None, None]:
+    def find_events_for(self, node: int | HIRCNode) -> Generator[Event, None, None]:
+        from yonder.types import Event, ActorMixer
+
         if not isinstance(node, HIRCNode):
             node = self[node]
 
-        # TODO cache nodes by type
-        # TODO cache full graph
-        events: list[Event] = list(self.query("type=Event"))
-
-        g = self.tree
         if isinstance(node, Event):
-            desc = nx.descendants(g, node.id)
-            yield node, g.subgraph({node.id} | desc)
+            yield node
             return
 
+        # first try walking up the tree, probably faster?
+        g = self.tree
+        if node in self:
+            todo = [node.id]
+            while todo:
+                nid = todo.pop()
+                for pid in g.predecessors(nid):
+                    parent = self.get(pid)
+                    if isinstance(parent, Event):
+                        yield parent
+                    elif not isinstance(parent, ActorMixer):
+                        todo.append(pid)
+
+            return
+
+        # cache nodes by type
+        events: list[Event] = list(self.query(node_type=Event))
+
         for evt in events:
-            desc = nx.descendants(g, evt.id)
-            if node.id in desc:
-                yield evt, g.subgraph({evt.id} | desc)
+            if node.id in nx.descendants(g, evt.id):
+                yield evt
+
+    def find_related_events(
+        self,
+        node: HIRCNode | int,
+        action_types: ActionType | tuple[ActionType] = (
+            ActionType.Play,
+            ActionType.StopEO,
+            ActionType.StopE,
+        ),
+    ) -> list[Event]:
+        if not isinstance(node, HIRCNode):
+            node = self[node]
+
+        if isinstance(node, Event):
+            for action in node.get_action_nodes(self):
+                if action.action_type_enum in action_types:
+                    target_id = action.external_id
+                    break
+            else:
+                return []
+        else:
+            target_id = node.id
+
+        related = []
+
+        for evt in self._src_bnk.find_events_for(target_id):
+            play_actions = evt.get_action_nodes(self, ActionType.Play)
+
+            if play_actions:
+                for pa in play_actions:
+                    if pa.external_id == target_id:
+                        # Explicitly plays our target_id, should be included
+                        break
+                else:
+                    if evt.has_action_type(
+                        self, ActionType.StopEO, ActionType.StopE
+                    ):
+                        # Has a play action targeting a different node, don't include it
+                        continue
+
+                related.append(evt)
+        
+        return related
 
     def solve(self) -> None:
+        from yonder.types import Action, Event
+
         g = self.tree
         objects = []
 
@@ -593,8 +753,14 @@ class Soundbank:
         self._regenerate_index_table()
 
     def verify(self) -> int:
+        from yonder.types import Action
+
         severity = 0
         discovered_ids = {0}
+
+        for cycle in nx.simple_cycles(self.tree):
+            logger.error(f"Found cycle in graph: {cycle}")
+            severity = 2
 
         def _verify_hirc_node(node: HIRCNode):
             nonlocal severity
@@ -637,8 +803,7 @@ class Soundbank:
                     if ref not in discovered_ids:
                         # For some
                         if (
-                            path.endswith("fx_id")
-                            or path.endswith("bus_id")
+                            path.endswith(("fx_id", "bus_id"))
                             or path[:-1].endswith("aux")
                             or (
                                 isinstance(node, Action)
@@ -708,6 +873,19 @@ class Soundbank:
 
         return severity
 
+    def check_conflicts(
+        self, other: Soundbank, soft: bool = False
+    ) -> list[tuple[int, type, type]]:
+        conflicts = []
+
+        for node in self:
+            on = other.get(node.id)
+            if on:
+                if type(on) != type(node) or soft and on.json() != node.json():
+                    conflicts.append((node.id, type(node), type(on)))
+
+        return conflicts
+
     def get(self, nid: Hash, default: Any = None) -> HIRCNode:
         try:
             return self[nid]
@@ -715,9 +893,15 @@ class Soundbank:
             return default
 
     def __iter__(self) -> Iterator[HIRCNode]:
+        if not self.hirc:
+            return
+
         yield from self.hirc.objects
 
     def __len__(self) -> int:
+        if not self.hirc:
+            return 0
+
         return len(self.hirc.objects)
 
     def __contains__(self, key: Any) -> HIRCNode:

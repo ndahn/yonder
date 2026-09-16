@@ -8,7 +8,9 @@ dpg_demo.py
 **/config.yaml
 yonder_v*
 *.*lock*
+!Cargo.lock
 export/
+binary-mapper.exe
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -22,8 +24,8 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
-downloads/
+/dist/
+/downloads/
 eggs/
 .eggs/
 lib/

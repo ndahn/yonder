@@ -6,11 +6,11 @@ from yonder.hash import Hash
 from yonder.enums import PropID
 from .hirc_node import HIRCNode
 from .base_types import BusInitialValues, DuckInfo, PropBundle, RTPC, StateChunk
-from .mixins import StateMixin, PropertyMixin
+from .mixins import StateMixin, RtpcMixin, PropertyMixin
 
 
 @dataclass(repr=False, eq=False)
-class Bus(StateMixin, PropertyMixin, HIRCNode):
+class Bus(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 8
     initial_values: BusInitialValues = field(default_factory=BusInitialValues)
 
@@ -35,6 +35,10 @@ class Bus(StateMixin, PropertyMixin, HIRCNode):
                 obj.set_property(prop, val)
 
         return obj
+
+    @property
+    def wwise_link(self) -> str:
+        return "https://ndahn.github.io/yonder/wwise/globals/#busses"
 
     @property
     def properties(self) -> list[PropBundle]:
