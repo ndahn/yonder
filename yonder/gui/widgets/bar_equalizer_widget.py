@@ -13,7 +13,7 @@ class add_bar_equalizer(DpgItem):
         bars: int = 16,
         levels: int = 10,
         *,
-        gamma: float = 0.5,
+        gamma: float = 0.3,
         tag: str = None,
         parent: str = 0,
     ):
@@ -84,14 +84,14 @@ class add_bar_equalizer(DpgItem):
 
         gap_x = 4
         gap_y = 1
-        box_w = w / self._bars - gap_x
         box_h = h / self._levels - gap_y
+        box_w = min(box_h * 6, w / self._bars - gap_x)
+        x = 0
 
         dpg.delete_item(self.tag, children_only=True)
 
         for idx, amp in enumerate(self._amplitudes):
             grad = self._gradients[idx]
-            x = idx * (w / self._bars)
             db = max(DB_FLOOR, min(0.0, amp_to_db(amp)))
 
             for level, th in enumerate(self._thresholds):
@@ -107,3 +107,5 @@ class add_bar_equalizer(DpgItem):
                     fill=grad[level],
                     parent=self.tag,
                 )
+
+            x += box_w + gap_x

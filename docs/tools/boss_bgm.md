@@ -92,7 +92,7 @@ $Event(
 
 ## Unlocking Additional States
 
-In order to use arbitrary strings for the `BgmEnemyType` you need a dll. Yonder currently has dlls for Elden Ring and Nightreign - don't even try to use them on other games, it won't work. You can load them like any other dll by adding them to your [me3 profile](https://me3.help/en/latest/configuration-reference/):
+In order to use arbitrary strings for the `BgmEnemyType` you need [this dll](../downloads.md#unlock-music). Yonder currently has dlls for Elden Ring and Nightreign - don't even try to use them on other games, it won't work. You can load them like any other dll by adding them to your [me3 profile](https://me3.help/en/latest/configuration-reference/):
 
 ```toml
     [[native]]

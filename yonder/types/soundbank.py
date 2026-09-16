@@ -164,7 +164,7 @@ class Soundbank:
 
         for track in self.query(node_type=MusicTrack):
             source_ids.extend(
-                [(src.source_ids, src.source_type) for src in track.sources]
+                [(src.source_id, src.source_type) for src in track.sources]
             )
 
         return source_ids
