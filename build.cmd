@@ -10,7 +10,6 @@ pyinstaller banks_of_yonder.py --onefile --icon=yonder.ico
 REM "=== COPYING ADDITIONAL FILES ==="
 COPY LICENSE dist\
 COPY README.md dist\
-COPY unlock_wwise_states\eldenring\unlock_wwise_states_er.dll dist\
 REM COPY icon.ico dist\
 ROBOCOPY resources dist\resources /E
 ROBOCOPY external dist\external /E
