@@ -51,6 +51,10 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         if not wem.name.endswith(".wem"):
             continue
 
+        if not wem.is_file():
+            logger.warning(f"Wem does not exist: {wem}")
+            continue
+
         wem_id = get_wem_id(wem)
 
         # Copy to the correct location
@@ -60,9 +64,9 @@ def import_wems(bnk: Soundbank, wems: list[Path]) -> None:
         else:
             target_path = bnk.bnk_dir / f"{wem_id}.wem"
 
-        wem_sizes[wem_id] = target_path.stat().st_size
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(wem, target_path)
+        wem_sizes[wem_id] = target_path.stat().st_size
 
     # Update memory sizes
     for sound in bnk.query(node_type=Sound):

@@ -1,5 +1,16 @@
 from __future__ import annotations
+import atexit
 from dearpygui import dearpygui as dpg
+
+
+# Prevent interactions with dpg once python is exiting
+_shutting_down = False
+
+
+@atexit.register
+def _mark_shutdown() -> None:
+    global _shutting_down
+    _shutting_down = True
 
 
 class DpgItem:
