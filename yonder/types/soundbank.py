@@ -568,18 +568,17 @@ class Soundbank:
         return ret
 
     def get_branch_root(self, node: int | HIRCNode) -> HIRCNode:
-        from . import Event, Action
+        from . import Event, Action, ActorMixer
 
-        if isinstance(node, HIRCNode):
-            node = node.id
+        if not isinstance(node, HIRCNode):
+            node = self.get(node)
 
-        n = self.get(node)
-        if not n:
+        if not node:
             return None
 
         # Search an event for a play or stop action
-        if isinstance(n, Event):
-            for aid in n.actions:
+        if isinstance(node, Event):
+            for aid in node.actions:
                 action: Action = self.get(aid)
                 if action and action.action_type_enum in (
                     ActionType.Play,
@@ -591,32 +590,33 @@ class Soundbank:
                 # Not an event that actually plays anything
                 return None
         # Check if the action can be played
-        elif isinstance(n, Action):
-            if n.action_type_enum in (
+        elif isinstance(node, Action):
+            if node.action_type_enum in (
                 ActionType.Play,
                 ActionType.StopE,
                 ActionType.StopEO,
             ):
-                return self.get(n.external_id)
+                return self.get(node.external_id)
             else:
                 return None
 
         # Not an event or action, go up the chain until we find the root
         root = node
         while True:
-            parent_ids = list(self.tree.predecessors(root))
+            parent_ids = list(self.tree.predecessors(root.id))
             if not parent_ids:
                 return root
 
-            parent = parent_ids[0]
-            if parent <= 0 or parent not in self:
-                return root
+            for pid in parent_ids:
+                parent_node = self.get(pid)
+                if not parent_node:
+                    return root
 
-            parent_node = self.get(parent)
-            if parent_node and parent_node.type_name == "ActorMixer":
-                return root
+                if parent_node and isinstance(parent_node, ActorMixer):
+                    return root
 
-            root = parent
+                if not isinstance(parent_node, (Event, Action)):
+                    root = parent_node
 
     def find_events(
         self, action_type: ActionType = ActionType.Play

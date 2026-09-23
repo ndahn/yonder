@@ -285,7 +285,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
             indices = []
             for idx, item in enumerate(self.playlist_items):
-                if item.segment_id:
+                if item.segment_id == other:
                     indices.append(idx)
 
             for idx in reversed(indices):

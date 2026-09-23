@@ -63,6 +63,7 @@ from yonder.gui import style
 from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
+from yonder.game.data import AmxData
 from ..widgets.paragraphs import add_paragraphs
 from ..widgets.generic_input_widget import add_generic_widget, is_simple_type
 from ..widgets.loading_indicator import loading_indicator
@@ -73,7 +74,7 @@ from ..widgets.wav_player_widget import add_wav_player
 from ..widgets.transition_matrix import add_transition_matrix
 from ..widgets.editable_table import add_widget_table, add_curves_table, add_nodes_table
 from ..widgets.hash_widget import add_hash_widget
-from ..widgets.select_node import add_select_node
+from ..widgets.select_node import add_select_node, add_select_actormixer
 
 
 _colorgen = style.HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)
@@ -167,49 +168,66 @@ def create_node_widgets(
                     tag=f"{tag}_nid_rename",
                 )
 
-            if hasattr(node, "parent"):
-                with dpg.group(horizontal=True):
-                    dpg.add_text("Parent: ", tag=f"{tag}/parent_is", bullet=True)
+            with dpg.tree_node(label=µ("Relations"), span_full_width=True):
+                if hasattr(node, "parent"):
                     parent_node = bnk.get(node.parent, node.parent)
-                    add_node_link(
-                        bnk, parent_node, on_structure_changed, on_node_selected
-                    )
+                    root = bnk.get_branch_root(node)
+                    
+                    if root and not isinstance(node, (Event, Action, ActorMixer)):
 
-            if hasattr(node, "children"):
-                with dpg.tree_node(label=µ("Children"), span_full_width=True):
-                    for child_id in node.children:
-                        child = bnk.get(child_id, child_id)
-                        add_node_link(
-                            bnk,
-                            child,
-                            on_structure_changed,
-                            on_node_selected,
-                            allow_select=False,
-                        )
+                        def on_amx_changed(sender: str, amx: AmxData, cb_user_data: Any) -> None:
+                            root.parent = amx.nid
+                            on_node_changed(tag, root, user_data)
+                        
+                        amx = root.parent
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("ActorMixer:", tag=f"{tag}/amx_is", bullet=True)
+                            add_select_actormixer(
+                                bnk, None, on_amx_changed, default=amx, textbox_width=240, 
+                            )
 
-            if isinstance(node, Action):
-                with dpg.group(horizontal=True):
-                    dpg.add_text(µ("Target: "), bullet=True)
-                    ext = bnk.get(node.external_id)
-                    add_node_link(
-                        bnk,
-                        ext,
-                        on_structure_changed,
-                        on_node_selected,
-                        user_data=user_data,
-                    )
-            else:
-                actions = [a for a in bnk.query(node_type=Action) if a.external_id == node.id]
-                if actions:
-                    with dpg.tree_node(label=µ("Actions"), span_full_width=True):
-                        for act in actions:
+                    if root != node:
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Parent:    ", tag=f"{tag}/parent_is", bullet=True)
+                            add_node_link(
+                                bnk, parent_node, on_structure_changed, on_node_selected
+                            )
+
+                if hasattr(node, "children"):
+                    with dpg.tree_node(label=µ("Children"), span_full_width=True):
+                        for child_id in node.children:
+                            child = bnk.get(child_id, child_id)
                             add_node_link(
                                 bnk,
-                                act,
+                                child,
                                 on_structure_changed,
-                                on_node_selected=on_node_selected,
+                                on_node_selected,
                                 allow_select=False,
                             )
+
+                if isinstance(node, Action):
+                    with dpg.group(horizontal=True):
+                        dpg.add_text(µ("Target: "), bullet=True)
+                        ext = bnk.get(node.external_id)
+                        add_node_link(
+                            bnk,
+                            ext,
+                            on_structure_changed,
+                            on_node_selected,
+                            user_data=user_data,
+                        )
+                else:
+                    actions = [a for a in bnk.query(node_type=Action) if a.external_id == node.id]
+                    if actions:
+                        with dpg.tree_node(label=µ("Actions"), span_full_width=True):
+                            for act in actions:
+                                add_node_link(
+                                    bnk,
+                                    act,
+                                    on_structure_changed,
+                                    on_node_selected=on_node_selected,
+                                    allow_select=False,
+                                )
 
             dpg.add_spacer(height=3)
             dpg.add_separator()
