@@ -788,8 +788,8 @@ class Soundbank:
                     severity = max(severity, 2)
 
                 if parent_id > 0 and not parent:
-                    logger.error(f"{node}: parent {parent_id} does not exist")
-                    severity = max(severity, 2)
+                    logger.warning(f"{node}: parent {parent_id} does not exist")
+                    severity = max(severity, 1)
 
                 if parent and hasattr(parent, "children"):
                     if node_id not in parent.children:

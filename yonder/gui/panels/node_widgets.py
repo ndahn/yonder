@@ -176,9 +176,13 @@ def create_node_widgets(
                     if root and not isinstance(node, (Event, Action, ActorMixer)):
 
                         def on_amx_changed(sender: str, amx: AmxData, cb_user_data: Any) -> None:
+                            prev_amx = bnk.get(root.parent)
+                            if prev_amx:
+                                prev_amx.children.remove(node.id, missing_ok=True)
+
                             root.parent = amx.nid
-                            on_node_changed(tag, root, user_data)
-                        
+                            on_structure_changed()
+
                         amx = root.parent
                         with dpg.group(horizontal=True):
                             dpg.add_text("ActorMixer:", tag=f"{tag}/amx_is", bullet=True)
@@ -186,12 +190,17 @@ def create_node_widgets(
                                 bnk, None, on_amx_changed, default=amx, textbox_width=240, 
                             )
 
-                    if root != node:
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Parent:    ", tag=f"{tag}/parent_is", bullet=True)
-                            add_node_link(
-                                bnk, parent_node, on_structure_changed, on_node_selected
-                            )
+                    def on_parent_changed() -> None:
+                        if hasattr(parent_node, "children"):
+                            parent_node.children.remove(node.id, missing_ok=True)
+
+                        on_structure_changed()
+
+                    with dpg.group(horizontal=True):
+                        dpg.add_text("Parent:    ", tag=f"{tag}/parent_is", bullet=True)
+                        add_node_link(
+                            bnk, parent_node, on_parent_changed, on_node_selected
+                        )
 
                 if hasattr(node, "children"):
                     with dpg.tree_node(label=µ("Children"), span_full_width=True):
