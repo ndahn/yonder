@@ -186,12 +186,13 @@ class add_hirc_player(DpgItem):
 
     def _update_visualizer(self) -> None:
         amps = self._bar_eq.get_levels()
+        if not self._player or not self._player.playing:
+            amps = [a * 0.5 for a in self._bar_eq_widget.amplitudes]
+
         self._bar_eq_widget.set_amplitudes(amps)
 
-        if (
-            not self._player
-            or not self._player.playing
-            and all(abs(x) <= 1e-6 for x in amps)
+        if (not self._player or not self._player.playing) and all(
+            abs(x) <= 1e-6 for x in amps
         ):
             # Not playing anymore and all amplitudes have calmed down
             return
@@ -277,7 +278,7 @@ class add_hirc_player(DpgItem):
         self._player.seek(0, False, None)
         self._set_play_button_state(False)
 
-    def _on_ctrl_play_pause(self) -> None:
+    def toggle_play_pause(self) -> None:
         if not self._player:
             return
 
@@ -374,7 +375,7 @@ class add_hirc_player(DpgItem):
                 )
                 dpg.add_image_button(
                     Icons.play,
-                    callback=self._on_ctrl_play_pause,
+                    callback=self.toggle_play_pause,
                     tint_color=style.white,
                     tag=self._t("btn_play"),
                 )

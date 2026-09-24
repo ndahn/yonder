@@ -42,6 +42,10 @@ class add_bar_equalizer(DpgItem):
     def destroy(self) -> None:
         self._delete_item(self._t("handler"))
 
+    @property
+    def amplitudes(self) -> list[float]:
+        return list(self._amplitudes)
+
     def set_amplitudes(self, amps: list[float]) -> None:
         if len(amps) != self._bars:
             # Interpolate to match our number of bars

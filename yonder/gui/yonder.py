@@ -841,6 +841,8 @@ class BanksOfYonder(DpgItem):
         else:
             if key == dpg.mvKey_F4:
                 self._repack_soundbank()
+            elif key == dpg.mvKey_Spacebar:
+                self._hirc_player.toggle_play_pause()
 
     def _regenerate_recent_files_menu(self) -> None:
         dpg.delete_item(self._t("menu/recent_files"), slot=1, children_only=True)
