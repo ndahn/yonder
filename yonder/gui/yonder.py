@@ -22,7 +22,6 @@ from yonder.types import (
     HIRCSection,
     DataNode,
 )
-from yonder.enums import ActionType
 from yonder.types.serialization import serialize
 from yonder.hash import (
     load_lookup_table,
@@ -37,7 +36,6 @@ from .config import Config, get_config
 from .helpers import center_window, shorten_path
 from .widgets import (
     DpgItem,
-    create_section_widgets,
     loading_indicator,
     table_tree_node,
     add_lazy_table_tree_node,
@@ -69,6 +67,7 @@ from .dialogs.file_dialog import (
 from .dialogs.create_simple_sound_dialog import create_simple_sound_dialog
 from .dialogs.batch_sound_builder import create_batch_sound_builder_dialog
 from .dialogs.calc_hash_dialog import calc_hash_dialog
+from .dialogs.graph_designer import graph_designer_dialog
 from .dialogs.mass_transfer_dialog import mass_transfer_dialog
 from .dialogs.new_soundbank_dialog import new_soundbank_dialog
 from .dialogs.convert_wav_dialog import convert_wavs_dialog
@@ -82,6 +81,7 @@ from .dialogs.compare_nodes_dialog import compare_nodes_dialog
 from .dialogs.unmangle_soundbanks_dialog import unmangle_soundbanks_dialog
 from .panels.hirc_player_panel import add_hirc_player_panel
 from .panels.node_widgets import create_node_widgets
+from .panels.section_widgets import create_section_widgets
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
 from .widgets.hirc_player_widget import add_hirc_player
@@ -268,6 +268,11 @@ class BanksOfYonder(DpgItem):
                     label=µ("Isolated Node", "menu"),
                     callback=self._open_create_node_dialog,
                     tag=self._t("menu/create_node"),
+                )
+                dpg.add_menu_item(
+                    label=µ("Designer", "menu"),
+                    callback=self._open_graph_designer_dialog,
+                    tag=self._t("menu/graph_designer"),
                 )
                 dpg.add_separator()
                 dpg.add_menu_item(
@@ -2213,6 +2218,19 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
 
         create_node_dialog(self.bnk, on_node_created, tag=tag)
+        center_window(tag)
+
+    def _open_graph_designer_dialog(self) -> None:
+        tag = self._t("graph_designer_dialog")
+        if dpg.does_item_exist(tag):
+            dpg.show_item(tag)
+            dpg.focus_item(tag)
+            return
+
+        def on_graph_created() -> None:
+            pass
+
+        graph_designer_dialog(self.bnk, on_graph_created, tag=tag)
         center_window(tag)
 
     def _open_settings_dialog(self) -> None:
