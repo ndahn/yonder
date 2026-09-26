@@ -48,6 +48,10 @@ class Attenuation(RtpcMixin, HIRCNode):
         )
 
     @property
+    def type_name_short(self):
+        return "AT"
+
+    @property
     def wwise_link(self) -> str:
         return "https://www.audiokinetic.com/en/public-library/2025.1.10_9233/?source=Help&id=defining_attenuation_curves_for_various_object_properties#wwise_properties_for_attenuation_curves_list"
 
