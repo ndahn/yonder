@@ -77,30 +77,7 @@ from ..widgets.hash_widget import add_hash_widget
 from ..widgets.select_node import add_select_node, add_select_actormixer
 
 
-_colorgen = style.HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)
-type_colors = {
-    Action: _colorgen(),
-    ActorMixer: _colorgen(),
-    AudioDevice: _colorgen(),
-    AuxiliaryBus: _colorgen(),
-    Attenuation: _colorgen(),
-    Bus: _colorgen(),
-    DialogueEvent: _colorgen(),
-    Event: _colorgen(),
-    EffectCustom: _colorgen(),
-    EffectShareSet: _colorgen(),
-    LayerContainer: _colorgen(),
-    MusicRandomSequenceContainer: _colorgen(),
-    MusicSegment: _colorgen(),
-    MusicSwitchContainer: _colorgen(),
-    MusicTrack: _colorgen(),
-    RandomSequenceContainer: _colorgen(),
-    Section: _colorgen(),
-    Sound: _colorgen(),
-    State: _colorgen(),
-    SwitchContainer: _colorgen(),
-    TimeModulator: _colorgen(),
-}
+
 
 
 def create_node_widgets(
@@ -123,7 +100,7 @@ def create_node_widgets(
             # Heading
             with dpg.group(horizontal=True, horizontal_spacing=4):
                 doc = doc_parse(type(node).__doc__)
-                color = type_colors.get(type(node), style.white)
+                color = style.type_colors.get(node.type_name, style.white)
 
                 dpg.add_text(node.type_name, color=color)
                 if doc.short_description or doc.long_description:

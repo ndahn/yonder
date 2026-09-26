@@ -459,13 +459,13 @@ class HighContrastColorGenerator:
         self.hue = self.initial_hue
         self.cache.clear()
 
-    def __next__(self) -> tuple[int, int, int]:
+    def __next__(self) -> RGBA:
         """Generates the next high-contrast color."""
         self.hue = (self.hue + self.hue_step) % 1
         r, g, b = colorsys.hsv_to_rgb(self.hue, self.saturation, self.value)
         return RGBA(int(r * 255), int(g * 255), int(b * 255), int(self.alpha * 255))
 
-    def __call__(self, key: Any = None) -> tuple[int, int, int]:
+    def __call__(self, key: Any = None) -> RGBA:
         """Allows calling the instance directly to get the next color."""
         if key is not None:
             if key not in self.cache:
@@ -473,3 +473,30 @@ class HighContrastColorGenerator:
             return self.cache[key]
 
         return next(self)
+
+
+# TODO move generator into separate module
+_colorgen = HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)
+type_colors = {
+    "Action": _colorgen(),
+    "ActorMixer": _colorgen(),
+    "AudioDevice": _colorgen(),
+    "AuxiliaryBus": _colorgen(),
+    "Attenuation": _colorgen(),
+    "Bus": _colorgen(),
+    "DialogueEvent": _colorgen(),
+    "Event": _colorgen(),
+    "EffectCustom": _colorgen(),
+    "EffectShareSet": _colorgen(),
+    "LayerContainer": _colorgen(),
+    "MusicRandomSequenceContainer": _colorgen(),
+    "MusicSegment": _colorgen(),
+    "MusicSwitchContainer": _colorgen(),
+    "MusicTrack": _colorgen(),
+    "RandomSequenceContainer": _colorgen(),
+    "Section": _colorgen(),
+    "Sound": _colorgen(),
+    "State": _colorgen(),
+    "SwitchContainer": _colorgen(),
+    "TimeModulator": _colorgen(),
+}

@@ -20,6 +20,7 @@ class GraphNode:
     label: str  # full "type (id)" description, used for tooltips/popups
     short_label: str  # 1-4 letter tag drawn inside the node marker
     type_name: str
+    type_name_snake: str
     pos: tuple[float, float]
     hidden: list[int]  # sibling branch ids collapsed under this node
 
@@ -86,7 +87,6 @@ class add_graph_widget(DpgItem):
         horizontal: bool = False,
         max_children: int = 5,
         node_spacing: float = 60.0,
-        node_color: Callable[[int], tuple[int, int, int, int]] = None,
         width: int = 400,
         height: int = 400,
         tag: str = None,
@@ -97,7 +97,6 @@ class add_graph_widget(DpgItem):
         self._bnk = bnk
         self._root = root
         self._on_node_selected = on_node_selected
-        self._node_color = node_color
         self._children_only = children_only
         self._horizontal = horizontal
         self._max_children = max_children
@@ -246,13 +245,15 @@ class add_graph_widget(DpgItem):
         """give nid a ring position, then split its wedge among its children."""
         node = self._bnk.get(nid)
         short = f"[{node.type_name_short if node else '?'}]"
-        type_name = re.sub(r"(?<!^)(?=[A-Z])", "_", node.type_name) if node else None
+        type_name = node.type_name if node else None
+        type_name_snake = re.sub(r"(?<!^)(?=[A-Z])", "_", type_name).lower() if node else None
 
         theta = (lo + hi) / 2
         layout[nid] = GraphNode(
             label=self._describe(node),
             short_label=short,
             type_name=type_name,
+            type_name_snake=type_name_snake,
             pos=self._polar_to_pos(depth * self._node_spacing, theta),
             hidden=self._hidden_branches.get(nid, []),
         )
@@ -398,19 +399,18 @@ class add_graph_widget(DpgItem):
             px = transformed_x[idx]
             py = transformed_y[idx]
             gnode = self._layout[nid]
-            color = self._node_color(nid) if self._node_color else None
+            color = style.type_colors.get(gnode.type_name)
 
             if gnode.hidden:
                 # grouped node: badge with hidden-branch count, no type label
                 text = f"+{len(gnode.hidden)}"
-                fill = color or style.purple
             else:
                 text = gnode.short_label
-                fill = color or style.pink
+                color = color.mix(style.black, 0.3)
 
-            dpg.draw_circle((px, py), node_r, fill=fill)
+            dpg.draw_circle((px, py), node_r, fill=color)
             
-            icon = getattr(Icons, f"type_{gnode.type_name.lower()}", None)
+            icon = getattr(Icons, f"type_{gnode.type_name_snake}", None)
             if icon:
                 dpg.draw_image(
                     icon,
