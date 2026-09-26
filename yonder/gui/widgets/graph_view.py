@@ -1,6 +1,4 @@
 from typing import Any, Callable
-import math
-import re
 import networkx as nx
 from dataclasses import dataclass
 from dearpygui import dearpygui as dpg
@@ -11,6 +9,7 @@ from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from yonder.gui.helpers import estimate_drawn_text_size
 from .dpg_item import DpgItem
+from .graph_layout import GraphLayout
 
 
 @dataclass
@@ -20,7 +19,6 @@ class GraphNode:
     label: str  # full "type (id)" description, used for tooltips/popups
     short_label: str  # 1-4 letter tag drawn inside the node marker
     type_name: str
-    type_name_snake: str
     pos: tuple[float, float]
     hidden: list[int]  # sibling branch ids collapsed under this node
 
@@ -83,7 +81,7 @@ class add_graph_widget(DpgItem):
         root: int | HIRCNode = None,
         on_node_selected: Callable[[str, int | HIRCNode, Any], None] = None,
         *,
-        children_only: bool = True,
+        nodes_only: bool = True,
         horizontal: bool = False,
         max_children: int = 5,
         node_spacing: float = 60.0,
@@ -97,41 +95,29 @@ class add_graph_widget(DpgItem):
         self._bnk = bnk
         self._root = root
         self._on_node_selected = on_node_selected
-        self._children_only = children_only
-        self._horizontal = horizontal
+        self._children_only = nodes_only
         self._max_children = max_children
-        self._node_spacing = node_spacing
         self._user_data = user_data
 
         # Mutable render state
-        self._g: nx.DiGraph = None  # full fetched subtree
-        self._visible_g: nx.DiGraph = None  # subtree with branches collapsed
-        self._layout: dict[int, GraphNode] = {}
+        self._g: nx.DiGraph = None
+        self._visible_g: nx.DiGraph = None
+        self._layout: GraphLayout[GraphNode] = GraphLayout(
+            self._store_node, None, horizontal=horizontal, node_spacing=node_spacing
+        )
         self._branch_selection: dict[int, int] = {}  # parent id -> chosen child id
-        self._hidden_branches: dict[
-            int, list[int]
-        ] = {}  # parent id -> collapsed siblings
         self._current_highlight: int = -1  # hovered node this frame
         self._selected_node: int = -1  # persistently selected node
         self._force_redraw: bool = (
             False  # redraw next frame even without mouse activity
         )
-        self._handler_reg: str = None
 
         self._build(width, height)
         self.regenerate()
 
-    def __del__(self) -> None:
-        self.destroy()
-
     def destroy(self) -> None:
-        """Delete DPG items owned by this widget."""
-        if dpg.does_item_exist(self._tag):
-            dpg.delete_item(self._tag)
-        if self._handler_reg and dpg.does_item_exist(self._handler_reg):
-            dpg.delete_item(self._handler_reg)
-        if dpg.does_item_exist(self._t("branch_popup")):
-            dpg.delete_item(self._t("branch_popup"))
+        self._delete_item(self._t("mouse_handler_reg"))
+        self._delete_item(self._t("branch_popup"))
 
     # === Build =========================================================
 
@@ -145,9 +131,6 @@ class add_graph_widget(DpgItem):
             no_menus=True,
             no_frame=True,
             no_title=True,
-            payload_type="node",
-            drag_callback=self._on_payload_drag,
-            drop_callback=self._on_payload_drop,
             width=width,
             height=height,
             tag=self._tag,
@@ -175,14 +158,13 @@ class add_graph_widget(DpgItem):
 
         dpg.bind_item_theme(self._tag, style.themes.graph_view)
 
-        with dpg.handler_registry() as reg:
+        with dpg.handler_registry(tag=self._t("mouse_handler_reg")):
             dpg.add_mouse_click_handler(
                 button=dpg.mvMouseButton_Left, callback=self._on_mouse_click
             )
             dpg.add_mouse_click_handler(
                 button=dpg.mvMouseButton_Right, callback=self._on_mouse_right_click
             )
-        self._handler_reg = reg
 
     # === Helpers =======================================================
 
@@ -194,10 +176,23 @@ class add_graph_widget(DpgItem):
         type_name = node.type_name if node else µ("(not found)")
         return f"{type_name} ({node})"
 
+    def _store_node(self, nid: int, pos: tuple[float, float]) -> GraphNode:        
+        node = self._bnk.get(nid)
+        short = f"[{node.type_name_short if node else '?'}]"
+        type_name = node.type_name if node else None
+
+        return GraphNode(
+            label=self._describe(node),
+            short_label=short,
+            type_name=type_name,
+            pos=pos,
+            hidden=self._layout.hidden_branches.get(nid, []),
+        )
+
     def _build_visible_subgraph(self) -> nx.DiGraph:
         """collapse branches with too many children down to the selected one."""
         visible = nx.DiGraph()
-        self._hidden_branches.clear()
+        self._layout.hidden_branches.clear()
 
         roots = [n for n in self._g if self._g.in_degree(n) == 0]
         visible.add_nodes_from(roots)
@@ -209,7 +204,9 @@ class add_graph_widget(DpgItem):
 
             if len(children) > self._max_children:
                 chosen = self._branch_selection.get(node, children[0])
-                self._hidden_branches[node] = [c for c in children if c != chosen]
+                self._layout.hidden_branches[node] = [
+                    c for c in children if c != chosen
+                ]
                 children = [chosen]
 
             for child in children:
@@ -218,92 +215,12 @@ class add_graph_widget(DpgItem):
 
         return visible
 
-    def _leaf_counts(self, g: nx.DiGraph) -> dict[int, int]:
-        """number of leaf descendants under each node, used to size wedges."""
-        counts: dict[int, int] = {}
-        for nid in reversed(list(nx.topological_sort(g))):
-            children = list(g.successors(nid))
-            counts[nid] = sum(counts[c] for c in children) if children else 1
-        return counts
-
-    def _polar_to_pos(self, radius: float, theta: float) -> tuple[float, float]:
-        """convert (radius, angle) to plot coords. theta=0 is straight ahead."""
-        if self._horizontal:
-            return radius * math.cos(theta), radius * math.sin(theta)
-        return radius * math.sin(theta), -radius * math.cos(theta)
-
-    def _place(
-        self,
-        g: nx.DiGraph,
-        nid: int,
-        depth: int,
-        lo: float,
-        hi: float,
-        leafs: dict[int, int],
-        layout: dict[int, GraphNode],
-    ) -> None:
-        """give nid a ring position, then split its wedge among its children."""
-        node = self._bnk.get(nid)
-        short = f"[{node.type_name_short if node else '?'}]"
-        type_name = node.type_name if node else None
-        type_name_snake = re.sub(r"(?<!^)(?=[A-Z])", "_", type_name).lower() if node else None
-
-        theta = (lo + hi) / 2
-        layout[nid] = GraphNode(
-            label=self._describe(node),
-            short_label=short,
-            type_name=type_name,
-            type_name_snake=type_name_snake,
-            pos=self._polar_to_pos(depth * self._node_spacing, theta),
-            hidden=self._hidden_branches.get(nid, []),
-        )
-
-        children = list(g.successors(nid))
-        total = leafs[nid] or 1
-        cur = lo
-        for child in children:
-            share = (hi - lo) * leafs[child] / total
-            self._place(g, child, depth + 1, cur, cur + share, leafs, layout)
-            cur += share
-
-    def _make_layout(self, g: nx.DiGraph) -> dict[int, GraphNode]:
-        """place nodes on a half-ring: depth -> radius, subtree size -> angle.
-
-        Roots sit at the center; each generation forms a wider ring around
-        it, opening downward (vertical) or rightward (horizontal). Siblings
-        share their parent's wedge proportional to subtree size, so a chain
-        of single-child nodes forms a straight ray.
-        """
-        layout: dict[int, GraphNode] = {}
-        if g.number_of_nodes() == 0:
-            return layout
-
-        leafs = self._leaf_counts(g)
-        roots = [n for n in g if g.in_degree(n) == 0]
-        total = sum(leafs[r] for r in roots) or 1
-
-        half_sweep = math.pi / 4  # 45 degrees either side of center
-        lo = -half_sweep
-
-        for root in roots:
-            share = 2 * half_sweep * leafs[root] / total
-            self._place(g, root, 0, lo, lo + share, leafs, layout)
-            lo += share
-
-        return layout
-
     # === DPG callbacks =================================================
-
-    def _on_payload_drag(self, sender: str, payload: Any) -> None:
-        pass
-
-    def _on_payload_drop(self, sender: str, payload: Any) -> None:
-        pass
 
     def _on_mouse_click(self) -> None:
         if not dpg.does_item_exist(self._tag):
             # Widget destroyed; remove the stale handler registry
-            dpg.delete_item(self._handler_reg)
+            dpg.delete_item(self._t("mouse_handler_reg"))
             return
 
         if not dpg.is_item_hovered(self._tag) or self._current_highlight <= 0:
@@ -321,7 +238,7 @@ class add_graph_widget(DpgItem):
         if not dpg.is_item_hovered(self._tag) or self._current_highlight <= 0:
             return
 
-        if self._hidden_branches.get(self._current_highlight):
+        if self._layout.hidden_branches.get(self._current_highlight):
             self._open_branch_popup(self._current_highlight)
 
     def _open_branch_popup(self, node_id: int) -> None:
@@ -380,7 +297,7 @@ class add_graph_widget(DpgItem):
             dx = transformed_x[node_indices[dst]]
             dy = transformed_y[node_indices[dst]]
 
-            mx, my = (sx, dy) if self._horizontal else (dx, sy)
+            mx, my = (sx, dy) if self._layout.horizontal else (dx, sy)
 
             dpg.draw_bezier_quadratic(
                 (sx, sy),
@@ -409,8 +326,8 @@ class add_graph_widget(DpgItem):
                 color = color.mix(style.black, 0.3)
 
             dpg.draw_circle((px, py), node_r, fill=color)
-            
-            icon = getattr(Icons, f"type_{gnode.type_name_snake}", None)
+
+            icon = Icons.get_type_icon_tag(gnode.type_name)
             if icon:
                 dpg.draw_image(
                     icon,
@@ -561,12 +478,12 @@ class add_graph_widget(DpgItem):
         dpg.delete_item(self._t("yaxis"), children_only=True, slot=1)
 
         self._visible_g = self._build_visible_subgraph()
-        self._layout = self._make_layout(self._visible_g)
+        self._layout.regenerate(self._visible_g)
 
         if not self._layout:
             return
 
-        node_ids = list(self._layout.keys())
+        node_ids = list(self._layout.nodes.keys())
         x = [self._layout[n].pos[0] for n in node_ids]
         y = [self._layout[n].pos[1] for n in node_ids]
         node_indices = {nid: idx for idx, nid in enumerate(node_ids)}

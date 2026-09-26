@@ -344,6 +344,3 @@ class add_interpolation_curve(DpgItem):
             dpg.delete_item(self._tag)
         if self._handler_reg and dpg.does_item_exist(self._handler_reg):
             dpg.delete_item(self._handler_reg)
-
-    def __del__(self) -> None:
-        self.destroy()

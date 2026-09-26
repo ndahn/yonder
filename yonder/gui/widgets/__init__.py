@@ -21,16 +21,17 @@ from .editable_table import (
 )
 from .flags_widget import add_flag_checkboxes
 from .generic_input_widget import add_generic_widget
+from .graph_layout import GraphLayout
 from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
 from .hirc_player_widget import add_hirc_player
 from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
+from .node_blocks import add_node_blocks
 from .notifications import global_notification_man
 from .loading_indicator import loading_indicator
 from .select_node import add_select_node, add_select_actormixer
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
-from .section_widgets import create_section_widgets
 from .state_value_input import add_state_value_input
 from .splash import add_splash
 from .wav_player_widget import add_wav_player

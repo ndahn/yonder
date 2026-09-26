@@ -29,11 +29,11 @@ from yonder.types.base_types import (
 from yonder.enums import RtpcType
 from yonder.gui import style
 from yonder.gui.localization import µ
-from .generic_input_widget import add_generic_widget
-from .editable_table import add_widget_table
-from .hash_widget import add_hash_widget
-from .interpolation_curve import add_interpolation_curve
-from .loading_indicator import loading_indicator
+from ..widgets.generic_input_widget import add_generic_widget
+from ..widgets.editable_table import add_widget_table
+from ..widgets.hash_widget import add_hash_widget
+from ..widgets.interpolation_curve import add_interpolation_curve
+from ..widgets.loading_indicator import loading_indicator
 
 
 def create_section_widgets(

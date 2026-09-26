@@ -29,7 +29,7 @@ class MultiTrackStream(pyo.PyoObject):
         sources: int | list[int],
         resolve_source: Callable[[int], Path],
         *,
-        loop: bool = False,
+        loop_count: int = -1,
         volume_db: float = 0,
         hpf_cents: float = 0,
         lpf_cents: float = 0,
@@ -78,7 +78,7 @@ class MultiTrackStream(pyo.PyoObject):
         return cls(
             playlist,
             resolve_source,
-            loop=loop,
+            loop_count=loop_count,
             volume_db=volume_db,
             hpf_cents=hpf_cents,
             lpf_cents=lpf_cents,
@@ -107,7 +107,7 @@ class MultiTrackStream(pyo.PyoObject):
         playlist: list[TrackSrcInfo],
         resolve_source: Callable[[int], Path],
         *,
-        loop: bool = False,
+        loop_count: int = -1,
         volume_db: float = 0,
         hpf_cents: float = 0,
         lpf_cents: float = 0,
@@ -135,7 +135,8 @@ class MultiTrackStream(pyo.PyoObject):
         self._loop_end = loop_end
         self._xfade = xfade
         self._paused_pos = 0.0
-        self.loop = loop
+        self._loops_played = 0
+        self.loop_count = loop_count
 
         # wwise implements pitch as a playback speed change (resampling).
         # Our clocks are driven from this signal and follow automatically
@@ -147,7 +148,9 @@ class MultiTrackStream(pyo.PyoObject):
         first_path = str(resolve_source(self._playlist[0].source_id))
         self._envs = [pyo.SigTo(0, xfade), pyo.SigTo(0, xfade)]
         self._players = [
-            pyo.SfPlayer(first_path, speed=self._speed_ctrl, loop=False, mul=self._envs[i])
+            pyo.SfPlayer(
+                first_path, speed=self._speed_ctrl, loop=False, mul=self._envs[i]
+            )
             for i in range(2)
         ]
         self._active_player = 0
@@ -175,7 +178,7 @@ class MultiTrackStream(pyo.PyoObject):
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=0.05)
 
         self._chain = self._setup_property_controls(self._mix, clip_automations)
-        # Only the fully processed signal is our output. Consumers like Mixer and 
+        # Only the fully processed signal is our output. Consumers like Mixer and
         # InputFader read the first stream of this object, i.e. the raw signal
         self._base_objs = self._chain[-1].getBaseObjects()
 
@@ -360,7 +363,7 @@ class MultiTrackStream(pyo.PyoObject):
 
     @property
     def play_duration(self) -> float:
-        if not self.loop:
+        if self.loop_count < 0:
             return self.duration
 
         return self.play_end - self.play_begin
@@ -392,9 +395,10 @@ class MultiTrackStream(pyo.PyoObject):
             offset = next_item.begin_trim_offset
             # silence for any gap left between clips, no crossfade needed
             delay = max(0.0, next_item.play_at - self._clip_end(current_item))
-        elif self.loop:
+        elif self.loop_count == 0 or self.loop_count > self._loops_played:
             next_idx, offset = self._clip_for_position(self._loop_start)
             delay = 0.0
+            self._loops_played += 1
         else:
             # end of playlist
             self.stop()
@@ -477,6 +481,7 @@ class MultiTrackStream(pyo.PyoObject):
 
         self._active_player = 0
         self._clip_index = idx
+        self._loops_played = 0
         self._update_clip_clock()
         self._update_overall_clock()
 

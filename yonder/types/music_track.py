@@ -238,7 +238,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         return MultiTrackStream(
             list(self.playlist),
             ctx.get_wav_for_source,
-            loop=(PropID.Loop in props),
+            loop_count=props.get(PropID.Loop, -1),
             volume_db=ctx.get_effective_volume(),
             hpf_cents=ctx.get_effective_hpf(),
             lpf_cents=ctx.get_effective_lpf(),
@@ -271,8 +271,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         stream: MultiTrackStream = my_pyo.output
         props = ctx.properties
 
-        stream.loop = PropID.Loop in props
-
+        stream.loop_count = props.get(PropID.Loop, -1)
         loop_start = props.get(PropID.LoopStart, stream.loop_start)
         loop_end = props.get(PropID.LoopEnd, stream.loop_end)
         stream.set_loop_points(loop_start, loop_end)

@@ -40,6 +40,7 @@ class DpgItem:
 
     def __del__(self):
         DpgItem.__instance_store.pop(self._tag, None)
+        self.destroy()
 
     def destroy(self) -> None:
         pass

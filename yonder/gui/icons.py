@@ -69,32 +69,40 @@ class Icons:
     tool_mass_transfer = "tex_icon_tool_mass_transfer"
     trash = "tex_icon_trash"
     transition = "tex_icon_transition"
-    type_action = "tex_icon_type_action"
-    type_actor_mixer = "tex_icon_type_actor_mixer"
-    type_attenuation = "tex_icon_type_attenuation"
-    type_audio_device = "tex_icon_type_audio_device"
-    type_aux_bus = "tex_icon_type_aux_bus"
-    type_bus = "tex_icon_type_bus"
-    type_dialog_event = "tex_icon_type_dialog_event"
-    type_effect_share_set = "tex_icon_type_effect_share_set"
-    type_effect_custom = "tex_icon_type_effect_custom"
-    type_event = "tex_icon_type_event"
-    type_layer_container = "tex_icon_type_layer_container"
-    type_lfo_modulator = "tex_icon_type_lfo_modulator"
-    type_music_random_sequence_container = "tex_icon_type_music_random_sequence_container"
-    type_music_switch_container = "text_icon_type_music_switch_container"
-    type_music_segment = "tex_icon_type_music_segment"
-    type_music_track = "tex_icon_type_music_track"
-    type_random_sequence_container = "tex_icon_type_random_sequence_container"
-    type_sound = "tex_icon_type_sound"
-    type_state = "tex_icon_type_state"
-    type_switch_container = "tex_icon_type_switch_container"
-    type_time_modulator = "tex_icon_type_time_modulator"
+    type_Action = "tex_icon_type_action"
+    type_ActorMixer = "tex_icon_type_actor_mixer"
+    type_Attenuation = "tex_icon_type_attenuation"
+    type_AudioDevice = "tex_icon_type_audio_device"
+    type_AuxiliaryBus = "tex_icon_type_auxilliary_bus"
+    type_Bus = "tex_icon_type_bus"
+    type_DialogueEvent = "tex_icon_type_dialogue_event"
+    type_EffectShareSet = "tex_icon_type_effect_share_set"
+    type_EffectCustom = "tex_icon_type_effect_custom"
+    type_Event = "tex_icon_type_event"
+    type_LayerContainer = "tex_icon_type_layer_container"
+    type_LFOModulator = "tex_icon_type_lfo_modulator"
+    type_MusicRandomSequenceContainer = "tex_icon_type_music_random_sequence_container"
+    type_MusicSwitchContainer = "tex_icon_type_music_switch_container"
+    type_MusicSegment = "tex_icon_type_music_segment"
+    type_MusicTrack = "tex_icon_type_music_track"
+    type_RandomSequenceContainer = "tex_icon_type_random_sequence_container"
+    type_Sound = "tex_icon_type_sound"
+    type_State = "tex_icon_type_state"
+    type_SwitchContainer = "tex_icon_type_switch_container"
+    type_TimeModulator = "tex_icon_type_time_modulator"
+    type_Unknown = "tex_icon_type_unknown"
     volume_down = "tex_icon_volume_down"
     volume_up = "tex_icon_volume_up"
     warning = "tex_icon_warning"
     wave = "tex_icon_wave"
     x = "tex_icon_x"
+
+    @classmethod
+    def get_type_icon_tag(cls, node_type: type | str) -> str:
+        if isinstance(node_type, type):
+            node_type = node_type.__name__
+
+        return getattr(cls, f"type_{node_type}", cls.type_Unknown)
 
 
 def load_icons():
@@ -106,7 +114,8 @@ def load_icons():
 
             if not dpg.does_item_exist(val):
                 try:
-                    tw, th, _, tex = dpg.load_image(str(res / "icons" / f"{key}.png"))
+                    filename = val.removeprefix("tex_icon_")
+                    tw, th, _, tex = dpg.load_image(str(res / "icons" / f"{filename}.png"))
                     dpg.add_static_texture(tw, th, tex, tag=val)
                 except Exception:
                     raise RuntimeError(f"Failed to load icon {key}")

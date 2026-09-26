@@ -132,6 +132,7 @@ muted_ocean = RGBA(36, 107, 107, 255)
 muted_rose = RGBA(200, 80, 120, 255)
 muted_sky = RGBA(48, 70, 100, 255)
 
+type_colors = {}
 
 class themes:
     notification_frame = None
@@ -431,6 +432,13 @@ def init_themes():
                 dpg.mvPlotStyleVar_FitPadding, 0.2, 0.2, category=dpg.mvThemeCat_Plots
             )
 
+    from yonder.types.hirc_node import HIRCNode
+
+    colorgen = HighContrastColorGenerator(0.5, hue_step=0.2573, saturation=0.52)
+    for tp in HIRCNode.__subclasses__():
+        type_colors[tp.__name__] = colorgen()
+
+
 class HighContrastColorGenerator:
     """Generates RGB colors with a certain distance apart so that subsequent colors are visually distinct."""
 
@@ -473,30 +481,3 @@ class HighContrastColorGenerator:
             return self.cache[key]
 
         return next(self)
-
-
-# TODO move generator into separate module
-_colorgen = HighContrastColorGenerator(0.5, hue_step=0.173, saturation=0.52)
-type_colors = {
-    "Action": _colorgen(),
-    "ActorMixer": _colorgen(),
-    "AudioDevice": _colorgen(),
-    "AuxiliaryBus": _colorgen(),
-    "Attenuation": _colorgen(),
-    "Bus": _colorgen(),
-    "DialogueEvent": _colorgen(),
-    "Event": _colorgen(),
-    "EffectCustom": _colorgen(),
-    "EffectShareSet": _colorgen(),
-    "LayerContainer": _colorgen(),
-    "MusicRandomSequenceContainer": _colorgen(),
-    "MusicSegment": _colorgen(),
-    "MusicSwitchContainer": _colorgen(),
-    "MusicTrack": _colorgen(),
-    "RandomSequenceContainer": _colorgen(),
-    "Section": _colorgen(),
-    "Sound": _colorgen(),
-    "State": _colorgen(),
-    "SwitchContainer": _colorgen(),
-    "TimeModulator": _colorgen(),
-}
