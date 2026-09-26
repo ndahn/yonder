@@ -21,6 +21,10 @@ class _EffectBase(StateMixin, RtpcMixin, HIRCNode):
         return cls(nid)
 
     @property
+    def type_name_short(self):
+        return "FX"
+
+    @property
     def wwise_link(self) -> str:
         return "https://ndahn.github.io/yonder/wwise/globals/#effects"
 

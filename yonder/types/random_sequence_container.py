@@ -165,6 +165,8 @@ class RandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         if my_pyo.playing:
             return
 
+        # TODO need to consume a Loop property here & in update_context, it shouldn't be inherited
+
         ctx = my_pyo.ctx
         fader: pyo.InputFader = my_pyo.cache["fader"]
         prev_node: HIRCNode = ctx.bank.get(my_pyo.cache.get("prev_node", -1))

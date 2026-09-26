@@ -1,11 +1,13 @@
 from typing import Any, Callable
 import math
+import re
 import networkx as nx
 from dataclasses import dataclass
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, HIRCNode
 from yonder.gui import style
+from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from yonder.gui.helpers import estimate_drawn_text_size
 from .dpg_item import DpgItem
@@ -17,6 +19,7 @@ class GraphNode:
 
     label: str  # full "type (id)" description, used for tooltips/popups
     short_label: str  # 1-4 letter tag drawn inside the node marker
+    type_name: str
     pos: tuple[float, float]
     hidden: list[int]  # sibling branch ids collapsed under this node
 
@@ -81,7 +84,7 @@ class add_graph_widget(DpgItem):
         *,
         children_only: bool = True,
         horizontal: bool = False,
-        max_children: int = 4,
+        max_children: int = 5,
         node_spacing: float = 60.0,
         node_color: Callable[[int], tuple[int, int, int, int]] = None,
         width: int = 400,
@@ -143,6 +146,9 @@ class add_graph_widget(DpgItem):
             no_menus=True,
             no_frame=True,
             no_title=True,
+            payload_type="node",
+            drag_callback=self._on_payload_drag,
+            drop_callback=self._on_payload_drop,
             width=width,
             height=height,
             tag=self._tag,
@@ -181,16 +187,13 @@ class add_graph_widget(DpgItem):
 
     # === Helpers =======================================================
 
-    def _describe(self, nid: int) -> str:
+    def _describe(self, node: HIRCNode | int) -> str:
         """human-readable label for a node: its type and id."""
-        node = self._bnk.get(nid)
-        type_name = node.type_name if node else µ("(not found)")
-        return f"{type_name} ({nid})"
+        if not isinstance(node, HIRCNode):
+            node = self._bnk.get(node)
 
-    def _short_label(self, nid: int) -> str:
-        """bracketed 1-4 letter abbreviation drawn inside a node marker."""
-        node = self._bnk.get(nid)
-        return f"[{node.type_name_short}]" if node else "[?]"
+        type_name = node.type_name if node else µ("(not found)")
+        return f"{type_name} ({node})"
 
     def _build_visible_subgraph(self) -> nx.DiGraph:
         """collapse branches with too many children down to the selected one."""
@@ -241,10 +244,15 @@ class add_graph_widget(DpgItem):
         layout: dict[int, GraphNode],
     ) -> None:
         """give nid a ring position, then split its wedge among its children."""
+        node = self._bnk.get(nid)
+        short = f"[{node.type_name_short if node else '?'}]"
+        type_name = re.sub(r"(?<!^)(?=[A-Z])", "_", node.type_name) if node else None
+
         theta = (lo + hi) / 2
         layout[nid] = GraphNode(
-            label=self._describe(nid),
-            short_label=self._short_label(nid),
+            label=self._describe(node),
+            short_label=short,
+            type_name=type_name,
             pos=self._polar_to_pos(depth * self._node_spacing, theta),
             hidden=self._hidden_branches.get(nid, []),
         )
@@ -284,6 +292,12 @@ class add_graph_widget(DpgItem):
         return layout
 
     # === DPG callbacks =================================================
+
+    def _on_payload_drag(self, sender: str, payload: Any) -> None:
+        pass
+
+    def _on_payload_drop(self, sender: str, payload: Any) -> None:
+        pass
 
     def _on_mouse_click(self) -> None:
         if not dpg.does_item_exist(self._tag):
@@ -395,15 +409,23 @@ class add_graph_widget(DpgItem):
                 fill = color or style.pink
 
             dpg.draw_circle((px, py), node_r, fill=fill)
-
-            tw, th = estimate_drawn_text_size(len(text), font_size=font_size)
-            dpg.draw_text(
-                # TODO Seems like our font size estimates are completely off right now :)
-                (px - tw / 4, py - th / 3),
-                text,
-                size=font_size,
-                color=style.white,
-            )
+            
+            icon = getattr(Icons, f"type_{gnode.type_name.lower()}", None)
+            if icon:
+                dpg.draw_image(
+                    icon,
+                    (px - 12, py - 12),
+                    (px + 12, py + 12),
+                )
+            else:
+                tw, th = estimate_drawn_text_size(len(text), font_size=font_size)
+                dpg.draw_text(
+                    # TODO Seems like our font size estimates are completely off right now :)
+                    (px - tw / 4, py - th / 3),
+                    text,
+                    size=font_size,
+                    color=style.white,
+                )
 
             hovered = self._current_highlight <= 0 and (
                 px - node_r - 2 <= mouse_x <= px + node_r + 2

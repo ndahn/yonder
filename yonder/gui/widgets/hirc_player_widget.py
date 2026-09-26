@@ -102,7 +102,9 @@ class add_hirc_player(DpgItem):
         self._player.set_equalizer(self._equalizer.values)
 
         # Give the pyo server a moment to boot
-        time.sleep(0.05)
+        while not self._player:
+            time.sleep(0.02)
+
         self._bar_eq = BarEqualizer(self._player.out, 16)
 
         self.regenerate()

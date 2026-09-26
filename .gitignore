@@ -10,6 +10,7 @@ yonder_v*
 *.*lock*
 !Cargo.lock
 export/
+resources/wwise_effects
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
