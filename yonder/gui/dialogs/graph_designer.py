@@ -60,7 +60,6 @@ class graph_designer_dialog(DpgItem):
         self._build(title)
 
     def destroy(self):
-        self._delete_item(self._t("mouse_handler_reg"))
         self._delete_item(self._t("canvas_resize_reg"))
 
     def _build(self, title: str) -> None:
@@ -114,7 +113,9 @@ class graph_designer_dialog(DpgItem):
                 color = style.type_colors.get(info.type_name, style.white)
                 icon = Icons.get_type_icon_tag(info.type_name)
 
-                with dpg.draw_node(tag=dpg_id, parent=self._t("canvas_root")):
+                with dpg.draw_node(
+                    label=info.type_name, tag=dpg_id, parent=self._t("canvas_root")
+                ):
                     dpg.draw_rectangle(
                         info.pos,
                         (
@@ -148,7 +149,7 @@ class graph_designer_dialog(DpgItem):
             )
 
         self._highlighted_node = node
-        
+
         if node:
             dpg.configure_item(
                 self._t(f"node_{node}_bg"),
