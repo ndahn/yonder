@@ -2051,6 +2051,9 @@ class BanksOfYonder(DpgItem):
 
     def _do_delete_node(self, node: HIRCNode, cascade: bool) -> None:
         def do_delete(nodes: list[HIRCNode]):
+            if isinstance(nodes, HIRCNode):
+                nodes = [nodes]
+
             if cascade:
                 for n in nodes:
                     self.bnk.delete_subtree(n)
@@ -2060,7 +2063,7 @@ class BanksOfYonder(DpgItem):
 
         def on_delete_related_choice(sender: str, choice: int, related: list[Event]) -> None:
             if choice == 0:
-                do_delete([node])
+                do_delete(node)
 
             elif choice == 1:
                 do_delete([node] + related)

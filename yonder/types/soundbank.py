@@ -118,7 +118,13 @@ class Soundbank:
 
     @property
     def name(self) -> str:
-        return self.bkhd.bank_name
+        name = self.bkhd.bank_name
+        if not name:
+            h = calc_hash(self.bnk_dir.name)
+            if h == self.bank_id:
+                return self.bnk_dir.name
+        
+        return name
 
     def get_name(self, default: str = None) -> str:
         if default is None:

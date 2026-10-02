@@ -20,7 +20,7 @@ class GraphLayout[T]:
         self._store_node = store_node
         self.horizontal = horizontal
         self.node_spacing = node_spacing
-        self.hidden_branches = hidden_branches  # parent id -> collapsed siblings
+        self.hidden_branches = hidden_branches or {}  # parent id -> collapsed siblings
         self.nodes: dict[int, T] = {}
 
         if g:
