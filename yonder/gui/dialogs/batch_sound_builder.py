@@ -6,7 +6,7 @@ import webbrowser
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, Hash
-from yonder.convenience import create_simple_sound
+from yonder.convenience import create_simple_sound_rsc
 from yonder.types import Event, ActorMixer
 from yonder.enums import PropID, RandomMode, PlaybackMode, SoundType
 from yonder.util import logger
@@ -177,9 +177,11 @@ class create_batch_sound_builder_dialog(DpgItem):
     def _on_track_selected(self, idx: int) -> None:
         g = self._groups[self._selected_group]
         table = self._t("layers_table")
-        
+
         for i in range(len(g.layers)):
-            dpg.highlight_table_row(table, i, style.muted_purple if i == idx else (0, 0, 0, 0))
+            dpg.highlight_table_row(
+                table, i, style.muted_purple if i == idx else (0, 0, 0, 0)
+            )
 
     def _refresh_layers_table(self) -> None:
         table = self._t("layers_table")
@@ -426,7 +428,7 @@ class create_batch_sound_builder_dialog(DpgItem):
             for g in self._groups:
                 amx = g.actormixer or self._groups[0].actormixer
 
-                (play_evt, stop_evt), _, _ = create_simple_sound(
+                (play_evt, stop_evt), _, _ = create_simple_sound_rsc(
                     self._bnk,
                     self._make_name("", g.soundtype, g.name),
                     g.soundfiles,
