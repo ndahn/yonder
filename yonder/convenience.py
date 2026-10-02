@@ -10,6 +10,7 @@ from yonder.types import (
     ActorMixer,
     RandomSequenceContainer,
     LayerContainer,
+    SwitchContainer,
     Sound,
     MusicSwitchContainer,
     MusicRandomSequenceContainer,
@@ -137,7 +138,7 @@ class DecisionNode(Generic[_T]):
         )
 
 
-def create_simple_sound(
+def create_simple_sound_rsc(
     bnk: Soundbank,
     event_name: str,
     wems: list[Path] | Path,
@@ -253,6 +254,33 @@ def create_simple_sound(
     # Add nodes to soundbank
     bnk.add_nodes(master_rsc, *nodes, play, play_action, stop, stop_action)
     return ((play, stop), master_rsc, nodes)
+
+
+def create_simple_sound_lc(
+    bnk: Soundbank,
+    event_name: str,
+    wems: list[Path] | Path,
+    actor_mixer: int | ActorMixer,
+    *,
+    layers: list[int] = None,
+    properties: dict[PropID, float] = None,
+) -> tuple[tuple[Event, Event], LayerContainer, list[Sound]]:
+    # TODO
+    pass
+
+
+def create_simple_sound_sc(
+    bnk: Soundbank,
+    event_name: str,
+    wems: list[Path] | Path,
+    switch_group: str | int,
+    switch_map: dict[str | int, int],
+    actor_mixer: int | ActorMixer,
+    *,
+    properties: dict[PropID, float] = None,
+) -> tuple[tuple[Event, Event], SwitchContainer, list[Sound]]:
+    # TODO
+    pass
 
 
 def _setup_bgm(

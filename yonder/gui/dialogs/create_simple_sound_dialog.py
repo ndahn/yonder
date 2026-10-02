@@ -5,8 +5,13 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
 from yonder.util import logger
-from yonder.convenience import create_simple_sound
-from yonder.types import Event, ActorMixer
+from yonder.convenience import (
+    create_simple_sound_rsc,
+    # TODO
+    create_simple_sound_lc,
+    create_simple_sound_sc,
+)
+from yonder.types import Event
 from yonder.enums import PropID, PlaybackMode, RandomMode
 from yonder.wem import wav2wem
 from yonder.game.data import AmxData
@@ -187,10 +192,12 @@ class create_simple_sound_dialog(DpgItem):
     def _on_soundfile_removed(self, sender: str, idx: int, user_data: Any) -> None:
         self._soundfiles.pop(idx)
 
-    def _on_soundfile_changed(self, sender: str, info: tuple[int, Path], user_data: Any) -> None:
+    def _on_soundfile_changed(
+        self, sender: str, info: tuple[int, Path], user_data: Any
+    ) -> None:
         idx, path = info
         self._soundfiles[idx] = path
-    
+
     def _on_okay(self) -> None:
         name = dpg.get_value(self._t("name"))
         if not name:
@@ -224,7 +231,7 @@ class create_simple_sound_dialog(DpgItem):
         playback_mode = PlaybackMode[dpg.get_value(self._t("playback_mode"))]
         random_mode = RandomMode[dpg.get_value(self._t("random_mode"))]
 
-        (play_evt, stop_evt), _, _ = create_simple_sound(
+        (play_evt, stop_evt), _, _ = create_simple_sound_rsc(
             self._bnk,
             name,
             self._soundfiles,
