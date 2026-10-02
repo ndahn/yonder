@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Any, ClassVar
-from dataclasses import dataclass, field
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
@@ -32,38 +31,52 @@ from yonder.gui import style
 from yonder.gui.icons import Icons
 
 
-@dataclass
 class GraphDesignerNode:
     node_type: ClassVar[type[HIRCNode]] = None
-    nid: int
-    inputs: dict[int, str] = field(init=False, default_factory=dict)
-    outputs: dict[int, str] = field(init=False, default_factory=dict)
+
+    def __init__(self, nid: str | int = 0):
+        self.nid = nid or dpg.generate_uuid()
+
+    def _make_tag(self, is_input: bool, label: str, suffix: str = None) -> str:
+        return f"{self.nid}#{'IN' if is_input else 'OUT'}#{label}#{suffix or ''}"
 
     def get_input_label(self, dpg_item_id: str | int) -> str:
-        if isinstance(dpg_item_id, str):
-            dpg_item_id = dpg.get_alias_id(dpg_item_id)
+        if isinstance(dpg_item_id, int):
+            dpg_item_id = dpg.get_item_alias(dpg_item_id)
 
-        return self.inputs.get(dpg_item_id)
+        try:
+            tag, in_out, label, *_ = dpg_item_id.split("#")
+            if int(tag) != self.nid:
+                return None
 
-    def get_input_dpg(self, label: str) -> int:
-        for dpg_id, terminal in self.inputs.items():
-            if terminal == label:
-                return dpg_id
+            if in_out != "IN":
+                return None
+        except ValueError:
+            return None
 
-        return None
-    
+        return label
+
+    def get_input_terminal(self, label: str) -> int:
+        return self._make_tag(True, label)
+
     def get_output_label(self, dpg_item_id: str | int) -> str:
-        if isinstance(dpg_item_id, str):
-            dpg_item_id = dpg.get_alias_id(dpg_item_id)
+        if isinstance(dpg_item_id, int):
+            dpg_item_id = dpg.get_item_alias(dpg_item_id)
 
-        return self.outputs.get(dpg_item_id)
+        try:
+            tag, in_out, label, *_ = dpg_item_id.split("#")
+            if int(tag) != self.nid:
+                return None
 
-    def get_output_dpg(self, label: str) -> int:
-        for dpg_id, terminal in self.outputs.items():
-            if terminal == label:
-                return dpg_id
+            if in_out != "OUT":
+                return None
+        except ValueError:
+            return None
 
-        return None
+        return label
+
+    def get_output_terminal(self, label: str) -> int:
+        return self._make_tag(False, label)
 
     def link_valid(
         self,
@@ -74,36 +87,51 @@ class GraphDesignerNode:
     ) -> bool:
         return False
 
-    def regenerate(self, parent: str | int) -> None:
+    def build(self, parent: str | int) -> None:
         pass
 
     def make_node(self, bnk: Soundbank) -> Any:
         pass
 
 
-@dataclass
 class RSCNode(GraphDesignerNode):
     node_type: ClassVar[type[HIRCNode]] = RandomSequenceContainer
-    mode: PlaybackMode = PlaybackMode.Random
-    items: list[int] = field(default_factory=list)
 
-    def regenerate(self, parent: str | int) -> None:
-        with dpg.node(label="RSC", tag=self._t(f"node_{self.nid}", parent=parent)):
+    def __init__(
+        self,
+        mode: PlaybackMode = PlaybackMode.Random,
+        items: list[int] = None,
+        nid: str | int = 0,
+    ):
+        super().__init__(nid=nid)
+
+        self.mode = mode
+        self.items: list[int] = items or []
+
+    def build(self, parent: str | int) -> None:
+        with dpg.node(label="RSC", tag=self.nid, parent=parent):
             with dpg.node_attribute(attribute_type=dpg.mvNode_Attr_Static):
                 dpg.add_combo(
                     [p.name for p in PlaybackMode],
+                    default_value=PlaybackMode.Random.name,
+                    fit_width=True,
                     label=µ("Mode"),
                 )
 
             # Inputs
-            for inp in self.inputs:
-                with dpg.add_node_attribute():
-                    self._inputs[inp] = dpg.add_text(µ(inp))
+            for inp in ("Playback", "Action"):
+                with dpg.node_attribute(
+                    attribute_type=dpg.mvNode_Attr_Input, tag=self._make_tag(True, inp)
+                ):
+                    dpg.add_text(µ(inp))
 
             # Outputs
-            for out in self.outputs:
-                with dpg.node_attribute(attribute_type=dpg.mvNode_Attr_Output):
-                    self._outputs[out] = dpg.add_text(µ(out))
+            for i in range(len(self.items) + 1):
+                out = f"Item{i}"
+                with dpg.node_attribute(
+                    attribute_type=dpg.mvNode_Attr_Output, tag=self._make_tag(False, out)
+                ):
+                    dpg.add_text(µ(out))
 
     def make_node(self, bnk: Soundbank) -> RandomSequenceContainer:
         return RandomSequenceContainer.new(
@@ -111,14 +139,6 @@ class RSCNode(GraphDesignerNode):
             self.items,
             playback_mode=self.mode,
         )
-
-    @property
-    def inputs(self) -> list[str]:
-        return ("Playback", "Action")
-
-    @property
-    def outputs(self) -> tuple[str]:
-        return (f"Item {i}" for i in range(len(self.items) + 1))
 
     def link_valid(
         self,
@@ -135,7 +155,7 @@ class RSCNode(GraphDesignerNode):
                 return True
 
         elif target is self:
-            pass
+            return True
 
         else:
             raise ValueError("on_link called for node not participating in link")

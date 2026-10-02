@@ -32,8 +32,18 @@ class HIRCNodeHeader:
         return _deserialize_fields(cls, data)
 
 
+class _FieldMeta(type):
+    def __getattr__(cls, name: str) -> Any:
+        # getattr/hasattr will not see dataclass fields without defaults
+        fields = cls.__dict__.get("__dataclass_fields__", {})
+        if name in fields:
+            return fields[name]
+
+        raise AttributeError(name)
+
+
 @dataclass(repr=False, eq=False)
-class HIRCNode(DataNode):
+class HIRCNode(DataNode, metaclass=_FieldMeta):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
     id: InitVar[int]
