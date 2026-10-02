@@ -22,6 +22,7 @@ from .editable_table import (
 from .flags_widget import add_flag_checkboxes
 from .generic_input_widget import add_generic_widget
 from .graph_layout import GraphLayout
+from .graph_designer_nodes import GraphDesignerNode
 from .graph_view import add_graph_widget
 from .hash_widget import add_hash_widget
 from .hirc_player_widget import add_hirc_player
