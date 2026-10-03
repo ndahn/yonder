@@ -46,8 +46,8 @@ def can_reference(source: type[HIRCNode], target: type[HIRCNode]) -> bool:
         return False
 
     if source is Event:
-        # Events only ever trigger actions
-        return target is Action
+        # Events automatically include the play/stop actions and could have additional actions
+        return target is Action or hasattr(target, "parent")
 
     if target is Action:
         return False
@@ -280,9 +280,9 @@ class GraphDesignerNode:
 
         with dpg.node(
             label=self.title,
+            pos=pos or [],
             tag=self.node_tag,
             parent=parent,
-            pos=pos or [],
         ):
             with dpg.node_attribute(
                 attribute_type=dpg.mvNode_Attr_Static, tag=self._wtag("body")
@@ -299,7 +299,7 @@ class GraphDesignerNode:
                 self.build_body()
 
                 if issubclass(self.node_type, PropertyMixin):
-                    with dpg.tree_node(label=µ("Properties")):
+                    with dpg.tree_node(label=µ("Properties"), span_text_width=True):
                         add_properties_table(
                             {}, self._on_update_properties, label=None, stretch=False
                         )
@@ -410,6 +410,8 @@ class GraphDesignerNode:
         attach = getattr(my_node, "attach", None)
         if callable(attach):
             attach(other_node)
+        elif isinstance(my_node, Action):
+            my_node.external_id = other_node.id
         elif hasattr(other_node, "parent"):
             other_node.parent = my_node.id
         else:

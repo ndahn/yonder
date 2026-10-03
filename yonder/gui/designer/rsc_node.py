@@ -16,7 +16,7 @@ class RSCNode(GraphDesignerNode):
 
     node_type: ClassVar[type[HIRCNode]] = RandomSequenceContainer
     label: ClassVar[str] = "RandomSequenceContainer"
-    inputs: ClassVar[tuple[str, ...]] = ("Playback", "Action")
+    inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Item0",)
 
     def __init__(
@@ -60,18 +60,16 @@ class RSCNode(GraphDesignerNode):
         with dpg.tooltip(dpg.last_item()):
             dpg.add_text(µ("0 means infinite", "tips"))
 
-        with dpg.tree_node(label="Properties"):
-            dpg.add_combo(["A" , ["B"]], width=self.body_width)
-
     def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
         # Always keep exactly one free item slot at the bottom
-        used = [self.terminal_index(o, False) for o in outputs]
-        wanted = max(used, default=-1) + 2
+        filt = lambda s: s.startswith("Item")
+        used = [self.terminal_index(o, False) for o in filter(filt, outputs)]
+        wanted = max(used, default=0) + 1
 
-        while len(self._outputs) > wanted:
+        while len(list(filter(filt, self._outputs))) > wanted:
             self.remove_terminal(self._outputs[-1], False)
 
-        while len(self._outputs) < wanted:
+        while len(list(filter(filt, self._outputs))) < wanted:
             self.add_terminal(f"Item{len(self._outputs)}", False)
 
     def link_valid(

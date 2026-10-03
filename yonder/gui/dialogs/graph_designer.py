@@ -136,7 +136,7 @@ class graph_designer_dialog(DpgItem):
                         minimap_location=dpg.mvNodeMiniMap_Location_BottomRight,
                         tag=self._t("canvas"),
                     )
-                
+
                 # For some reason the node editor ignores themes bound to it directly
                 dpg.bind_item_theme(
                     self._t("canvas_container"), style.themes.node_editor
