@@ -43,6 +43,7 @@ class add_properties_table(DpgItem):
             [str, dict[PropID, tuple[float, float]], Any], None
         ] = None,
         label: str = "Properties",
+        borders: bool = True,
         stretch: bool = True,
         tag: str | int = 0,
         user_data: Any = None,
@@ -56,20 +57,20 @@ class add_properties_table(DpgItem):
         self._on_prop_ranges_changed = on_prop_ranges_changed
         self._user_data = user_data
 
-        self._build(label, stretch)
+        self._build(label, borders, stretch)
         self.refresh()
 
     # === Build =========================================================
 
-    def _build(self, label: str, stretch: bool) -> None:
+    def _build(self, label: str, borders: bool, stretch: bool) -> None:
         if label:
             dpg.add_text(label)
 
         with dpg.table(
             header_row=False,
             policy=dpg.mvTable_SizingFixedFit,
-            borders_outerH=True,
-            borders_outerV=True,
+            borders_outerH=borders,
+            borders_outerV=borders,
             no_host_extendX=not stretch,
             tag=self._tag,
         ):
