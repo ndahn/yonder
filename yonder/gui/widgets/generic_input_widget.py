@@ -5,6 +5,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import Hash
 from yonder.gui.localization import µ
+from yonder.gui.icons import Icons
 from yonder.gui.helpers import shorten_path
 from yonder.gui.dialogs.file_dialog import (
     save_file_dialog,
@@ -47,6 +48,7 @@ def add_generic_widget(
     accept_on_enter: bool = False,
     file_mode: Literal["open", "save", "folder"] = "open",
     filetypes: dict[str, str] = None,
+    filename_only: bool = False,
     not_supported_ok: bool = False,
     parent: str = 0,
     tag: str = 0,
@@ -232,11 +234,13 @@ def add_generic_widget(
                 raise ValueError(f"Invalid file mode {file_mode}")
 
             if ret:
-                dpg.set_value(tag, shorten_path(ret))
+                value = Path(ret).name if filename_only else shorten_path(ret)
+                dpg.set_value(tag, value)
+
                 if callback:
                     callback(tag, Path(ret), user_data)
 
-        with dpg.group(horizontal=True, parent=parent):
+        with dpg.group(horizontal=True, horizontal_spacing=3, parent=parent):
 
             def cb(sender: str, new_path: str, user_data):
                 if callback:
@@ -252,13 +256,9 @@ def add_generic_widget(
                 tag=tag,
                 **kwargs,
             )
-            dpg.add_button(
-                # arrow=True,
-                # direction=dpg.mvDir_Right,
-                label=µ("Browse", "button"),
-                callback=select_file,
-            )
+            dpg.add_image_button(Icons.file_open, width=18, height=18, callback=select_file)
             if label:
+                dpg.add_spacer(width=2)
                 dpg.add_text(label)
     elif type_origin is list and origin_args in (int, float, bool, str, Path):
         from .editable_table import add_widget_table
