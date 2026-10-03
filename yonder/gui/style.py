@@ -134,6 +134,7 @@ muted_sky = RGBA(48, 70, 100, 255)
 
 type_colors = {}
 
+
 class themes:
     notification_frame = None
     item_default = None
@@ -148,6 +149,7 @@ class themes:
     plot_blue = None
     plot_red = None
     plot_fit_padding = None
+    node_editor = None
 
     @cache
     @staticmethod
@@ -181,7 +183,9 @@ class themes:
         with dpg.theme() as theme:
             with dpg.theme_component(0):
                 dpg.add_theme_style(
-                    dpg.mvStyleVar_ButtonTextAlign, alignment, category=dpg.mvThemeCat_Core
+                    dpg.mvStyleVar_ButtonTextAlign,
+                    alignment,
+                    category=dpg.mvThemeCat_Core,
                 )
                 dpg.add_theme_style(
                     dpg.mvStyleVar_CellPadding, 1, 1, category=dpg.mvThemeCat_Core
@@ -430,6 +434,17 @@ def init_themes():
             )
             dpg.add_theme_style(
                 dpg.mvPlotStyleVar_FitPadding, 0.2, 0.2, category=dpg.mvThemeCat_Plots
+            )
+
+    with dpg.theme() as themes.node_editor:
+        with dpg.theme_component(dpg.mvAll):
+            dpg.add_theme_color(
+                dpg.mvNodeCol_GridBackground,
+                (0, 0, 0, 0),
+                category=dpg.mvThemeCat_Nodes,
+            )
+            dpg.add_theme_color(
+                dpg.mvNodeCol_GridLine, (0, 0, 0, 64), category=dpg.mvThemeCat_Nodes
             )
 
     from yonder.types.hirc_node import HIRCNode

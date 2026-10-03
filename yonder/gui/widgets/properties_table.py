@@ -43,6 +43,7 @@ class add_properties_table(DpgItem):
             [str, dict[PropID, tuple[float, float]], Any], None
         ] = None,
         label: str = "Properties",
+        stretch: bool = True,
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
@@ -55,12 +56,12 @@ class add_properties_table(DpgItem):
         self._on_prop_ranges_changed = on_prop_ranges_changed
         self._user_data = user_data
 
-        self._build(label)
+        self._build(label, stretch)
         self.refresh()
 
     # === Build =========================================================
 
-    def _build(self, label: str) -> None:
+    def _build(self, label: str, stretch: bool) -> None:
         if label:
             dpg.add_text(label)
 
@@ -69,13 +70,14 @@ class add_properties_table(DpgItem):
             policy=dpg.mvTable_SizingFixedFit,
             borders_outerH=True,
             borders_outerV=True,
+            no_host_extendX=not stretch,
             tag=self._tag,
         ):
             dpg.add_table_column(
-                label=µ("Property"), width_stretch=True, init_width_or_weight=100
+                label=µ("Property"), width_stretch=stretch, init_width_or_weight=100
             )
             dpg.add_table_column(
-                label=µ("Value"), width_stretch=True, init_width_or_weight=100
+                label=µ("Value"), width_stretch=stretch, init_width_or_weight=100
             )
             dpg.add_table_column(label="", width_fixed=True)
 
@@ -176,7 +178,12 @@ class add_properties_table(DpgItem):
 
     def _add_footer(self) -> None:
         with dpg.table_row(parent=self._tag):
-            dpg.add_button(label=µ("+ Add Property"), callback=self._on_add_clicked)
+            dpg.add_combo(
+                items=sorted(p.name for p in self._get_available_props()),
+                default_value="",
+                width=-1,
+                callback=self._on_property_added,
+            )
 
     # === DPG callbacks =================================================
 
@@ -285,11 +292,11 @@ class add_properties_table(DpgItem):
 
         center_window(tag, xratio=0.2, yratio=0.2)
 
-    def _on_add_clicked(self) -> None:
-        available = self._get_available_props()
-        if not available:
+    def _on_property_added(self, sender: str, prop: str, user_data: Any) -> None:
+        if not prop:
             return
-        self._properties[available[0]] = 0.0
+
+        self._properties[PropID[prop]] = 0.0
         self.refresh()
         if self._on_values_changed:
             self._on_values_changed(self._tag, dict(self._properties), self._user_data)

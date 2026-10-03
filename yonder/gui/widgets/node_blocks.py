@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder.types import (
@@ -29,7 +29,7 @@ from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
 
 
-_categories: dict[str, list[type[HIRCNode]]] = {
+node_categories: dict[str, list[type[HIRCNode]]] = {
     "Sounds": [
         RandomSequenceContainer,
         SwitchContainer,
@@ -61,8 +61,16 @@ _categories: dict[str, list[type[HIRCNode]]] = {
 
 
 class add_node_blocks(DpgItem):
+    """A palette of all HIRC node types, grouped by category.
+
+    Every type is shown as an icon button that can be dragged onto a drop
+    target (carrying the type as its payload) or clicked, which calls
+    ``callback(sender, app_data, node_type)``.
+    """
+
     def __init__(
         self,
+        callback: Callable[[str, Any, type[HIRCNode]], None] = None,
         *,
         width: int = 200,
         height: int = 200,
@@ -75,6 +83,7 @@ class add_node_blocks(DpgItem):
         container_kwargs.setdefault("resizable_x", True)
         container_kwargs.setdefault("autosize_y", True)
 
+        self._callback = callback
         self._payload_type = payload_type
         dpg.add_child_window(
             width=width,
@@ -93,12 +102,15 @@ class add_node_blocks(DpgItem):
         self._delete_item(self._t("resize_handler_registry"))
 
     def _on_resize(self) -> None:
+        if not dpg.does_item_exist(self.tag):
+            return
+
         dpg.delete_item(self.tag, children_only=True, slot=1)
         dpg.push_container_stack(self.tag)
 
         w, _ = dpg.get_item_rect_size(self.tag)
 
-        for cat, nodes in _categories.items():
+        for cat, nodes in node_categories.items():
             dpg.add_separator(label=µ(cat))
             row = None
             row_width = 0
@@ -119,6 +131,8 @@ class add_node_blocks(DpgItem):
                     width=24,
                     height=24,
                     tint_color=color,
+                    callback=self._callback,
+                    user_data=tp,
                     parent=row,
                 )
 

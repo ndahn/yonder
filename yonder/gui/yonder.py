@@ -2227,8 +2227,9 @@ class BanksOfYonder(DpgItem):
             dpg.focus_item(tag)
             return
 
-        def on_graph_created() -> None:
-            pass
+        def on_graph_created(nodes: list[HIRCNode]) -> None:
+            self.add_pinned_objects(nodes)
+            self.regenerate()
 
         graph_designer_dialog(self.bnk, on_graph_created, tag=tag)
         center_window(tag)

@@ -1,38 +1,25 @@
 from typing import Any, Callable
 from dataclasses import dataclass
+import webbrowser
 import networkx as nx
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.types import (
-    HIRCNode,
-    Action,
-    ActorMixer,
-    Attenuation,
-    AuxiliaryBus,
-    Bus,
-    DialogueEvent,
-    EffectCustom,
-    EffectShareSet,
-    Event,
-    LayerContainer,
-    LFOModulator,
-    MusicRandomSequenceContainer,
-    MusicSegment,
-    MusicSwitchContainer,
-    MusicTrack,
-    RandomSequenceContainer,
-    Sound,
-    SwitchContainer,
-    TimeModulator,
-)
-from yonder.enums import PlaybackMode
+from yonder.types import HIRCNode
 from yonder.gui.localization import µ
 from yonder.util import logger
 from yonder.gui import style
-from yonder.gui.icons import Icons
-from yonder.gui.widgets import DpgItem, GraphLayout, add_node_blocks
-from yonder.gui.widgets.graph_designer_nodes import GraphDesignerNode, RSCNode
+from yonder.gui.widgets import (
+    DpgItem,
+    GraphLayout,
+    add_node_blocks,
+    node_categories,
+    yay,
+)
+from yonder.gui.designer import (
+    GraphDesignerNode,
+    get_designer_node,
+)
 
 
 @dataclass
@@ -42,39 +29,134 @@ class GraphNode:
 
 
 class graph_designer_dialog(DpgItem):
+    """A node editor for assembling new HIRC hierarchies by hand.
+
+    Nodes are added from the palette on the left, the "Add" menu, or by right
+    clicking the canvas, and are wired up by dragging between their terminals.
+    Every terminal holds at most one link; containers that can take more than
+    one child grow a new slot whenever the last free one is used.
+
+    Nothing is written to the soundbank until "Create" is pressed, at which
+    point every node turns into an actual `HIRCNode`, the links are applied as
+    parent/child relations, and the whole batch is added to the bank.
+
+    The designer only knows about node types that have a `GraphDesignerNode`
+    registered for them; everything else is shown greyed out.
+
+    Parameters
+    ----------
+    bnk : Soundbank
+        Target soundbank; used for ID allocation and duplicate checking.
+    callback : callable
+        Called as ``callback(nodes)`` with all created nodes on success.
+    title : str
+        Window title bar label.
+    tag : int or str, optional
+        Explicit tag; auto-generated if None. Existing item is deleted first.
+    """
+
     def __init__(
         self,
         bnk: Soundbank,
-        callback: Callable[[HIRCNode], None],
+        callback: Callable[[list[HIRCNode]], None],
         *,
         title: str = "Graph Designer",
         tag: str = None,
     ) -> None:
+        if tag and dpg.does_item_exist(tag):
+            dpg.delete_item(tag)
+
         super().__init__(tag)
 
         self._bnk = bnk
         self._callback = callback
 
         self._g = nx.DiGraph()
+        self._spawn_pos: tuple[float, float] = (40.0, 40.0)
+        self._palette: add_node_blocks = None
         self._build(title)
 
     def destroy(self):
+        if self._palette:
+            self._palette.destroy()
+
         self._delete_item(self._t("context"))
-        self._delete_item(self._t("mouse_handler_reg"))
+        self._delete_item(self._t("handler_reg"))
+
+    # === Build =========================================================
 
     def _build(self, title: str) -> None:
         with dpg.window(
-            width=600,
-            height=500,
+            width=900,
+            height=600,
             label=title,
+            menubar=True,
+            no_saved_settings=True,
             tag=self.tag,
-            on_close=lambda s, a, u: dpg.delete_item(s),
+            on_close=self._on_close,
         ):
-            dpg.add_node_editor(
-                callback=self._on_link_nodes,
-                delink_callback=self._on_unlink_nodes,
-                tag=self._t("canvas"),
-            )
+            with dpg.menu_bar():
+                with dpg.menu(label=µ("Add", "menu")):
+                    self._build_add_menu()
+
+                self._build_templates_menu()
+
+                with dpg.menu(label=µ("Graph", "menu")):
+                    dpg.add_menu_item(
+                        label=µ("Auto Layout", "menu"),
+                        callback=self.auto_layout,
+                    )
+                    dpg.add_menu_item(
+                        label=µ("Delete Selected", "menu"),
+                        shortcut="del",
+                        callback=self.delete_selection,
+                    )
+                    dpg.add_separator()
+                    dpg.add_menu_item(
+                        label=µ("Clear", "menu"),
+                        callback=self.clear,
+                    )
+
+            with dpg.group(horizontal=True):
+                self._palette = add_node_blocks(
+                    lambda s, a, u: self.add_node(u),
+                    width=180,
+                    height=-60,
+                    autosize_y=False,
+                    tag=self._t("palette"),
+                )
+
+                with dpg.child_window(
+                    width=-1, height=-60, border=False, tag=self._t("canvas_container")
+                ):
+                    dpg.add_node_editor(
+                        callback=self._on_link_nodes,
+                        delink_callback=self._on_unlink_nodes,
+                        minimap=True,
+                        minimap_location=dpg.mvNodeMiniMap_Location_BottomRight,
+                        tag=self._t("canvas"),
+                    )
+                
+                # For some reason the node editor ignores themes bound to it directly
+                dpg.bind_item_theme(
+                    self._t("canvas_container"), style.themes.node_editor
+                )
+
+            dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label=µ("Create", "button"),
+                    callback=self._on_okay,
+                    tag=self._t("button_okay"),
+                )
+                dpg.add_button(
+                    label="?",
+                    callback=lambda s, a, u: webbrowser.open(u),
+                    user_data="https://ndahn.github.io/yonder/tools/graph_designer/",
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text("https://ndahn.github.io/yonder/tools/graph_designer/")
 
         # NOTE node editor doesn't accept popups at the moment
         with dpg.window(
@@ -82,87 +164,41 @@ class graph_designer_dialog(DpgItem):
             show=False,
             tag=self._t("context"),
         ):
-            with dpg.menu(label=µ("Sounds")):
-                dpg.add_menu_item(
-                    label="RandomSequenceContainer",
-                    callback=self._add_random_sequence_container,
-                )
-                dpg.add_menu_item(
-                    label="LayerContainer",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="SwitchContainer",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="Sound",
-                    callback=None,
-                )
-
-            with dpg.menu(label=µ("Music")):
-                dpg.add_menu_item(
-                    label="MusicRandomSequenceContainer",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="MusicSwitchContainer",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="MusicSegment",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="MusicTrack",
-                    callback=None,
-                )
-
-            with dpg.menu(label=µ("Playback")):
-                dpg.add_menu_item(
-                    label="Event",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="Action",
-                    callback=None,
-                )
-
-            with dpg.menu(label=µ("Effects")):
-                dpg.add_menu_item(
-                    label="Attenuation",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="Effect",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="LFOModulator",
-                    callback=None,
-                )
-                dpg.add_menu_item(
-                    label="TimeModulator",
-                    callback=None,
-                )
-
+            self._build_add_menu()
             dpg.add_separator()
+            self._build_templates_menu()
 
-            with dpg.menu(label=µ("Templates")):
-                pass
-
-        with dpg.handler_registry(tag=self._t("mouse_handler_reg")):
-            dpg.add_mouse_click_handler(callback=self._on_right_click)
-
-    def _on_right_click(
-        self, sender: str, button: tuple[float, float, int], user_data: Any
-    ) -> None:
-        if button == dpg.mvMouseButton_Right and dpg.is_item_hovered(self._t("canvas")):
-            dpg.configure_item(
-                self._t("context"), pos=dpg.get_mouse_pos(local=False), show=True
+        with dpg.handler_registry(tag=self._t("handler_reg")):
+            dpg.add_mouse_click_handler(callback=self._on_mouse_click)
+            dpg.add_key_press_handler(
+                dpg.mvKey_Delete, callback=self._on_delete_pressed
             )
 
-    def _get_input_node_for(self, dpg_item: int) -> tuple[GraphDesignerNode, str]:
+    def _build_add_menu(self) -> None:
+        """Menu items for every known node type, grouped like the palette."""
+        for category, node_types in node_categories.items():
+            with dpg.menu(label=µ(category)):
+                for node_type in node_types:
+                    designer_node = get_designer_node(node_type)
+                    dpg.add_menu_item(
+                        label=node_type.__name__,
+                        enabled=designer_node is not None,
+                        callback=lambda s, a, u: self.add_node(u),
+                        user_data=node_type,
+                    )
+
+    def _build_templates_menu(self) -> None:
+        with dpg.menu(label=µ("Templates", "menu")):
+            # TODO prebuilt graphs (simple sound, bgm, ...)
+            dpg.add_menu_item(label=µ("(none yet)"), enabled=False)
+
+    # === Helpers =======================================================
+
+    def _get_node(self, nid: int) -> GraphDesignerNode:
+        data = self._g.nodes.get(nid)
+        return data["node"] if data else None
+
+    def _get_input_terminal_for(self, dpg_item: int) -> tuple[GraphDesignerNode, str]:
         for nid, data in self._g.nodes(data=True):
             node: GraphDesignerNode = data["node"]
             label = node.get_input_label(dpg_item)
@@ -171,7 +207,7 @@ class graph_designer_dialog(DpgItem):
 
         return (None, None)
 
-    def _get_output_node_for(self, dpg_item: int) -> tuple[GraphDesignerNode, str]:
+    def _get_output_terminal_for(self, dpg_item: int) -> tuple[GraphDesignerNode, str]:
         for nid, data in self._g.nodes(data=True):
             node: GraphDesignerNode = data["node"]
             label = node.get_output_label(dpg_item)
@@ -180,78 +216,364 @@ class graph_designer_dialog(DpgItem):
 
         return (None, None)
 
+    def _get_node_for_item(self, dpg_item: int | str) -> GraphDesignerNode:
+        """Resolve a dpg node widget back to its designer node."""
+        if not isinstance(dpg_item, str):
+            dpg_item = dpg.get_item_alias(dpg_item)
+
+        try:
+            nid, kind = dpg_item.split("#")
+            if kind != "NODE":
+                return None
+        except (AttributeError, ValueError):
+            return None
+
+        return self._get_node(int(nid))
+
+    def _get_edge_at(self, nid: int, label: str, is_input: bool) -> tuple[int, int]:
+        """The edge occupying a terminal, if any. Terminals are 1:1."""
+        if is_input:
+            for src, dst, data in self._g.in_edges(nid, data=True):
+                if data["input"] == label:
+                    return (src, dst)
+        else:
+            for src, dst, data in self._g.out_edges(nid, data=True):
+                if data["output"] == label:
+                    return (src, dst)
+
+        return None
+
+    def _get_edge_for_link(self, link: Any) -> tuple[int, int]:
+        """Resolve whatever dpg hands us for a link to an edge in our graph."""
+        if isinstance(link, (list, tuple)):
+            # Some dpg versions report links as their two attributes
+            source, output = self._get_output_terminal_for(link[0])
+            target, input = self._get_input_terminal_for(link[1])
+            if source and target and self._g.has_edge(source.nid, target.nid):
+                return (source.nid, target.nid)
+
+            return None
+
+        for src, dst, data in self._g.edges(data=True):
+            if data["link"] == link:
+                return (src, dst)
+
+        return None
+
+    def _remove_edge(self, src: int, dst: int) -> None:
+        if not self._g.has_edge(src, dst):
+            return
+
+        data = self._g.edges[src, dst]
+        if dpg.does_item_exist(data["link"]):
+            dpg.delete_item(data["link"])
+
+        self._g.remove_edge(src, dst)
+        self._notify_connections(self._get_node(src))
+        self._notify_connections(self._get_node(dst))
+
+    def _notify_connections(self, node: GraphDesignerNode) -> None:
+        """Let a node adjust its terminals to the links it currently has."""
+        if not node or not dpg.does_item_exist(node.node_tag):
+            return
+
+        inputs = {data["input"] for _, _, data in self._g.in_edges(node.nid, data=True)}
+        outputs = {
+            data["output"] for _, _, data in self._g.out_edges(node.nid, data=True)
+        }
+        node.on_connections_changed(inputs, outputs)
+
+    def _link_allowed(
+        self,
+        source: GraphDesignerNode,
+        output: str,
+        target: GraphDesignerNode,
+        input: str,
+    ) -> bool:
+        if source is target:
+            self.show_message(µ("A node cannot be linked to itself", "msg"))
+            return False
+
+        if self._g.has_edge(source.nid, target.nid):
+            self.show_message(µ("Nodes are already linked", "msg"))
+            return False
+
+        if nx.has_path(self._g, target.nid, source.nid):
+            self.show_message(µ("Link would create a cycle", "msg"))
+            return False
+
+        if not (
+            source.link_valid(source, output, target, input)
+            and target.link_valid(source, output, target, input)
+        ):
+            self.show_message(
+                µ("{source} cannot be linked to {target}", "msg").format(
+                    source=source.title, target=target.title
+                )
+            )
+            return False
+
+        return True
+
+    def _canvas_pos(self, global_pos: tuple[float, float]) -> tuple[float, float]:
+        """Convert a global mouse position to node editor coordinates."""
+        ox, oy = dpg.get_item_rect_min(self._t("canvas"))
+        return (max(global_pos[0] - ox, 0.0), max(global_pos[1] - oy, 0.0))
+
+    def _cascade(self, pos: tuple[float, float]) -> tuple[float, float]:
+        """Where the next node goes if the user didn't pick a spot."""
+        x, y = pos[0] + 30.0, pos[1] + 30.0
+        if y > 400.0:
+            return (40.0, 40.0)
+
+        return (x, y)
+
+    # === DPG callbacks =================================================
+
+    def _on_close(self) -> None:
+        # Clear first so the nodes get a chance to release their tags
+        self.clear()
+        self._delete_item(self.tag)
+        self.destroy()
+
+    def _on_mouse_click(
+        self, sender: str, button: tuple[float, float, int], user_data: Any
+    ) -> None:
+        if dpg.is_item_hovered(self._t("canvas")):
+            if button == dpg.mvMouseButton_Left:
+                # Need to split, otherwise a previous pos might be returned
+                dpg.split_frame()
+                self._spawn_pos = dpg.get_mouse_pos(local=True)
+
+            elif button == dpg.mvMouseButton_Right:
+                dpg.configure_item(
+                    self._t("context"), pos=dpg.get_mouse_pos(local=False), show=True
+                )
+
+    def _on_delete_pressed(self, sender: str, key: int, user_data: Any) -> None:
+        if not dpg.does_item_exist(self._t("canvas")):
+            # Dialog is gone, get rid of the stale handlers
+            self._delete_item(self._t("handler_reg"))
+            return
+
+        if not dpg.is_item_hovered(self._t("canvas")):
+            return
+
+        focused = dpg.get_focused_item()
+        if focused and "Input" in dpg.get_item_type(focused):
+            # Don't eat the key while someone is editing a node's widgets
+            return
+
+        self.delete_selection()
+
     def _on_link_nodes(self, sender: str, app_data: Any, user_data: Any) -> None:
         dpg_src, dpg_dst = app_data
 
-        source, output = self._get_output_node_for(dpg_src)
+        source, output = self._get_output_terminal_for(dpg_src)
         if not source:
             return
 
-        target, input = self._get_input_node_for(dpg_dst)
+        target, input = self._get_input_terminal_for(dpg_dst)
         if not target:
             return
 
-        if not self._is_link_valid(source.node_type, target.node_type):
+        if not self._link_allowed(source, output, target, input):
             return
 
-        if source.link_valid(source, output, target, input) and target.link_valid(
-            source, output, target, input
+        # Terminals are 1:1, so whatever was connected before gets dropped
+        for edge in (
+            self._get_edge_at(source.nid, output, False),
+            self._get_edge_at(target.nid, input, True),
         ):
-            # TODO all links should be 1:1 relations
-            for src_node, dst_node, data in self._g.out_edges(source.nid, data=True):
-                if data["dpg_src"] == dpg_src:
-                    # TODO remove
-                    pass
+            if edge:
+                self._remove_edge(*edge)
 
-            for src_node, dst_node, data in self._g.in_edges(target.nid, data=True):
-                if data["dpg_dst"] == dpg_dst:
-                    # TODO remove
-                    pass
+        link = dpg.add_node_link(
+            source.get_output_terminal(output),
+            target.get_input_terminal(input),
+            parent=self._t("canvas"),
+        )
+        self._g.add_edge(
+            source.nid,
+            target.nid,
+            link=link,
+            output=output,
+            input=input,
+        )
 
-            # TODO unlink previous inputs to dpg_dst
-            dpg.add_node_link(dpg_src, dpg_dst, parent=self._t("canvas"))
-            self._g.add_edge(
-                source.nid,
-                target.nid,
-                dpg_src=dpg_src,
-                output=output,
-                dpg_dst=dpg_dst,
-                input=input,
-            )
-
-            # TODO source and target might have to regenerate
+        self._notify_connections(source)
+        self._notify_connections(target)
+        self.show_message()
 
     def _on_unlink_nodes(self, sender: str, app_data: Any, user_data: Any) -> None:
-        dpg_src = dpg.get_item_configuration(app_data)["attr_1"]
-        dpg_dst = dpg.get_item_configuration(app_data)["attr_2"]
-        source, _ = self._get_output_node_for(dpg_src)
-        target, _ = self._get_input_node_for(dpg_dst)
+        edge = self._get_edge_for_link(app_data)
+        if edge:
+            self._remove_edge(*edge)
+        elif dpg.does_item_exist(app_data):
+            dpg.delete_item(app_data)
 
-        # TODO is there a case where the source->target pair is not unique?
-        self._g.remove_edge(source.nid, target.nid)
+    def _on_okay(self) -> None:
+        try:
+            nodes = self.build_nodes()
+        except ValueError as e:
+            self.show_message(str(e))
+            return
+        except Exception as e:
+            logger.exception(f"Failed to create graph: {e}")
+            self.show_message(str(e))
+            return
 
-    def _add_random_sequence_container(self) -> None:
-        node = RSCNode(self._bnk.new_id())
-        
-        self._g.add_node(
-            node.nid,
-            type=RandomSequenceContainer,
-            node=node,
-        )
-        # TODO place at current mouse pos
-        node.build(self._t("canvas"))
+        logger.info(µ("Created {count} nodes", "log").format(count=len(nodes)))
+        self._callback(nodes)
+        self._on_close()
+        yay()
 
-    def _is_link_valid(self, source: type[HIRCNode], target: type[HIRCNode]) -> None:
-        if source is Event and not target:
-            return True
+    # === Public ========================================================
 
-        if source is Action and target is Event:
-            return True
+    def add_node(
+        self, node_type: type[HIRCNode], pos: tuple[float, float] = None
+    ) -> GraphDesignerNode:
+        """Add a new node of the given HIRC type to the canvas."""
+        designer_node = get_designer_node(node_type)
+        if not designer_node:
+            self.show_message(
+                µ("{type} is not supported yet", "msg").format(type=node_type.__name__)
+            )
+            return None
 
-        if hasattr(target, "parent") and (
-            hasattr(source, "children")
+        pos = pos or self._spawn_pos
+        node = designer_node(self._bnk.new_id())
+        self._g.add_node(node.nid, type=node_type, node=node)
+        node.build(self._t("canvas"), pos)
+        self._spawn_pos = self._cascade(pos)
+
+        self.show_message()
+        return node
+
+    def remove_node(self, node: GraphDesignerNode) -> None:
+        """Remove a node and all links attached to it."""
+        if node.nid not in self._g:
+            return
+
+        for src, dst in list(self._g.in_edges(node.nid)) + list(
+            self._g.out_edges(node.nid)
         ):
-            return True
+            self._remove_edge(src, dst)
 
-        # TODO effects, busses, attenuations, etc
-        return False
+        self._g.remove_node(node.nid)
+        node.destroy()
+
+    def delete_selection(self) -> None:
+        """Remove all selected links and nodes."""
+        canvas = self._t("canvas")
+
+        for link in dpg.get_selected_links(canvas):
+            edge = self._get_edge_for_link(link)
+            if edge:
+                self._remove_edge(*edge)
+
+        for item in dpg.get_selected_nodes(canvas):
+            node = self._get_node_for_item(item)
+            if node:
+                self.remove_node(node)
+
+        dpg.clear_selected_links(canvas)
+        dpg.clear_selected_nodes(canvas)
+
+    def clear(self) -> None:
+        """Remove everything from the canvas."""
+        for node in [data["node"] for _, data in self._g.nodes(data=True)]:
+            self.remove_node(node)
+
+        self._g.clear()
+        self._spawn_pos = (40.0, 40.0)
+        self.show_message()
+
+    def auto_layout(self) -> None:
+        """Arrange the nodes left to right, parents before their children."""
+        if not self._g:
+            return
+
+        layout: GraphLayout[GraphNode] = GraphLayout(
+            lambda nid, pos: GraphNode(pos, self._g.nodes[nid]["type"].__name__),
+            self._g,
+            horizontal=True,
+            node_spacing=280.0,
+        )
+        if not layout:
+            return
+
+        positions = [n.pos for n in layout.nodes.values()]
+        ox = 40.0 - min(p[0] for p in positions)
+        oy = 40.0 - min(p[1] for p in positions)
+
+        for nid, gnode in layout.nodes.items():
+            node = self._get_node(nid)
+            if node and dpg.does_item_exist(node.node_tag):
+                dpg.set_item_pos(node.node_tag, (gnode.pos[0] + ox, gnode.pos[1] + oy))
+
+    def build_nodes(self) -> list[HIRCNode]:
+        """Turn the graph into HIRC nodes and add them to the soundbank.
+
+        Raises
+        ------
+        ValueError
+            If the graph is empty or any of its nodes is not ready to be built.
+        """
+        if not self._g:
+            raise ValueError(µ("There is nothing to create", "msg"))
+
+        names: set[str] = set()
+        for nid, data in self._g.nodes(data=True):
+            node: GraphDesignerNode = data["node"]
+
+            msg = node.validate(self._bnk)
+            if msg:
+                raise ValueError(msg)
+
+            if node.name:
+                if node.name in names:
+                    raise ValueError(
+                        µ("{name} is used more than once", "msg").format(name=node.name)
+                    )
+                names.add(node.name)
+
+        created: dict[int, HIRCNode] = {}
+        for nid in nx.topological_sort(self._g):
+            created[nid] = self._get_node(nid).make_node(self._bnk)
+
+        # Children are attached in terminal order, which decides e.g. the
+        # playlist order of a container
+        def link_order(edge: tuple[int, int, dict]) -> tuple[int, int]:
+            src, _, data = edge
+            return (src, self._get_node(src).terminal_index(data["output"], False))
+
+        edges = sorted(self._g.edges(data=True), key=link_order)
+        for src, dst, data in edges:
+            source = self._get_node(src)
+            target = self._get_node(dst)
+            source.connect(
+                self._bnk,
+                created[src],
+                data["output"],
+                target,
+                created[dst],
+                data["input"],
+            )
+
+        nodes = list(created.values())
+        self._bnk.add_nodes(*nodes)
+        return nodes
+
+    def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
+        """Show or hide the notification label. Pass ``msg=None`` to hide."""
+        if not msg:
+            dpg.hide_item(self._t("notification"))
+            return
+
+        dpg.configure_item(
+            self._t("notification"),
+            default_value=msg,
+            color=color,
+            show=True,
+        )
