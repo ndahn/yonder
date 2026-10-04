@@ -42,7 +42,7 @@ class SCNode(GraphDesignerNode):
         widget: Callable[[], None] = None,
     ) -> str:
         if label.startswith("Switch"):
-            widget = self._make_switch_terminal
+            widget = self._make_item_terminal
 
         super().add_terminal(label, is_input, before=before, widget=widget)
 
@@ -104,9 +104,9 @@ class SCNode(GraphDesignerNode):
         input: str,
     ) -> None:
         if output.startswith("Switch"):
-            return my_node.attach(other_node, self.switches[output])
-
-        return super().connect(bnk, my_node, output, other, other_node, input)
+            my_node.attach(other_node, self.switches[output])
+        else:
+            super().connect(bnk, my_node, output, other, other_node, input)
 
     # === Helpers =======================================================
 
@@ -126,15 +126,7 @@ class SCNode(GraphDesignerNode):
         for widget in self._switch_widgets.values():
             widget.items = self.get_free_states(exclude=widget.string_value)
 
-    # === DPG callbacks =================================================
-
-    def _on_switch_group_changed(
-        self, sender: str, switch_group: str, user_data: Any
-    ) -> None:
-        self.switch_group = switch_group
-        self.update_combo_items()
-
-    def _make_switch_terminal(self, label: str, is_input: bool) -> None:
+    def _make_item_terminal(self, label: str, is_input: bool) -> None:
         widget = add_state_value_input(
             self.get_free_states(),
             self._on_switch_changed,
@@ -142,6 +134,14 @@ class SCNode(GraphDesignerNode):
         )
         self._switch_widgets[label] = widget
         self.switches[label] = None
+
+    # === DPG callbacks =================================================
+
+    def _on_switch_group_changed(
+        self, sender: str, switch_group: str, user_data: Any
+    ) -> None:
+        self.switch_group = switch_group
+        self.update_combo_items()
 
     def _on_switch_changed(self, sender: str, switch: str, user_data: Any) -> None:
         self.switches = {
