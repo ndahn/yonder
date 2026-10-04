@@ -94,8 +94,9 @@ class LCNode(GraphDesignerNode):
         input: str,
     ) -> None:
         if output.startswith("Item"):
-            # TODO assign to layer
-            my_node.attach(other_node, self.switches[output])
+            layer = self.layer_assignments[output]
+            layer_id = calc_hash(layer) if layer != NO_LAYER else None
+            my_node.attach(other_node, layer_id)
         else:
             super().connect(bnk, my_node, output, other, other_node, input)
 

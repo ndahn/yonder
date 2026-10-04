@@ -120,21 +120,72 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         self.layers.append(layer)
         return layer
 
-    def get_layer(self, child: HIRCNode | int) -> Layer:
+    def get_layer(self, layer_id: int) -> Layer:
+        for layer in self.layers:
+            if layer.layer_id == layer_id:
+                return layer
+
+        return None
+
+    def remove_layer(self, layer_id: int) -> None:
+        self.layers = [x for x in self.layers if x.layer_id != layer_id]
+
+    def assign_layer(
+        self,
+        node: HIRCNode | int,
+        layer_id: int,
+        curve: list[RTPCGraphPoint] = None,
+        exclusive: bool = False,
+    ) -> Layer:
+        nid = node.id if isinstance(node, HIRCNode) else int(node)
+
+        if exclusive:
+            self.remove_from_layer(nid, None)
+
+        for layer in self.layers:
+            if layer.layer_id == layer_id:
+                for assoc in layer.associated_children:
+                    if assoc.associated_child_id == nid:
+                        break
+                else:
+                    assoc = AssociatedChildData(nid)
+                    layer.associated_children.append(assoc)
+
+                if curve:
+                    assoc.graph_point_count = len(curve)
+                    assoc.graph_points = curve
+
+                return layer
+
+        return self.add_layer(layer_id, [nid], curves={nid: curve} if curve else None)
+
+    def remove_from_layer(self, node: HIRCNode | int, layer_id: int = None) -> None:
+        nid = node.id if isinstance(node, HIRCNode) else int(node)
+
+        for layer in self.layers:
+            if not layer_id or layer.layer_id == layer_id:
+                layer.associated_children = [
+                    a for a in layer.associated_children if a.associated_child_id != nid
+                ]
+
+    def get_layers_for(self, child: HIRCNode | int) -> list[Layer]:
         if isinstance(child, HIRCNode):
             child = child.id
 
         if child not in self.children:
             raise ValueError(f"{child} is not associated with this container")
 
+        ret = []
+
         for layer in self.layers:
             for associated in layer.associated_children:
                 if associated.associated_child_id == child:
-                    return layer
+                    ret.append(layer)
+                    break
 
-        return None
+        return ret
 
-    def attach(self, other: int | HIRCNode) -> None:
+    def attach(self, other: int | HIRCNode, layer_id: int = None) -> None:
         if isinstance(other, HIRCNode):
             if other.parent not in (0, self.id):
                 logger.warning(
@@ -144,6 +195,9 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             other = other.id
 
         self.children.add(int(other))
+        
+        if layer_id:
+            self.assign_layer(other, layer_id)
 
     def detach(self, other: int | HIRCNode) -> None:
         if isinstance(other, HIRCNode):
@@ -206,17 +260,21 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         controls: dict[int, pyo.SigTo] = my_pyo.cache["controls"]
 
         for child_id in self.children.items:
-            layer = self.get_layer(child_id)
+            layers = self.get_layers_for(child_id)
             ctrl = controls[child_id]
+            val = 0.0
 
-            if layer:
-                for info in layer.associated_children:
-                    if info.associated_child_id == child_id:
-                        x = ctx.rtpc_x.get(layer.rtpc_id)
-                        y = eval_curve(info.graph_points, x)
-                        ctrl.value = y
-                        break
+            if layers:
+                for layer in layers:
+                    for info in layer.associated_children:
+                        if info.associated_child_id == child_id:
+                            x = ctx.rtpc_x.get(layer.rtpc_id)
+                            y = eval_curve(info.graph_points, x)
+                            val += y
+                            break
             else:
-                ctrl.value = 1
+                val = 1
+
+            ctrl.value = val
 
         super().update_playback(ctx)
