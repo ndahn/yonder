@@ -7,6 +7,7 @@ from .graph_designer_nodes import (
 
 # Need to import these so they register with the lookup table
 from .rsc_node import RSCNode
+from .sc_node import SCNode
 from .action_node import ActionNode
 from .event_node import EventNode
 from .sound_node import SoundNode

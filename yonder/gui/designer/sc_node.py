@@ -3,9 +3,8 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.types import HIRCNode, SwitchContainer
-from yonder.enums import PlaybackMode, RandomMode
 from yonder.game import get_selected_game
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.gui.widgets import add_state_value_input
 
@@ -18,24 +17,20 @@ class SCNode(GraphDesignerNode):
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Switch0",)
 
-    def __init__(
-        self,
-        nid: str | int = 0,
-        *,
-        switch_group: str | int = None
-    ):
+    def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
         super().__init__(nid)
 
         self.switch_group = switch_group
-        self._items: dict[str, str] = {}
+        self.switches: dict[str, str] = {}  # terminal to switch state
+        self._game = get_selected_game()
+        self._switch_group_widget: add_state_value_input = None
+        self._switch_widgets: dict[str, add_state_value_input] = {}
 
     def build_body(self) -> None:
-        game = get_selected_game()
-        
-        add_state_value_input(
-            game.game_syncs.states,
+        self._switch_group_widget = add_state_value_input(
+            self._game.game_syncs.states,
             self._on_switch_group_changed,
-            tag=self._wtag("switch_group")
+            tag=self._wtag("switch_group"),
         )
 
     def add_terminal(
@@ -51,6 +46,10 @@ class SCNode(GraphDesignerNode):
 
         super().add_terminal(label, is_input, before=before, widget=widget)
 
+    def remove_terminal(self, label: str, is_input: bool) -> None:
+        self._switch_widgets.pop(label, None)
+        super().remove_terminal(label, is_input)
+
     def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
         # Always keep exactly one free item slot at the bottom
         items = [o for o in self.get_terminals(False) if o.startswith("Switch")]
@@ -63,7 +62,7 @@ class SCNode(GraphDesignerNode):
             self.remove_terminal(label, False)
 
         for i in range(len(items), wanted):
-            self.add_terminal(f"Item{i}", False)
+            self.add_terminal(f"Switch{i}", False)
 
     def link_valid(
         self,
@@ -73,33 +72,81 @@ class SCNode(GraphDesignerNode):
         input: str,
     ) -> bool:
         if source is self:
-            return output.startswith("Item") and input == "Playback"
+            return output.startswith("Switch") and input == "Playback"
 
-        # Either a parent container plays us, or an action targets us
-        return can_reference(source.node_type, target.node_type)
+        return super().link_valid(source, output, target, input)
+
+    def validate(self, bnk: Soundbank) -> str:
+        if not self.switch_group:
+            return µ("Switch group not set")
+
+        for val in self.switches.values():
+            if not val:
+                return µ("Terminal switch not set")
+
+        return super().validate(bnk)
 
     def make_node(self, bnk: Soundbank) -> SwitchContainer:
         return SwitchContainer.new(
             self.node_id(),
-            playback_mode=self.mode,
-            random_mode=self.random_mode,
-            loop_count=self.loop_count,
+            switch_group=self.switch_group,
+            switch_states={},
             props=self.properties,
         )
 
+    def connect(
+        self,
+        bnk: Soundbank,
+        my_node: SwitchContainer,
+        output: str,
+        other: GraphDesignerNode,
+        other_node: HIRCNode,
+        input: str,
+    ) -> None:
+        if output.startswith("Switch"):
+            return my_node.attach(other_node, self.switches[output])
+
+        return super().connect(bnk, my_node, output, other, other_node, input)
+
+    # === Helpers =======================================================
+
+    def get_free_states(self, exclude: str | list[str] = None) -> list[str]:
+        if not exclude:
+            exclude = []
+        elif isinstance(exclude, str):
+            exclude = [exclude]
+
+        used = set(self.switches.values())
+        used.update(exclude)
+
+        states = set(self._game.game_syncs.states.get(self.switch_group, []))
+        return sorted(states.difference(used))
+
+    def update_combo_items(self) -> None:
+        for widget in self._switch_widgets.values():
+            widget.items = self.get_free_states(exclude=widget.string_value)
+
     # === DPG callbacks =================================================
 
-    def _on_switch_group_changed(self, sender: str, switch_group: str, user_data: Any) -> None:
+    def _on_switch_group_changed(
+        self, sender: str, switch_group: str, user_data: Any
+    ) -> None:
         self.switch_group = switch_group
+        self.update_combo_items()
 
     def _make_switch_terminal(self, label: str, is_input: bool) -> None:
-        game = get_selected_game()
-
-        add_state_value_input(
-            game.game_syncs.states.get(self.switch_group, None),
+        widget = add_state_value_input(
+            self.get_free_states(),
             self._on_switch_changed,
             user_data=(label, is_input),
         )
+        self._switch_widgets[label] = widget
+        self.switches[label] = None
 
     def _on_switch_changed(self, sender: str, switch: str, user_data: Any) -> None:
-        pass
+        self.switches = {
+            terminal: dpg.get_value(self._switch_widgets[terminal])
+            for terminal in self._outputs
+            if terminal.startswith("Switch")
+        }
+        self.update_combo_items()

@@ -31,7 +31,7 @@ class add_state_value_input(DpgItem):
         callback: Callable[[str, int, Any], None],
         *,
         default_value: int | str = "",
-        label: str,
+        label: str = None,
         empty_value: int = 0,
         custom_values: dict[str, int] = None,
         raw: bool = False,
@@ -52,7 +52,7 @@ class add_state_value_input(DpgItem):
 
         self._custom_values.setdefault("-", 0)
 
-        with dpg.group(horizontal=True, parent=parent, tag=self.tag):
+        with dpg.group(horizontal=True, horizontal_spacing=3, parent=parent, tag=self.tag):
             dpg.add_input_text(
                 default_value=_get_label(default_value),
                 width=width,
@@ -90,6 +90,15 @@ class add_state_value_input(DpgItem):
                 return calc_hash(value) 
         
         return self._empty_value
+
+    @property
+    def items(self) -> list[str]:
+        return list(self._values)
+
+    @items.setter
+    def items(self, values: list[str]) -> None:
+        self._values = values
+        dpg.configure_item(self._t("combo"), items=values)
 
     @property
     def string_value(self) -> str:

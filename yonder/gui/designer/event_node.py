@@ -1,14 +1,10 @@
-from yonder import Soundbank
-from yonder.enums import ActionType
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
-from yonder.gui.localization import μ
-from yonder.types import HIRCNode, Action, Event
-
-
+from typing import ClassVar
 from dearpygui import dearpygui as dpg
 
-
-from typing import Any, ClassVar
+from yonder import Soundbank
+from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.localization import μ
+from yonder.types import HIRCNode, Action, Event
 
 
 class EventNode(GraphDesignerNode):
@@ -63,7 +59,7 @@ class EventNode(GraphDesignerNode):
             elif output.startswith("Extra"):
                 return target.node_type is Action
 
-        return False
+        return super().link_valid(source, output, target, input)
 
     def make_node(self, bnk: Soundbank) -> tuple[Event, Action, Action]:
         self._play = Action.new_play_action(bnk.new_id(), 0, bank_id=bnk.bank_id)
@@ -74,7 +70,7 @@ class EventNode(GraphDesignerNode):
     def connect(
         self,
         bnk: Soundbank,
-        my_node: HIRCNode,
+        my_node: Event,
         output: str,
         other: GraphDesignerNode,
         other_node: HIRCNode,

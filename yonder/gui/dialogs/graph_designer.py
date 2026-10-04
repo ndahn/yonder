@@ -247,8 +247,8 @@ class graph_designer_dialog(DpgItem):
         """Resolve whatever dpg hands us for a link to an edge in our graph."""
         if isinstance(link, (list, tuple)):
             # Some dpg versions report links as their two attributes
-            source, output = self._get_output_terminal_for(link[0])
-            target, input = self._get_input_terminal_for(link[1])
+            source, _ = self._get_output_terminal_for(link[0])
+            target, _ = self._get_input_terminal_for(link[1])
             if source and target and self._g.has_edge(source.nid, target.nid):
                 return (source.nid, target.nid)
 

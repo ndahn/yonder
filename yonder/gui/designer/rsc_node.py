@@ -1,14 +1,11 @@
+from typing import Any, ClassVar
+from dearpygui import dearpygui as dpg
+
 from yonder import Soundbank
 from yonder.enums import PlaybackMode, RandomMode
 from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
 from yonder.gui.localization import μ
 from yonder.types import HIRCNode, RandomSequenceContainer
-
-
-from dearpygui import dearpygui as dpg
-
-
-from typing import Any, ClassVar
 
 
 class RSCNode(GraphDesignerNode):
