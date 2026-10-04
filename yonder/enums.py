@@ -406,7 +406,7 @@ class PropID(IntEnum):
             PropID.MidiTempoSource: Units.None_,
             PropID.MidiTargetNode: Units.ID,
             PropID.AttachedPluginFXID: Units.ID,
-            PropID.Loop: Units.None_,
+            PropID.Loop: Units.Count,
             PropID.InitialDelay: Units.Milliseconds,
             PropID.UserAuxSendLPF0: Units.Percent,
             PropID.UserAuxSendLPF1: Units.Percent,

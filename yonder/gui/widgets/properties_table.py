@@ -43,8 +43,7 @@ class add_properties_table(DpgItem):
             [str, dict[PropID, tuple[float, float]], Any], None
         ] = None,
         label: str = "Properties",
-        borders: bool = True,
-        stretch: bool = True,
+        compact: bool = False,
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
@@ -57,28 +56,30 @@ class add_properties_table(DpgItem):
         self._on_prop_ranges_changed = on_prop_ranges_changed
         self._user_data = user_data
 
-        self._build(label, borders, stretch)
+        self._build(label, compact)
         self.refresh()
 
     # === Build =========================================================
 
-    def _build(self, label: str, borders: bool, stretch: bool) -> None:
+    def _build(self, label: str, compact: bool) -> None:
         if label:
             dpg.add_text(label)
 
         with dpg.table(
             header_row=False,
             policy=dpg.mvTable_SizingFixedFit,
-            borders_outerH=borders,
-            borders_outerV=borders,
-            no_host_extendX=not stretch,
+            borders_outerH=not compact,
+            borders_outerV=not compact,
+            no_host_extendX=compact,
+            no_pad_innerX=compact,
+            no_pad_outerX=compact,
             tag=self._tag,
         ):
             dpg.add_table_column(
-                label=µ("Property"), width_stretch=stretch, init_width_or_weight=100
+                label=µ("Property"), width_stretch=not compact, init_width_or_weight=100
             )
             dpg.add_table_column(
-                label=µ("Value"), width_stretch=stretch, init_width_or_weight=100
+                label=µ("Value"), width_stretch=not compact, init_width_or_weight=100
             )
             dpg.add_table_column(label="", width_fixed=True)
 
@@ -147,7 +148,7 @@ class add_properties_table(DpgItem):
             )
 
             vmin, vmax, fmt, rate = self._get_prop_range(prop)
-            dpg.add_drag_float(
+            dpg.add_drag_double(
                 default_value=val,
                 width=-1,
                 callback=self._on_prop_value_changed,

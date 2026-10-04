@@ -304,8 +304,7 @@ class GraphDesignerNode:
                             {},
                             self._on_update_properties,
                             label=None,
-                            borders=False,
-                            stretch=False,
+                            compact=True,
                             tag=self._wtag("properties"),
                         )
 
