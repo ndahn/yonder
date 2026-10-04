@@ -538,10 +538,6 @@ class graph_designer_dialog(DpgItem):
                     )
                 names.add(node.name)
 
-        created: dict[int, HIRCNode] = {}
-        for nid in nx.topological_sort(self._g):
-            created[nid] = self._get_node(nid).make_node(self._bnk)
-
         # Children are attached in terminal order, which decides e.g. the
         # playlist order of a container
         def link_order(edge: tuple[int, int, dict]) -> tuple[int, int]:
@@ -549,21 +545,30 @@ class graph_designer_dialog(DpgItem):
             return (src, self._get_node(src).terminal_index(data["output"], False))
 
         edges = sorted(self._g.edges(data=True), key=link_order)
-        for src, dst, data in edges:
-            source = self._get_node(src)
-            target = self._get_node(dst)
-            source.connect(
-                self._bnk,
-                created[src],
-                data["output"],
-                target,
-                created[dst],
-                data["input"],
-            )
+        created: list[HIRCNode] = []
 
-        nodes = list(created.values())
-        self._bnk.add_nodes(*nodes)
-        return nodes
+        for nid in nx.topological_sort(self._g):
+            input_map = {}
+            output_map = {}
+            
+            for src, dst, data in edges:
+                if dst == nid:
+                    # Inputs to node nid
+                    source = self._get_node(src)
+                    input_map[data["input"]] = (source.nid, data["output"])
+                elif src == nid:
+                    # Outputs from node nid
+                    target = self._get_node(dst)
+                    output_map[data["output"]] = (target.nid, data["input"])
+
+            ret = self._get_node(nid).make_node(self._bnk, input_map, output_map)
+            if isinstance(ret, (list, tuple)):
+                created.extend(ret)
+            else:
+                created.append(ret)
+
+        self._bnk.add_nodes(*created)
+        return created
 
     def show_message(self, msg: str = None, color: style.RGBA = style.red) -> None:
         """Show or hide the notification label. Pass ``msg=None`` to hide."""

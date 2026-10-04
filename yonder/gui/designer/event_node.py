@@ -61,20 +61,18 @@ class EventNode(GraphDesignerNode):
 
         return super().link_valid(source, output, target, input)
 
-    def make_node(self, bnk: Soundbank) -> tuple[Event, Action, Action]:
-        self._play = Action.new_play_action(bnk.new_id(), 0, bank_id=bnk.bank_id)
-        self._stop = Action.new_stop_action(bnk.new_id(), 0)
-        evt = Event.new(self.nid, [self._play.id, self._stop.id])
-        return evt
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> tuple[Event, Action, Action]:
+        target = output_map.get("Play/Stop", 0)
+        extras = [
+            aid
+            for terminal, aid in sorted(output_map.items())
+            if terminal.startswith("Extra") and aid > 0
+        ]
 
-    def connect(
-        self,
-        bnk: Soundbank,
-        my_node: Event,
-        output: str,
-        other: GraphDesignerNode,
-        other_node: HIRCNode,
-        input: str,
-    ) -> None:
-        self._play.external_id = other_node.id
-        self._stop.external_id = other_node.id
+        play = Action.new_play_action(bnk.new_id(), target, bank_id=bnk.bank_id)
+        stop = Action.new_stop_action(bnk.new_id(), target)
+        evt = Event.new(self.nid, [self._play.id, self._stop.id] + extras)
+
+        return (evt, play, stop)

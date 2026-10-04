@@ -71,34 +71,24 @@ class LCNode(GraphDesignerNode):
 
         return super().link_valid(source, output, target, input)
 
-    def make_node(self, bnk: Soundbank) -> LayerContainer:
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> LayerContainer:
+        parent = input_map.get("Playback", 0)
+
         lc = LayerContainer.new(
             self.node_id(),
             props=self.properties,
+            parent=parent,
         )
 
-        for layer in sorted(set(self.layer_assignments.values())):
-            if layer != NO_LAYER:
-                # TODO configure layer
-                lc.add_layer(calc_hash(layer), [])
+        for terminal, layer in sorted(set(self.layer_assignments.items())):
+            child = output_map.get(terminal)
+            if child:
+                layer_id = calc_hash(layer) if layer != NO_LAYER else None
+                lc.attach(child, layer_id)
 
         return lc
-
-    def connect(
-        self,
-        bnk: Soundbank,
-        my_node: LayerContainer,
-        output: str,
-        other: GraphDesignerNode,
-        other_node: HIRCNode,
-        input: str,
-    ) -> None:
-        if output.startswith("Item"):
-            layer = self.layer_assignments[output]
-            layer_id = calc_hash(layer) if layer != NO_LAYER else None
-            my_node.attach(other_node, layer_id)
-        else:
-            super().connect(bnk, my_node, output, other, other_node, input)
 
     # === Helpers =======================================================
 

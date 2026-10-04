@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import pyo
 
 from yonder.hash import Hash
-from yonder.enums import ValueMeaning, ActionType
+from yonder.enums import ValueMeaning, ActionType, PropID
 from yonder.util import logger
 from yonder.audio import PlayContext, PlaybackState
 from .base_types import PropBundle, PropRangedModifiers
@@ -41,13 +41,19 @@ class Action(PropertyMixin, HIRCNode):
 
     @classmethod
     def new_play_action(
-        cls, nid: int, external_id: int, bank_id: int = 0, fade_curve: int = 4
+        cls, nid: int, external_id: int, bank_id: int = 0, fade_curve: int = 4, props: dict[PropID, float] = None,
     ) -> Action:
-        return cls(
+        obj = cls(
             id=nid,
             external_id=external_id,
             params=ActionPlay(ActionType.Play, bank_id, fade_curve),
         )
+
+        if props:
+            for prop, val in props.items():
+                obj.set_property(prop, val)
+
+        return obj
 
     @classmethod
     def new_stop_action(

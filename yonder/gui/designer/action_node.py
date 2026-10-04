@@ -42,13 +42,15 @@ class ActionNode(GraphDesignerNode):
         target: GraphDesignerNode,
         input: str,
     ) -> bool:
-        return can_reference(source.node_type, target.node_type)
+        return output == "Target" and input == "Playback"
 
-    def make_node(self, bnk: Soundbank) -> Action:
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> Action:
         # TODO handle different action types
         print("##### WARNING not handling action type yet!!!")
-        ret = Action.new_play_action(self.nid, 0)
-        ret.properties = [(p, v) for p, v in self.properties.items()]
+        target = output_map.get("Target", 0)
+        ret = Action.new_play_action(self.nid, target, bnk.bank_id, props=self.properties)
         return ret
 
     # === DPG callbacks =================================================

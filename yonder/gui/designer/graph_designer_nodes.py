@@ -390,36 +390,11 @@ class GraphDesignerNode:
 
         return None
 
-    def make_node(self, bnk: Soundbank) -> HIRCNode:
-        """Create the HIRC node this designer node stands for.
-
-        Links are applied separately through `connect`, so children don't have
-        to be known here.
-        """
-        return self.node_type.new(self.node_id())
-
-    def connect(
-        self,
-        bnk: Soundbank,
-        my_node: HIRCNode,
-        output: str,
-        other: GraphDesignerNode,
-        other_node: HIRCNode,
-        input: str,
-    ) -> None:
-        """Apply one of this node's outgoing links to the created HIRC nodes.
-
-        Called once per link, on the source node, in terminal order.
-        """
-        attach = getattr(my_node, "attach", None)
-        if callable(attach):
-            attach(other_node)
-        elif isinstance(my_node, Action):
-            my_node.external_id = other_node.id
-        elif hasattr(other_node, "parent"):
-            other_node.parent = my_node.id
-        else:
-            raise TypeError(f"Don't know how to attach {other_node} to {my_node}")
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> HIRCNode:
+        """Create the HIRC node this designer node stands for and links it to its children."""
+        raise NotImplementedError()
 
     def __str__(self) -> str:
         return f"[{self.title}] {self.name or f'#{self.nid}'}"

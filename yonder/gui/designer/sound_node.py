@@ -59,13 +59,25 @@ class SoundNode(GraphDesignerNode):
 
         return None
 
-    def make_node(self, bnk: Soundbank) -> Sound:
-        return Sound.new(self.nid, self.wem_path, self.source_type, props=self.properties)
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> Sound:
+        # TODO effects
+        parent = input_map.get("Playback", 0)
+        return Sound.new(
+            self.nid,
+            self.wem_path,
+            self.source_type,
+            props=self.properties,
+            parent=parent,
+        )
 
     # === DPG callbacks =================================================
 
     def _on_wem_path_changed(self, sender: str, wem_path: Path, user_data: Any) -> None:
         self.wem_path = wem_path
 
-    def _on_source_type_changed(self, sender: str, source_type: str, user_data: Any) -> None:
+    def _on_source_type_changed(
+        self, sender: str, source_type: str, user_data: Any
+    ) -> None:
         self.source_type = SourceType[source_type]

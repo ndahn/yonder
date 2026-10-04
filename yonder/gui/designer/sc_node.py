@@ -86,27 +86,24 @@ class SCNode(GraphDesignerNode):
 
         return super().validate(bnk)
 
-    def make_node(self, bnk: Soundbank) -> SwitchContainer:
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> SwitchContainer:
+        parent = input_map.get("Playback", 0)
+        switch_map = {}
+
+        for terminal, state in sorted(self.switches.items()):
+            child = output_map.get(terminal)
+            if child:
+                switch_map[state] = child
+
         return SwitchContainer.new(
             self.node_id(),
             switch_group=self.switch_group,
-            switch_states={},
+            switch_states=switch_map,
             props=self.properties,
+            parent=parent,
         )
-
-    def connect(
-        self,
-        bnk: Soundbank,
-        my_node: SwitchContainer,
-        output: str,
-        other: GraphDesignerNode,
-        other_node: HIRCNode,
-        input: str,
-    ) -> None:
-        if output.startswith("Switch"):
-            my_node.attach(other_node, self.switches[output])
-        else:
-            super().connect(bnk, my_node, output, other, other_node, input)
 
     # === Helpers =======================================================
 

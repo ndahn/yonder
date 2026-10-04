@@ -84,13 +84,25 @@ class RSCNode(GraphDesignerNode):
         # Either a parent container plays us, or an action targets us
         return can_reference(source.node_type, target.node_type)
 
-    def make_node(self, bnk: Soundbank) -> RandomSequenceContainer:
+    def make_node(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> RandomSequenceContainer:
+        parent = input_map.get("Playback", 0)
+        children = []
+
+        for terminal in self.get_terminals(False):
+            child = output_map.get(terminal)
+            if child:
+                children.append(child)
+
         return RandomSequenceContainer.new(
             self.node_id(),
+            nodes=children,
             playback_mode=self.mode,
             random_mode=self.random_mode,
             loop_count=self.loop_count,
             props=self.properties,
+            parent=parent,
         )
 
     # === DPG callbacks =================================================
