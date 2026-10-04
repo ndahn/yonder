@@ -360,9 +360,9 @@ class add_hirc_player_panel(DpgItem):
                             state_values = known_states.get(group_id, [state_value])
 
                         row_value = add_state_value_input(
-                            group,
                             ["-"] + state_values,
                             self._on_state_changed,
+                            label=group,
                             default_value=state_value,
                             width=160,
                             user_data=group,

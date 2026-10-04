@@ -287,9 +287,9 @@ Area tree:
             values = self._get_values_for_arg(arg.group_id)
 
             widget = add_state_value_input(
-                name,
                 values,
                 self._on_area_val_changed,
+                label=name,
                 default_value=_WILDCARD,
                 custom_values={"*": 0},
                 width=160,
@@ -350,7 +350,6 @@ Area tree:
             self._local_state_widgets.pop(idx).destroy()
 
         widget = add_state_value_input(
-            None,
             values,
             self._on_local_arg_name_changed,
             default_value=arg,

@@ -9,3 +9,4 @@ from .graph_designer_nodes import (
 from .rsc_node import RSCNode
 from .action_node import ActionNode
 from .event_node import EventNode
+from .sound_node import SoundNode

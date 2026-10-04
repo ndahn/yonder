@@ -62,15 +62,17 @@ class RSCNode(GraphDesignerNode):
 
     def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
         # Always keep exactly one free item slot at the bottom
-        filt = lambda s: s.startswith("Item")
-        used = [self.terminal_index(o, False) for o in filter(filt, outputs)]
-        wanted = max(used, default=0) + 1
+        items = [o for o in self.get_terminals(False) if o.startswith("Item")]
+        last_used = max(
+            (i for i, label in enumerate(items) if label in outputs), default=-1
+        )
+        wanted = last_used + 2
 
-        while len(list(filter(filt, self._outputs))) > wanted:
-            self.remove_terminal(self._outputs[-1], False)
+        for label in items[wanted:]:
+            self.remove_terminal(label, False)
 
-        while len(list(filter(filt, self._outputs))) < wanted:
-            self.add_terminal(f"Item{len(self._outputs)}", False)
+        for i in range(len(items), wanted):
+            self.add_terminal(f"Item{i}", False)
 
     def link_valid(
         self,
@@ -91,6 +93,7 @@ class RSCNode(GraphDesignerNode):
             playback_mode=self.mode,
             random_mode=self.random_mode,
             loop_count=self.loop_count,
+            props=self.properties,
         )
 
     # === DPG callbacks =================================================

@@ -23,8 +23,11 @@ class EventNode(GraphDesignerNode):
     def __init__(
         self,
         nid: str | int = 0,
+        *,
+        name: str = "c100200300",
     ):
         super().__init__(nid)
+        self.name = name
 
         self.extra_actions: list[str] = []
         self._play: Action = None
@@ -34,16 +37,18 @@ class EventNode(GraphDesignerNode):
         pass
 
     def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
-        # Always keep exactly one free item slot at the bottom
-        filt = lambda s: s.startswith("Extra")
-        used = [self.terminal_index(o, False) for o in filter(filt, outputs)]
-        wanted = max(used, default=0) + 1
+        # Always keep exactly one free extra slot at the bottom
+        items = [o for o in self.get_terminals(False) if o.startswith("Extra")]
+        last_used = max(
+            (i for i, label in enumerate(items) if label in outputs), default=-1
+        )
+        wanted = last_used + 2
 
-        while len(list(filter(filt, self._outputs))) > wanted:
-            self.remove_terminal(self._outputs[-1], False)
+        for label in items[wanted:]:
+            self.remove_terminal(label, False)
 
-        while len(list(filter(filt, self._outputs))) < wanted:
-            self.add_terminal(f"Extra{len(self._outputs)}", False)
+        for i in range(len(items), wanted):
+            self.add_terminal(f"Extra{i}", False)
 
     def link_valid(
         self,
@@ -52,7 +57,7 @@ class EventNode(GraphDesignerNode):
         target: GraphDesignerNode,
         input: str,
     ) -> bool:
-        if source is self:
+        if source is self and input == "Event":
             if output == "Play/Stop":
                 return hasattr(target.node_type, "parent")
             elif output.startswith("Extra"):

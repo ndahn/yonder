@@ -27,11 +27,11 @@ def _get_label(value: int | str) -> str:
 class add_state_value_input(DpgItem):
     def __init__(
         self,
-        state: str,
         values: list[int | str],
         callback: Callable[[str, int, Any], None],
         *,
         default_value: int | str = "",
+        label: str,
         empty_value: int = 0,
         custom_values: dict[str, int] = None,
         raw: bool = False,
@@ -67,8 +67,8 @@ class add_state_value_input(DpgItem):
                 tag=self._t("combo"),
             )
 
-            if state:
-                dpg.add_text(state, tag=self._t("label"))
+            if label:
+                dpg.add_text(label, tag=self._t("label"))
 
     def _on_value_changed(self, sender: str, value: str | int, cb_user_data: Any) -> None:
         self.value = value

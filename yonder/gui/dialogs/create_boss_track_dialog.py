@@ -324,9 +324,9 @@ class create_boss_track_dialog(DpgItem):
                 if "reserved" in x.lower()
             ]
             self._bgm_enemy_type_widget = add_state_value_input(
-                "BgmEnemyType",
                 reserved_keys,
                 self._on_bgmenemytype_changed,
+                label="BgmEnemyType",
                 default_value="*",
                 custom_values={"*": 0},
                 tag=self._t("bgm_enemy_type"),

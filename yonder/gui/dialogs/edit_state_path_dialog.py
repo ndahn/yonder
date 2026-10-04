@@ -111,9 +111,9 @@ class edit_state_path_dialog(DpgItem):
                 values = ["*"] + game_states.get(name, [])
 
                 widget = add_state_value_input(
-                    name,
                     values,
                     None,
+                    label=name,
                     default_value=state_path[i] if state_path else "*",
                     custom_values={"*": 0},
                     tag=self._t(f"arg_{name}"),

@@ -50,7 +50,9 @@ class ActionNode(GraphDesignerNode):
     def make_node(self, bnk: Soundbank) -> Action:
         # TODO handle different action types
         print("##### WARNING not handling action type yet!!!")
-        return Action.new_play_action(self.nid, 0)
+        ret = Action.new_play_action(self.nid, 0)
+        ret.properties = [(p, v) for p, v in self.properties.items()]
+        return ret
 
     # === DPG callbacks =================================================
 

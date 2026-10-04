@@ -220,7 +220,7 @@ class GraphDesignerNode:
         is_input: bool,
         *,
         before: str = None,
-        widget: Callable[[], None] = None,
+        widget: Callable[[str, bool], None] = None,
     ) -> str:
         """Add a terminal to the live dpg node and return its tag.
 
@@ -255,7 +255,7 @@ class GraphDesignerNode:
             **kwargs,
         ):
             if widget:
-                widget()
+                widget(label, is_input)
             else:
                 dpg.add_text(µ(label))
 
@@ -301,7 +301,12 @@ class GraphDesignerNode:
                 if issubclass(self.node_type, PropertyMixin):
                     with dpg.tree_node(label=µ("Properties"), span_text_width=True):
                         add_properties_table(
-                            {}, self._on_update_properties, label=None, stretch=False
+                            {},
+                            self._on_update_properties,
+                            label=None,
+                            borders=False,
+                            stretch=False,
+                            tag=self._wtag("properties"),
                         )
 
         for label in self.inputs:
