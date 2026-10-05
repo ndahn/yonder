@@ -1,86 +1,12 @@
 from __future__ import annotations
 from typing import Any, Callable
-from copy import deepcopy
-from dataclasses import dataclass, field, replace
 from dearpygui import dearpygui as dpg
 
-from yonder import Soundbank
-from yonder.hash import random_hash
 from yonder.enums import RandomSequenceMode, RandomMode
 from yonder.types.base_types import MusicRanSeqPlaylistItem
+from yonder.types.music_random_sequence_container import PlaylistTreeItem
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
-from .select_node import add_select_node
-
-
-# TODO move to MRSC and use in e.g. playback playlist state
-@dataclass
-class PlaylistTreeItem:
-    item: MusicRanSeqPlaylistItem
-    parent: PlaylistTreeItem = None
-    children: list[PlaylistTreeItem] = field(default_factory=list)
-
-    @classmethod
-    def new(
-        cls,
-        ers_base_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
-        parent: PlaylistTreeItem = None,
-        children: list[PlaylistTreeItem] = None,
-    ) -> PlaylistTreeItem:
-        return PlaylistTreeItem(
-            MusicRanSeqPlaylistItem(0, random_hash(), ers_type=ers_base_type.value),
-            parent=parent,
-            children=children or [],
-        )
-
-    @classmethod
-    def from_playlist(cls, playlist: list[MusicRanSeqPlaylistItem]) -> PlaylistTreeItem:
-        """flat list -> tree (recursive descent)"""
-        it = iter(playlist)
-
-        def take(parent: PlaylistTreeItem) -> PlaylistTreeItem:
-            node = PlaylistTreeItem(replace(next(it)), parent)
-            # Each node is immediately followed by its entire subtree. Once this returns the
-            # iterator will have advanced to the next node belonging to us.
-            node.children = [take(node) for _ in range(node.item.child_count)]
-            return node
-
-        return take(None)
-
-    def to_wwise_playlist(self) -> list[MusicRanSeqPlaylistItem]:
-        """tree -> flat list (pre-order), child_count rebuilt from the tree"""
-
-        def flatten(node: PlaylistTreeItem) -> list[MusicRanSeqPlaylistItem]:
-            node.item.child_count = len(node.children)
-            out = [node.item]
-            for c in node.children:
-                out += flatten(c)
-            return out
-
-        return flatten(self)
-
-    def copy(self) -> PlaylistTreeItem:
-        return deepcopy(self)
-
-    def is_leaf(self) -> bool:
-        return not self.children
-
-    def __str__(self) -> str:
-        def delve(n: PlaylistTreeItem, level: int) -> str:
-            if n.is_leaf():
-                s = " " * level * 2 + str(n.item.segment_id) + "\n"
-            else:
-                s = (
-                    " " * level * 2
-                    + f"{n.item.ers_type_enum.name} | {n.item.random_mode_enum.name}\n"
-                )
-
-                for child in n.children:
-                    s += delve(child, level + 1)
-
-            return s
-
-        return delve(self, 0)
 
 
 class add_music_playlist_editor(DpgItem):

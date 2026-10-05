@@ -11,7 +11,10 @@ from .hirc_node import HIRCNode, NODE_TYPE_MAP
 from .layer_container import LayerContainer
 from .lfo_modulator import LFOModulator
 from .mixins import DataNode, PropertyMixin
-from .music_random_sequence_container import MusicRandomSequenceContainer
+from .music_random_sequence_container import (
+    MusicRandomSequenceContainer,
+    PlaylistTreeItem,
+)
 from .music_segment import MusicSegment
 from .music_switch_container import MusicSwitchContainer
 from .music_track import MusicTrack

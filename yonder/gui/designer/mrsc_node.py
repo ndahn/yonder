@@ -3,13 +3,10 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RandomSequenceMode
-from yonder.types import HIRCNode, MusicRandomSequenceContainer
+from yonder.types import HIRCNode, MusicRandomSequenceContainer, PlaylistTreeItem
 from yonder.gui.localization import μ
 from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
-from yonder.gui.widgets.music_playlist_editor import (
-    add_music_playlist_editor,
-    PlaylistTreeItem,
-)
+from yonder.gui.widgets import add_music_playlist_editor
 
 
 class MRSCNode(GraphDesignerNode):
@@ -74,23 +71,18 @@ class MRSCNode(GraphDesignerNode):
     ) -> MusicRandomSequenceContainer:
         parent = input_map.get("Playback", 0)
 
-        # Build playlist
-        playlist = self.playlist.to_wwise_playlist()
-        for item in playlist:
-            if item.child_count == 0:
-                label = self._playlist_editor.get_playlist_item_label(
-                    item.playlist_item_id
-                )
-                item.segment_id = output_map.get(label, 0)
+        # Resolve the leaf items against the segments connected to our terminals
+        playlist = self.playlist.copy()
+        for leaf in playlist.leaves():
+            label = self._playlist_editor.get_playlist_item_label(leaf.item)
+            leaf.item.segment_id = output_map.get(label, 0)
 
-        node = MusicRandomSequenceContainer.new(
+        return MusicRandomSequenceContainer.new(
             self.node_id(),
+            playlist=playlist,
             props=self.properties,
             parent=parent,
         )
-        node.playlist_items = playlist
-
-        return node
 
     # === DPG callbacks =================================================
 
@@ -99,12 +91,8 @@ class MRSCNode(GraphDesignerNode):
     ) -> None:
         self.playlist = playlist
 
-        leafs = []
-        for item in playlist.to_wwise_playlist():
-            if item.child_count == 0:
-                label = self._playlist_editor.get_playlist_item_label(
-                    item.playlist_item_id
-                )
-                leafs.append(label)
-
+        leafs = [
+            self._playlist_editor.get_playlist_item_label(leaf.item)
+            for leaf in playlist.leaves()
+        ]
         self.on_connections_changed(self._inputs, leafs)

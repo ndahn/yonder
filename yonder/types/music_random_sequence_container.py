@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Callable, ClassVar
-from dataclasses import dataclass, field
-import networkx as nx
+from typing import Callable, ClassVar, Iterator
+from copy import deepcopy
+from dataclasses import dataclass, field, replace
 import pyo
 
 from yonder.hash import random_hash, Hash
@@ -23,6 +23,113 @@ from .base_types import (
 from .mixins import PropertyMixin, RtpcMixin, StateMixin
 
 
+@dataclass(eq=False)
+class PlaylistTreeItem:
+    """A playlist item together with its place in the playlist tree.
+
+    Wwise stores a MusicRandomSequenceContainer's playlist as a flat, pre-order
+    list where every item declares how many children follow it. This class is
+    the same data as an actual tree, which is far easier to edit and to walk
+    during playback. Nodes are compared by identity, so they can be used as
+    dictionary keys.
+    """
+
+    item: MusicRanSeqPlaylistItem
+    parent: PlaylistTreeItem = None
+    children: list[PlaylistTreeItem] = field(default_factory=list)
+
+    @classmethod
+    def new(
+        cls,
+        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
+        parent: PlaylistTreeItem = None,
+        children: list[PlaylistTreeItem] = None,
+    ) -> PlaylistTreeItem:
+        return cls(
+            MusicRanSeqPlaylistItem(0, random_hash(), ers_type=ers_type.value),
+            parent=parent,
+            children=children or [],
+        )
+
+    @classmethod
+    def from_playlist(cls, playlist: list[MusicRanSeqPlaylistItem]) -> PlaylistTreeItem:
+        """flat list -> tree (recursive descent)"""
+        if not playlist:
+            raise ValueError("Cannot build a playlist tree from an empty playlist")
+
+        it = iter(playlist)
+
+        def take(parent: PlaylistTreeItem) -> PlaylistTreeItem:
+            node = cls(replace(next(it)), parent)
+            # Each node is immediately followed by its entire subtree. Once this returns the
+            # iterator will have advanced to the next node belonging to us.
+            node.children = [take(node) for _ in range(node.item.child_count)]
+            return node
+
+        return take(None)
+
+    def to_wwise_playlist(self) -> list[MusicRanSeqPlaylistItem]:
+        """tree -> flat list (pre-order), child_count rebuilt from the tree"""
+
+        def flatten(node: PlaylistTreeItem) -> list[MusicRanSeqPlaylistItem]:
+            node.item.child_count = len(node.children)
+            out = [node.item]
+            for c in node.children:
+                out += flatten(c)
+            return out
+
+        return flatten(self)
+
+    def copy(self) -> PlaylistTreeItem:
+        return deepcopy(self)
+
+    def is_leaf(self) -> bool:
+        return not self.children
+
+    def walk(self) -> Iterator[PlaylistTreeItem]:
+        """This node and its entire subtree, in pre-order."""
+        yield self
+        for child in self.children:
+            yield from child.walk()
+
+    def leaves(self) -> Iterator[PlaylistTreeItem]:
+        """The nodes of this subtree that actually reference a segment."""
+        return (n for n in self.walk() if n.is_leaf())
+
+    def ancestors(self) -> Iterator[PlaylistTreeItem]:
+        """This node's parents, closest first."""
+        node = self.parent
+        while node:
+            yield node
+            node = node.parent
+
+    @property
+    def ers_type(self) -> RandomSequenceMode:
+        """The item's playback mode, resolving `Inherit` against its ancestors."""
+        for node in (self, *self.ancestors()):
+            if node.item.ers_type_enum != RandomSequenceMode.Inherit:
+                return node.item.ers_type_enum
+
+        return RandomSequenceMode.ContinuousSequence
+
+    def __str__(self) -> str:
+        def delve(n: PlaylistTreeItem, level: int) -> str:
+            if n.is_leaf():
+                s = " " * level * 2 + str(n.item.segment_id) + "\n"
+            else:
+                s = (
+                    " " * level * 2
+                    + f"{n.item.ers_type_enum.name} | {n.item.random_mode_enum.name}\n"
+                )
+
+                for child in n.children:
+                    s += delve(child, level + 1)
+
+            return s
+
+        return delve(self, 0)
+
+
 @dataclass(repr=False, eq=False)
 class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
     body_type: ClassVar[int] = 13
@@ -36,15 +143,11 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
     def new(
         cls,
         nid: Hash,
-        playlist: list[int, list[int]] = None,
-        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
+        playlist: PlaylistTreeItem = None,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicRandomSequenceContainer:
-        if playlist:
-            items = cls.make_playlist(playlist, ers_type=ers_type)
-        else:
-            items = []
+        items = playlist.to_wwise_playlist() if playlist else []
 
         obj = cls(nid, playlist_items=items)
 
@@ -99,15 +202,11 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
             self.music_trans_node_params.music_node_params.node_base_params.state_chunk
         )
 
-    def set_playlist(
-        self,
-        items: list,
-        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
-    ) -> None:
-        playlist = self.make_playlist(items, ers_type)
-        self.playlist_items = playlist
+    def set_playlist(self, playlist: PlaylistTreeItem) -> None:
+        items = playlist.to_wwise_playlist()
+        self.playlist_items = items
         self.music_trans_node_params.music_node_params.children.items = [
-            p.segment_id for p in playlist if p.segment_id > 0
+            p.segment_id for p in items if p.segment_id > 0
         ]
 
     @property
@@ -117,69 +216,9 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
         return self.playlist_items[0].ers_type_enum
 
-    def get_playlist_tree(self) -> nx.DiGraph:
-        g = nx.DiGraph()
-        idx = 0
-
-        while idx < len(self.playlist_items):
-            item = self.playlist_items[idx]
-            g.add_node(item.playlist_item_id, item=item)
-
-            for child in self.playlist_items[idx + 1 : idx + 1 + item.child_count]:
-                # TODO make sure the child exists
-                g.add_node(child.playlist_item_id, item=child)
-                g.add_edge(
-                    item.playlist_item_id,
-                    child.playlist_item_id,
-                    mode=item.ers_type_enum,
-                )
-            idx += item.child_count + 1
-
-        return g
-
-    @staticmethod
-    def make_playlist(
-        items: list,
-        ers_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
-    ) -> list[MusicRanSeqPlaylistItem]:
-        def assemble(
-            item: int | list | tuple,
-            playlist: list[MusicRanSeqPlaylistItem],
-            parent_id: int,
-        ) -> None:
-            if isinstance(item, int):
-                playlist.append(
-                    MusicRanSeqPlaylistItem(
-                        item,
-                        random_hash(),
-                        ers_type=RandomSequenceMode.Inherit.value,
-                        parent=parent_id,
-                    )
-                )
-            else:
-                if isinstance(item[0], RandomSequenceMode):
-                    group_ers = item[0]
-                    item = item[1:]
-                elif isinstance(item, list):
-                    group_ers = RandomSequenceMode.ContinuousSequence
-                else:
-                    group_ers = RandomSequenceMode.ContinuousRandom
-
-                group_node = MusicRanSeqPlaylistItem(
-                    0,
-                    random_hash(),
-                    ers_type=group_ers.value,
-                    parent=parent_id,
-                )
-                playlist.append(group_node)
-                for child in item:
-                    assemble(child, playlist, group_node.playlist_item_id)
-
-        playlist = [MusicRanSeqPlaylistItem(0, 0, ers_type=ers_type.value)]
-        for child in items:
-            assemble(child, playlist, playlist[-1].playlist_item_id)
-
-        return playlist
+    def get_playlist_tree(self) -> PlaylistTreeItem:
+        """The playlist as an editable tree. The items are copies, use `set_playlist` to apply changes."""
+        return PlaylistTreeItem.from_playlist(self.playlist_items)
 
     def add_playlist_item(
         self,
