@@ -52,7 +52,6 @@ from yonder.enums import (
     AttenuationProperty,
     ClipAutomationType,
     PropID,
-    DecisionTreeMode,
     MarkerId,
     RandomMode,
     PlaybackMode,
@@ -64,6 +63,7 @@ from yonder.gui.config import get_config
 from yonder.gui.helpers import GraphCurve
 from yonder.gui.localization import µ
 from yonder.game.data import AmxData
+from ..widgets.decision_tree_editor import add_decision_tree_editor
 from ..widgets.paragraphs import add_paragraphs
 from ..widgets.generic_input_widget import add_generic_widget, is_simple_type
 from ..widgets.loading_indicator import loading_indicator
@@ -1212,60 +1212,16 @@ def _create_attributes_musicswitchcontainer(
     base_tag: str = 0,
     user_data: Any = None,
 ) -> None:
-    from yonder.gui.dialogs.edit_state_path_dialog import edit_state_path_dialog
-
-    names = {
-        a.group_id: lookup_name(a.group_id, f"#{a.group_id}") for a in node.arguments
-    }
-
-    def on_state_path_created(
-        sender: str, state_path: list[int], path_node_id: int
+    def on_tree_changed(
+        sender: str, tree_owner: MusicSwitchContainer, cb_user_data: Any
     ) -> None:
-        node.add_branch(state_path, path_node_id)
-        # Tree changed, need to regenerate widgets
-        on_structure_changed()
-
-    def on_tree_mode_changed(sender: str, mode: str, cb_user_data: Any) -> None:
-        node.tree_mode = DecisionTreeMode[mode]
         on_node_changed(base_tag, node, user_data)
 
-    def on_node_key_changed(
-        sender: str, info: tuple[int, str], branch: tuple[DecisionTreeNode, int, str]
+    def on_branch_removed(
+        sender: str, branch: DecisionTreeNode, cb_user_data: Any
     ) -> None:
-        tree_node, level, _ = branch
-        new_key = info[0]
-        siblings = node.get_tree_nodes_at_depth(level)
-
-        for sib in siblings:
-            if sib is not tree_node and sib.key == new_key:
-                logger.error(f"A node with key {info} already exists in level {level}")
-                return
-
-        tree_node.key = new_key
-        update_branch_label(sender, branch, None)
-
-    def on_add_branch(
-        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
-        branch, path = info
-        for _ in range(len(node.arguments) - len(path)):
-            new_child = DecisionTreeNode(999999)
-            branch.children.append(new_child)
-            branch.child_count += 1
-            branch = new_child
-
-        on_structure_changed()
-
-    def on_delete_branch(
-        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
-        branch, path = info
-        node.remove_branch(path)
-        logger.info(f"Removed branch {branch.name}")
-        on_node_changed(base_tag, node, user_data)
-
         # Search for orphaned nodes and pin them
-        orphans: set[DecisionTreeNode] = set()
+        orphans: set[int] = set()
         todo = [branch]
 
         while todo:
@@ -1274,179 +1230,51 @@ def _create_attributes_musicswitchcontainer(
                 orphans.add(fork.node_id)
             todo.extend(fork.children)
 
-        if orphans:
-            for n in list(orphans):
-                orphans.update(bnk.get_subtree(n).nodes)
+        if not orphans:
+            return
 
-            pin_nodes(orphans)
-            logger.info(f"Pinned {len(orphans)} nodes which are now orphaned")
-            on_structure_changed()
+        for n in list(orphans):
+            orphans.update(bnk.get_subtree(n).nodes)
 
-    def on_insert_decision_confirm(
-        sender: str, arg_hash: tuple[int, str], info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
-        h, name = arg_hash
-        _, path = info
-        node.insert_argument(len(path), h, GroupType.State)
-        names[h] = name
+        pin_nodes(orphans)
+        logger.info(f"Pinned {len(orphans)} nodes which are now orphaned")
         on_structure_changed()
-
-    def on_insert_decision(
-        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
-        from yonder.gui.dialogs.choice_dialog import pick_hash_dialog
-
-        pick_hash_dialog(
-            0, on_insert_decision_confirm, user_data=info,
-        )
-
-    def on_remove_decision(
-        sender: str, app_data: Any, info: tuple[DecisionTreeNode, list[Hash]]
-    ) -> None:
-        _, path = info
-        arg = node.arguments[len(path) - 1].group_id
-        node.remove_argument(arg)
-        on_structure_changed()
-
-    def update_branch_label(
-        sender: str, info: tuple[DecisionTreeNode, int, str], cb_user_data: Any
-    ) -> None:
-        tree_node, level, dpg_item = info
-
-        arg = node.arguments[level]
-        arg_name = names[arg.group_id]
-        val_name = get_key(tree_node)
-
-        label = f"{arg_name} = {val_name}"
-        dpg.set_item_label(dpg_item, label)
 
     def on_leaf_changed(
-        sender: str, selected: HIRCNode, parent: DecisionTreeNode
+        sender: str, selected: int | HIRCNode, branch: DecisionTreeNode
     ) -> None:
-        parent.node_id = selected.id if selected else 0
+        if isinstance(selected, HIRCNode):
+            branch.node_id = selected.id
+        else:
+            branch.node_id = int(selected or 0)
+
+        if branch.node_id > 0:
+            node.children.add(branch.node_id)
+
         on_node_changed(base_tag, node, user_data)
+        on_structure_changed()
 
-    def open_context_menu(
-        sender: str, app_data: Any, info: tuple[DecisionTreeNode, int, str, str]
-    ) -> None:
-        item, tree_node, level, path = info
-
-        arg = node.arguments[level]
-        arg_name = names[arg.group_id]
-        if tree_node.key == 0:
-            val_name = "*"
-        else:
-            val_name = lookup_name(tree_node.key, "<?>")
-
-        with dpg.window(
-            popup=True,
-            min_size=(100, 50),
-            pos=dpg.get_mouse_pos(local=False),
-            no_saved_settings=True,
-            on_close=lambda: dpg.delete_item(context_menu),
-        ) as context_menu:
-            dpg.add_text(arg_name)
-            add_hash_widget(
-                tree_node.key,
-                on_node_key_changed,
-                horizontal=False,
-                initial_string=val_name,
-                string_label=µ("Value"),
-                width=100,
-                user_data=(tree_node, level, item),
-            )
-            dpg.add_separator()
-
-            # TODO add options to merge with/split from branch
-            dpg.add_menu_item(
-                label=µ("Create branch"),
-                callback=on_add_branch,
-                user_data=(tree_node, path),
-            )
-            dpg.add_menu_item(
-                label=µ("Delete branch"),
-                callback=on_delete_branch,
-                user_data=(tree_node, path),
-            )
-            dpg.add_menu_item(
-                label=µ("Insert decision level"),
-                callback=on_insert_decision,
-                user_data=(tree_node, path),
-            )
-            dpg.add_menu_item(
-                label=µ("Remove decision level"),
-                callback=on_remove_decision,
-                user_data=(tree_node, path),
-            )
-
-    def get_key(tree_node: DecisionTreeNode) -> str:
-        val = tree_node.key
-        if val == 0:
-            return "*"
-        return lookup_name(val, f"#{val}")
-
-    def delve(tree_node: DecisionTreeNode, level: int, path: list) -> None:
-        path = path + [tree_node.key]
-        if level == len(node.arguments) - 1:
-            # Leaf
-            nid = tree_node.node_id
-            leaf_node = bnk.get(nid, nid)
-
-            with dpg.tree_node(span_full_width=True) as dpg_item:
-                add_node_link(
-                    bnk,
-                    leaf_node,
-                    on_structure_changed,
-                    on_node_selected,
-                    user_data=tree_node,
-                )
-        else:
-            # Branch
-            with dpg.tree_node(span_full_width=True) as dpg_item:
-                children = sorted(tree_node.children, key=lambda c: c.name)
-                for child in children:
-                    delve(child, level + 1, path)
-
-        # Won't get cleaned up, but better than one popup per decision tree node
-        registry = f"{base_tag}_msc_ctx_{path}"
-        if not dpg.does_item_exist(registry):
-            dpg.add_item_handler_registry(tag=registry)
-
-        dpg.add_item_clicked_handler(
-            dpg.mvMouseButton_Right,
-            callback=open_context_menu,
-            user_data=(dpg_item, tree_node, level, path),
-            parent=registry,
+    def make_leaf(branch: DecisionTreeNode, label: str) -> None:
+        nid = branch.node_id
+        add_select_node(
+            bnk,
+            None,
+            on_leaf_changed,
+            default=bnk.get(nid, nid),
+            jump_to=on_node_selected,
+            textbox_width=240,
+            user_data=branch,
         )
-        dpg.bind_item_handler_registry(dpg_item, registry)
-
-        update_branch_label(None, (tree_node, level, dpg_item), None)
-
 
     with dpg.group():
-        dpg.add_combo(
-            [m.name for m in DecisionTreeMode],
-            default_value=node.tree_mode.name,
-            callback=on_tree_mode_changed,
-            tag=f"{base_tag}/musicswitchcontainer/tree_mode",
-        )
-
-        with dpg.tree_node(
-            label=µ("Decision Tree"),
-            default_open=True,
-            span_full_width=True,
+        add_decision_tree_editor(
+            node,
+            on_tree_changed,
+            bnk=bnk,
+            leaf_widget=make_leaf,
+            on_branch_removed=on_branch_removed,
             tag=f"{base_tag}/musicswitchcontainer/decision_tree",
-        ):
-            for child in node.tree.children:
-                delve(child, 0, [])
-
-        dpg.add_spacer(height=3)
-        dpg.add_button(
-            label=µ("Add State Path", "button"),
-            callback=lambda: edit_state_path_dialog(
-                bnk, node.arguments, on_state_path_created, raw=True
-            ),
-            tag=f"{base_tag}/musicswitchcontainer/button_add_state_path",
+            user_data=user_data,
         )
 
         dpg.add_spacer(height=3)

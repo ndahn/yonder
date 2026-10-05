@@ -11,6 +11,7 @@ from .table_tree_nodes import (
     push_table_tree_level,
     pop_table_tree_level,
 )
+from .decision_tree_editor import add_decision_tree_editor
 from .dpg_draw import draw_curve
 from .editable_table import (
     add_widget_table,

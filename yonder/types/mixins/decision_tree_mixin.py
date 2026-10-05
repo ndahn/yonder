@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from yonder.hash import Hash, calc_hash, lookup_name
-from yonder.enums import GroupType
+from yonder.enums import DecisionTreeMode, GroupType
 from yonder.util import get_key_hash, parse_state_path
 from yonder.types.base_types import (
     GameSync,
@@ -19,6 +19,7 @@ class DecisionTreeMixin:
     tree: DecisionTreeNode
     tree_size: int
     tree_depth: int
+    tree_mode: DecisionTreeMode
     arguments: list[GameSync]
     group_types: list[GroupType]
     children: Children
@@ -109,18 +110,22 @@ class DecisionTreeMixin:
             raise ValueError(f"Argument {argument} is already part of this tree")
 
         if pos < 0:
-            pos = len(self.arguments) + pos
+            # -1 appends, like list.append rather than list.insert
+            pos = len(self.arguments) + pos + 1
 
-        # Insert into the tree
+        # Insert into the tree. Every node at the new level gets a wildcard child
+        # that takes over its subtree, so existing branches keep matching.
         def delve(node: DecisionTreeNode, level: int) -> None:
             if level == pos:
                 new_node = DecisionTreeNode(
                     0,
+                    node_id=node.node_id,
                     children=node.children,
                     child_count=len(node.children),
                 )
                 node.children = [new_node]
                 node.child_count = 1
+                node.node_id = 0
             elif level < pos:
                 for child in node.children:
                     delve(child, level + 1)
@@ -136,16 +141,29 @@ class DecisionTreeMixin:
         if pos < 0:
             raise ValueError(f"Argument {argument} is not part of this tree")
 
-        # Remove the decision level from the tree
+        # Remove the decision level from the tree. The surviving branch is spliced
+        # out, i.e. its children (or its node, if it was a leaf) move up a level.
         keep = get_key_hash(branch_to_keep)
 
-        def delve(node: DecisionTreeNode, level: int) -> None:
+        def delve(node: DecisionTreeNode, level: int) -> bool:
+            """Returns False if the node lost its subtree and should be dropped."""
             if level == pos:
-                node.children = [c for c in node.children if c.key == keep]
+                kept = next((c for c in node.children if c.key == keep), None)
+                if kept is None:
+                    # Nothing to keep below here, this branch is a dead end now
+                    return False
+
+                node.children = kept.children
                 node.child_count = len(node.children)
-            elif level < pos:
-                for child in node.children:
-                    delve(child, level + 1)
+
+                if not node.children:
+                    node.node_id = kept.node_id
+
+                return True
+
+            node.children = [c for c in node.children if delve(c, level + 1)]
+            node.child_count = len(node.children)
+            return bool(node.children)
 
         delve(self.tree, 0)
 
@@ -222,6 +240,7 @@ class DecisionTreeMixin:
         # TODO doesn't work if it's not a complete path (e.g. only up to level 3/5)
         branch = next(c for c in parent.children if c.key == path_to_branch[-1])
         parent.children.remove(branch)
+        parent.child_count = len(parent.children)
         return branch
 
     def select_child(self, values: list[int | str]) -> DecisionTreeNode:
