@@ -16,7 +16,7 @@ class LCNode(GraphDesignerNode):
     node_type: ClassVar[type[HIRCNode]] = LayerContainer
     label: ClassVar[str] = "LayerContainer"
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
-    outputs: ClassVar[tuple[str, ...]] = ("Item0",)
+    outputs: ClassVar[tuple[str, ...]] = ("Item 0",)
 
     def __init__(self, nid: str | int = 0):
         super().__init__(nid)

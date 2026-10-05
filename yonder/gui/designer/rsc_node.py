@@ -14,7 +14,7 @@ class RSCNode(GraphDesignerNode):
     node_type: ClassVar[type[HIRCNode]] = RandomSequenceContainer
     label: ClassVar[str] = "RandomSequenceContainer"
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
-    outputs: ClassVar[tuple[str, ...]] = ("Item0",)
+    outputs: ClassVar[tuple[str, ...]] = ("Item 0",)
 
     def __init__(
         self,

@@ -2,20 +2,20 @@ from typing import Any, ClassVar, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.types import HIRCNode, SwitchContainer
+from yonder.types import HIRCNode, MusicSwitchContainer
 from yonder.game import get_selected_game
 from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.gui.widgets import add_state_value_input
 
 
-class SCNode(GraphDesignerNode):
-    """A SwitchContainer, playing one of its children based on a game sync."""
+class MSCNode(GraphDesignerNode):
+    """A MusicSwitchContainer, playing one of its children based on a decision tree."""
 
-    node_type: ClassVar[type[HIRCNode]] = SwitchContainer
-    label: ClassVar[str] = "SwitchContainer"
+    node_type: ClassVar[type[HIRCNode]] = MusicSwitchContainer
+    label: ClassVar[str] = "MusicSwitchContainer"
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
-    outputs: ClassVar[tuple[str, ...]] = ("Switch 0",)
+    outputs: ClassVar[tuple[str, ...]] = ("Item 0",)
 
     def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
         super().__init__(nid)
@@ -88,7 +88,7 @@ class SCNode(GraphDesignerNode):
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
-    ) -> SwitchContainer:
+    ) -> MusicSwitchContainer:
         parent = input_map.get("Playback", 0)
         switch_map = {}
 
@@ -97,7 +97,7 @@ class SCNode(GraphDesignerNode):
             if child:
                 switch_map[state] = child
 
-        return SwitchContainer.new(
+        return MusicSwitchContainer.new(
             self.node_id(),
             switch_group=self.switch_group,
             switch_states=switch_map,
