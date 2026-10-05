@@ -139,12 +139,16 @@ class add_widget_table(DpgItem):
             column_weights = [100] * len(columns)
 
         with dpg.child_window(
-            border=False, autosize_x=not compact, auto_resize_y=True, parent=parent
+            border=False,
+            autosize_x=not compact,
+            auto_resize_x=compact,
+            auto_resize_y=True,
+            parent=parent,
         ):
             with dpg.table(
                 header_row=header_row,
                 policy=column_policy,
-                resizable=True,
+                resizable=not compact,
                 width=width,
                 height=height,
                 scrollX=(width != 0),
@@ -163,7 +167,9 @@ class add_widget_table(DpgItem):
                     )
                 for col, weight in zip(columns, column_weights):
                     dpg.add_table_column(
-                        label=col, width_stretch=not compact, init_width_or_weight=weight
+                        label=col,
+                        width_stretch=not compact,
+                        init_width_or_weight=weight,
                     )
                 if self._new_item:
                     dpg.add_table_column(
@@ -1101,19 +1107,28 @@ class add_nodes_table(DpgItem):
             self._on_value_changed(self.tag, self._table._values, self._user_data)
 
     def _on_add(
-        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+        self,
+        sender: str,
+        info: tuple[int, HIRCNode | int, list[HIRCNode | int]],
+        cb_user_data: Any,
     ) -> None:
         if self._on_value_changed:
             self._on_value_changed(self.tag, info[2], self._user_data)
 
     def _on_remove(
-        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+        self,
+        sender: str,
+        info: tuple[int, HIRCNode | int, list[HIRCNode | int]],
+        cb_user_data: Any,
     ) -> None:
         if self._on_value_changed:
             self._on_value_changed(self.tag, info[2], self._user_data)
 
     def _on_select(
-        self, sender: str, info: tuple[int, HIRCNode | int, list[HIRCNode | int]], cb_user_data: Any
+        self,
+        sender: str,
+        info: tuple[int, HIRCNode | int, list[HIRCNode | int]],
+        cb_user_data: Any,
     ) -> None:
         if self._on_select_cb:
             self._on_select_cb(self.tag, info[1], self._user_data)
