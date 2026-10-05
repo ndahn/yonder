@@ -6,6 +6,7 @@ from yonder.types import HIRCNode, MusicSegment, MusicTrack
 from yonder.enums import MarkerId
 from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
 from yonder.gui.localization import μ
+from yonder.gui.widgets import add_marker_editor
 
 
 class MSNode(GraphDesignerNode):
@@ -19,15 +20,16 @@ class MSNode(GraphDesignerNode):
     def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
         super().__init__(nid)
 
-        self.markers: dict[int, float] = {}
         self.duration = 0.0
+        self._segment = MusicSegment.new(nid)
 
     def build_body(self) -> None:
         dpg.add_text("0.0s total", tag=self._wtag("duration"))
 
-        with dpg.tree_node(label=µ("Markers")):
-            # TODO markers table
-            pass
+        # TODO button to open track arranger
+
+        with dpg.tree_node(label=µ("Markers"), span_text_width=True):
+            add_marker_editor(self._segment, None, compact=True)
 
     def on_connections_changed(
         self,
@@ -76,14 +78,13 @@ class MSNode(GraphDesignerNode):
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
     ) -> MusicSegment:
         parent = input_map.get("Playback", 0)
+        markers = {m.id: m.position for m in self._segment.markers}
 
         return MusicSegment.new(
             self.node_id(),
-            markers=self.markers,
+            markers=markers,
             props=self.properties,
             parent=parent,
         )
-
-    # === Helpers =======================================================
 
     # === DPG callbacks =================================================

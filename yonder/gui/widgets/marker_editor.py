@@ -56,6 +56,7 @@ class add_marker_editor(DpgItem):
         *,
         bnk: Soundbank = None,
         label: str = None,
+        compact: bool = False,
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
@@ -70,7 +71,7 @@ class add_marker_editor(DpgItem):
         # Combo label -> track id, so we don't have to parse ids back out
         self._tracks: dict[str, int] = {}
 
-        self._build(label)
+        self._build(label, compact)
 
     def destroy(self) -> None:
         self._delete_item(self._t("tracks"))
@@ -78,7 +79,7 @@ class add_marker_editor(DpgItem):
 
     # === Build =========================================================
 
-    def _build(self, label: str) -> None:
+    def _build(self, label: str, compact: bool) -> None:
         with dpg.group(tag=self.tag):
             self._table = add_widget_table(
                 self.segment.markers,
@@ -87,9 +88,9 @@ class add_marker_editor(DpgItem):
                 on_add=self._on_marker_added,
                 on_remove=self._on_marker_removed,
                 columns=[µ("Marker"), µ("Position (ms)")],
-                header_row=True,
                 add_item_label=µ("+ Add Marker"),
-                label=label if label is not None else µ("Markers"),
+                label=label,
+                compact=compact,
             )
 
             if self._bnk is not None:

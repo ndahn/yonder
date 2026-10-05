@@ -86,6 +86,7 @@ class add_widget_table(DpgItem):
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
+        compact: bool = False,
     ) -> None:
         super().__init__(tag)
 
@@ -113,6 +114,7 @@ class add_widget_table(DpgItem):
             parent,
             width,
             height,
+            compact,
         )
         self.refresh()
 
@@ -128,6 +130,7 @@ class add_widget_table(DpgItem):
         parent: str | int,
         width: int,
         height: int,
+        compact: bool,
     ) -> None:
         if label:
             dpg.add_text(label, parent=parent, tag=self.tag)
@@ -136,19 +139,22 @@ class add_widget_table(DpgItem):
             column_weights = [100] * len(columns)
 
         with dpg.child_window(
-            border=False, autosize_x=True, auto_resize_y=True, parent=parent
+            border=False, autosize_x=not compact, auto_resize_y=True, parent=parent
         ):
             with dpg.table(
                 header_row=header_row,
                 policy=column_policy,
                 resizable=True,
-                borders_outerH=True,
-                borders_outerV=True,
                 width=width,
                 height=height,
                 scrollX=(width != 0),
                 scrollY=(height != 0),
                 tag=self._t("table"),
+                borders_outerH=not compact,
+                borders_outerV=not compact,
+                no_host_extendX=compact,
+                no_pad_innerX=False,
+                no_pad_outerX=compact,
             ):
                 if self._on_select:
                     # Narrow indicator column; never spans other columns
@@ -157,7 +163,7 @@ class add_widget_table(DpgItem):
                     )
                 for col, weight in zip(columns, column_weights):
                     dpg.add_table_column(
-                        label=col, width_stretch=True, init_width_or_weight=weight
+                        label=col, width_stretch=not compact, init_width_or_weight=weight
                     )
                 if self._new_item:
                     dpg.add_table_column(
