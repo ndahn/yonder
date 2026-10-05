@@ -65,10 +65,9 @@ class add_decision_tree_editor(DpgItem):
         on_value_changed: Callable[[str, DecisionTreeMixin, Any], None],
         *,
         bnk: Soundbank = None,
-        label: str = None,
         leaf_widget: Callable[[DecisionTreeNode, str], None] = None,
         on_branch_removed: Callable[[str, DecisionTreeNode, Any], None] = None,
-        show_tree_mode: bool = True,
+        show_tree_mode: bool = False,
         compact: bool = False,
         tag: str | int = 0,
         user_data: Any = None,
@@ -80,13 +79,14 @@ class add_decision_tree_editor(DpgItem):
         self._on_value_changed = on_value_changed
         self._leaf_widget = leaf_widget
         self._on_branch_removed = on_branch_removed
+        self._compact = compact
         self._user_data = user_data
 
         # Registries for the per row context menu, recreated on every regenerate
         self._registries: list[str] = []
         self._branch_label_indices: dict[int, int] = {}
 
-        self._build(label, show_tree_mode, compact)
+        self._build(show_tree_mode)
 
     def destroy(self) -> None:
         self._clear_rows()
@@ -96,41 +96,33 @@ class add_decision_tree_editor(DpgItem):
 
     # === Build =========================================================
 
-    def _build(self, label: str, show_tree_mode: bool, compact: bool) -> None:
+    def _build(self, show_tree_mode: bool) -> None:
         with dpg.group(tag=self.tag):
             if show_tree_mode:
                 dpg.add_combo(
                     [m.name for m in DecisionTreeMode],
                     default_value=self.owner.tree_mode.name,
-                    width=-1 if compact else 0,
+                    width=0 if self._compact else -1,
                     callback=self._on_tree_mode_changed,
                     tag=self._t("tree_mode"),
                 )
                 with dpg.tooltip(dpg.last_item()):
                     dpg.add_text(µ("How closely a state path has to match"))
 
-            if compact:
-                # The embedding node provides the heading
-                dpg.add_group(tag=self._t("tree"))
-            else:
-                dpg.add_tree_node(
-                    label=label or µ("Decision Tree"),
-                    default_open=True,
-                    span_full_width=True,
-                    tag=self._t("tree"),
-                )
+            # Anchor for the decision tree
+            dpg.add_group(tag=self._t("tree"))
 
             dpg.add_spacer(height=3)
             with dpg.group(horizontal=True):
                 dpg.add_button(
-                    label=µ("+ Branch", "button"),
-                    callback=self._on_add_branch_dialog,
-                    tag=self._t("button_add_branch"),
-                )
-                dpg.add_button(
                     label=µ("+ Decision", "button"),
                     callback=self._on_append_decision,
                     tag=self._t("button_add_decision"),
+                )
+                dpg.add_button(
+                    label=µ("+ Branch", "button"),
+                    callback=self._on_add_branch_dialog,
+                    tag=self._t("button_add_branch"),
                 )
 
         self.regenerate()
@@ -167,7 +159,11 @@ class add_decision_tree_editor(DpgItem):
         self, branch: DecisionTreeNode, level: int, parent: str | int = 0
     ) -> None:
         # Nested rows land inside the row we are currently building
-        with dpg.tree_node(span_full_width=True, parent=parent) as row:
+        with dpg.tree_node(
+            span_full_width=not self._compact,
+            span_text_width=self._compact,
+            parent=parent,
+        ) as row:
             if level == len(self.owner.arguments) - 1:
                 label = self.get_branch_label(branch)
                 if self._leaf_widget:
@@ -237,7 +233,7 @@ class add_decision_tree_editor(DpgItem):
 
             self._branch_label_indices[key] = index
 
-        return f"Switch {index:01d}"
+        return f"Item {index}"
 
     def _prune_branch_labels(self) -> None:
         # Labels are keyed by identity, so entries of dropped branches have to go

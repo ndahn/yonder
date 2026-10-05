@@ -77,7 +77,7 @@ class create_boss_track_dialog(DpgItem):
 
         edit_state_path_dialog(
             self.bnk,
-            [arg.group_id for arg in self.msc.arguments],
+            self.msc.arguments,
             self._on_statepath_selected,
             state_path=self.current_state_path,
             hide_node_id=True,

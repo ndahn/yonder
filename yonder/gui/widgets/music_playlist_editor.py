@@ -188,7 +188,7 @@ class add_music_playlist_editor(DpgItem):
                     break
 
         self._item_label_indices[item] = index
-        return f"Item {index:01d}"
+        return f"Item {index}"
 
     def _on_item_drop(
         self, drop_target: str, node: PlaylistTreeItem, user_data: Any

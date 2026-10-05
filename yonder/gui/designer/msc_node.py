@@ -47,10 +47,10 @@ class MSCNode(GraphDesignerNode):
         input: str,
     ) -> bool:
         if source is self:
-            return output.startswith("Switch") and input == "Playback"
+            return output.startswith("Item") and input == "Playback"
 
         # Either a parent container plays us, or an action targets us
-        return can_reference(source.node_type, target.node_type)
+        return super().link_valid(source, output, target, input)
 
     def validate(self, bnk: Soundbank) -> str:
         if not self.tree.arguments:
@@ -62,7 +62,7 @@ class MSCNode(GraphDesignerNode):
 
         for path, _ in branches:
             if 999999 in path:
-                return µ("Decision tree branch value not set")
+                return µ("Branch key for {path} not set").format(path=path)
 
         return super().validate(bnk)
 

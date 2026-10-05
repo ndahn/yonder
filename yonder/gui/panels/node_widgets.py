@@ -1266,7 +1266,11 @@ def _create_attributes_musicswitchcontainer(
             user_data=branch,
         )
 
-    with dpg.group():
+    with dpg.tree_node(
+        label=µ("Decision Tree"),
+        default_open=True,
+        span_full_width=True,
+    ):
         add_decision_tree_editor(
             node,
             on_tree_changed,

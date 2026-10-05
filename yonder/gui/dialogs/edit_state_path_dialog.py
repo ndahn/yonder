@@ -65,6 +65,11 @@ class edit_state_path_dialog(DpgItem):
                 "State path must have the same length as MusicSwitchContainer arguments"
             )
 
+        arguments = list(arguments)
+        for idx, arg in enumerate(arguments):
+            if isinstance(arg, GameSync):
+                arguments[idx] = arg.group_id
+
         self._bnk = bnk
         self._arguments = arguments
         self._callback = callback
