@@ -1,7 +1,7 @@
 from typing import Any, Container, NewType, TYPE_CHECKING
 from pathlib import Path
 import re
-from random import randrange
+from random import Random
 
 if TYPE_CHECKING:
     from yonder import Soundbank
@@ -112,6 +112,7 @@ class LookupTable:
 class UniqueIdGenerator:
     def __init__(self, invalid_ids: Container[Hash] = None):
         self.invalid_ids = invalid_ids
+        self.rng = Random()
 
     def __call__(self) -> Hash:
         return self.new_id()
@@ -120,7 +121,7 @@ class UniqueIdGenerator:
         while True:
             # IDs should be signed 32bit integers, although in practice
             # I've rarely seen any below 1000000 (expected I guess?)
-            id = randrange(2**24, 2**31 - 1)
+            id = self.rng.randrange(2**24, 2**31 - 1)
             if not self.invalid_ids or id not in self.invalid_ids:
                 return id
 
@@ -203,10 +204,6 @@ def calc_hash(input: int | str) -> Hash:
     return h
 
 
-def random_hash() -> Hash:
-    return _global_id_generator.new_id()
-
-
 def lookup_name(h: Hash, default: Any = None) -> str:
     for table in _lookup_tables:
         res = table.lookup_name(h)
@@ -219,6 +216,8 @@ def lookup_name(h: Hash, default: Any = None) -> str:
 _global_id_generator = UniqueIdGenerator()
 _lookup_tables: list[LookupTable] = []
 _active_table: LookupTable = None
+
+random_hash = _global_id_generator.new_id
 
 # Load our default hash lookup dict
 load_lookup_table(get_default_lookup_table_path(), False)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, Callable
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from dearpygui import dearpygui as dpg
 
@@ -7,7 +8,6 @@ from yonder import Soundbank
 from yonder.hash import random_hash
 from yonder.enums import RandomSequenceMode, RandomMode
 from yonder.types.base_types import MusicRanSeqPlaylistItem
-from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 from .select_node import add_select_node
@@ -54,15 +54,35 @@ class PlaylistTreeItem:
 
         return flatten(self.item)
 
+    def copy(self) -> PlaylistTreeItem:
+        return deepcopy(self)
+
     def is_leaf(self) -> bool:
-        return self.item.segment_id > 0
+        return not self.children
+
+    def __str__(self) -> str:
+        def delve(n: PlaylistTreeItem, level: int) -> str:
+            if n.is_leaf():
+                s = " " * level * 2 + str(n.item.segment_id) + "\n"
+            else:
+                s = (
+                    " " * level * 2
+                    + f"{n.item.ers_type_enum.name} | {n.item.random_mode_enum.name}\n"
+                )
+
+                for child in n.children:
+                    s += delve(child, level + 1)
+
+            return s
+
+        return delve(self, 0)
 
 
 class add_music_playlist_editor(DpgItem):
     def __init__(
         self,
         playlist: PlaylistTreeItem,
-        on_value_changed: Callable[[str, list, Any], None],
+        on_value_changed: Callable[[str, PlaylistTreeItem, Any], None],
         *,
         label: str = None,
         compact: bool = False,
@@ -71,7 +91,7 @@ class add_music_playlist_editor(DpgItem):
     ) -> None:
         super().__init__(tag)
 
-        self._playlist = playlist
+        self.playlist = playlist.copy()
         self._on_value_changed = on_value_changed
         self._user_data = user_data
         self._ctx_row: str = None
@@ -80,7 +100,7 @@ class add_music_playlist_editor(DpgItem):
 
     def destroy(self):
         self._delete_item(self._t("context"))
-        self._delete_item(self._t("item_handler_reg"))
+        self._delete_item(self._t("mouse_handler_reg"))
 
     def _build(self, label: str, compact: bool) -> None:
         with dpg.table(
@@ -98,12 +118,8 @@ class add_music_playlist_editor(DpgItem):
             dpg.add_table_column(
                 label=µ("Mode"), width_stretch=not compact, init_width_or_weight=100
             )
-            dpg.add_table_column(
-                label=µ("Weight"), init_width_or_weight=30
-            )
-            dpg.add_table_column(
-                label=µ("Loops"), init_width_or_weight=30
-            )
+            dpg.add_table_column(label=µ("Weight"), init_width_or_weight=30)
+            dpg.add_table_column(label=µ("Loops"), init_width_or_weight=30)
 
         with dpg.window(
             popup=True,
@@ -115,19 +131,21 @@ class add_music_playlist_editor(DpgItem):
             dpg.add_menu_item(label=µ("Add Sibling"), callback=self._add_sibling)
             dpg.add_menu_item(label=µ("Delete"), callback=self._delete_node)
 
-        with dpg.handler_registry(tag=self._t("handler_reg")):
-            dpg.add_mouse_click_handler(dpg.mvMouseButton_Right, callback=self._on_right_click)
+        with dpg.handler_registry(tag=self._t("mouse_handler_reg")):
+            dpg.add_mouse_click_handler(
+                dpg.mvMouseButton_Right, callback=self._on_right_click
+            )
 
         self.regenerate()
 
     def regenerate(self) -> None:
         dpg.delete_item(self.tag, slot=1, children_only=True)
 
-        todo = [(0, self._playlist)]
+        todo = [(0, self.playlist)]
         while todo:
-            level, node = todo.pop()
+            level, node = todo.pop(0)
             self._make_row(node, level)
-            todo.extend((level + 1, child) for child in node.children)
+            todo = [(level + 1, child) for child in node.children] + todo
 
     def _make_row(self, node: PlaylistTreeItem, level: int) -> None:
         item = node.item
@@ -136,13 +154,17 @@ class add_music_playlist_editor(DpgItem):
             def cb(sender: str, value: Any, user_data: Any) -> None:
                 if transformer:
                     value = transformer(value)
+                
                 setattr(item, key, value)
+
+                if self._on_value_changed:
+                    self._on_value_changed(self.tag, self.playlist, self._user_data)
 
             return cb
 
         with dpg.table_row(parent=self.tag, user_data=node):
-            # Deciding on the presence of children is more useful for editing
-            if not node.children:
+            # Top level node should always be a branch
+            if node != self.playlist and node.is_leaf():
                 # Leaf node with segment ID
                 dpg.add_input_text(
                     default_value=str(item.segment_id),
@@ -155,7 +177,7 @@ class add_music_playlist_editor(DpgItem):
                     user_data=node,
                 )
                 with dpg.drag_payload(
-                    parent=dpg.last_item(), drag_data=item, payload_type="playlist_item"
+                    parent=dpg.last_item(), drag_data=node, payload_type="playlist_item"
                 ):
                     dpg.add_text(
                         f"{item.segment_id} | W={item.weight} | L={item.loop_min}"
@@ -176,7 +198,7 @@ class add_music_playlist_editor(DpgItem):
                     user_data=node,
                 )
                 with dpg.drag_payload(
-                    parent=dpg.last_item(), drag_data=item, payload_type="playlist_item"
+                    parent=dpg.last_item(), drag_data=node, payload_type="playlist_item"
                 ):
                     dpg.add_text(
                         f"{item.segment_id} | W={item.weight} | L={item.loop_min}"
@@ -216,24 +238,29 @@ class add_music_playlist_editor(DpgItem):
                 dpg.add_text(µ("Loops"))
 
     def _on_item_drop(
-        self, drop_target: str, item: PlaylistTreeItem, user_data: Any
+        self, drop_target: str, node: PlaylistTreeItem, user_data: Any
     ) -> None:
-        if not item.parent:
+        if not node.parent:
             return
 
         target_item: PlaylistTreeItem = dpg.get_item_user_data(drop_target)
-        if target_item is item:
+        if target_item is node:
             return
 
-        item.parent.children = [c for c in item.parent.children if c is not item]
+        node.parent.children = [c for c in node.parent.children if c is not node]
 
         if target_item.is_leaf():
             # Insert the item after the target
             target_idx = target_item.parent.children.index(target_item) + 1
-            target_item.parent.children.insert(target_idx, item)
+            target_item.parent.children.insert(target_idx, node)
+            node.parent = target_item.parent
         else:
             # Append to the branch children
-            target_item.children.append(item)
+            target_item.children.append(node)
+            node.parent = target_item
+
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, self.playlist, self._user_data)
 
         self.regenerate()
 
@@ -257,10 +284,14 @@ class add_music_playlist_editor(DpgItem):
         node: PlaylistTreeItem = dpg.get_item_user_data(self._ctx_row)
         new = PlaylistTreeItem.new(RandomSequenceMode.Inherit)
 
-        # Can't be a leaf node if it has children
+        # Can't be a leaf node if it has children, but we can transfer it to the new child
+        new.item.segment_id = node.item.segment_id
         node.item.segment_id = 0
         node.children.append(new)
         new.parent = node
+
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, self.playlist, self._user_data)
 
         self.regenerate()
 
@@ -273,7 +304,11 @@ class add_music_playlist_editor(DpgItem):
 
         if node.parent:
             node.parent.children.append(new)
-            new.parent = node
+            new.parent = node.parent
+
+            if self._on_value_changed:
+                self._on_value_changed(self.tag, self.playlist, self._user_data)
+
             self.regenerate()
 
     def _delete_node(self) -> None:
@@ -283,6 +318,9 @@ class add_music_playlist_editor(DpgItem):
         node: PlaylistTreeItem = dpg.get_item_user_data(self._ctx_row)
 
         if node.parent:
-            node.parent.children = [c for c in node.parent.children if c != node]
-
+            node.parent.children = [c for c in node.parent.children if c is not node]
+        
+        if self._on_value_changed:
+            self._on_value_changed(self.tag, self.playlist, self._user_data)
+        
         self.regenerate()
