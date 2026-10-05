@@ -69,7 +69,7 @@ class RSCNode(GraphDesignerNode):
             self.remove_terminal(label, False)
 
         for i in range(len(items), wanted):
-            self.add_terminal(f"Item{i}", False)
+            self.add_terminal(f"Item {i}", False)
 
     def link_valid(
         self,

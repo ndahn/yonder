@@ -22,10 +22,15 @@ class PlaylistTreeItem:
 
     @classmethod
     def new(
-        cls, ers_base_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence
+        cls,
+        ers_base_type: RandomSequenceMode = RandomSequenceMode.ContinuousSequence,
+        parent: PlaylistTreeItem = None,
+        children: list[PlaylistTreeItem] = None,
     ) -> PlaylistTreeItem:
         return PlaylistTreeItem(
-            MusicRanSeqPlaylistItem(0, random_hash(), ers_type=ers_base_type.value)
+            MusicRanSeqPlaylistItem(0, random_hash(), ers_type=ers_base_type.value),
+            parent=parent,
+            children=children or [],
         )
 
     @classmethod
@@ -42,7 +47,7 @@ class PlaylistTreeItem:
 
         return take(None)
 
-    def to_wwise_playlist(self, n: PlaylistTreeItem) -> list[MusicRanSeqPlaylistItem]:
+    def to_wwise_playlist(self) -> list[MusicRanSeqPlaylistItem]:
         """tree -> flat list (pre-order), child_count rebuilt from the tree"""
 
         def flatten(node: PlaylistTreeItem) -> list[MusicRanSeqPlaylistItem]:
@@ -52,7 +57,7 @@ class PlaylistTreeItem:
                 out += flatten(c)
             return out
 
-        return flatten(self.item)
+        return flatten(self)
 
     def copy(self) -> PlaylistTreeItem:
         return deepcopy(self)
@@ -85,6 +90,7 @@ class add_music_playlist_editor(DpgItem):
         on_value_changed: Callable[[str, PlaylistTreeItem, Any], None],
         *,
         label: str = None,
+        show_raw_item_ids: bool = False,
         compact: bool = False,
         tag: str | int = 0,
         user_data: Any = None,
@@ -92,9 +98,12 @@ class add_music_playlist_editor(DpgItem):
         super().__init__(tag)
 
         self.playlist = playlist.copy()
+        self._show_raw_item_ids = show_raw_item_ids
         self._on_value_changed = on_value_changed
         self._user_data = user_data
+
         self._ctx_row: str = None
+        self._item_label_indices: dict[int, str] = {}
 
         self._build(label, compact)
 
@@ -154,7 +163,7 @@ class add_music_playlist_editor(DpgItem):
             def cb(sender: str, value: Any, user_data: Any) -> None:
                 if transformer:
                     value = transformer(value)
-                
+
                 setattr(item, key, value)
 
                 if self._on_value_changed:
@@ -165,13 +174,14 @@ class add_music_playlist_editor(DpgItem):
         with dpg.table_row(parent=self.tag, user_data=node):
             # Top level node should always be a branch
             if node != self.playlist and node.is_leaf():
-                # Leaf node with segment ID
-                dpg.add_input_text(
-                    default_value=str(item.segment_id),
-                    decimal=True,
+                if self._show_raw_item_ids:
+                    label = str(item.playlist_item_id)
+                else:
+                    label = self.get_playlist_item_label(node)
+
+                dpg.add_text(
+                    label,
                     indent=level * 7,
-                    width=-1,
-                    callback=make_cb("segment_id"),
                     payload_type="playlist_item",
                     drop_callback=self._on_item_drop,
                     user_data=node,
@@ -179,9 +189,7 @@ class add_music_playlist_editor(DpgItem):
                 with dpg.drag_payload(
                     parent=dpg.last_item(), drag_data=node, payload_type="playlist_item"
                 ):
-                    dpg.add_text(
-                        f"{item.segment_id} | W={item.weight} | L={item.loop_min}"
-                    )
+                    dpg.add_text(f"{label} | W={item.weight} | L={item.loop_min}")
 
                 # Mode placeholder
                 dpg.add_text()
@@ -237,6 +245,25 @@ class add_music_playlist_editor(DpgItem):
             with dpg.tooltip(dpg.last_item()):
                 dpg.add_text(µ("Loops"))
 
+    def get_playlist_item_label(
+        self, item: PlaylistTreeItem | MusicRanSeqPlaylistItem | int
+    ) -> str:
+        if isinstance(item, PlaylistTreeItem):
+            item = item.item.playlist_item_id
+        elif isinstance(item, MusicRanSeqPlaylistItem):
+            item = item.playlist_item_id
+
+        # Create a user-friendly label stable across mutations
+        index = self._item_label_indices.get(item)
+        if index is None:
+            used = set(self._item_label_indices.values())
+            for index in range(len(used) + 1):
+                if index not in used:
+                    break
+
+        self._item_label_indices[item] = index
+        return f"Item {index:01d}"
+
     def _on_item_drop(
         self, drop_target: str, node: PlaylistTreeItem, user_data: Any
     ) -> None:
@@ -287,6 +314,8 @@ class add_music_playlist_editor(DpgItem):
         # Can't be a leaf node if it has children, but we can transfer it to the new child
         new.item.segment_id = node.item.segment_id
         node.item.segment_id = 0
+        self._item_label_indices.pop(node.item.playlist_item_id, None)
+
         node.children.append(new)
         new.parent = node
 
@@ -319,8 +348,8 @@ class add_music_playlist_editor(DpgItem):
 
         if node.parent:
             node.parent.children = [c for c in node.parent.children if c is not node]
-        
+
         if self._on_value_changed:
             self._on_value_changed(self.tag, self.playlist, self._user_data)
-        
+
         self.regenerate()
