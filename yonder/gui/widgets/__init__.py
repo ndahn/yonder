@@ -27,6 +27,7 @@ from .hash_widget import add_hash_widget
 from .hirc_player_widget import add_hirc_player
 from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
+from .music_playlist_editor import add_music_playlist_editor
 from .node_blocks import add_node_blocks, node_categories
 from .notifications import global_notification_man
 from .loading_indicator import loading_indicator

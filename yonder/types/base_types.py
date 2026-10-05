@@ -21,6 +21,7 @@ from yonder.enums import (
     SourceType,
     EffectPlugin,
     RandomSequenceMode,
+    RandomMode,
 )
 
 if TYPE_CHECKING:
@@ -1064,6 +1065,10 @@ class MusicRanSeqPlaylistItem:
     @property
     def ers_type_enum(self) -> RandomSequenceMode:
         return RandomSequenceMode(self.ers_type)
+
+    @property
+    def random_mode_enum(self) -> RandomMode:
+        return RandomMode.Shuffle if self.shuffle else RandomMode.Standard
 
     def get_references(self) -> list[tuple[str, int]]:
         return [("segment_id", self.segment_id)]

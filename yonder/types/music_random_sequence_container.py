@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import networkx as nx
 import pyo
 
-from yonder.hash import global_id_generator, Hash
+from yonder.hash import random_hash, Hash
 from yonder.enums import PropID, RandomSequenceMode
 from yonder.util import logger
 from yonder.audio import PlayContext, PlaybackState
@@ -151,7 +151,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
                 playlist.append(
                     MusicRanSeqPlaylistItem(
                         item,
-                        global_id_generator(),
+                        random_hash(),
                         ers_type=RandomSequenceMode.Inherit.value,
                         parent=parent_id,
                     )
@@ -167,7 +167,7 @@ class MusicRandomSequenceContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNod
 
                 group_node = MusicRanSeqPlaylistItem(
                     0,
-                    global_id_generator(),
+                    random_hash(),
                     ers_type=group_ers.value,
                     parent=parent_id,
                 )

@@ -28,7 +28,6 @@ class SoundNode(GraphDesignerNode):
         super().__init__(nid)
 
         self.wem_path: Path = wem_path
-        self.source_type = source_type
 
     def build_body(self) -> None:
         add_generic_widget(
@@ -45,13 +44,6 @@ class SoundNode(GraphDesignerNode):
             width=self.body_width,
             tag=self._wtag("wem_path"),
         )
-        dpg.add_combo(
-            [s.name for s in SourceType],
-            default_value=self.source_type.name,
-            width=self.body_width,
-            callback=self._on_source_type_changed,
-            tag=self._wtag("source_type"),
-        )
 
     def validate(self, bnk: Soundbank) -> bool:
         if not self.wem_path:
@@ -67,7 +59,7 @@ class SoundNode(GraphDesignerNode):
         return Sound.new(
             self.nid,
             self.wem_path,
-            self.source_type,
+            SourceType.Embedded,
             props=self.properties,
             parent=parent,
         )
@@ -76,8 +68,3 @@ class SoundNode(GraphDesignerNode):
 
     def _on_wem_path_changed(self, sender: str, wem_path: Path, user_data: Any) -> None:
         self.wem_path = wem_path
-
-    def _on_source_type_changed(
-        self, sender: str, source_type: str, user_data: Any
-    ) -> None:
-        self.source_type = SourceType[source_type]

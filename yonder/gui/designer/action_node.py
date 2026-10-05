@@ -42,7 +42,10 @@ class ActionNode(GraphDesignerNode):
         target: GraphDesignerNode,
         input: str,
     ) -> bool:
-        return output == "Target" and input == "Playback"
+        if source is self:
+            return output == "Target" and input == "Playback"
+
+        return super().link_valid(source, output, target, input)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]

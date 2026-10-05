@@ -203,6 +203,10 @@ def calc_hash(input: int | str) -> Hash:
     return h
 
 
+def random_hash() -> Hash:
+    return _global_id_generator.new_id()
+
+
 def lookup_name(h: Hash, default: Any = None) -> str:
     for table in _lookup_tables:
         res = table.lookup_name(h)
@@ -212,7 +216,7 @@ def lookup_name(h: Hash, default: Any = None) -> str:
     return default
 
 
-global_id_generator = UniqueIdGenerator()
+_global_id_generator = UniqueIdGenerator()
 _lookup_tables: list[LookupTable] = []
 _active_table: LookupTable = None
 

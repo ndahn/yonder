@@ -71,9 +71,9 @@ class add_properties_table(DpgItem):
             borders_outerH=not compact,
             borders_outerV=not compact,
             no_host_extendX=compact,
-            no_pad_innerX=compact,
+            no_pad_innerX=False,
             no_pad_outerX=compact,
-            tag=self._tag,
+            tag=self.tag,
         ):
             dpg.add_table_column(
                 label=µ("Property"), width_stretch=not compact, init_width_or_weight=100
@@ -137,7 +137,7 @@ class add_properties_table(DpgItem):
             )
 
     def _add_row(self, idx: int, prop: PropID, val: float) -> None:
-        with dpg.table_row(parent=self._tag):
+        with dpg.table_row(parent=self.tag):
             dpg.add_combo(
                 items=sorted(p.name for p in self._get_available_props(exclude=prop)),
                 default_value=prop.name,
@@ -179,7 +179,7 @@ class add_properties_table(DpgItem):
                 )
 
     def _add_footer(self) -> None:
-        with dpg.table_row(parent=self._tag):
+        with dpg.table_row(parent=self.tag):
             dpg.add_combo(
                 items=sorted(p.name for p in self._get_available_props()),
                 default_value="",
@@ -214,7 +214,7 @@ class add_properties_table(DpgItem):
 
         self._sync_combos()
         if self._on_values_changed:
-            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
+            self._on_values_changed(self.tag, dict(self._properties), self._user_data)
         
         # Remove prop range if set
         self._prop_ranges.pop(old_prop, None)
@@ -229,7 +229,7 @@ class add_properties_table(DpgItem):
         self._properties[prop] = new_val
 
         if self._on_values_changed:
-            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
+            self._on_values_changed(self.tag, dict(self._properties), self._user_data)
 
     def _edit_prop_range(self, sender: str, app_data: Any, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
@@ -301,19 +301,19 @@ class add_properties_table(DpgItem):
         self._properties[PropID[prop]] = 0.0
         self.refresh()
         if self._on_values_changed:
-            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
+            self._on_values_changed(self.tag, dict(self._properties), self._user_data)
 
     def _on_remove_clicked(self, sender: str, app_data: Any, idx: int) -> None:
         prop = list(self._properties.keys())[idx]
         self._properties.pop(prop)
         self.refresh()
         if self._on_values_changed:
-            self._on_values_changed(self._tag, dict(self._properties), self._user_data)
+            self._on_values_changed(self.tag, dict(self._properties), self._user_data)
 
     # === Public ========================================================
 
     def refresh(self) -> None:
-        dpg.delete_item(self._tag, children_only=True, slot=1)
+        dpg.delete_item(self.tag, children_only=True, slot=1)
         for idx, (prop, val) in enumerate(self._properties.items()):
             self._add_row(idx, prop, val)
         self._add_footer()

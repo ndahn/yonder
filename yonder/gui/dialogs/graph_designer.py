@@ -346,6 +346,11 @@ class graph_designer_dialog(DpgItem):
                 self._spawn_pos = dpg.get_mouse_pos(local=True)
 
             elif button == dpg.mvMouseButton_Right:
+                # Prevent opening context menu while hovering one of the nodes
+                for node in dpg.get_item_children(self._t("canvas"), slot=1):
+                    if dpg.is_item_hovered(node):
+                        return
+
                 dpg.configure_item(
                     self._t("context"), pos=dpg.get_mouse_pos(local=False), show=True
                 )
