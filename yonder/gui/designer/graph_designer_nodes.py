@@ -14,7 +14,7 @@ from yonder.enums import PropID
 from yonder.types.mixins import PropertyMixin
 from yonder.gui.localization import µ
 from yonder.gui import style
-from yonder.gui.widgets import add_properties_table
+from yonder.gui.widgets import DpgItem, add_properties_table
 
 
 # Node type -> designer node implementing it, filled by __init_subclass__
@@ -317,6 +317,8 @@ class GraphDesignerNode:
         dpg.bind_item_theme(self.node_tag, _node_theme(self.color))
 
     def destroy(self) -> None:
+        DpgItem.destroy_container(self.node_tag)
+
         for label in list(self._inputs):
             self.remove_terminal(label, True)
 

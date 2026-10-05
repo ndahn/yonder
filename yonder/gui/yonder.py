@@ -1723,25 +1723,9 @@ class BanksOfYonder(DpgItem):
             )
 
     def _clear_attributes_panel(self) -> None:
-        # Popups and windows are root-level containers and may keep other objects alive through
-        # closures. To avoid this we can either:
-        # v1) pass callback for registering items for cleanup -> messy
-        # v2) return list of items to explicitly cleanup -> messy
-        # v3) traverse the dpg tree and close DpgItems explicitly -> yay
-
-        def delve(tag: str) -> None:
-            if dpg.does_item_exist(tag):
-                for children in dpg.get_item_children(tag).values():
-                    for child in children:
-                        delve(child)
-
-            item = DpgItem.get_instance(tag)
-            if item:
-                item.destroy()
-
         # TODO regrettably, this can take a while for e.g. the main music switch container
         with loading_indicator("loading..."):
-            delve(self._t("attributes"))
+            DpgItem.destroy_container(self._t("attributes"))
             dpg.delete_item(self._t("attributes"), children_only=True, slot=1)
 
     def _on_node_changed(self, node: HIRCNode) -> None:

@@ -218,7 +218,8 @@ class add_music_playlist_editor(DpgItem):
         self.regenerate()
 
     def _on_right_click(self) -> None:
-        self._ctx = None
+        self._ctx_row = None
+
         for row in dpg.get_item_children(self.tag, slot=1):
             for child in dpg.get_item_children(row, slot=1):
                 try:

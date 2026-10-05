@@ -30,6 +30,26 @@ class DpgItem:
     def get_instance(cls, tag: str | int) -> DpgItem:
         return cls.__instance_store.get(tag)
 
+    @classmethod
+    def destroy_container(cls, dpg_root: str | int) -> None:
+        # Popups and windows are root-level containers and may keep other objects alive through
+        # closures. To avoid this we can either:
+        # v1) pass callback for registering items for cleanup -> messy
+        # v2) return list of items to explicitly cleanup -> messy
+        # v3) traverse the dpg tree and close DpgItems explicitly -> yay
+
+        def delve(tag: str) -> None:
+            if dpg.does_item_exist(tag):
+                for children in dpg.get_item_children(tag).values():
+                    for child in children:
+                        delve(child)
+
+            item = DpgItem.get_instance(tag)
+            if item:
+                item.destroy()
+
+        delve(dpg_root)
+
     def __init__(self, tag: str = 0, ctx: str = None) -> None:
         if not tag:
             tag = dpg.generate_uuid()
