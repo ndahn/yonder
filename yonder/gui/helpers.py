@@ -7,8 +7,11 @@ from copy import deepcopy
 import subprocess
 from dearpygui import dearpygui as dpg
 
+from yonder.types.soundbank import Soundbank
 from yonder.types.base_types import RTPCGraphPoint
-from yonder.enums import CurveInterpolation
+from yonder.enums import CurveInterpolation, SourceType
+from yonder.util import logger
+from yonder.gui.config import get_config
 from yonder.gui.localization import µ
 from yonder.gui import style
 
@@ -90,6 +93,38 @@ def dpg_section(
 
     dpg.add_text(label, color=color, parent=parent, tag=tag)
     dpg.add_separator()
+
+
+def get_sound_path(bnk: Soundbank, source_id: int, source_type: SourceType) -> Path:
+    """Locate the wem backing a source, wherever it ended up.
+
+    Embedded sounds sit next to the unpacked bank, streamed ones in one of the
+    game's sound directories. Returns None if nothing was found.
+    """
+    wem = bnk.bnk_dir / f"{source_id}.wem"
+    if source_type != SourceType.PrefetchStreaming and wem.is_file():
+        return wem
+
+    # Find the largest external wem (if any)
+    ext_wem = max(
+        get_config().find_external_sounds(source_id, bnk),
+        key=lambda p: p.stat().st_size,
+        default=None,
+    )
+    if ext_wem:
+        return ext_wem
+
+    # In case we have a prefetch snippet but no streaming sound
+    if wem.is_file() and source_type == SourceType.PrefetchStreaming:
+        logger.warning(
+            µ(
+                "Could not find streamed sound for {sound}, playing prefetch snippet",
+                "log",
+            ).format(sound=source_id)
+        )
+        return wem
+
+    return None
 
 
 def exec_file_native(filename: str | Path):

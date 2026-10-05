@@ -45,7 +45,11 @@ class LCNode(GraphDesignerNode):
         self._layer_widgets.pop(label, None)
         super().remove_terminal(label, is_input)
 
-    def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
+    def on_connections_changed(
+        self,
+        inputs: dict[str, GraphDesignerNode],
+        outputs: dict[str, GraphDesignerNode],
+    ) -> None:
         # Always keep exactly one free item slot at the bottom
         items = [o for o in self.get_terminals(False) if o.startswith("Item")]
         last_used = max(

@@ -277,9 +277,13 @@ class graph_designer_dialog(DpgItem):
         if not node or not dpg.does_item_exist(node.node_tag):
             return
 
-        inputs = {data["input"] for _, _, data in self._g.in_edges(node.nid, data=True)}
+        inputs = {
+            data["input"]: self._get_node(src)
+            for src, _, data in self._g.in_edges(node.nid, data=True)
+        }
         outputs = {
-            data["output"] for _, _, data in self._g.out_edges(node.nid, data=True)
+            data["output"]: self._get_node(dst)
+            for _, dst, data in self._g.out_edges(node.nid, data=True)
         }
         node.on_connections_changed(inputs, outputs)
 
@@ -555,7 +559,7 @@ class graph_designer_dialog(DpgItem):
         for nid in nx.topological_sort(self._g):
             input_map = {}
             output_map = {}
-            
+
             for src, dst, data in edges:
                 if dst == nid:
                     # Inputs to node nid

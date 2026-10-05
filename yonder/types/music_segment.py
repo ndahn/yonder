@@ -36,7 +36,7 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         cls,
         nid: Hash,
         tracks: int | list[int] = None,
-        markers: list[Hash, float] = None,
+        markers: dict[Hash, float] = None,
         props: dict[PropID, float] = None,
         parent: int | HIRCNode = 0,
     ) -> MusicSegment:

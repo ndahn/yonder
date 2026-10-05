@@ -32,7 +32,11 @@ class EventNode(GraphDesignerNode):
     def build_body(self) -> None:
         pass
 
-    def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
+    def on_connections_changed(
+        self,
+        inputs: dict[str, GraphDesignerNode],
+        outputs: dict[str, GraphDesignerNode],
+    ) -> None:
         # Always keep exactly one free extra slot at the bottom
         items = [o for o in self.get_terminals(False) if o.startswith("Extra")]
         last_used = max(

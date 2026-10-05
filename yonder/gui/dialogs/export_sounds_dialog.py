@@ -8,7 +8,7 @@ from yonder.util import logger
 from yonder.enums import SourceType
 from yonder.wem import wem2wav
 from yonder.gui import style
-from yonder.gui.helpers import exec_file_native
+from yonder.gui.helpers import exec_file_native, get_sound_path
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
 from yonder.gui.widgets import DpgItem, add_generic_widget, loading_indicator, yay
@@ -70,7 +70,7 @@ class export_sounds_dialog(DpgItem):
                     if st == SourceType.Embedded:
                         path = self._bnk.bnk_dir / f"{wid}.wem"
                     else:
-                        path = next(config.find_external_sounds(wid, self._bnk), None)
+                        path = get_sound_path(self._bnk, wid, SourceType.Streaming)
 
                     if path and path.is_file():
                         wems.append(path)

@@ -372,7 +372,11 @@ class GraphDesignerNode:
         """
         return can_reference(source.node_type, target.node_type)
 
-    def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
+    def on_connections_changed(
+        self,
+        inputs: dict[str, GraphDesignerNode],
+        outputs: dict[str, GraphDesignerNode],
+    ) -> None:
         """Called whenever a link to this node was added or removed.
 
         Receives the labels of all currently connected terminals, which is

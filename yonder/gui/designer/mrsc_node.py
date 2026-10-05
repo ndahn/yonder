@@ -38,7 +38,11 @@ class MRSCNode(GraphDesignerNode):
                 self.playlist, self._on_playlist_changed, compact=True
             )
 
-    def on_connections_changed(self, inputs: set[str], outputs: set[str]) -> None:
+    def on_connections_changed(
+        self,
+        inputs: dict[str, GraphDesignerNode],
+        outputs: dict[str, GraphDesignerNode],
+    ) -> None:
         for label in outputs:
             if label not in list(self._outputs):
                 self.remove_terminal(label, False)
