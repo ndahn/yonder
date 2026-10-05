@@ -29,7 +29,7 @@ from yonder.types import (
     SwitchContainer,
     TimeModulator,
 )
-from yonder.types.action import ActionParams
+from yonder.types.action import ActionParams, get_valid_action_scopes
 from yonder.util import logger, to_typed_dict
 from yonder.types.base_types import (
     ConversionTable,
@@ -47,6 +47,7 @@ from yonder.types.base_types import (
 from yonder.types.mixins import PropertyMixin
 from yonder.enums import (
     ActionType,
+    ActionScope,
     SourceType,
     CurveScaling,
     AttenuationProperty,
@@ -75,9 +76,6 @@ from ..widgets.transition_matrix import add_transition_matrix
 from ..widgets.editable_table import add_widget_table, add_curves_table, add_nodes_table
 from ..widgets.hash_widget import add_hash_widget
 from ..widgets.select_node import add_select_node, add_select_actormixer
-
-
-
 
 
 def create_node_widgets(
@@ -149,10 +147,12 @@ def create_node_widgets(
                 if hasattr(node, "parent"):
                     parent_node = bnk.get(node.parent, node.parent)
                     root = bnk.get_branch_root(node)
-                    
+
                     if root and not isinstance(node, (Event, Action, ActorMixer)):
 
-                        def on_amx_changed(sender: str, amx: AmxData, cb_user_data: Any) -> None:
+                        def on_amx_changed(
+                            sender: str, amx: AmxData, cb_user_data: Any
+                        ) -> None:
                             prev_amx = bnk.get(root.parent)
                             if prev_amx:
                                 prev_amx.children.remove(node.id, missing_ok=True)
@@ -162,9 +162,15 @@ def create_node_widgets(
 
                         amx = root.parent
                         with dpg.group(horizontal=True):
-                            dpg.add_text("ActorMixer:", tag=f"{tag}/amx_is", bullet=True)
+                            dpg.add_text(
+                                "ActorMixer:", tag=f"{tag}/amx_is", bullet=True
+                            )
                             add_select_actormixer(
-                                bnk, None, on_amx_changed, default=amx, textbox_width=240, 
+                                bnk,
+                                None,
+                                on_amx_changed,
+                                default=amx,
+                                textbox_width=240,
                             )
 
                     def on_parent_changed() -> None:
@@ -203,7 +209,11 @@ def create_node_widgets(
                             user_data=user_data,
                         )
                 else:
-                    actions = [a for a in bnk.query(node_type=Action) if a.external_id == node.id]
+                    actions = [
+                        a
+                        for a in bnk.query(node_type=Action)
+                        if a.external_id == node.id
+                    ]
                     if actions:
                         with dpg.tree_node(label=µ("Actions"), span_full_width=True):
                             for act in actions:
@@ -852,10 +862,58 @@ def _create_attributes_action(
                     not_supported_ok=True,
                 )
 
+    def on_action_type_changed(sender: str, type_name: str, cb_user_data: Any) -> None:
+        try:
+            node.change_type(ActionType[type_name])
+        except ValueError as e:
+            dpg.set_value(sender, node.action_type_enum.name)
+            logger.error(str(e))
+            return
+
+        # Different type means different params, so the widgets have to go
+        on_structure_changed()
+
+    def on_action_scope_changed(
+        sender: str, scope_name: str, cb_user_data: Any
+    ) -> None:
+        try:
+            node.change_scope(ActionScope[scope_name])
+        except ValueError as e:
+            dpg.set_value(sender, node.scope.name)
+            logger.error(str(e))
+            return
+
+        # Same verb and params, only the type name changed
+        dpg.set_value(f"{base_tag}/action/action_type", node.action_type_enum.name)
+        on_node_changed(base_tag, node, user_data)
+
+    # An action's type is really a verb plus the scope it applies to, so offer
+    # the two separately instead of making the user find e.g. "ResetPitchAEO"
+    dpg.add_combo(
+        [t.name for t in Action.supported_types()],
+        default_value=node.action_type_enum.name,
+        label=µ("Type"),
+        callback=on_action_type_changed,
+        tag=f"{base_tag}/action/action_type",
+    )
+
+    scopes = get_valid_action_scopes(node.action_type_enum)
+    if node.scope and len(scopes) > 1:
+        dpg.add_combo(
+            [s.name for s in scopes],
+            default_value=node.scope.name,
+            label=µ("Scope"),
+            callback=on_action_scope_changed,
+            tag=f"{base_tag}/action/action_scope",
+        )
+        with dpg.tooltip(dpg.last_item()):
+            add_paragraphs(ActionScope.__doc__)
+
+    # NOTE is_bus belongs to the action, not to its params
     dpg.add_checkbox(
-        label="target is bus",
+        label=µ("target is bus"),
         default_value=bool(node.is_bus),
-        callback=set_action_value("is_bus", int),
+        callback=make_setter(node, "is_bus", base_tag, on_node_changed, user_data, int),
     )
     dpg.add_spacer(height=5)
 
@@ -863,7 +921,7 @@ def _create_attributes_action(
     # PlayEvents will have a string here
     if isinstance(params, ActionParams):
         data = to_typed_dict(params, True)
-        # No changing type, we'd have to exchange the params for that
+        # Covered by the combos above
         data.pop("action_type")
         create_generic_widgets_recursive(data)
 
@@ -1050,19 +1108,18 @@ def _create_attributes_event(
         sender: str, action_type_name: str, action_id: int
     ) -> None:
         action: Action = bnk[action_id]
-        action_type = ActionType[action_type_name]
         try:
-            action.change_type(action_type)
-        except ValueError:
+            action.change_type(ActionType[action_type_name])
+        except ValueError as e:
             dpg.set_value(sender, action.action_type_enum.name)
-            raise
+            logger.error(str(e))
+            return
 
         if on_structure_changed:
             on_structure_changed()
 
     def create_action(done: Callable[[int], None]) -> None:
-        # TODO new action dialog
-        action: Action = Action.new_play_action(bnk.new_id(), 0, bnk.bank_id)
+        action: Action = Action.new_play(bnk.new_id(), 0, bank_id=bnk.bank_id)
         bnk.add_nodes(action)
         node.actions.append(action.id)
         on_node_changed(base_tag, node, user_data)
@@ -1075,7 +1132,7 @@ def _create_attributes_event(
             if action:
                 action: Action = bnk[aid]
                 dpg.add_combo(
-                    [at.name for at in ActionType],
+                    [t.name for t in Action.supported_types()],
                     default_value=action.action_type_enum.name,
                     width=150,
                     callback=on_action_type_changed,
@@ -1845,7 +1902,9 @@ def _create_attributes_switchcontainer(
             node.group_id, on_hash_changed=on_groupid_changed, hash_label=µ("Group ID")
         )
         add_hash_widget(
-            node.default_switch, on_hash_changed=on_default_switch_changed, hash_label=µ("Default Switch")
+            node.default_switch,
+            on_hash_changed=on_default_switch_changed,
+            hash_label=µ("Default Switch"),
         )
 
         with dpg.tree_node(

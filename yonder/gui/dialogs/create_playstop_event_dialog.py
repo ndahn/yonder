@@ -51,7 +51,7 @@ class create_wwise_event_dialog(DpgItem):
 
         if create_play_event:
             play_evt = Event.new(f"Play_{sound_id}")
-            play_action = Action.new_play_action(
+            play_action = Action.new_play(
                 self._bnk.new_id(), external_id, bank_id=self._bnk.bank_id
             )
             play_evt.attach(play_action)
@@ -60,7 +60,7 @@ class create_wwise_event_dialog(DpgItem):
         create_stop_event = dpg.get_value(self._t("create_stop_event"))
         if create_stop_event:
             stop_evt = Event.new(f"Stop_{sound_id}")
-            stop_action = Action.new_stop_action(self._bnk.new_id(), external_id)
+            stop_action = Action.new_stop(self._bnk.new_id(), external_id)
             stop_evt.attach(stop_action)
             new_nodes.extend([stop_evt, stop_action])
 

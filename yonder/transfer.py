@@ -229,15 +229,13 @@ def copy_structures_with_new_events(
 
     for entrypoint, wwise_dst in nodes.items():
         play_event = Event.new(f"Play_{wwise_dst}")
-        play_action = Action.new_play_action(
-            dst_bnk.new_id(), f"Stop_{wwise_dst}", bank_id=dst_bnk.id
+        play_action = Action.new_play(
+            dst_bnk.new_id(), entrypoint, bank_id=dst_bnk.id
         )
-        play_action.external_id = entrypoint.id
         play_event.add_action(play_action)
 
         stop_event = Event.new(f"Stop_{wwise_dst}")
-        stop_action = Action.new_stop_action(dst_bnk.new_id(), f"Stop_{wwise_dst}")
-        stop_action.external_id = entrypoint.id
+        stop_action = Action.new_stop(dst_bnk.new_id(), entrypoint)
         stop_event.add_action(stop_action)
 
         dst_bnk.add_nodes(play_event, play_action, stop_event, stop_action)

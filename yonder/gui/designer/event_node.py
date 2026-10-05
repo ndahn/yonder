@@ -71,8 +71,8 @@ class EventNode(GraphDesignerNode):
             if terminal.startswith("Extra") and aid > 0
         ]
 
-        play = Action.new_play_action(bnk.new_id(), target, bank_id=bnk.bank_id)
-        stop = Action.new_stop_action(bnk.new_id(), target)
+        play = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
+        stop = Action.new_stop(bnk.new_id(), target)
         evt = Event.new(self.nid, [self._play.id, self._stop.id] + extras)
 
         return (evt, play, stop)

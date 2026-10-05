@@ -157,6 +157,29 @@ class ActionType(IntEnum):
     Unk2102 = 0x2102
     PlayEvent = 0x2103
 
+    def verb(self) -> int:
+        return self >> 8
+
+
+class ActionScope(IntEnum):
+    """Which objects an action affects, i.e. the low byte of an `ActionType`.
+
+    Wwise encodes the scope in the action type itself, which is why there are so
+    many `ActionType` members for so few actual verbs. wwiser spells the scope
+    out as a name suffix, inconsistently: `E` and `M` both mean `Target`, `EO`
+    and `O` both mean `TargetLocal`. The `Local` variants only affect instances
+    belonging to the game object that posted the event, the others are global.
+
+    Not every verb exists in every scope, see `resolve_action_type`.
+    """
+
+    Target = 0x02  # wwiser: E, or M for the property actions
+    TargetLocal = 0x03  # wwiser: EO / O
+    All = 0x04  # wwiser: ALL
+    AllLocal = 0x05  # wwiser: ALLO
+    Except = 0x08  # wwiser: AE, the target is the exception list
+    ExceptLocal = 0x09  # wwiser: AEO
+
 
 class CurveInterpolation(IntEnum):
     Log3 = 0x0

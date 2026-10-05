@@ -228,11 +228,11 @@ def create_simple_sound_rsc(
                 nodes.extend((rsc, snd))
 
     play = Event.new(f"Play_{event_name}")
-    play_action = Action.new_play_action(bnk.new_id(), master_rsc.id, bnk.bank_id)
+    play_action = Action.new_play(bnk.new_id(), master_rsc, bank_id=bnk.bank_id)
     play.actions.append(play_action.id)
 
     stop = Event.new(f"Stop_{event_name}")
-    stop_action = Action.new_stop_action(bnk.new_id(), master_rsc.id)
+    stop_action = Action.new_stop(bnk.new_id(), master_rsc)
     stop.actions.append(stop_action.id)
 
     # Add the RSC to the actor mixer
@@ -844,11 +844,11 @@ def setup_custom_music_branch(
     off_state = calc_hash("None")
 
     enable_evt = Event.new("Play_m999888777")
-    enable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, on_state)
+    enable_act = Action.new_set_state(bnk.new_id(), state_group_id, on_state)
     enable_evt.actions.append(enable_act)
 
     disable_evt = Event.new("Stop_m999888777")
-    disable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, off_state)
+    disable_act = Action.new_set_state(bnk.new_id(), state_group_id, off_state)
     disable_evt.actions.append(disable_act)
 
     bnk.add_nodes(enable_evt, enable_act, disable_evt, disable_act)
@@ -879,17 +879,17 @@ def create_custom_music_event(
     off_state = calc_hash("None")
 
     enable_evt = Event.new(f"Play_{sound_type.value}{event_id}")
-    enable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, on_state)
+    enable_act = Action.new_set_state(bnk.new_id(), state_group_id, on_state)
     enable_evt.actions.append(enable_act)
 
     for key, val in custom_states.items():
-        state_act = Action.new_setstate_action(
+        state_act = Action.new_set_state(
             bnk.new_id(), calc_hash(key), calc_hash(val)
         )
         enable_evt.actions.append(state_act)
 
     disable_evt = Event.new(f"Stop_{sound_type.value}{event_id}")
-    disable_act = Action.new_setstate_action(bnk.new_id(), state_group_id, off_state)
+    disable_act = Action.new_set_state(bnk.new_id(), state_group_id, off_state)
     disable_evt.actions.append(disable_act)
 
     bnk.add_nodes(enable_evt, *enable_evt.actions, disable_evt, disable_act)
