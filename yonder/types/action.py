@@ -236,8 +236,11 @@ class Action(PropertyMixin, HIRCNode):
         *,
         scope: ActionScope = ActionScope.TargetLocal,
         exceptions: list[Hash | tuple[Hash, bool]] = None,
-        flags1: int = 4,  # ? usually 4, rarely 7
-        flags2: int = 6,  # ? usually 6
+        # probably fade CurveInterpolation, usually 4, rarely 7
+        flags1: int = 4,
+        # probably what it applies to, 110 = state transitions + dynamic sequence, usually 6, 
+        # Try to find CAkActionStop::SetActionSpecificParams?
+        flags2: int = 6,
     ) -> Action:
         """Stop `target`."""
         return cls.new(

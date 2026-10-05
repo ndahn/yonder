@@ -25,16 +25,21 @@ class ActionNode(GraphDesignerNode):
         super().__init__(nid)
 
         self.action_type = action_type
+        self.is_bus = False
 
     def build_body(self) -> None:
-        # Only the types we can actually serialize, scope suffixes included.
-        # Fine tuning the params is left to the node attributes panel.
         dpg.add_combo(
             [t.name for t in Action.supported_types()],
             default_value=self.action_type.name,
             width=self.body_width,
             callback=self._on_action_type_changed,
             tag=self._wtag("action_type"),
+        )
+        dpg.add_checkbox(
+            label=µ("is bus"),
+            default_value=False,
+            callback=self._on_is_bus_changed,
+            tag=self._wtag("is_bus"),
         )
 
     def link_valid(
@@ -69,10 +74,15 @@ class ActionNode(GraphDesignerNode):
             )
 
         return Action.new(
-            self.nid, self.action_type, target, props=self.properties
+            self.nid, self.action_type, target, props=self.properties, is_bus=self.is_bus
         )
 
     # === DPG callbacks =================================================
 
     def _on_action_type_changed(self, sender: str, action_type: str, user_data: Any) -> None:
         self.action_type = ActionType[action_type]
+        is_play = (self.action_type == ActionType.Play)
+        dpg.configure_item(self._wtag("is_bus"), enabled=not is_play)
+
+    def _on_is_bus_changed(self, sender: str, is_bus: bool, user_data: Any) -> None:
+        self.is_bus = is_bus
