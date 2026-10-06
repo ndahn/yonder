@@ -7,6 +7,7 @@ from yonder.hash import Hash, calc_hash
 from yonder.enums import (
     ValueMeaning,
     ActionType,
+    ActionVerb,
     ActionScope,
     CurveInterpolation,
     PropID,
@@ -19,17 +20,6 @@ from .serialization import _serialize_value, _deserialize_fields
 from .mixins import PropertyMixin
 
 
-# The high byte of an ActionType picks the verb, the low byte the ActionScope.
-# Only the verbs we have constructors for are named here.
-_STOP = 0x01
-_PAUSE = 0x02
-_RESUME = 0x03
-_PLAY = 0x04
-_MUTE = 0x06
-_UNMUTE = 0x07
-_SET_GAME_PARAMETER = 0x13
-_SEEK = 0x1E
-
 # Properties with a dedicated set/reset action verb. Note that reset is *not*
 # simply set + 1 - the HPF actions sit in a different range than the rest.
 PROP_ACTIONS: dict[PropID, tuple[int, int]] = {
@@ -41,12 +31,19 @@ PROP_ACTIONS: dict[PropID, tuple[int, int]] = {
 }
 
 
-def resolve_action_type(verb: int, scope: ActionScope) -> ActionType:
+def resolve_action_type(verb: ActionVerb | int, scope: ActionScope) -> ActionType:
     """Combine a verb byte and an `ActionScope` into the matching `ActionType`.
 
     Raises if the combination doesn't exist, which is common - most verbs only
-    support a subset of the scopes. Use `get_action_scopes` to find out which.
+    support a subset of the scopes. Use `get_valid_action_scopes` to find out which.
     """
+    if verb == ActionVerb.SetSwitch:
+        return ActionType.SetSwitch
+    elif verb == ActionVerb.SetState:
+        return ActionType.SetState
+    elif verb == ActionVerb.PlayEvent:
+        return ActionType.PlayEvent
+
     try:
         return ActionType((verb << 8) | int(scope))
     except ValueError:
@@ -245,7 +242,7 @@ class Action(PropertyMixin, HIRCNode):
         """Stop `target`."""
         return cls.new(
             nid,
-            resolve_action_type(_STOP, scope),
+            resolve_action_type(ActionVerb.Stop, scope),
             target,
             stop=ActionStopParams(flags1=flags1, flags2=flags2),
             except_=_make_exceptions(exceptions),
@@ -265,7 +262,7 @@ class Action(PropertyMixin, HIRCNode):
         """Pause `target`, keeping its playback position."""
         return cls.new(
             nid,
-            resolve_action_type(_PAUSE, scope),
+            resolve_action_type(ActionVerb.Pause, scope),
             target,
             pause=ActionPauseParams(flags=flags),
             except_=_make_exceptions(exceptions),
@@ -286,7 +283,7 @@ class Action(PropertyMixin, HIRCNode):
         """Resume `target` where a pause action left it."""
         return cls.new(
             nid,
-            resolve_action_type(_RESUME, scope),
+            resolve_action_type(ActionVerb.Resume, scope),
             target,
             fade_curve=int(fade_curve),
             resume=1 if master_resume else 0,
@@ -306,7 +303,7 @@ class Action(PropertyMixin, HIRCNode):
         """Silence `target` without stopping it."""
         return cls.new(
             nid,
-            resolve_action_type(_MUTE, scope),
+            resolve_action_type(ActionVerb.Mute, scope),
             target,
             fade_curve=int(fade_curve),
             except_=_make_exceptions(exceptions),
@@ -325,7 +322,7 @@ class Action(PropertyMixin, HIRCNode):
         """Undo a mute action on `target`."""
         return cls.new(
             nid,
-            resolve_action_type(_UNMUTE, scope),
+            resolve_action_type(ActionVerb.Unmute, scope),
             target,
             fade_curve=int(fade_curve),
             except_=_make_exceptions(exceptions),
@@ -403,7 +400,7 @@ class Action(PropertyMixin, HIRCNode):
         """Jump `target` to `position`, in ms or as a 0..1 fraction of its duration."""
         return cls.new(
             nid,
-            resolve_action_type(_SEEK, scope),
+            resolve_action_type(ActionVerb.Seek, scope),
             target,
             seek=ActionSeekParams(
                 is_seek_relative_to_duration=1 if relative_to_duration else 0,
@@ -455,7 +452,7 @@ class Action(PropertyMixin, HIRCNode):
         """Set an RTPC game parameter, `target` being the parameter itself."""
         return cls.new(
             nid,
-            resolve_action_type(_SET_GAME_PARAMETER, scope),
+            resolve_action_type(ActionVerb.SetGameParameter, scope),
             target,
             set_game_parameter=ActionSetGameParameterParams(
                 bypass_transition=1 if bypass_transition else 0,

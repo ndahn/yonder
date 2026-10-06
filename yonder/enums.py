@@ -161,6 +161,23 @@ class ActionType(IntEnum):
         return self >> 8
 
 
+# The high byte of an ActionType picks the verb, the low byte the ActionScope.
+# Only the verbs we have constructors for are named here.
+class ActionVerb(IntEnum):
+    Stop = 0x01
+    Pause = 0x02
+    Resume = 0x03
+    Play = 0x04
+    Mute = 0x06
+    Unmute = 0x07
+    SetGameParameter = 0x13
+    Seek = 0x1E
+    # These don't correspond to actual bytes and need to be treated separately
+    SetSwitch = 0xFD
+    SetState = 0xFE
+    PlayEvent = 0xFF
+
+
 class ActionScope(IntEnum):
     """Which objects an action affects, i.e. the low byte of an `ActionType`.
 
@@ -172,7 +189,6 @@ class ActionScope(IntEnum):
 
     Not every verb exists in every scope, see `resolve_action_type`.
     """
-
     Target = 0x02  # wwiser: E, or M for the property actions
     TargetLocal = 0x03  # wwiser: EO / O
     All = 0x04  # wwiser: ALL
