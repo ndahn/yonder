@@ -22,9 +22,8 @@ class MSCNode(GraphDesignerNode):
     def __init__(self, nid: str | int = 0):
         super().__init__(nid)
 
-        # The container doubles as the working copy of the decision tree. Only the
-        # tree and its arguments are used, the real node is built in make_node().
-        self.tree: MusicSwitchContainer = MusicSwitchContainer(self.nid)
+        # Used for editing the decision tree, the real node is built in make_node()
+        self._tree: MusicSwitchContainer = MusicSwitchContainer(self.nid)
         self._tree_editor: add_decision_tree_editor = None
 
     def build(self, parent: str | int, pos: tuple[float, float] = None) -> None:
@@ -34,7 +33,7 @@ class MSCNode(GraphDesignerNode):
     def build_body(self) -> None:
         with dpg.tree_node(label=µ("Decision Tree"), span_text_width=True):
             self._tree_editor = add_decision_tree_editor(
-                self.tree,
+                self._tree,
                 self._on_tree_changed,
                 compact=True,
             )
@@ -53,7 +52,7 @@ class MSCNode(GraphDesignerNode):
         return super().link_valid(source, output, target, input)
 
     def validate(self, bnk: Soundbank) -> str:
-        if not self.tree.arguments:
+        if not self._tree.arguments:
             return µ("Decision tree has no decisions")
 
         branches = list(self._tree_editor.branches())
@@ -81,11 +80,11 @@ class MSCNode(GraphDesignerNode):
         node = MusicSwitchContainer.new(
             self.node_id(), [], props=self.properties, parent=parent
         )
-        node.arguments = [GameSync(a.group_id) for a in self.tree.arguments]
-        node.group_types = list(self.tree.group_types)
+        node.arguments = [GameSync(a.group_id) for a in self._tree.arguments]
+        node.group_types = list(self._tree.group_types)
         node.tree_depth = len(node.arguments)
-        node.tree_mode = self.tree.tree_mode
-        node.tree = deepcopy(self.tree.tree)
+        node.tree_mode = self._tree.tree_mode
+        node.tree = deepcopy(self._tree.tree)
         self._prune_tree(node, node.tree, 0)
 
         for child_id in node.get_flat_tree(string_keys=False).values():
@@ -129,5 +128,5 @@ class MSCNode(GraphDesignerNode):
     def _on_tree_changed(
         self, sender: str, tree: MusicSwitchContainer, user_data: Any
     ) -> None:
-        self.tree = tree
+        self._tree = tree
         self._sync_terminals()

@@ -34,8 +34,8 @@ class edit_state_path_dialog(DpgItem):
         Omit the leaf node reference picker when True.
     node_id : int, optional
         Pre-selected leaf node ID.
-    raw : bool
-        Parse key strings to integer hashes before passing to ``callback``.
+    modal : bool
+        If True, the dialog will be modal.
     title : str
         Window title bar label.
     tag : int or str, optional
@@ -51,7 +51,7 @@ class edit_state_path_dialog(DpgItem):
         state_path: list[str] = None,
         hide_node_id: bool = False,
         node_id: int = None,
-        raw: bool = False,
+        modal: bool = True,
         title: str = "Edit State Path",
         tag: str = None,
     ) -> None:
@@ -75,12 +75,11 @@ class edit_state_path_dialog(DpgItem):
         self._callback = callback
         self._state_path = state_path
         self._hide_node_id = hide_node_id
-        self._raw = raw
         self._leaf_node_id: int = node_id or 0
         self._window: str = None
         self._state_inputs: dict[int, add_state_value_input] = {}
 
-        self._build(title, state_path, hide_node_id, node_id)
+        self._build(title, state_path, hide_node_id, node_id, modal)
 
     # === Build =========================================================
 
@@ -99,6 +98,7 @@ class edit_state_path_dialog(DpgItem):
         state_path: list[str],
         hide_node_id: bool,
         node_id: int,
+        modal: bool,
     ) -> None:
         with dpg.window(
             label=title,
@@ -106,6 +106,7 @@ class edit_state_path_dialog(DpgItem):
             height=400,
             autosize=True,
             no_saved_settings=True,
+            modal=modal,
             tag=self._tag,
             on_close=lambda: dpg.delete_item(self._window),
         ) as self._window:

@@ -6,29 +6,11 @@ from yonder import calc_hash, lookup_name
 from .dpg_item import DpgItem
 
 
-def _get_label(value: int | str) -> str:
-    if isinstance(value, str):
-        if value.startswith("#"):
-            value = int(value[1:])
-        elif value.isdigit():
-            value = int(value)
-        else:
-            return value
-
-    if not value:
-        return "-"
-
-    if isinstance(value, int):
-        return lookup_name(value, f"#{value}")
-
-    return str(value)
-
-
 class add_state_value_input(DpgItem):
     def __init__(
         self,
         values: list[int | str],
-        callback: Callable[[str, int, Any], None],
+        callback: Callable[[str, tuple[int, str], Any], None],
         *,
         default_value: int | str = "",
         label: str = None,
@@ -54,14 +36,14 @@ class add_state_value_input(DpgItem):
 
         with dpg.group(horizontal=True, horizontal_spacing=3, parent=parent, tag=self.tag):
             dpg.add_input_text(
-                default_value=_get_label(default_value),
+                default_value=self._get_label(default_value),
                 width=width,
                 readonly=readonly,
                 callback=self._on_value_changed,
                 tag=self._t("input"),
             )
             dpg.add_combo(
-                [_get_label(v) for v in self._values],
+                [self._get_label(v) for v in self._values],
                 no_preview=True,
                 callback=self._on_value_changed,
                 tag=self._t("combo"),
@@ -70,15 +52,35 @@ class add_state_value_input(DpgItem):
             if label:
                 dpg.add_text(label, tag=self._t("label"))
 
-    def _on_value_changed(self, sender: str, value: str | int, cb_user_data: Any) -> None:
+    def _get_label(self, value: int | str) -> str:
+        if isinstance(value, str):
+            if value.startswith("#"):
+                value = int(value[1:])
+            elif value.isdigit():
+                value = int(value)
+            else:
+                return value
+
+        for label, val in self._custom_values.items():
+            if val == value:
+                return label
+
+        if not value:
+            return "-"
+
+        if isinstance(value, int):
+            return lookup_name(value, f"#{value}")
+
+        return str(value)
+
+    def _on_value_changed(self, sender: str, value: str, cb_user_data: Any) -> None:
         self.value = value
 
         if self._callback:
-            ret = self.value
-            if not self._raw:
-                ret = lookup_name(ret, f"#{ret}")
+            hash = self._value_to_int(value)
+            name = lookup_name(hash, f"#{hash}")
 
-            self._callback(self.tag, ret, self._user_data)
+            self._callback(self.tag, (hash, name), self._user_data)
 
     def _value_to_int(self, value: int | str) -> int:
         if value in self._custom_values:
@@ -110,7 +112,7 @@ class add_state_value_input(DpgItem):
 
     @value.setter
     def value(self, val: int | str) -> None:
-        val = _get_label(val)
+        val = self._get_label(val)
         dpg.set_value(self._t("input"), val)
         dpg.set_value(self._t("combo"), val)
 

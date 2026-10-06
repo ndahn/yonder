@@ -20,8 +20,18 @@ class MSNode(GraphDesignerNode):
     def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
         super().__init__(nid)
 
-        self.duration = 0.0
+        # Used for editing the markers, the real node is built in make_node()
         self._segment = MusicSegment.new(nid)
+        self._output_map: dict[str, MSNode] = {}
+
+    @property
+    def duration(self) -> float:
+        dur = 0.0
+        for node in self._output_map.values():
+            if node.node_type == MusicTrack:
+                dur += node.duration
+
+        return dur
 
     def build_body(self) -> None:
         dpg.add_text("0.0s total", tag=self._wtag("duration"))
@@ -49,14 +59,7 @@ class MSNode(GraphDesignerNode):
         for i in range(len(items), wanted):
             self.add_terminal(f"Track {i}", False)
 
-        # Update duration
-        dur = 0.0
-        for node in outputs.values():
-            if node.node_type == MusicTrack:
-                dur += node.duration
-
-        self.duration = dur
-        dpg.set_value(self._wtag("duration"), f"{dur:.1d}s total")
+        self._output_map = outputs
 
     def link_valid(
         self,

@@ -135,12 +135,12 @@ class SCNode(GraphDesignerNode):
     # === DPG callbacks =================================================
 
     def _on_switch_group_changed(
-        self, sender: str, switch_group: str, user_data: Any
+        self, sender: str, switch_group: tuple[int, str], user_data: Any
     ) -> None:
-        self.switch_group = switch_group
+        self.switch_group = switch_group[0]
         self.update_combo_items()
 
-    def _on_switch_changed(self, sender: str, switch: str, user_data: Any) -> None:
+    def _on_switch_changed(self, sender: str, switch: tuple[int, str], user_data: Any) -> None:
         self.switches = {
             terminal: dpg.get_value(self._switch_widgets[terminal])
             for terminal in self._outputs

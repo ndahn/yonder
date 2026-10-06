@@ -12,6 +12,7 @@ from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 from .editable_table import add_widget_table
 from .hash_widget import add_hash_widget
+from .state_value_input import add_state_value_input
 
 if TYPE_CHECKING:
     from yonder import Soundbank
@@ -132,28 +133,14 @@ class add_marker_editor(DpgItem):
         self._table.items = self.segment.markers
 
     def _make_row(self, marker: MusicMarkerWwise, idx: int) -> None:
-        known = self.get_known_marker(marker)
-
-        if known:
-            # Wwise identifies these by hash, so the id must not be edited
-            add_hash_widget(
-                marker.id,
-                None,
-                initial_string=known.name,
-                width=200,
-                hash_label=None,
-                allow_edit_hash=False,
-                allow_edit_name=False,
-            )
-        else:
-            add_hash_widget(
-                marker.id,
-                self._on_marker_renamed,
-                initial_string=marker.string,
-                width=200,
-                hash_label=None,
-                user_data=marker,
-            )
+        add_state_value_input(
+            [m.name for m in MarkerId],
+            self._on_marker_renamed,
+            default_value=marker.id,
+            custom_values={m.name: m.value for m in MarkerId},
+            width=80,
+            user_data=marker,
+        )
 
         dpg.add_input_float(
             default_value=marker.position,
@@ -165,17 +152,6 @@ class add_marker_editor(DpgItem):
         )
 
     # === Public ========================================================
-
-    @staticmethod
-    def get_known_marker(marker: MusicMarkerWwise | int) -> MarkerId:
-        """The `MarkerId` a marker stands for, or None if it's a custom one."""
-        if isinstance(marker, MusicMarkerWwise):
-            marker = marker.id
-
-        try:
-            return MarkerId(marker)
-        except ValueError:
-            return None
 
     def get_selected_track(self) -> MusicTrack:
         """The track currently picked for waveform editing, if any."""
@@ -228,6 +204,9 @@ class add_marker_editor(DpgItem):
                 µ("A marker with ID {mid} already exists", "log").format(mid=mid)
             )
             return
+
+        if name.startswith("#"):
+            name = None
 
         # Edited in place so the row order and the open hash widget both survive
         marker.id = mid

@@ -338,8 +338,8 @@ Area tree:
         dpg.show_item(self._t("location_args_group"))
         self.show_message()
 
-    def _on_area_val_changed(self, sender: str, value: str, idx: int) -> None:
-        self.local_args[idx] = value
+    def _on_area_val_changed(self, sender: str, value: tuple[int, str], idx: int) -> None:
+        self.local_args[idx] = value[1]
         self._update_summary()
 
     def _local_arg_to_row(self, arg: str, idx: int) -> None:
@@ -364,12 +364,13 @@ Area tree:
         self.area_args.append(arg)
         done(arg)
 
-    def _on_local_arg_name_changed(self, sender: str, value: str, idx: int) -> None:
-        self.area_args[idx] = value
-        self._area_states_table.items[idx] = value
+    def _on_local_arg_name_changed(self, sender: str, value: tuple[int, str], idx: int) -> None:
+        _, name = value
+        self.area_args[idx] = name
+        self._area_states_table.items[idx] = name
 
         for entry in self._bgm_tracks:
-            entry.state_path.setdefault(value, _WILDCARD)
+            entry.state_path.setdefault(name, _WILDCARD)
 
         self._update_local_branch_labels()
         self._update_summary()

@@ -7,6 +7,7 @@ from yonder.enums import DecisionTreeMode, GroupType
 from yonder.util import logger
 from yonder.game import get_selected_game
 from yonder.types.base_types import DecisionTreeNode
+from yonder.gui.helpers import center_window
 from yonder.gui.localization import µ
 from .dpg_item import DpgItem
 from .hash_widget import add_hash_widget
@@ -380,13 +381,14 @@ class add_decision_tree_editor(DpgItem):
     def _on_add_branch_dialog(self) -> None:
         from yonder.gui.dialogs.edit_state_path_dialog import edit_state_path_dialog
 
-        edit_state_path_dialog(
+        dlg = edit_state_path_dialog(
             self._bnk,
             self.owner.arguments,
             self._on_state_path_created,
             hide_node_id=self._bnk is None,
             raw=True,
         )
+        center_window(dlg.tag, 0.2, 0.2)
 
     def _on_state_path_created(
         self, sender: str, state_path: list[int], node_id: int
@@ -416,13 +418,14 @@ class add_decision_tree_editor(DpgItem):
             modal=True,
             autosize=True,
             no_saved_settings=True,
-            pos=dpg.get_mouse_pos(local=False),
             on_close=lambda: dpg.delete_item(window),
         ) as window:
             dpg.add_text(µ("State group"))
-            widget = add_state_value_input(groups, None, raw=True)
+            widget = add_state_value_input(groups, None)
             dpg.add_spacer(height=3)
             dpg.add_button(label=µ("Okay", "button"), callback=on_okay)
+
+        center_window(window, 0.2, 0.2)
 
     def _open_context_menu(
         self,

@@ -445,9 +445,9 @@ class add_hirc_player_panel(DpgItem):
             for _, row_value in list(self._state_rows.values()):
                 row_value.set_enabled(True)
 
-    def _on_state_changed(self, sender: str, value: str, state: str) -> None:
+    def _on_state_changed(self, sender: str, value: tuple[int, str], state: str) -> None:
         h = calc_hash(state)
-        v = calc_hash(value)
+        v = calc_hash(value[1])
         self._states[h] = v
         self._hirc_player.set_game_syncs(self._states, self._rtpcs)
 

@@ -146,12 +146,13 @@ class create_boss_track_dialog(DpgItem):
         self.show_message()
 
     def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
-        if not value or value == "*":
+        _, name = value
+        if not name or name == "*":
             self.show_message(µ("BgmEnemyType not set", "msg"))
             return
 
         if self.msc:
-            self.current_state_path[self.bgm_enemy_type_idx] = value
+            self.current_state_path[self.bgm_enemy_type_idx] = name
 
         self.show_message()
 
