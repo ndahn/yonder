@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.types import HIRCNode, MusicSegment, MusicTrack
 from yonder.enums import MarkerId
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.gui.widgets import add_marker_editor
 
@@ -17,8 +17,14 @@ class MSNode(GraphDesignerNode):
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Track 0",)
 
-    def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
-        super().__init__(nid)
+    def __init__(
+        self,
+        bnk: Soundbank,
+        nid: str | int = 0,
+        *,
+        switch_group: str | int = None,
+    ):
+        super().__init__(bnk, nid)
 
         # Used for editing the markers, the real node is built in make_node()
         self._segment = MusicSegment.new(nid)
@@ -77,14 +83,24 @@ class MSNode(GraphDesignerNode):
 
         return super().link_valid(source, output, target, input)
 
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
+
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
     ) -> MusicSegment:
         parent = input_map.get("Playback", 0)
+        tracks = [track for key, track in output_map.items() if key.startswith("Track")]
         markers = {m.id: m.position for m in self._segment.markers}
 
         return MusicSegment.new(
             self.node_id(),
+            tracks,
             markers=markers,
             props=self.properties,
             parent=parent,

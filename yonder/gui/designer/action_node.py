@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import ActionType
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.localization import μ
 from yonder.types import HIRCNode, Action
 
@@ -18,11 +18,12 @@ class ActionNode(GraphDesignerNode):
 
     def __init__(
         self,
+        bnk: Soundbank,
         nid: str | int = 0,
         *,
         action_type: ActionType = ActionType.Play,
     ):
-        super().__init__(nid)
+        super().__init__(bnk, nid)
 
         self.action_type = action_type
         self.is_bus = False
@@ -41,6 +42,7 @@ class ActionNode(GraphDesignerNode):
             callback=self._on_is_bus_changed,
             tag=self._wtag("is_bus"),
         )
+        # TODO adjust body based on type
 
     def link_valid(
         self,
@@ -54,13 +56,18 @@ class ActionNode(GraphDesignerNode):
 
         return super().link_valid(source, output, target, input)
 
-    def validate(self, bnk: Soundbank) -> str:
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
         if self.action_type not in Action.supported_types():
             return µ("{action} cannot be created yet", "msg").format(
                 action=self.action_type.name
             )
 
-        return super().validate(bnk)
+        if "Event" not in input_map:
+            return µ("Event not connected")
+
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
@@ -74,14 +81,20 @@ class ActionNode(GraphDesignerNode):
             )
 
         return Action.new(
-            self.nid, self.action_type, target, props=self.properties, is_bus=self.is_bus
+            self.nid,
+            self.action_type,
+            target,
+            props=self.properties,
+            is_bus=self.is_bus,
         )
 
     # === DPG callbacks =================================================
 
-    def _on_action_type_changed(self, sender: str, action_type: str, user_data: Any) -> None:
+    def _on_action_type_changed(
+        self, sender: str, action_type: str, user_data: Any
+    ) -> None:
         self.action_type = ActionType[action_type]
-        is_play = (self.action_type == ActionType.Play)
+        is_play = self.action_type == ActionType.Play
         dpg.configure_item(self._wtag("is_bus"), enabled=not is_play)
 
     def _on_is_bus_changed(self, sender: str, is_bus: bool, user_data: Any) -> None:

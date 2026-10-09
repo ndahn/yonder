@@ -30,7 +30,7 @@ from .interpolation_curve import add_interpolation_curve
 from .kofi import add_kofi_button
 from .marker_editor import add_marker_editor
 from .music_playlist_editor import add_music_playlist_editor
-from .node_blocks import add_node_blocks, node_categories
+from .node_palette import add_node_palette
 from .notifications import global_notification_man
 from .loading_indicator import loading_indicator
 from .select_node import add_select_node, add_select_actormixer
@@ -38,6 +38,7 @@ from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph
 from .state_value_input import add_state_value_input
 from .splash import add_splash
 from .wav_player_widget import add_wav_player
+from .audio_visualizer import add_audio_visualizer, AudioTrack
 from .properties_table import add_properties_table
 from .transition_matrix import add_transition_matrix
 from .yay import yay

@@ -99,7 +99,7 @@ class add_select_node(DpgItem):
         textbox_width: int,
         parent: str,
     ):
-        with dpg.group(horizontal=True, parent=parent):
+        with dpg.group(horizontal=True, parent=parent, tag=self.tag):
             dpg.add_input_text(
                 default_value=str(default),
                 decimal=True,
@@ -108,7 +108,7 @@ class add_select_node(DpgItem):
                 width=textbox_width,
                 callback=self._on_node_edit,
                 user_data=self._user_data,
-                tag=self.tag,
+                tag=self._t("text_input"),
             )
 
             if self._create_new:
@@ -200,13 +200,13 @@ class add_select_node(DpgItem):
 
     def _update_widget_state(self) -> None:
         if isinstance(self._selected_node, HIRCNode):
-            dpg.bind_item_theme(self.tag, style.themes.node_link_enabled)
+            dpg.bind_item_theme(self._t("text_input"), style.themes.node_link_enabled)
             if self._jump_to:
                 dpg.configure_item(
                     self._t("jump_to_button"), tint_color=style.white, enabled=True
                 )
         else:
-            dpg.bind_item_theme(self.tag, style.themes.node_link_disabled)
+            dpg.bind_item_theme(self._t("text_input"), style.themes.node_link_disabled)
             if self._jump_to:
                 dpg.configure_item(
                     self._t("jump_to_button"),
@@ -233,14 +233,14 @@ class add_select_node(DpgItem):
     def selected_node(self) -> int | HIRCNode:
         node = self._selected_node
 
-        if not isinstance(self._selected_node, HIRCNode):
+        if self._bnk and not isinstance(self._selected_node, HIRCNode):
             node = self._bnk.get(node, node)
 
         return node
 
     @selected_node.setter
     def selected_node(self, node: int | HIRCNode) -> None:
-        dpg.set_value(self.tag, str(node))
+        dpg.set_value(self._t("text_input"), str(node))
         self._selected_node = node
         self._update_widget_state()
 
@@ -298,6 +298,6 @@ class add_select_actormixer(add_select_node):
         )
 
     def _on_node_selected(self, sender: str, info: AmxData, user_data: Any) -> None:
-        dpg.set_value(self.tag, lookup_name(info.nid, f"#{info.nid}"))
+        dpg.set_value(self._t("text_input"), lookup_name(info.nid, f"#{info.nid}"))
         if self._callback:
             self._callback(self.tag, info, self._user_data)

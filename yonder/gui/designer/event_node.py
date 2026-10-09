@@ -2,7 +2,7 @@ from typing import ClassVar
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.types import HIRCNode, Action, Event
 
@@ -18,11 +18,12 @@ class EventNode(GraphDesignerNode):
 
     def __init__(
         self,
+        bnk: Soundbank,
         nid: str | int = 0,
         *,
         name: str = "c100200300",
     ):
-        super().__init__(nid)
+        super().__init__(bnk, nid)
         self.name = name
 
         self.extra_actions: list[str] = []
@@ -57,13 +58,23 @@ class EventNode(GraphDesignerNode):
         target: GraphDesignerNode,
         input: str,
     ) -> bool:
-        if source is self and input == "Event":
+        if source is self:
+            if input != "Event":
+                return False
             if output == "Play/Stop":
                 return hasattr(target.node_type, "parent")
             elif output.startswith("Extra"):
                 return target.node_type is Action
 
         return super().link_valid(source, output, target, input)
+
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
+        if "Play/Stop" not in input_map:
+            return µ("Play/Stop not connected")
+
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]

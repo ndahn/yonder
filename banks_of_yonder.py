@@ -2,7 +2,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.util import resource_dir
 from yonder.gui.config import load_config
-from yonder.gui.style import init_themes
+from yonder.gui import style
 from yonder.gui.localization import set_active_language
 from yonder.gui.yonder import BanksOfYonder
 
@@ -15,7 +15,7 @@ def dpg_init():
         dpg.bind_font(default_font)
 
     # Themes
-    init_themes()
+    style.init_themes()
 
     # Localization
     lang = load_config().language or "en"

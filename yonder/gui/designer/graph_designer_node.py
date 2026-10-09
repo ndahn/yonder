@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Iterable
 from functools import cache
 from dearpygui import dearpygui as dpg
 
@@ -12,8 +12,7 @@ from yonder.types import (
 )
 from yonder.enums import PropID
 from yonder.types.mixins import PropertyMixin
-from yonder.gui.localization import µ
-from yonder.gui import style
+from yonder.gui import style, Icons, µ
 from yonder.gui.widgets import DpgItem, add_properties_table
 
 
@@ -116,6 +115,8 @@ class GraphDesignerNode:
     # Set by deriving classes
     node_type: ClassVar[type[HIRCNode]] = None
     label: ClassVar[str] = None
+    icon: ClassVar[str] = None
+    color: ClassVar[style.RGBA] = None
     inputs: ClassVar[tuple[str, ...]] = ()
     outputs: ClassVar[tuple[str, ...]] = ()
     show_name_field: ClassVar[bool] = False
@@ -125,8 +126,12 @@ class GraphDesignerNode:
         super().__init_subclass__(**kwargs)
         if cls.node_type is not None:
             _designer_nodes[cls.node_type] = cls
+            if cls.icon is None:
+                cls.icon = Icons.get_type_icon_tag(cls.node_type.__name__) or Icons.object
+            if cls.color is None:
+                cls.color = style.type_colors.get(cls.node_type.__name__, style.white)
 
-    def __init__(self, nid: str | int = 0):
+    def __init__(self, bnk: Soundbank, nid: str | int = 0):
         self.nid = int(nid) if nid else dpg.generate_uuid()
         self.name: str = ""
         self.properties: dict[PropID, float] = {}
@@ -134,6 +139,8 @@ class GraphDesignerNode:
         self._inputs: list[str] = []
         self._outputs: list[str] = []
         self._widget_tags: list[str] = []
+        self._unlink: Callable[[GraphDesignerNode, str, bool], None] = None
+        self._updating: int = 0
 
     # === Identity ======================================================
 
@@ -150,12 +157,6 @@ class GraphDesignerNode:
             return self.node_type.__name__
 
         return type(self).__name__
-
-    @property
-    def color(self) -> style.RGBA:
-        return style.type_colors.get(
-            self.node_type.__name__ if self.node_type else None, style.light_grey
-        )
 
     def node_id(self) -> Hash:
         """Name or ID the HIRC node will be created with."""
@@ -262,15 +263,77 @@ class GraphDesignerNode:
         return tag
 
     def remove_terminal(self, label: str, is_input: bool) -> None:
-        """Remove a terminal. Any link attached to it must be gone already."""
+        """Remove a terminal, dropping whatever link was attached to it."""
         terminals = self._inputs if is_input else self._outputs
         if label not in terminals:
             return
 
+        # The link has to go first, deleting a connected attribute leaves the
+        # editor with a link pointing nowhere
+        if self._unlink:
+            self._updating += 1
+            try:
+                self._unlink(self, label, is_input)
+            finally:
+                self._updating -= 1
+
         terminals.remove(label)
         self._destroy_item(self._make_tag(is_input, label))
 
+    def sync_terminals(self, labels: Iterable[str], is_input: bool) -> None:
+        """Make this node's terminals match `labels`, in that order.
+
+        Terminals that are no longer wanted lose their links, the remaining
+        ones keep theirs. Use this from a widget callback when the node's
+        terminals depend on its values. Note that terminals already present
+        are not reordered.
+        """
+        wanted = list(labels)
+        terminals = self._inputs if is_input else self._outputs
+
+        for label in list(terminals):
+            if label not in wanted:
+                self.remove_terminal(label, is_input)
+
+        for i, label in enumerate(wanted):
+            if label in terminals:
+                continue
+
+            # Insert in front of the next terminal that is already there to
+            # end up in the requested order
+            follower = next((f for f in wanted[i + 1 :] if f in terminals), None)
+            self.add_terminal(label, is_input, before=follower)
+
+    def notify_connections(
+        self,
+        inputs: dict[str, GraphDesignerNode],
+        outputs: dict[str, GraphDesignerNode],
+    ) -> None:
+        """Entry point for the designer, forwards to `on_connections_changed`.
+
+        Calls are swallowed while the node is rearranging its own terminals,
+        since removing a terminal drops its link, which notifies us right back.
+        """
+        if self._updating:
+            return
+
+        self._updating += 1
+        try:
+            self.on_connections_changed(inputs, outputs)
+        finally:
+            self._updating -= 1
+
     # === Build =========================================================
+
+    def set_unlink_handler(
+        self, handler: Callable[[GraphDesignerNode, str, bool], None]
+    ) -> None:
+        """Set by the designer so removed terminals can drop their links.
+
+        Without a handler (e.g. in tests) terminals are removed as they are,
+        which is only safe as long as nothing is connected to them.
+        """
+        self._unlink = handler
 
     def build(self, parent: str | int, pos: tuple[float, float] = None) -> None:
         """Create the dpg node inside the given node editor."""
@@ -287,14 +350,14 @@ class GraphDesignerNode:
             with dpg.node_attribute(
                 attribute_type=dpg.mvNode_Attr_Static, tag=self._wtag("body")
             ):
-                if self.show_name_field:
-                    dpg.add_input_text(
-                        hint=µ("Name"),
-                        default_value=self.name,
-                        width=self.body_width,
-                        callback=self._on_name_changed,
-                        tag=self._wtag("name"),
-                    )
+                dpg.add_input_text(
+                    hint=µ("Name"),
+                    default_value=self.name,
+                    width=self.body_width,
+                    callback=self._on_name_changed,
+                    show=self.show_name_field,
+                    tag=self._wtag("name"),
+                )
 
                 self.build_body()
 
@@ -379,12 +442,16 @@ class GraphDesignerNode:
     ) -> None:
         """Called whenever a link to this node was added or removed.
 
-        Receives the labels of all currently connected terminals, which is
-        the place to add or remove dynamic terminals (see `RSCNode`).
+        Receives the nodes behind all currently connected terminals, keyed by
+        terminal label, which is the place to add or remove dynamic terminals
+        (see `RSCNode`). Terminals can also be rearranged outside of this hook,
+        e.g. from a widget callback - see `sync_terminals`.
         """
         pass
 
-    def validate(self, bnk: Soundbank) -> str:
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
         """Return a message describing why this node can't be built yet, if any."""
         if self.node_type is None:
             return µ("{node} cannot be created", "msg").format(node=self.title)

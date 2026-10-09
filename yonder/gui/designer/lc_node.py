@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
 from yonder.types import HIRCNode, LayerContainer
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
 
 
@@ -18,8 +18,8 @@ class LCNode(GraphDesignerNode):
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Item 0",)
 
-    def __init__(self, nid: str | int = 0):
-        super().__init__(nid)
+    def __init__(self, bnk: Soundbank, nid: str | int = 0):
+        super().__init__(bnk, nid)
 
         self.layer_assignments: dict[str, str] = {}
         self._layer_widgets: dict[str, str] = {}
@@ -39,7 +39,7 @@ class LCNode(GraphDesignerNode):
         if label.startswith("Item"):
             widget = self._make_item_terminal
 
-        super().add_terminal(label, is_input, before=before, widget=widget)
+        return super().add_terminal(label, is_input, before=before, widget=widget)
 
     def remove_terminal(self, label: str, is_input: bool) -> None:
         self._layer_widgets.pop(label, None)
@@ -74,6 +74,14 @@ class LCNode(GraphDesignerNode):
             return output.startswith("Item") and input == "Playback"
 
         return super().link_valid(source, output, target, input)
+
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]

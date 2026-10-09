@@ -4,7 +4,7 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.types import HIRCNode, SwitchContainer
 from yonder.game import get_selected_game
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.gui.widgets import add_state_value_input
 
@@ -17,8 +17,14 @@ class SCNode(GraphDesignerNode):
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Switch 0",)
 
-    def __init__(self, nid: str | int = 0, *, switch_group: str | int = None):
-        super().__init__(nid)
+    def __init__(
+        self,
+        bnk: Soundbank,
+        nid: str | int = 0,
+        *,
+        switch_group: str | int = None,
+    ):
+        super().__init__(bnk, nid)
 
         self.switch_group = switch_group
         self.switches: dict[str, str] = {}  # terminal to switch state
@@ -44,7 +50,7 @@ class SCNode(GraphDesignerNode):
         if label.startswith("Switch"):
             widget = self._make_item_terminal
 
-        super().add_terminal(label, is_input, before=before, widget=widget)
+        return super().add_terminal(label, is_input, before=before, widget=widget)
 
     def remove_terminal(self, label: str, is_input: bool) -> None:
         self._switch_widgets.pop(label, None)
@@ -76,7 +82,9 @@ class SCNode(GraphDesignerNode):
 
         return super().link_valid(source, output, target, input)
 
-    def validate(self, bnk: Soundbank) -> str:
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
         if not self.switch_group:
             return µ("Switch group not set")
 
@@ -84,7 +92,10 @@ class SCNode(GraphDesignerNode):
             if not val:
                 return µ("Terminal switch not set")
 
-        return super().validate(bnk)
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
@@ -140,7 +151,9 @@ class SCNode(GraphDesignerNode):
         self.switch_group = switch_group[0]
         self.update_combo_items()
 
-    def _on_switch_changed(self, sender: str, switch: tuple[int, str], user_data: Any) -> None:
+    def _on_switch_changed(
+        self, sender: str, switch: tuple[int, str], user_data: Any
+    ) -> None:
         self.switches = {
             terminal: dpg.get_value(self._switch_widgets[terminal])
             for terminal in self._outputs

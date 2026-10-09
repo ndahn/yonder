@@ -6,7 +6,7 @@ from yonder import Soundbank
 from yonder.types import HIRCNode, MusicSwitchContainer
 from yonder.types.base_types import DecisionTreeNode, GameSync
 from yonder.gui.localization import μ
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.widgets import add_decision_tree_editor
 
 
@@ -19,8 +19,8 @@ class MSCNode(GraphDesignerNode):
     # One output per leaf of the decision tree, see _sync_terminals()
     outputs: ClassVar[tuple[str, ...]] = ()
 
-    def __init__(self, nid: str | int = 0):
-        super().__init__(nid)
+    def __init__(self, bnk: Soundbank, nid: str | int = 0):
+        super().__init__(bnk, nid)
 
         # Used for editing the decision tree, the real node is built in make_node()
         self._tree: MusicSwitchContainer = MusicSwitchContainer(self.nid)
@@ -51,7 +51,9 @@ class MSCNode(GraphDesignerNode):
         # Either a parent container plays us, or an action targets us
         return super().link_valid(source, output, target, input)
 
-    def validate(self, bnk: Soundbank) -> str:
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
         if not self._tree.arguments:
             return µ("Decision tree has no decisions")
 
@@ -63,7 +65,10 @@ class MSCNode(GraphDesignerNode):
             if 999999 in path:
                 return µ("Branch key for {path} not set").format(path=path)
 
-        return super().validate(bnk)
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]

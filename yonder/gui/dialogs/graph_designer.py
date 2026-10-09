@@ -12,13 +12,12 @@ from yonder.gui import style
 from yonder.gui.widgets import (
     DpgItem,
     GraphLayout,
-    add_node_blocks,
-    node_categories,
+    add_node_palette,
     yay,
 )
 from yonder.gui.designer import (
     GraphDesignerNode,
-    get_designer_node,
+    designer_node_categories,
 )
 
 
@@ -73,7 +72,8 @@ class graph_designer_dialog(DpgItem):
 
         self._g = nx.DiGraph()
         self._spawn_pos: tuple[float, float] = (40.0, 40.0)
-        self._palette: add_node_blocks = None
+        self._palette: add_node_palette = None
+        self._palette_shown: bool = True
         self._build(title)
 
     def destroy(self):
@@ -118,8 +118,11 @@ class graph_designer_dialog(DpgItem):
                     )
 
             with dpg.group(horizontal=True):
-                self._palette = add_node_blocks(
-                    lambda s, a, u: self.add_node(u),
+                self._palette = add_node_palette(
+                    designer_node_categories,
+                    lambda s, a, u: self.add_node(a),
+                    get_icon=lambda t, e: t.icon,
+                    get_color=lambda t, e: t.color,
                     width=180,
                     height=-60,
                     autosize_y=False,
@@ -176,16 +179,22 @@ class graph_designer_dialog(DpgItem):
 
     def _build_add_menu(self) -> None:
         """Menu items for every known node type, grouped like the palette."""
-        for category, node_types in node_categories.items():
+        for category, node_types in designer_node_categories.items():
             with dpg.menu(label=µ(category)):
-                for node_type in node_types:
-                    designer_node = get_designer_node(node_type)
+                for designer_node in node_types:
                     dpg.add_menu_item(
-                        label=node_type.__name__,
+                        label=designer_node.node_type.__name__,
                         enabled=designer_node is not None,
                         callback=lambda s, a, u: self.add_node(u),
-                        user_data=node_type,
+                        user_data=designer_node,
                     )
+
+        dpg.add_separator()
+
+        dpg.add_menu_item(
+            label=µ("Palette"),
+            callback=self._toggle_nodes_panel,
+        )
 
     def _build_templates_menu(self) -> None:
         with dpg.menu(label=µ("Templates", "menu")):
@@ -272,20 +281,33 @@ class graph_designer_dialog(DpgItem):
         self._notify_connections(self._get_node(src))
         self._notify_connections(self._get_node(dst))
 
+    def _get_terminal_map(
+        self, node: GraphDesignerNode
+    ) -> tuple[dict[str, GraphDesignerNode], dict[str, GraphDesignerNode]]:
+        # Children are attached in terminal order, which decides e.g. the
+        # playlist order of a container
+        def link_order(edge: tuple[int, int, dict]) -> tuple[int, int]:
+            src, _, data = edge
+            return (src, self._get_node(src).terminal_index(data["output"], False))
+
+        edges = sorted(self._g.edges(node.nid, data=True), key=link_order)
+
+        input_map = {}
+        output_map = {}
+
+        for src, dst, data in edges:
+            input_map[data["input"]] = self._get_node(src)
+            output_map[data["output"]] = self._get_node(dst)
+
+        return input_map, output_map
+
     def _notify_connections(self, node: GraphDesignerNode) -> None:
         """Let a node adjust its terminals to the links it currently has."""
         if not node or not dpg.does_item_exist(node.node_tag):
             return
 
-        inputs = {
-            data["input"]: self._get_node(src)
-            for src, _, data in self._g.in_edges(node.nid, data=True)
-        }
-        outputs = {
-            data["output"]: self._get_node(dst)
-            for _, dst, data in self._g.out_edges(node.nid, data=True)
-        }
-        node.on_connections_changed(inputs, outputs)
+        input_map, output_map = self._get_terminal_map(node)
+        node.notify_connections(input_map, output_map)
 
     def _link_allowed(
         self,
@@ -299,8 +321,7 @@ class graph_designer_dialog(DpgItem):
             return False
 
         if self._g.has_edge(source.nid, target.nid):
-            self.show_message(µ("Nodes are already linked", "msg"))
-            return False
+            self.unlink_terminal(target, input, True)
 
         if nx.has_path(self._g, target.nid, source.nid):
             self.show_message(µ("Link would create a cycle", "msg"))
@@ -311,8 +332,13 @@ class graph_designer_dialog(DpgItem):
             and target.link_valid(source, output, target, input)
         ):
             self.show_message(
-                µ("{source} cannot be linked to {target}", "msg").format(
-                    source=source.title, target=target.title
+                µ(
+                    "{source}:{output} cannot be linked to {target}:{input}", "msg"
+                ).format(
+                    source=source.title,
+                    output=output,
+                    target=target.title,
+                    input=input,
                 )
             )
             return False
@@ -333,6 +359,14 @@ class graph_designer_dialog(DpgItem):
         return (x, y)
 
     # === DPG callbacks =================================================
+
+    def _toggle_nodes_panel(self) -> None:
+        if self._palette_shown:
+            dpg.hide_item(self._t("palette"))
+            self._palette_shown = False
+        else:
+            dpg.show_item(self._t("palette"))
+            self._palette_shown = True
 
     def _on_close(self) -> None:
         # Clear first so the nodes get a chance to release their tags
@@ -440,24 +474,33 @@ class graph_designer_dialog(DpgItem):
     # === Public ========================================================
 
     def add_node(
-        self, node_type: type[HIRCNode], pos: tuple[float, float] = None
+        self, designer_node: type[GraphDesignerNode], pos: tuple[float, float] = None
     ) -> GraphDesignerNode:
         """Add a new node of the given HIRC type to the canvas."""
-        designer_node = get_designer_node(node_type)
-        if not designer_node:
-            self.show_message(
-                µ("{type} is not supported yet", "msg").format(type=node_type.__name__)
-            )
-            return None
-
         pos = pos or self._spawn_pos
-        node = designer_node(self._bnk.new_id())
-        self._g.add_node(node.nid, type=node_type, node=node)
+        node = designer_node(self._bnk, self._bnk.new_id())
+        node.set_unlink_handler(self.unlink_terminal)
+        self._g.add_node(node.nid, type=designer_node.node_type, node=node)
         node.build(self._t("canvas"), pos)
         self._spawn_pos = self._cascade(pos)
 
         self.show_message()
         return node
+
+    def unlink_terminal(
+        self, node: GraphDesignerNode, label: str, is_input: bool
+    ) -> None:
+        """Drop the link on one of a node's terminals, e.g. before removing it.
+
+        Nodes call this through the handler they get in `add_node`, so they can
+        rearrange their terminals without leaving edges behind.
+        """
+        if node.nid not in self._g:
+            return
+
+        edge = self._get_edge_at(node.nid, label, is_input)
+        if edge:
+            self._remove_edge(*edge)
 
     def remove_node(self, node: GraphDesignerNode) -> None:
         """Remove a node and all links attached to it."""
@@ -547,29 +590,10 @@ class graph_designer_dialog(DpgItem):
                     )
                 names.add(node.name)
 
-        # Children are attached in terminal order, which decides e.g. the
-        # playlist order of a container
-        def link_order(edge: tuple[int, int, dict]) -> tuple[int, int]:
-            src, _, data = edge
-            return (src, self._get_node(src).terminal_index(data["output"], False))
-
-        edges = sorted(self._g.edges(data=True), key=link_order)
         created: list[HIRCNode] = []
 
         for nid in nx.topological_sort(self._g):
-            input_map = {}
-            output_map = {}
-
-            for src, dst, data in edges:
-                if dst == nid:
-                    # Inputs to node nid
-                    source = self._get_node(src)
-                    input_map[data["input"]] = (source.nid, data["output"])
-                elif src == nid:
-                    # Outputs from node nid
-                    target = self._get_node(dst)
-                    output_map[data["output"]] = (target.nid, data["input"])
-
+            input_map, output_map = self._get_terminal_map(node)
             ret = self._get_node(nid).make_node(self._bnk, input_map, output_map)
             if isinstance(ret, (list, tuple)):
                 created.extend(ret)

@@ -179,6 +179,20 @@ class themes:
 
     @cache
     @staticmethod
+    def make_series_theme(color: RGBA, item_type: int = dpg.mvLineSeries) -> str:
+        with dpg.theme() as theme:
+            with dpg.theme_component(item_type):
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_Line, color, category=dpg.mvThemeCat_Plots
+                )
+                dpg.add_theme_color(
+                    dpg.mvPlotCol_Fill, color.but(a=70), category=dpg.mvThemeCat_Plots
+                )
+
+        return theme
+
+    @cache
+    @staticmethod
     def make_link_theme(alignment: float = 0, color: RGBA = light_blue) -> str:
         with dpg.theme() as theme:
             with dpg.theme_component(0):
@@ -447,12 +461,6 @@ def init_themes():
                 dpg.mvNodeCol_GridLine, (0, 0, 0, 64), category=dpg.mvThemeCat_Nodes
             )
 
-    from yonder.types.hirc_node import HIRCNode
-
-    colorgen = HighContrastColorGenerator(0.5, hue_step=0.2573, saturation=0.52)
-    for tp in HIRCNode.__subclasses__():
-        type_colors[tp.__name__] = colorgen()
-
 
 class HighContrastColorGenerator:
     """Generates RGB colors with a certain distance apart so that subsequent colors are visually distinct."""
@@ -496,3 +504,10 @@ class HighContrastColorGenerator:
             return self.cache[key]
 
         return next(self)
+
+
+from yonder.types import HIRCNode
+
+_colorgen = HighContrastColorGenerator(0.5, hue_step=0.2573, saturation=0.52)
+for tp in HIRCNode.__subclasses__():
+    type_colors[tp.__name__] = _colorgen()

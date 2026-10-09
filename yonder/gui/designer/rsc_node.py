@@ -3,7 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import PlaybackMode, RandomMode
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.localization import μ
 from yonder.types import HIRCNode, RandomSequenceContainer
 
@@ -18,13 +18,14 @@ class RSCNode(GraphDesignerNode):
 
     def __init__(
         self,
+        bnk: Soundbank,
         nid: str | int = 0,
         *,
         mode: PlaybackMode = PlaybackMode.Random,
         random_mode: RandomMode = RandomMode.Standard,
         loop_count: int = 1,
     ):
-        super().__init__(nid)
+        super().__init__(bnk, nid)
 
         self.mode = mode
         self.random_mode = random_mode
@@ -83,6 +84,14 @@ class RSCNode(GraphDesignerNode):
 
         # Either a parent container plays us, or an action targets us
         return can_reference(source.node_type, target.node_type)
+
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]

@@ -5,7 +5,7 @@ from yonder import Soundbank
 from yonder.enums import RandomSequenceMode
 from yonder.types import HIRCNode, MusicRandomSequenceContainer, PlaylistTreeItem
 from yonder.gui.localization import μ
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.widgets import add_music_playlist_editor
 
 
@@ -17,8 +17,8 @@ class MRSCNode(GraphDesignerNode):
     inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event")
     outputs: ClassVar[tuple[str, ...]] = ("Item 0",)
 
-    def __init__(self, nid: str | int = 0):
-        super().__init__(nid)
+    def __init__(self, bnk: Soundbank, nid: str | int = 0):
+        super().__init__(bnk, nid)
 
         default_tree = PlaylistTreeItem.new()
         default_tree.children.append(
@@ -38,19 +38,6 @@ class MRSCNode(GraphDesignerNode):
                 self.playlist, self._on_playlist_changed, compact=True
             )
 
-    def on_connections_changed(
-        self,
-        inputs: dict[str, GraphDesignerNode],
-        outputs: dict[str, GraphDesignerNode],
-    ) -> None:
-        for label in outputs:
-            if label not in list(self._outputs):
-                self.remove_terminal(label, False)
-
-        for label in outputs:
-            if label not in list(self._inputs):
-                self.add_terminal(label, False)
-
     def link_valid(
         self,
         source: GraphDesignerNode,
@@ -64,11 +51,16 @@ class MRSCNode(GraphDesignerNode):
         # Either a parent container plays us, or an action targets us
         return can_reference(source.node_type, target.node_type)
 
-    def validate(self, bnk: Soundbank) -> str:
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
         if self.playlist.item.ers_type_enum == RandomSequenceMode.Inherit:
             return µ("Playlist root cannot have mode 'Inherit'")
 
-        return super().validate(bnk)
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
@@ -95,8 +87,9 @@ class MRSCNode(GraphDesignerNode):
     ) -> None:
         self.playlist = playlist
 
+        # One terminal per playlist leaf; dropped leaves take their link with them
         leafs = [
             self._playlist_editor.get_playlist_item_label(leaf.item)
             for leaf in playlist.leaves()
         ]
-        self.on_connections_changed(self._inputs, leafs)
+        self.sync_terminals(leafs, False)

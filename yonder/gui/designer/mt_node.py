@@ -7,7 +7,7 @@ from yonder import Soundbank
 from yonder.types import HIRCNode, MusicTrack
 from yonder.enums import SourceType
 from yonder.wem import get_wem_metadata
-from yonder.gui.designer.graph_designer_nodes import GraphDesignerNode
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
 from yonder.gui.widgets import add_generic_widget
 
@@ -22,11 +22,12 @@ class MTNode(GraphDesignerNode):
 
     def __init__(
         self,
+        bnk: Soundbank,
         nid: str | int = 0,
         *,
         wem_path: Path = None,
     ):
-        super().__init__(nid)
+        super().__init__(bnk, nid)
 
         self.wem_path: Path = wem_path
         self._duration = 0.0
@@ -52,11 +53,13 @@ class MTNode(GraphDesignerNode):
     def duration(self) -> float:
         return self._duration
 
-    def validate(self, bnk: Soundbank) -> bool:
-        if not self.wem_path:
-            return µ("No wem selected")
-
-        return None
+    def validate(
+        self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
+    ) -> str:
+        if "Playback" not in input_map:
+            return µ("Playback not connected")
+        
+        return super().validate(bnk, input_map, output_map)
 
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
