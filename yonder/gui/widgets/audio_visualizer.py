@@ -12,13 +12,16 @@ from yonder.types import Soundbank, MusicSegment, MusicTrack
 from yonder.types.base_types import MusicMarkerWwise
 from yonder.enums import MarkerId, SourceType
 from yonder.util import logger, get_temp_dir
-from yonder.wem import read_wav, wav2wem, wem2wav
+from yonder.wem import wav2wem, wem2wav
+from yonder.audio.wavesignal import read_wav, minmax_envelope
+from yonder.audio.audiomath import mix
 from yonder.audio.loop_points import find_loops
 from yonder.gui import style, get_config
 from yonder.gui.helpers import get_sound_path
 from yonder.gui.localization import µ
-from yonder.gui.widgets.dpg_item import DpgItem
+from yonder.gui.widgets import DpgItem, loading_indicator
 from yonder.gui.dialogs.file_dialog import open_file_dialog
+from yonder.gui.dialogs.loop_point_candidates_dialog import loop_point_candidates_dialog
 
 
 @dataclass
@@ -577,7 +580,7 @@ class add_audio_visualizer(DpgItem):
         channels = (0, 0) if row.mono else (0, 1)
         factors = (1, -1)
         for i, channel in enumerate(channels):
-            t_env, y_env = self._minmax_envelope(
+            t_env, y_env = minmax_envelope(
                 samples[:, channel], time, self._max_points // 2
             )
             row.envelopes.append((t_env, factors[i] * np.abs(y_env)))
@@ -908,6 +911,77 @@ class add_audio_visualizer(DpgItem):
         self._sync_markers()
         self._fire_loop_changed()
 
+    def _mixdown(self, row_indices: list[int] = None) -> tuple[np.ndarray, int]:
+        """Mix every audible track into one mono signal on the timeline.
+
+        Parameters
+        ----------
+        row_indices : list[int], optional
+            Rows to mix, or all rows if None.
+
+        Returns
+        -------
+        tuple of (numpy.ndarray, int)
+            Flat mono samples and their sample rate. Empty if nothing is
+            audible.
+        """
+        if not row_indices:
+            row_indices = list(range(len(self._rows)))
+
+        rows = sorted((self._rows[i] for i in row_indices), key=lambda r: r.start)
+        signals = []
+        offsets = []
+        framerates = []
+
+        for row in rows:
+            if not row.enabled or row.error:
+                continue
+
+            signal, framerate = read_wav(row.path)
+
+            # Only the audible part belongs in the mix
+            begin = max(0, round(row.begin_trim * framerate))
+            end = len(signal) + min(0, round(row.end_trim * framerate))
+            signal = signal[begin:end]
+            if not len(signal):
+                continue
+
+            signals.append(signal)
+            offsets.append(row.start)
+            framerates.append(framerate)
+
+        if not signals:
+            return np.empty(0, dtype=np.float32), 0
+
+        combined, framerate = mix(signals, offsets, framerates, mono=True)
+        # find_loops wants a flat mono signal; mix returns (n_frames, 1)
+        return combined[:, 0], framerate
+
+    def _find_loop_markers(self) -> None:
+        """Search the mixed-down timeline for loop points and offer them."""
+        with loading_indicator(µ("Searching...")):
+            combined, framerate = self._mixdown()
+            if not len(combined):
+                logger.warning(µ("No audio to search for loop points", "log"))
+                return
+
+            candidates = find_loops(combined, framerate)
+
+        # Built outside the loading indicator - both are modal windows
+        loop_point_candidates_dialog(
+            candidates,
+            combined,
+            framerate,
+            current=self._loop_abs_bounds(),
+            on_apply=self._on_loop_candidate_applied,
+        )
+
+    def _on_loop_candidate_applied(
+        self, sender: str, loop: tuple[float, float], ud: Any
+    ) -> None:
+        self.set_loop_state(*loop)
+        self._fire_loop_changed()
+
     # === Trim markers ==================================================
 
     def get_trims(self, index: int, millis: bool) -> tuple[float, float]:
@@ -1079,35 +1153,6 @@ class add_audio_visualizer(DpgItem):
         return 10.0 if self._markers_in_ms else 0.01
 
     # === Rendering =====================================================
-
-    @staticmethod
-    def _minmax_envelope(
-        signal: np.ndarray, time: np.ndarray, n_buckets: int
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Downsample by splitting into n_buckets and keeping min+max per bucket.
-        Returns (t, y) where len == 2*n_buckets, ready to plot as a filled waveform.
-        """
-        # Clamp so we never request more buckets than samples
-        n_buckets = max(1, min(n_buckets, len(signal)))
-        trim = (len(signal) // n_buckets) * n_buckets
-        sig_buckets = signal[:trim].reshape(n_buckets, -1)
-        t_buckets = time[:trim].reshape(n_buckets, -1)
-
-        mins = sig_buckets.min(axis=1)
-        maxs = sig_buckets.max(axis=1)
-        t_mid = t_buckets.mean(axis=1)
-
-        # Interleave: for each bucket emit (t, max) then (t, min) for a
-        # continuous envelope trace
-        t_out = np.empty(2 * n_buckets)
-        y_out = np.empty(2 * n_buckets)
-        t_out[0::2] = t_mid
-        t_out[1::2] = t_mid
-        y_out[0::2] = maxs
-        y_out[1::2] = mins
-
-        return t_out, y_out
 
     def _clip_color(self, row: _Row) -> style.RGBA:
         if not row.enabled:

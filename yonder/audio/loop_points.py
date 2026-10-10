@@ -76,43 +76,6 @@ class LoopPair:
     score: float  # higher is better; only meaningful for comparing pairs of one track
 
 
-# ---------------------------------------------------------------- input
-
-
-def read_wav(path: str) -> tuple[np.ndarray, int]:
-    """Read a PCM wav file with the stdlib `wave` module.
-
-    Parameters
-    ----------
-    path : str
-        Path to an uncompressed 8, 16, 24 or 32 bit integer wav file.
-
-    Returns
-    -------
-    tuple[np.ndarray, int]
-        (mono float32 samples scaled to -1..1, sample rate in Hz). Channels are averaged.
-    """
-    with wave.open(path, "rb") as w:
-        ch, width, rate = w.getnchannels(), w.getsampwidth(), w.getframerate()
-        raw = w.readframes(
-            w.getnframes()
-        )  # raw bytes, `width` bytes per sample, channels interleaved
-
-    if width == 1:  # 8 bit wav is unsigned, centred on 128
-        x = (np.frombuffer(raw, np.uint8).astype(np.float32) - 128) / 128
-    elif (
-        width == 3
-    ):  # 24 bit: numpy has no int24, so add one zero low byte -> int32 (sample * 256)
-        b = np.frombuffer(raw, np.uint8).reshape(-1, 3)
-        x = np.pad(b, ((0, 0), (1, 0))).view("<i4")[:, 0] / 2.0**31
-    else:  # 16 / 32 bit: little-endian signed ints
-        x = np.frombuffer(raw, f"<i{width}") / 2.0 ** (8 * width - 1)
-
-    return x.reshape(-1, ch).mean(axis=1).astype(
-        np.float32
-    ), rate  # (samples, ch) -> mono
-
-
 # ---------------------------------------------------------------- steps 1-3: features and candidates
 
 
@@ -580,8 +543,9 @@ def _refine(
 def find_loops(
     x: np.ndarray,
     rate: int,
+    *,
+    candidates: int = 3,
     min_len_s: float = 5.0,
-    top: int = 3,
     context_length: float = 4.0,
     loudness_weight: float = 0.05,
     length_weight: float = 0.02,
@@ -607,10 +571,10 @@ def find_loops(
         Mono samples (see `read_wav`). Tuned for 44.1 / 48 kHz.
     rate : int
         Sample rate in Hz.
+    candidates : int
+        Number of pairs to return (neighbours of the best pair may show up too).
     min_len_s : float
         Shortest loop to consider, in seconds.
-    top : int
-        Number of pairs to return (neighbours of the best pair may show up too).
     context_length : float
         Number of frames to analyze around candidate points, in seconds.
     loudness_weight : float
@@ -697,7 +661,7 @@ def find_loops(
 
     # --- pick the best cells, then 5. refine their `end`
     pairs = []
-    best = np.argsort(score, axis=None)[::-1][:top]  # flat indices of the top scores
+    best = np.argsort(score, axis=None)[::-1][:candidates]  # flat indices of the top scores
 
     for i, j in zip(*np.unravel_index(best, score.shape)):  # flat index -> (row, col)
         if np.isfinite(score[i, j]):  # skip -inf cells (fewer valid pairs than `top`)

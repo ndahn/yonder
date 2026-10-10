@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Callable
 import math
+import numpy as np
 import pyo
 
 from yonder.types.base_types import RTPCGraphPoint
@@ -11,6 +12,7 @@ from yonder.enums import (
     CurveScaling,
 )
 from yonder.interpolation import interpolate
+from .wavesignal import to_channels
 
 
 # Lowest volume threshold in Wwise
@@ -173,3 +175,185 @@ def accumulate(base: float, val: float, accum: RtpcAccum) -> float:
         return val
 
     return base
+
+
+def _fft_resample(signal: np.ndarray, n_out: int) -> np.ndarray:
+    """Resample to ``n_out`` frames by resizing the signal's spectrum."""
+    n_in = len(signal)
+    spec = np.fft.rfft(signal, axis=0)
+
+    n_bins = n_out // 2 + 1
+    out_spec = np.zeros((n_bins,) + spec.shape[1:], dtype=spec.dtype)
+    # Zero padding interpolates, truncating both decimates and acts as the
+    # anti-alias filter - there is nothing left above the new Nyquist to fold
+    # back down.
+    n_keep = min(len(spec), n_bins)
+    out_spec[:n_keep] = spec[:n_keep]
+
+    # The bin at Nyquist is unpaired, so it contributes once where every other
+    # bin contributes twice. Whenever it changes role between the two lengths
+    # its amplitude has to be split or doubled to compensate.
+    n_common = min(n_in, n_out)
+    nyquist = n_common // 2
+    if n_common % 2 == 0 and nyquist < n_bins:
+        if n_out > n_in:
+            out_spec[nyquist] *= 0.5  # was Nyquist, now an ordinary paired bin
+        elif n_out < n_in:
+            out_spec[nyquist] *= 2.0  # was paired, now Nyquist
+
+    # irfft normalizes by the output length, so undo the length change
+    return np.fft.irfft(out_spec, n=n_out, axis=0) * (n_out / n_in)
+
+
+def resample(signal: np.ndarray, framerate: int, target_framerate: int) -> np.ndarray:
+    """Resample a signal to a different sample rate.
+
+    Works in the frequency domain: transform, resize the spectrum to the new
+    length, transform back. That is O(n log n) and band-limited in both
+    directions, which matters because the alternative available without scipy
+    - linear interpolation - filters poorly enough to dull the result audibly.
+
+    Parameters
+    ----------
+    signal : numpy.ndarray
+        Samples shaped ``(n_frames,)`` or ``(n_frames, n_channels)``.
+    framerate : int
+        Sample rate of ``signal``.
+    target_framerate : int
+        Sample rate to convert to.
+
+    Returns
+    -------
+    numpy.ndarray
+        The resampled signal, same shape bar the frame count. Returned as-is
+        when the rates already match.
+    """
+    if framerate == target_framerate or len(signal) == 0:
+        return signal
+
+    ratio = target_framerate / framerate
+    n_in = len(signal)
+    n_out = max(1, round(n_in * ratio))
+
+    # The transform treats the signal as periodic, so a clip that does not
+    # begin and end near zero rings where its end wraps onto its start. Pad
+    # both ends and cut the padding back off, putting that seam outside the
+    # audio we keep.
+    pad = min(n_in, 1024)
+    silence = np.zeros((pad,) + signal.shape[1:], dtype=signal.dtype)
+    padded = np.concatenate([silence, signal, silence])
+
+    out = _fft_resample(padded, max(1, round(len(padded) * ratio)))
+
+    start = round(pad * ratio)
+    out = out[start : start + n_out]
+    if len(out) < n_out:  # rounding slop at the tail
+        missing = np.zeros((n_out - len(out),) + out.shape[1:], dtype=out.dtype)
+        out = np.concatenate([out, missing])
+
+    return out.astype(signal.dtype, copy=False)
+
+
+def fade_edges(signal: np.ndarray, n_samples: int) -> np.ndarray:
+    """Return a copy of ``signal`` faded in and out over ``n_samples``."""
+    n_samples = min(n_samples, len(signal) // 2)
+    if n_samples <= 0:
+        return signal
+
+    ramp = np.linspace(
+        0.0, 1.0, n_samples, endpoint=False, dtype=signal.dtype
+    )[:, np.newaxis]
+
+    signal = signal.copy()  # never touch the caller's array
+    signal[:n_samples] *= ramp
+    signal[-n_samples:] *= ramp[::-1]
+    return signal
+
+
+def mix(
+    signals: list[np.ndarray],
+    offsets: list[float],
+    framerates: list[int],
+    *,
+    mono: bool = False,
+    target_framerate: int = None,
+    fade: float = 0.003,
+    normalize: bool = True,
+) -> tuple[np.ndarray, int]:
+    """Down-mix several signals onto a single timeline.
+
+    Parameters
+    ----------
+    signals : list of numpy.ndarray
+        Samples per track, shaped ``(n_frames,)`` or ``(n_frames, n_channels)``
+        and normalized to ``[-1, 1]``. Trimming is the caller's job: pass only
+        the audio that should be heard.
+    offsets : list of float
+        Where each signal starts on the timeline, in seconds. Audio placed
+        before 0 is cut off rather than shifting the mix, so that output
+        sample 0 stays pinned to timeline 0 and markers keep lining up.
+    framerates : list of int
+        Sample rate of each signal.
+    mono : bool
+        Fold the result to one channel instead of two.
+    target_framerate : int, optional
+        Rate to mix at. Defaults to the highest input rate, so no track gets
+        band-limited by a lower-rate neighbour.
+    fade : float
+        Seconds of fade applied to each signal's own start and end. Clips
+        trimmed to start or end mid-waveform click without it.
+    normalize : bool
+        Scale the result back into ``[-1, 1]`` if summing the tracks
+        overshot. Only ever attenuates, and only when it has to - dividing by
+        the track count unconditionally would make every mix quieter than the
+        last.
+
+    Returns
+    -------
+    tuple of (numpy.ndarray, int)
+        The mix, shaped ``(n_frames, 1 or 2)``, and its sample rate.
+    """
+    if not len(signals) == len(offsets) == len(framerates):
+        raise ValueError("signals, offsets and framerates must be the same length")
+
+    if target_framerate is None:
+        target_framerate = max(framerates, default=0)
+
+    channels = 1 if mono else 2
+
+    placed: list[tuple[int, np.ndarray]] = []
+    for signal, offset, framerate in zip(signals, offsets, framerates):
+        # Fold channels before resampling - halves the work for stereo -> mono
+        signal = to_channels(signal, channels)
+        # Fade before resampling, not after: a clip trimmed to start or end
+        # mid-waveform is a step discontinuity, and a band-limited resampler
+        # rings at one. Fading first means it never reaches the transform.
+        signal = fade_edges(signal, round(fade * framerate))
+        signal = resample(signal, framerate, target_framerate)
+
+        # Offsets are rounded to whole samples here and nowhere else, so the
+        # output length can never disagree with where the clips land. Rounding
+        # after resampling also keeps the two roundings from compounding.
+        start = round(offset * target_framerate)
+        if start < 0:
+            signal = signal[-start:]
+            start = 0
+
+        if len(signal):
+            placed.append((start, signal))
+
+    if not placed:
+        return np.zeros((0, channels), dtype=np.float32), target_framerate
+
+    total = max(start + len(signal) for start, signal in placed)
+    out = np.zeros((total, channels), dtype=np.float32)
+
+    for start, signal in placed:
+        out[start : start + len(signal)] += signal
+
+    if normalize:
+        peak = np.abs(out).max()
+        if peak > 1.0:
+            out /= peak
+
+    return out, target_framerate
