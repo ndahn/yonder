@@ -192,8 +192,10 @@ class loop_point_candidates_dialog(DpgItem):
 
         self._select(index)
 
-    def _on_bound_changed(self, sender: str, value: float, ud: tuple) -> None:
-        index, which = ud
+    def _on_bound_changed(
+        self, sender: str, value: float, user_data: tuple[int, str]
+    ) -> None:
+        index, which = user_data
         candidate = self._candidates[index]
 
         value = max(0.0, value)
@@ -264,8 +266,8 @@ class loop_point_candidates_dialog(DpgItem):
         with dpg.window(
             label=title,
             modal=True,
-            width=680,
-            height=420,
+            width=620,
+            height=410,
             no_saved_settings=True,
             tag=self.tag,
             on_close=self.close,
@@ -274,6 +276,7 @@ class loop_point_candidates_dialog(DpgItem):
             dpg.add_spacer(height=4)
             self._build_table()
             dpg.add_separator()
+            dpg.add_spacer(height=3)
 
             with dpg.group(horizontal=True):
                 dpg.add_button(
@@ -304,9 +307,7 @@ class loop_point_candidates_dialog(DpgItem):
                 series = dpg.add_line_series(
                     t_env.tolist(), y_env.tolist(), shaded=True, parent=xaxis
                 )
-                dpg.bind_item_theme(
-                    series, style.themes.make_series_theme(style.blue)
-                )
+                dpg.bind_item_theme(series, style.themes.make_series_theme(style.blue))
 
             # Read-only: the numeric fields in the table are the editor
             self._region = dpg.add_drag_rect(
@@ -338,8 +339,9 @@ class loop_point_candidates_dialog(DpgItem):
             header_row=True,
             policy=dpg.mvTable_SizingStretchProp,
             scrollY=True,
-            height=-60,
+            height=-40,
         ):
+            # Select
             dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=26)
             dpg.add_table_column(
                 label=µ("Loop", "table"), width_fixed=True, init_width_or_weight=50
@@ -347,15 +349,21 @@ class loop_point_candidates_dialog(DpgItem):
             dpg.add_table_column(
                 label=µ("Score", "table"), width_fixed=True, init_width_or_weight=55
             )
-            dpg.add_table_column(label=µ("Start (s)", "table"))
-            dpg.add_table_column(label=µ("End (s)", "table"))
             dpg.add_table_column(
-                label=µ("Length", "table"), width_fixed=True, init_width_or_weight=75
+                label=µ("Start (s)", "table"),
+                width_stretch=True,
+                init_width_or_weight=75,
+            )
+            dpg.add_table_column(
+                label=µ("End (s)", "table"),
+                width_stretch=True,
+                init_width_or_weight=75,
+            )
+            dpg.add_table_column(
+                label=µ("Length", "table"), width_fixed=True, init_width_or_weight=55
             )
             # Playback button
-            dpg.add_table_column(
-                label="", width_fixed=True, init_width_or_weight=26
-            )
+            dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=26)
 
             for index, candidate in enumerate(self._candidates):
                 self._build_row(index, candidate)
@@ -367,7 +375,7 @@ class loop_point_candidates_dialog(DpgItem):
             )
             dpg.add_text(candidate.label)
             dpg.add_text(
-                "-" if candidate.score is None else f"{candidate.score:.2f}",
+                "-" if candidate.score is None else f"{candidate.score:.3f}",
                 color=style.light_grey,
             )
 
@@ -375,7 +383,7 @@ class loop_point_candidates_dialog(DpgItem):
                 item = dpg.add_input_float(
                     default_value=value,
                     width=-1,
-                    step=0.0,  # the spinner buttons do not fit in a table cell
+                    step=0.01,
                     format="%.3f",
                     enabled=candidate.editable,
                     readonly=not candidate.editable,

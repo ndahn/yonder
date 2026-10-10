@@ -17,7 +17,7 @@ from yonder.audio.wavesignal import read_wav, minmax_envelope
 from yonder.audio.audiomath import mix
 from yonder.audio.loop_points import find_loops
 from yonder.gui import style, get_config
-from yonder.gui.helpers import get_sound_path
+from yonder.gui.helpers import get_sound_path, center_window
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, loading_indicator
 from yonder.gui.dialogs.file_dialog import open_file_dialog
@@ -965,16 +965,21 @@ class add_audio_visualizer(DpgItem):
                 logger.warning(µ("No audio to search for loop points", "log"))
                 return
 
-            candidates = find_loops(combined, framerate)
+            # TODO remove min_len
+            candidates = find_loops(combined, framerate, candidates=5, min_len_s=1.0)
+
+        # Give dpg a frame so that another modal dialog can open again
+        dpg.split_frame()
 
         # Built outside the loading indicator - both are modal windows
-        loop_point_candidates_dialog(
+        dlg = loop_point_candidates_dialog(
             candidates,
             combined,
             framerate,
             current=self._loop_abs_bounds(),
             on_apply=self._on_loop_candidate_applied,
         )
+        center_window(dlg.tag)
 
     def _on_loop_candidate_applied(
         self, sender: str, loop: tuple[float, float], ud: Any
@@ -1038,6 +1043,9 @@ class add_audio_visualizer(DpgItem):
         self._update_row_geometry(row)
         self._refresh_timeline()
         self._fire_trims_changed(row)
+
+    def _trim_silence(self) -> None:
+        pass
 
     # === User markers ==================================================
 
@@ -1513,12 +1521,12 @@ class add_audio_visualizer(DpgItem):
             dpg.add_separator()
             dpg.add_menu_item(
                 label=µ("Find loop points"),
-                callback=None,
+                callback=self._find_loop_markers,
                 user_data=row,
             )
             dpg.add_menu_item(
                 label=µ("Trim silence"),
-                callback=None,
+                callback=self._trim_silence,
                 user_data=row,
             )
 
@@ -1625,6 +1633,7 @@ def _demo() -> None:
     import struct
     import sys
     import tempfile
+    from yonder.gui.icons import load_icons
 
     def make_wav(name: str, seconds: float, freq: float, channels: int) -> Path:
         path = Path(tempfile.gettempdir()) / name
@@ -1668,6 +1677,7 @@ def _demo() -> None:
 
     dpg.create_context()
     style.init_themes()
+    load_icons()
 
     with dpg.window(tag="demo"):
         viz = add_audio_visualizer(
