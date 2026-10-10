@@ -28,7 +28,7 @@ class _Candidate:
     start_input: int = 0
     end_input: int = 0
     length_text: int = 0
-    preview: int = 0
+    play_stop: int = 0
 
     @property
     def length(self) -> float:
@@ -59,12 +59,6 @@ class loop_point_candidates_dialog(DpgItem):
     on_apply : callable, optional
         Fired as ``on_apply(tag, (loop_start, loop_end), user_data)`` when the
         user confirms. The dialog closes afterwards.
-    on_preview : callable, optional
-        Fired as ``on_preview(tag, (index, loop_start, loop_end), user_data)``
-        when a row's preview button is pressed. No preview buttons are shown
-        when this is None. The dialog does not own playback: use
-        ``seam_audio`` to get the audio to play and ``set_preview_playing`` to
-        feed the resulting state back into the buttons.
     current : tuple of (float, float), optional
         The loop already set, shown as a read-only first row to compare the
         proposals against.
@@ -88,7 +82,6 @@ class loop_point_candidates_dialog(DpgItem):
         framerate: int,
         *,
         on_apply: Callable[[str, tuple[float, float], Any], None] = None,
-        on_preview: Callable[[str, tuple[int, float, float], Any], None] = None,
         current: tuple[float, float] = None,
         title: str = None,
         max_points: int = 4000,
@@ -101,7 +94,6 @@ class loop_point_candidates_dialog(DpgItem):
         self._framerate = framerate
         self._duration = len(self._signal) / framerate if framerate else 0.0
         self._on_apply = on_apply
-        self._on_preview = on_preview
         self._user_data = user_data
         self._selected = 0
 
@@ -152,7 +144,7 @@ class loop_point_candidates_dialog(DpgItem):
         candidate = self._candidates[self._selected]
         return candidate.start, candidate.end
 
-    def seam_audio(
+    def _loop_preview_signal(
         self, index: int = None, lead: float = 3.0, tail: float = 3.0
     ) -> np.ndarray:
         """Audio of a loop's seam: the run-up to ``end`` spliced onto ``start``.
@@ -185,21 +177,6 @@ class loop_point_candidates_dialog(DpgItem):
         before = self._signal[at(candidate.end - lead) : at(candidate.end)]
         after = self._signal[at(candidate.start) : at(candidate.start + tail)]
         return np.concatenate([before, after])
-
-    def set_preview_playing(self, index: int = None, playing: bool = False) -> None:
-        """Swap the preview buttons between play and stop.
-
-        The dialog has no idea whether anything is playing, so whatever drives
-        playback has to say so. Call with ``playing=False`` to reset them all.
-        """
-        for i, candidate in enumerate(self._candidates):
-            if not candidate.preview:
-                continue
-
-            dpg.configure_item(
-                candidate.preview,
-                texture_tag=Icons.stop if playing and i == index else Icons.play,
-            )
 
     def close(self) -> None:
         if dpg.does_item_exist(self.tag):
@@ -238,13 +215,21 @@ class loop_point_candidates_dialog(DpgItem):
         self._select(index)
 
     def _on_preview_clicked(self, sender: str, app_data: Any, index: int) -> None:
-        if not self._on_preview:
-            return
-
+        # TODO if currently playing index == index then stop playing, otherwise switch to new track
+        playing = False
         candidate = self._candidates[index]
-        self._on_preview(
-            self.tag, (index, candidate.start, candidate.end), self._user_data
-        )
+
+        # Swap the preview buttons between play and stop
+        for i, candidate in enumerate(self._candidates):
+            if not candidate.play_stop:
+                continue
+
+            dpg.configure_item(
+                candidate.play_stop,
+                texture_tag=Icons.stop if playing and i == index else Icons.play,
+            )
+
+        # TODO start/stop playback
 
     def _on_apply_clicked(self) -> None:
         loop = self.loop_points
@@ -367,10 +352,10 @@ class loop_point_candidates_dialog(DpgItem):
             dpg.add_table_column(
                 label=µ("Length", "table"), width_fixed=True, init_width_or_weight=75
             )
-            if self._on_preview:
-                dpg.add_table_column(
-                    label="", width_fixed=True, init_width_or_weight=26
-                )
+            # Playback button
+            dpg.add_table_column(
+                label="", width_fixed=True, init_width_or_weight=26
+            )
 
             for index, candidate in enumerate(self._candidates):
                 self._build_row(index, candidate)
@@ -400,12 +385,10 @@ class loop_point_candidates_dialog(DpgItem):
                 setattr(candidate, f"{which}_input", item)
 
             candidate.length_text = dpg.add_text(self._length_label(candidate))
-
-            if self._on_preview:
-                candidate.preview = dpg.add_image_button(
-                    Icons.play,
-                    width=18,
-                    height=18,
-                    callback=self._on_preview_clicked,
-                    user_data=index,
-                )
+            candidate.play_stop = dpg.add_image_button(
+                Icons.play,
+                width=18,
+                height=18,
+                callback=self._on_preview_clicked,
+                user_data=index,
+            )
