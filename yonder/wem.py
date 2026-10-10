@@ -1,6 +1,9 @@
 from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 from pathlib import Path
+import wave
+import sounddevice
+import numpy as np
 import shutil
 import subprocess
 
@@ -12,7 +15,7 @@ warnings.filterwarnings("ignore", message="^.*find ffmpeg or avconv.*$")
 from pydub import AudioSegment, silence
 
 from yonder.hash import calc_hash
-from yonder.util import logger, get_temp_dir
+from yonder.util import logger
 
 if TYPE_CHECKING:
     from yonder import Soundbank
@@ -272,7 +275,7 @@ def wav2wem(
             )
         except subprocess.CalledProcessError as e:
             logger.error(f"Creating wwise project failed: {e.output}")
-            raise e
+            raise
 
     # Convert the wav files by passing the wsources list to wwise
     try:
@@ -290,7 +293,7 @@ def wav2wem(
         )
     except subprocess.CalledProcessError as e:
         logger.error(f"Conversion failed: {e.output}")
-        raise e
+        raise
 
     # Generated files will be stored in a Windows folder (on Windows)
     wwise_out_dir = out_dir / "Windows"
@@ -345,3 +348,57 @@ def wem2wav(
             out_files.append(None)
 
     return out_files
+
+
+def read_wav(path: Path, mono: bool = False) -> tuple[np.ndarray, int]:
+    """Read a wav file into normalized float samples.
+
+    Parameters
+    ----------
+    path : Path
+        File to read.
+    mono : bool
+        If True the returned audio data will be mono.
+
+    Returns
+    -------
+    tuple of (numpy.ndarray, int)
+        Samples shaped ``(n_frames, n_channels)`` in ``[-1, 1]``, and the
+        sample rate.
+    """
+    with wave.open(str(path), "rb") as wf:
+        n_channels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        framerate = wf.getframerate()
+        raw = wf.readframes(wf.getnframes())
+
+    if sampwidth == 1:
+        # 8 bit wav is unsigned
+        data = np.frombuffer(raw, dtype=np.uint8).astype(np.float32)
+        data = (data - 128.0) / 128.0
+    elif sampwidth == 2:
+        data = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 2.0**15
+    elif sampwidth == 3:
+        # 24 bit has no numpy dtype - widen to int32 keeping the sign
+        packed = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3)
+        widened = np.zeros((len(packed), 4), dtype=np.uint8)
+        widened[:, 1:] = packed  # shift into the high bytes so the sign carries
+        data = widened.view("<i4").ravel().astype(np.float32) / 2.0**31
+    elif sampwidth == 4:
+        data = np.frombuffer(raw, dtype="<i4").astype(np.float32) / 2.0**31
+    else:
+        raise ValueError(f"Unsupported sample width: {sampwidth * 8} bit")
+
+    data = data.reshape(-1, n_channels)
+
+    # The audio backend is limited by the soundcard's channel count. This is usually
+    # not an issue, but cutscene audio may sometimes have 8 channels.
+    max_channels = sounddevice.query_devices(kind="output")["max_output_channels"]
+    if max_channels < n_channels:
+        data = data.mean(axis=1, keepdims=True)
+        data = np.tile(data, (1, max_channels))
+
+    if mono:
+        data = data.mean(axis=1)
+
+    return data, framerate

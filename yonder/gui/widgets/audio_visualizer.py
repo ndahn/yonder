@@ -1,0 +1,1344 @@
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Any, Callable, Iterable
+from pathlib import Path
+import wave
+import numpy as np
+
+from dearpygui import dearpygui as dpg
+
+from yonder.hash import calc_hash, lookup_name, Hash
+from yonder.util import logger
+from yonder.wem import read_wav
+from yonder.gui import style
+from yonder.gui.localization import µ
+from yonder.gui.widgets.dpg_item import DpgItem
+
+
+# TODO add handler for MusicTracks
+@dataclass
+class AudioTrack:
+    """A single track on the arranger timeline.
+
+    Parameters
+    ----------
+    path : Path
+        Wav file backing the track.
+    label : str
+        Display name; defaults to the file stem.
+    offset : float
+        Where the track starts on the timeline, in ms if the arranger was
+        built with ``markers_in_ms``, else in seconds.
+    enabled : bool
+        Disabled tracks are greyed out, cannot be dragged, and are ignored
+        for timeline length and snapping.
+    """
+
+    path: Path
+    label: str = ""
+    offset: float = 0.0
+    enabled: bool = True
+
+
+@dataclass
+class _Row:
+    """Per-track runtime state. All times are in seconds."""
+
+    path: Path
+    label: str
+    offset: float = 0.0
+    enabled: bool = True
+    duration: float = 0.0
+    error: str = ""
+    mono: bool = False
+    # (t, y) envelope per half, t relative to the track start
+    envelopes: list[tuple[np.ndarray, np.ndarray]] = field(default_factory=list)
+    # dpg items, recreated on every rebuild
+    plot: int = 0
+    xaxis: int = 0
+    yaxis: int = 0
+    clip: int = 0
+    series: list[int] = field(default_factory=list)
+    mirrors: dict[str, int] = field(default_factory=dict)
+    popup: int = 0
+    popup_handlers: int = 0
+    offset_input: int = 0
+
+    @property
+    def end(self) -> float:
+        return self.offset + self.duration
+
+
+class add_audio_visualizer(DpgItem):
+    """A multi-track audio arranger.
+
+    Every track gets its own waveform row inside a linked ``subplots`` block,
+    so all rows share one time axis and one amplitude scale. Tracks are moved
+    along the timeline by grabbing their waveform and dragging it sideways;
+    they snap to the edges of the other tracks, to the markers and to zero.
+    Loop points, trims and named user markers are global to the timeline and
+    live on a thin marker strip above the rows, mirrored read-only into every
+    waveform row. Right-clicking a row opens its options menu.
+
+    There is no playback - this widget only arranges and visualizes.
+
+    Parameters
+    ----------
+    tracks : list of (Path or AudioTrack), optional
+        Initial tracks, top row first.
+    label : str
+        Text label rendered above the plots.
+    loop_markers_enabled : bool
+        Enable the global loop start/end markers.
+    loop_start : float
+        Initial loop start, relative to the begin trim.
+    loop_end : float
+        Initial loop end, relative to the begin trim. ``0.0`` means "to end".
+    on_loop_changed : callable, optional
+        Fired as ``on_loop_changed(tag, (start, end, enabled), user_data)``.
+    trim_enabled : bool
+        Enable the global begin/end trim markers.
+    begin_trim : float
+        Initial begin trim, measured from the timeline start.
+    end_trim : float
+        Initial end trim, measured from the timeline end (negative).
+    on_trims_changed : callable, optional
+        Fired as ``on_trims_changed(tag, (begin, end), user_data)``.
+    user_markers_enabled : bool
+        Enable the global named user markers.
+    user_markers : dict of (int or str) to float, optional
+        Initial marker positions keyed by ID or name.
+    on_user_markers_changed : callable, optional
+        Fired as ``on_user_markers_changed(tag, markers_dict, user_data)``.
+    on_track_moved : callable, optional
+        Fired as ``on_track_moved(tag, (index, offset), user_data)``.
+    on_track_toggled : callable, optional
+        Fired as ``on_track_toggled(tag, (index, enabled), user_data)``.
+    on_track_removed : callable, optional
+        Fired as ``on_track_removed(tag, index, user_data)``. Also decides
+        whether the row menu offers a remove entry.
+    snap_enabled : bool
+        Initial state of the snapping toggle.
+    snap_pixels : int
+        Snap radius in screen pixels, converted to time at the current zoom.
+    row_height : int
+        Pixel height of a single waveform row.
+    marker_height : int
+        Pixel height of the marker strip above the rows.
+    max_points : int
+        Maximum waveform envelope points rendered per channel.
+    markers_in_ms : bool
+        Interpret and report all marker and offset values in milliseconds.
+    width : int
+        Plot width in pixels (-1 = auto).
+    tag : int or str
+        Explicit tag; auto-generated if 0.
+    parent : int or str
+        DPG parent item.
+    user_data : any
+        Passed through to all callbacks.
+    """
+
+    # Y range of a waveform row. Fixed so rows stay comparable.
+    _Y_LIMIT = 1.05
+
+    def __init__(
+        self,
+        tracks: Iterable[Path | AudioTrack] = None,
+        *,
+        label: str = "",
+        loop_markers_enabled: bool = False,
+        loop_start: float = 0.0,
+        loop_end: float = 0.0,
+        on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
+        trim_enabled: bool = False,
+        begin_trim: float = 0.0,
+        end_trim: float = 0.0,
+        on_trims_changed: Callable[[str, tuple[float, float], Any], None] = None,
+        user_markers_enabled: bool = False,
+        user_markers: dict[Hash, float] = None,
+        on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
+        on_track_moved: Callable[[str, tuple[int, float], Any], None] = None,
+        on_track_toggled: Callable[[str, tuple[int, bool], Any], None] = None,
+        on_track_removed: Callable[[str, int, Any], None] = None,
+        snap_enabled: bool = True,
+        snap_pixels: int = 8,
+        row_height: int = 90,
+        marker_height: int = 34,
+        max_points: int = 5000,
+        markers_in_ms: bool = True,
+        width: int = -1,
+        tag: str = 0,
+        parent: str = 0,
+        user_data: Any = None,
+    ) -> None:
+        super().__init__(tag)
+
+        # Layout / construction-time settings (fixed for lifetime)
+        self._label = label
+        self._loop_markers_enabled = loop_markers_enabled
+        self._trim_enabled = trim_enabled
+        self._user_markers_enabled = user_markers_enabled
+        self._snap_pixels = snap_pixels
+        self._row_height = row_height
+        self._marker_height = marker_height
+        self._max_points = max_points
+        self._markers_in_ms = markers_in_ms
+        self._width = width
+        self._parent = parent
+
+        # Callbacks
+        self._on_loop_changed = on_loop_changed
+        self._on_trims_changed = on_trims_changed
+        self._on_user_markers_changed = on_user_markers_changed
+        self._on_track_moved = on_track_moved
+        self._on_track_toggled = on_track_toggled
+        self._on_track_removed = on_track_removed
+
+        self._user_data = user_data
+
+        # Runtime state
+        self._rows: list[_Row] = []
+        self._strip: dict[str, int] = {}  # marker items on the marker strip
+        self._axis_tags: dict[str, int] = {}
+        self._subplots: int = 0
+        self._marker_plot: int = 0
+        self._marker_axis: int = 0
+        self._snap_enabled: bool = True
+
+        # Parse user markers - resolves str keys to int hashes
+        self._user_markers: dict[int, float] = {}
+        self._user_marker_labels: dict[int, str] = {}
+        self._user_marker_colors: dict[int, style.RGBA] = {}
+
+        colorgen = style.HighContrastColorGenerator()
+        for mid, pos in (user_markers or {}).items():
+            if isinstance(mid, str):
+                marker_label = mid
+                mid = calc_hash(mid)
+            else:
+                marker_label = lookup_name(mid, f"#{mid}")
+                
+            self._user_markers[mid] = pos / 1000 if markers_in_ms else pos
+            self._user_marker_labels[mid] = marker_label
+            self._user_marker_colors[mid] = colorgen()
+
+        if markers_in_ms:
+            loop_start /= 1000
+            loop_end /= 1000
+            begin_trim /= 1000
+            end_trim /= 1000
+
+        # Loop offsets are kept relative to begin trim (offset into the
+        # trimmed region) and are the source of truth; plot widgets show the
+        # absolute positions derived from them. loop_end == 0.0 means "to end".
+        self._loop_start: float = loop_start
+        self._loop_end: float = loop_end
+        self._begin_trim: float = begin_trim
+        self._end_trim: float = -abs(end_trim)
+
+        self._setup_content(snap_enabled)
+        self.set_tracks(tracks or [])
+
+    def destroy(self) -> None:
+        self._destroy_plots()
+        self._delete_item(self._t("markers_popup"))
+
+    # === Tracks ========================================================
+
+    @property
+    def duration(self) -> float:
+        """Length of the timeline in seconds (longest enabled track end)."""
+        ends = [r.end for r in self._rows if r.enabled and not r.error]
+        return max(ends) if ends else 0.0
+
+    @property
+    def tracks(self) -> list[AudioTrack]:
+        """Current tracks, in row order."""
+        return [
+            AudioTrack(r.path, r.label, self._out(r.offset), r.enabled)
+            for r in self._rows
+        ]
+
+    def set_tracks(self, tracks: Iterable[Path | AudioTrack]) -> None:
+        """Replace all tracks and rebuild the plots."""
+        self._rows = [self._make_row(t) for t in tracks]
+        self._rebuild()
+
+    def append_track(self, track: Path | AudioTrack) -> None:
+        """Add a track as a new bottom row."""
+        self._rows.append(self._make_row(track))
+        self._rebuild()
+
+    def remove_track(self, index: int) -> None:
+        """Remove the track at ``index``."""
+        self._rows.pop(index)
+        self._rebuild()
+
+    def clear(self) -> None:
+        """Remove all tracks."""
+        self.set_tracks([])
+
+    def fit(self) -> None:
+        """Zoom the time axis to the full timeline."""
+        if not self._rows or not dpg.does_item_exist(self._rows[0].xaxis):
+            return
+
+        # All rows share one x axis, so fitting the first fits them all.
+        xaxis = self._rows[0].xaxis
+        duration = max(self.duration, 0.1)
+        padding = 0.02 * duration
+        dpg.set_axis_limits(xaxis, -padding, duration + padding)
+
+        # set_axis_limits locks the axis - release it once the range landed,
+        # otherwise the user can no longer zoom or pan.
+        dpg.set_frame_callback(
+            dpg.get_frame_count() + 2, lambda: self._unlock_axis(xaxis)
+        )
+
+    def get_track_offsets(self, millis: bool) -> list[float]:
+        """Return every track's timeline start, in row order."""
+        factor = 1000 if millis else 1
+        return [r.offset * factor for r in self._rows]
+
+    def set_track_offset(self, index: int, offset: float) -> None:
+        """Move a track to a timeline position (snapping is not applied)."""
+        row = self._rows[index]
+        row.offset = max(0.0, self._into(offset))
+        self._update_row_geometry(row)
+        self._refresh_timeline()
+
+    def set_track_enabled(self, index: int, enabled: bool) -> None:
+        """Enable or disable a track."""
+        row = self._rows[index]
+        if row.enabled == enabled:
+            return
+
+        row.enabled = enabled
+        self._apply_row_enabled(row)
+        self._refresh_timeline()
+
+    def is_snap_enabled(self) -> bool:
+        return self._snap_enabled
+
+    def set_snap_enabled(self, enabled: bool) -> None:
+        self._snap_enabled = enabled
+
+    def show_markers_popup(self, pos: tuple[float, float] = None) -> None:
+        if pos is not None:
+            dpg.set_item_pos(self._t("markers_popup"), pos=pos)
+
+        dpg.show_item(self._t("markers_popup"))
+
+    def _make_row(self, track: Path | AudioTrack) -> _Row:
+        if not isinstance(track, AudioTrack):
+            track = AudioTrack(Path(track))
+
+        path = Path(track.path) if track.path else None
+        row = _Row(
+            path=path,
+            label=track.label or (path.stem if path else µ("<empty>")),
+            offset=max(0.0, self._into(track.offset)),
+            enabled=track.enabled,
+        )
+        self._load_row(row)
+        return row
+
+    def _load_row(self, row: _Row) -> None:
+        """Read the wav file and compute the per-channel envelopes."""
+        if not row.path or not row.path.is_file():
+            row.error = µ("Audio {file} not found", "msg").format(file=row.path)
+            logger.error(row.error)
+            return
+
+        try:
+            samples, framerate = read_wav(row.path)
+        except (wave.Error, ValueError, OSError) as e:
+            row.error = µ("Error reading file: {exc}", "log").format(exc=e)
+            logger.error(row.error, exc_info=e)
+            return
+
+        n_frames = len(samples)
+        row.duration = n_frames / framerate if framerate else 0.0
+        time = np.linspace(0, row.duration, num=n_frames)
+
+        # Channels are stacked into one row: first above the axis, second
+        # below. Mono is mirrored so it fills the row like a stereo track.
+        row.mono = samples.shape[1] == 1
+        channels = (0, 0) if row.mono else (0, 1)
+        factors = (1, -1)
+        for i, channel in enumerate(channels):
+            t_env, y_env = self._minmax_envelope(
+                samples[:, channel], time, self._max_points // 2
+            )
+            row.envelopes.append((t_env, factors[i] * np.abs(y_env)))
+
+    # === Dragging & snapping ===========================================
+
+    def _snap_targets(self, exclude: _Row) -> list[float]:
+        """Positions a dragged track edge is allowed to latch onto."""
+        targets = [0.0]
+
+        for row in self._rows:
+            if row is exclude or not row.enabled or row.error:
+                continue
+            targets.append(row.offset)
+            targets.append(row.end)
+
+        if self._loop_markers_enabled:
+            targets.extend(self._loop_abs_bounds())
+
+        if self._trim_enabled:
+            targets.append(self._begin_trim)
+            targets.append(self.duration + self._end_trim)
+
+        if self._user_markers_enabled:
+            targets.extend(self._user_markers.values())
+
+        return targets
+
+    def _snap_threshold(self) -> float:
+        """Snap radius in seconds, derived from the current zoom level."""
+        if not self._rows or not dpg.does_item_exist(self._rows[0].xaxis):
+            return 0.0
+
+        xmin, xmax = dpg.get_axis_limits(self._rows[0].xaxis)
+        pixels = dpg.get_item_rect_size(self._rows[0].plot)[0]
+        if pixels <= 0:
+            return 0.0
+
+        return self._snap_pixels * (xmax - xmin) / pixels
+
+    def _snap(self, row: _Row, start: float) -> float:
+        """Snap either edge of ``row`` to the nearest target within reach."""
+        if not self._snap_enabled:
+            return start
+
+        threshold = self._snap_threshold()
+        if threshold <= 0.0:
+            return start
+
+        targets = self._snap_targets(row)
+        best = None
+        for anchor in (start, start + row.duration):
+            for target in targets:
+                delta = target - anchor
+                if abs(delta) <= threshold and (best is None or abs(delta) < abs(best)):
+                    best = delta
+
+        return start if best is None else max(0.0, start + best)
+
+    def _on_clip_dragged(self, sender: str, app_data: Any, row: _Row) -> None:
+        # The clip rect doubles as the grab handle. Grabbing an edge resizes it
+        # instead of moving it, so take whichever edge travelled furthest and
+        # turn that into a move of the whole clip.
+        xmin, _, xmax, _ = dpg.get_value(sender)
+        d_start = xmin - row.offset
+        d_end = xmax - row.end
+        delta = d_start if abs(d_start) >= abs(d_end) else d_end
+
+        row.offset = self._snap(row, max(0.0, row.offset + delta))
+
+        self._update_row_geometry(row)
+        self._refresh_timeline()
+        self._fire_track_moved(row)
+
+    def _fire_track_moved(self, row: _Row) -> None:
+        if self._on_track_moved:
+            self._on_track_moved(
+                self._tag,
+                (self._rows.index(row), self._out(row.offset)),
+                self._user_data,
+            )
+
+    def _update_row_geometry(self, row: _Row) -> None:
+        """Push a row's offset into its clip rect and waveform series."""
+        if not dpg.does_item_exist(row.clip):
+            return
+
+        dpg.set_value(
+            row.clip, (row.offset, -self._Y_LIMIT, row.end, self._Y_LIMIT)
+        )
+
+        for series, (t_env, y_env) in zip(row.series, row.envelopes):
+            dpg.set_value(series, [(t_env + row.offset).tolist(), y_env.tolist()])
+
+        if dpg.does_item_exist(row.offset_input):
+            dpg.set_value(row.offset_input, self._out(row.offset))
+
+    def _refresh_timeline(self) -> None:
+        """Re-clamp the view and the markers after the timeline length moved."""
+        duration = self.duration
+        padding = max(0.05 * duration, 0.1)
+
+        for row in self._rows:
+            if dpg.does_item_exist(row.xaxis):
+                dpg.set_axis_limits_constraints(
+                    row.xaxis, -padding, duration + padding
+                )
+
+        if dpg.does_item_exist(self._marker_axis):
+            dpg.set_axis_limits_constraints(
+                self._marker_axis, -padding, duration + padding
+            )
+
+        self._sync_markers()
+
+    @staticmethod
+    def _unlock_axis(axis: int) -> None:
+        if dpg.does_item_exist(axis):
+            dpg.set_axis_limits_auto(axis)
+
+    # === Row menu ======================================================
+
+    def _on_row_enabled_toggled(self, sender: str, value: bool, row: _Row) -> None:
+        row.enabled = value
+        self._apply_row_enabled(row)
+        self._refresh_timeline()
+
+        if self._on_track_toggled:
+            self._on_track_toggled(
+                self._tag, (self._rows.index(row), value), self._user_data
+            )
+
+    def _apply_row_enabled(self, row: _Row) -> None:
+        if not dpg.does_item_exist(row.plot):
+            return
+
+        suffix = "" if row.enabled else f"  ({µ('disabled', 'track')})"
+        dpg.configure_item(row.plot, label=f"{row.label}{suffix}")
+        dpg.configure_item(
+            row.clip,
+            no_inputs=not row.enabled,
+            color=self._clip_color(row),
+        )
+        for i, series in enumerate(row.series):
+            dpg.bind_item_theme(series, self._series_theme(row, i))
+
+    def _on_row_offset_input(self, sender: str, value: float, row: _Row) -> None:
+        row.offset = max(0.0, self._into(value))
+        self._update_row_geometry(row)
+        self._refresh_timeline()
+        self._fire_track_moved(row)
+
+    def _on_row_offset_reset(self, sender: str, app_data: Any, row: _Row) -> None:
+        row.offset = 0.0
+        self._update_row_geometry(row)
+        self._refresh_timeline()
+        self._fire_track_moved(row)
+
+    def _on_row_remove(self, sender: str, app_data: Any, row: _Row) -> None:
+        index = self._rows.index(row)
+        dpg.hide_item(row.popup)
+        self.remove_track(index)
+
+        if self._on_track_removed:
+            self._on_track_removed(self._tag, index, self._user_data)
+
+    # === Loop markers ==================================================
+
+    def get_loop_state(self, millis: bool) -> tuple[float, float, bool]:
+        """Return ``(loop_start, loop_end, enabled)`` relative to begin trim."""
+        if not self._loop_markers_enabled:
+            return (0.0, 0.0, False)
+
+        factor = 1000 if millis else 1
+        return (self._loop_start * factor, self._loop_end * factor, True)
+
+    def set_loop_state(self, loop_start: float, loop_end: float) -> None:
+        """Set loop positions (relative to begin trim, seconds)."""
+        if not self._loop_markers_enabled:
+            raise RuntimeError("loop_markers_enabled is False")
+
+        self._loop_start = loop_start
+        self._loop_end = loop_end
+        self._sync_markers()
+
+    def _loop_abs_bounds(self) -> tuple[float, float]:
+        """Absolute loop ``(start, end)`` derived from the relative offsets.
+
+        ``loop_end == 0.0`` is the "unset" sentinel and maps to the timeline end.
+        """
+        start = self._begin_trim + self._loop_start
+        end = (
+            self.duration
+            if self._loop_end == 0.0
+            else self._begin_trim + self._loop_end
+        )
+        return start, end
+
+    def _fire_loop_changed(self) -> None:
+        if self._on_loop_changed:
+            self._on_loop_changed(self._tag, self.get_loop_state(True), self._user_data)
+
+    def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
+        # Popup fields are absolute; store the offset from begin trim.
+        rel = self._get_valid_pos(pos, False) - self._begin_trim
+        if loop_marker == "loop_start":
+            self._loop_start = max(0.0, rel)
+        else:
+            self._loop_end = max(0.001, rel)  # keep clear of the 0.0 sentinel
+
+        self._sync_markers()
+        self._fire_loop_changed()
+
+    def _on_loop_marker_moved(self, sender: str) -> None:
+        # Drag lines are absolute; store positions as offsets from begin trim.
+        pos = dpg.get_value(sender)
+        if sender == self._strip.get("loop_start"):
+            self._loop_start = max(0.0, pos - self._begin_trim)
+        else:
+            self._loop_end = max(0.001, pos - self._begin_trim)
+
+        self._sync_markers()
+        self._fire_loop_changed()
+
+    # === Trim markers ==================================================
+
+    def get_trims(self, millis: bool) -> tuple[float, float]:
+        """Return ``(begin_trim, end_trim)``; end trim is measured from the end."""
+        if not self._trim_enabled:
+            return (0.0, 0.0)
+
+        factor = 1000 if millis else 1
+        return (self._begin_trim * factor, self._end_trim * factor)
+
+    def set_trims(self, begin_trim: float, end_trim: float) -> None:
+        """Set trim marker positions programmatically (seconds)."""
+        if not self._trim_enabled:
+            raise RuntimeError("trim_enabled is False")
+
+        if end_trim > 0.0:
+            raise ValueError("end_trim must be <0")
+
+        self._begin_trim = begin_trim
+        self._end_trim = end_trim
+        self._sync_markers()
+
+    def set_trim_marker_pos(self, sender: str, pos: float, trim_marker: str) -> None:
+        """Set a single trim marker; also usable as a DPG callback."""
+        if trim_marker == "begin_trim":
+            self._begin_trim = self._get_valid_pos(pos, False)
+        else:
+            if pos == 0.0:
+                pos = -0.01
+            self._end_trim = -abs(pos)
+
+        self._sync_markers()
+        self._fire_trims_changed()
+
+    def _fire_trims_changed(self) -> None:
+        if self._on_trims_changed:
+            self._on_trims_changed(self._tag, self.get_trims(True), self._user_data)
+
+    def _on_trim_marker_moved(self, sender: str) -> None:
+        value = dpg.get_value(sender)
+        if sender == self._strip.get("begin_trim"):
+            self._begin_trim = self._get_valid_pos(value[2], False)
+        else:
+            self._end_trim = min(-0.001, value[0] - self.duration)
+
+        self._sync_markers()
+        self._fire_trims_changed()
+
+    # === User markers ==================================================
+
+    def get_user_markers(self, millis: bool) -> dict[int, float]:
+        """Return all user marker positions ``{id: pos}``."""
+        if millis:
+            return {k: v * 1000 for k, v in self._user_markers.items()}
+
+        return dict(self._user_markers)
+
+    def get_user_marker_pos(self, mid: Hash, default: float = 0.0) -> float:
+        """Return a single marker position by ID or name, in seconds."""
+        if isinstance(mid, str):
+            mid = calc_hash(mid)
+
+        return self._user_markers.get(mid, default)
+
+    def _fire_user_markers_changed(self) -> None:
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(
+                self._tag, self.get_user_markers(True), self._user_data
+            )
+
+    def _set_user_marker_pos(self, sender: str, pos: float, mid: int) -> None:
+        self._user_markers[mid] = self._get_valid_pos(pos)
+        self._sync_markers()
+        self._fire_user_markers_changed()
+
+    def _on_user_marker_moved(self, sender: str, app_data: Any, mid: int) -> None:
+        self._user_markers[mid] = self._get_valid_pos(dpg.get_value(sender))
+        self._sync_markers()
+        self._fire_user_markers_changed()
+
+    # === Marker plumbing ===============================================
+
+    def _get_valid_pos(
+        self, pos: float, use_trims: bool = True, force_from_end: bool = False
+    ) -> float:
+        """Constrain a position to the timeline, trims included if desired.
+
+        Parameters
+        ----------
+        pos : float
+            The position to constrain in seconds.
+        use_trims : bool, optional
+            Whether to take the current trims into account.
+        force_from_end : bool, optional
+            If true, the input position is always measured from the end no
+            matter its sign.
+
+        Returns
+        -------
+        float
+            A valid position on the timeline.
+        """
+        duration = self.duration
+
+        if force_from_end:
+            pos = duration - abs(pos)
+        elif pos < 0:
+            pos = duration + pos
+
+        if self._trim_enabled and use_trims:
+            min_pos = max(0.0, min(self._begin_trim, duration))
+            max_pos = min(duration, max(0.0, duration + self._end_trim))
+        else:
+            min_pos = 0.0
+            max_pos = duration
+
+        return max(min_pos, min(pos, max_pos))
+
+    def _marker_items(self, key: str) -> list[int]:
+        """The strip item plus the read-only mirror in every waveform row."""
+        items = [self._strip.get(key, 0)]
+        items.extend(row.mirrors.get(key, 0) for row in self._rows)
+        return [i for i in items if i and dpg.does_item_exist(i)]
+
+    def _set_marker_line(self, key: str, pos: float) -> None:
+        for item in self._marker_items(key):
+            dpg.set_value(item, pos)
+
+        tag = self._axis_tags.get(key)
+        if tag and dpg.does_item_exist(tag):
+            dpg.set_value(tag, pos)
+
+    def _set_marker_rect(self, key: str, x0: float, x1: float) -> None:
+        value = (x0, -self._Y_LIMIT, x1, self._Y_LIMIT)
+        for item in self._marker_items(key):
+            dpg.set_value(item, value)
+
+    def _sync_markers(self) -> None:
+        """Push the authoritative marker state into every plot item."""
+        duration = self.duration
+
+        if self._loop_markers_enabled:
+            start, end = self._loop_abs_bounds()
+            start_viz = min(self._get_valid_pos(start), end)
+            self._set_marker_line("loop_start", start_viz)
+            self._set_marker_line("loop_end", end)
+            self._set_value(self._t("loop_start_value"), start)
+            self._set_value(self._t("loop_end_value"), end)
+
+        if self._trim_enabled:
+            begin = self._get_valid_pos(self._begin_trim, False)
+            end = self._get_valid_pos(self._end_trim, False, True)
+            begin = min(begin, end)
+            # The rects shade the trimmed-away regions, so they reach outwards
+            self._set_marker_rect("begin_trim", -max(1000.0, duration), begin)
+            self._set_marker_rect("end_trim", end, max(1000.0, duration * 2))
+            self._set_value(self._axis_tags.get("begin_trim"), begin)
+            self._set_value(self._axis_tags.get("end_trim"), end)
+            self._set_value(self._t("begin_trim_value"), self._begin_trim)
+            self._set_value(self._t("end_trim_value"), self._end_trim)
+
+        if self._user_markers_enabled:
+            for mid in self._user_markers:
+                pos = self._get_valid_pos(self._user_markers[mid])
+                self._user_markers[mid] = pos
+                self._set_marker_line(f"m{mid}", pos)
+                self._set_value(self._t(f"marker_{mid}_value"), pos)
+
+    @staticmethod
+    def _set_value(item: str | int, value: Any) -> None:
+        if item and dpg.does_item_exist(item):
+            dpg.set_value(item, value)
+
+    @staticmethod
+    def _drop(item: int) -> None:
+        """Delete a uuid-tagged item. Unlike ``_delete_item`` it has no alias."""
+        if item and dpg.does_item_exist(item):
+            dpg.delete_item(item)
+
+    def _into(self, value: float) -> float:
+        """Convert a public value into internal seconds."""
+        return value / 1000 if self._markers_in_ms else value
+
+    def _out(self, value: float) -> float:
+        """Convert internal seconds into a public value."""
+        return value * 1000 if self._markers_in_ms else value
+
+    # === Rendering =====================================================
+
+    @staticmethod
+    def _minmax_envelope(
+        signal: np.ndarray, time: np.ndarray, n_buckets: int
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Downsample by splitting into n_buckets and keeping min+max per bucket.
+        Returns (t, y) where len == 2*n_buckets, ready to plot as a filled waveform.
+        """
+        # Clamp so we never request more buckets than samples
+        n_buckets = max(1, min(n_buckets, len(signal)))
+        trim = (len(signal) // n_buckets) * n_buckets
+        sig_buckets = signal[:trim].reshape(n_buckets, -1)
+        t_buckets = time[:trim].reshape(n_buckets, -1)
+
+        mins = sig_buckets.min(axis=1)
+        maxs = sig_buckets.max(axis=1)
+        t_mid = t_buckets.mean(axis=1)
+
+        # Interleave: for each bucket emit (t, max) then (t, min) for a
+        # continuous envelope trace
+        t_out = np.empty(2 * n_buckets)
+        y_out = np.empty(2 * n_buckets)
+        t_out[0::2] = t_mid
+        t_out[1::2] = t_mid
+        y_out[0::2] = maxs
+        y_out[1::2] = mins
+
+        return t_out, y_out
+
+    def _clip_color(self, row: _Row) -> style.RGBA:
+        if not row.enabled:
+            return style.dark_grey.but(a=110)
+        return style.light_blue.but(a=70)
+
+    def _series_theme(self, row: _Row, channel: int) -> int:
+        if not row.enabled:
+            return style.themes.make_series_theme(style.light_grey.but(a=110))
+
+        color = style.blue if row.mono or channel == 0 else style.orange
+        return style.themes.make_series_theme(color)
+
+    def _destroy_plots(self) -> None:
+        for row in self._rows:
+            self._drop(row.popup)
+            self._drop(row.popup_handlers)
+            row.plot = row.xaxis = row.yaxis = row.clip = 0
+            row.popup = row.popup_handlers = row.offset_input = 0
+            row.series = []
+            row.mirrors = {}
+
+        self._drop(self._subplots)
+        self._subplots = 0
+        self._marker_plot = 0
+        self._marker_axis = 0
+        self._strip.clear()
+        self._axis_tags.clear()
+
+    def _rebuild(self) -> None:
+        """Recreate the subplots block. DPG cannot resize it in place."""
+        self._destroy_plots()
+
+        errors = [r.error for r in self._rows if r.error]
+        dpg.configure_item(
+            self._t("errors"),
+            default_value="\n".join(errors),
+            show=bool(errors),
+        )
+
+        playable = [r for r in self._rows if not r.error]
+        if not playable:
+            dpg.hide_item(self._t("plot_group"))
+            return
+
+        dpg.show_item(self._t("plot_group"))
+
+        # The marker strip is just another subplot row, sized via the ratios so
+        # the drag tools on it stay grabbable.
+        n_rows = len(playable) + 1
+        marker_ratio = self._marker_height / self._row_height
+        height = self._marker_height + len(playable) * self._row_height
+
+        with dpg.subplots(
+            n_rows,
+            1,
+            link_all_x=True,
+            link_all_y=True,
+            row_ratios=[marker_ratio] + [1.0] * len(playable),
+            width=self._width,
+            height=height,
+            no_resize=True,
+            no_menus=True,
+            no_title=True,
+            parent=self._t("plot_group"),
+        ) as self._subplots:
+            self._build_marker_strip()
+            for i, row in enumerate(playable):
+                self._build_row(row, is_last=i == len(playable) - 1)
+
+        # Popups are windows, so they have to be built outside the subplots
+        for row in playable:
+            self._build_row_menu(row)
+
+        for row in playable:
+            dpg.set_axis_limits(row.yaxis, -self._Y_LIMIT, self._Y_LIMIT)
+            self._update_row_geometry(row)
+            self._apply_row_enabled(row)
+
+        self._refresh_timeline()
+        self.fit()
+
+    def _build_marker_strip(self) -> None:
+        with dpg.plot(
+            no_title=True,
+            no_menus=True,
+            no_mouse_pos=True,
+            no_frame=True,
+            no_box_select=True,
+        ) as self._marker_plot:
+            self._marker_axis = dpg.add_plot_axis(
+                dpg.mvXAxis,
+                label=µ("markers"),
+                opposite=True,
+                no_label=True,
+                no_highlight=True,
+                no_tick_labels=True,
+                no_tick_marks=True,
+                no_initial_fit=True,
+            )
+            # Not hidden with show=False - a hidden axis loses its flags and
+            # renders default tick labels into the strip.
+            dpg.add_plot_axis(
+                dpg.mvYAxis,
+                no_label=True,
+                no_highlight=True,
+                no_tick_labels=True,
+                no_tick_marks=True,
+                no_gridlines=True,
+            )
+
+            if self._loop_markers_enabled:
+                start, end = self._loop_abs_bounds()
+                self._axis_tags["loop_start"] = dpg.add_axis_tag(
+                    label=µ("L0", "marker"),
+                    default_value=start,
+                    color=style.green,
+                    parent=self._marker_axis,
+                )
+                self._axis_tags["loop_end"] = dpg.add_axis_tag(
+                    label=µ("L1", "marker"),
+                    default_value=end,
+                    color=style.green,
+                    parent=self._marker_axis,
+                )
+                self._strip["loop_start"] = dpg.add_drag_line(
+                    label=µ("loop_start", "marker"),
+                    color=style.green,
+                    default_value=start,
+                    no_fit=True,
+                    callback=self._on_loop_marker_moved,
+                )
+                self._strip["loop_end"] = dpg.add_drag_line(
+                    label=µ("loop_end", "marker"),
+                    color=style.green,
+                    default_value=end,
+                    no_fit=True,
+                    callback=self._on_loop_marker_moved,
+                )
+
+            if self._trim_enabled:
+                self._axis_tags["begin_trim"] = dpg.add_axis_tag(
+                    label=µ("T0", "marker"),
+                    default_value=self._begin_trim,
+                    color=style.red,
+                    parent=self._marker_axis,
+                )
+                self._axis_tags["end_trim"] = dpg.add_axis_tag(
+                    label=µ("T1", "marker"),
+                    default_value=self.duration + self._end_trim,
+                    color=style.red,
+                    parent=self._marker_axis,
+                )
+                self._strip["begin_trim"] = dpg.add_drag_rect(
+                    label=µ("begin_trim", "marker"),
+                    color=style.red,
+                    no_fit=True,
+                    no_cursor=True,
+                    callback=self._on_trim_marker_moved,
+                )
+                self._strip["end_trim"] = dpg.add_drag_rect(
+                    label=µ("end_trim", "marker"),
+                    color=style.red,
+                    no_fit=True,
+                    no_cursor=True,
+                    callback=self._on_trim_marker_moved,
+                )
+
+            if self._user_markers_enabled:
+                for i, (mid, pos) in enumerate(self._user_markers.items()):
+                    color = self._user_marker_colors[mid]
+                    marker_label = self._user_marker_labels[mid]
+                    self._axis_tags[f"m{mid}"] = dpg.add_axis_tag(
+                        label=µ("m{idx}", "marker").format(idx=i),
+                        default_value=pos,
+                        color=color,
+                        parent=self._marker_axis,
+                    )
+                    self._strip[f"m{mid}"] = dpg.add_drag_line(
+                        label=marker_label,
+                        color=color,
+                        default_value=pos,
+                        no_fit=True,
+                        callback=self._on_user_marker_moved,
+                        user_data=mid,
+                    )
+
+        dpg.bind_item_theme(self._marker_plot, style.themes.player_plot)
+
+    def _build_row(self, row: _Row, *, is_last: bool) -> None:
+        with dpg.plot(
+            label=row.label,
+            no_menus=True,
+            no_mouse_pos=True,
+            no_box_select=True,
+            # Left drag moves clips, so panning goes to the middle button
+            pan_button=dpg.mvMouseButton_Middle,
+        ) as row.plot:
+            row.xaxis = dpg.add_plot_axis(
+                dpg.mvXAxis,
+                label=µ("time"),
+                no_label=True,
+                no_highlight=True,
+                no_tick_labels=not is_last,
+                no_tick_marks=not is_last,
+            )
+            row.yaxis = dpg.add_plot_axis(
+                dpg.mvYAxis,
+                label=µ("amp"),
+                no_label=True,
+                no_highlight=True,
+                no_tick_labels=True,
+                no_tick_marks=True,
+            )
+
+            for i, (t_env, y_env) in enumerate(row.envelopes):
+                series = dpg.add_line_series(
+                    (t_env + row.offset).tolist(),
+                    y_env.tolist(),
+                    shaded=True,
+                    no_clip=True,
+                    label=f"Ch{i}",
+                    parent=row.xaxis,
+                )
+                row.series.append(series)
+
+            # Read-only mirrors of the global markers
+            self._build_row_mirrors(row)
+
+            # The clip rect is the grab handle for moving the track. It is
+            # added last so it sits on top of the mirrored markers.
+            row.clip = dpg.add_drag_rect(
+                label=row.label,
+                color=self._clip_color(row),
+                default_value=(row.offset, -self._Y_LIMIT, row.end, self._Y_LIMIT),
+                no_fit=True,
+                no_cursor=True,
+                callback=self._on_clip_dragged,
+                user_data=row,
+            )
+
+        dpg.bind_item_theme(row.plot, style.themes.player_plot)
+
+    def _build_row_mirrors(self, row: _Row) -> None:
+        if self._loop_markers_enabled:
+            for key, color in (
+                ("loop_start", style.green),
+                ("loop_end", style.green),
+            ):
+                row.mirrors[key] = dpg.add_drag_line(
+                    color=color.but(a=160),
+                    show_label=False,
+                    no_inputs=True,
+                    no_cursor=True,
+                    no_fit=True,
+                )
+
+        if self._trim_enabled:
+            for key in ("begin_trim", "end_trim"):
+                row.mirrors[key] = dpg.add_drag_rect(
+                    color=style.red.but(a=120),
+                    no_inputs=True,
+                    no_cursor=True,
+                    no_fit=True,
+                )
+
+        if self._user_markers_enabled:
+            for mid in self._user_markers:
+                row.mirrors[f"m{mid}"] = dpg.add_drag_line(
+                    color=self._user_marker_colors[mid].but(a=160),
+                    show_label=False,
+                    no_inputs=True,
+                    no_cursor=True,
+                    no_fit=True,
+                )
+
+    def _build_row_menu(self, row: _Row) -> None:
+        """Right-click menu for a waveform row.
+
+        Hand-rolled rather than ``dpg.popup`` so both the window and the
+        handler registry can be deleted again on the next rebuild.
+        """
+        row.popup = dpg.generate_uuid()
+
+        with dpg.item_handler_registry() as row.popup_handlers:
+            dpg.add_item_clicked_handler(
+                dpg.mvMouseButton_Right,
+                callback=lambda s, a, u: dpg.configure_item(u, show=True),
+                user_data=row.popup,
+            )
+        dpg.bind_item_handler_registry(row.plot, row.popup_handlers)
+
+        dpg.add_window(
+            popup=True,
+            show=False,
+            autosize=True,
+            no_move=True,
+            no_title_bar=True,
+            no_resize=True,
+            tag=row.popup,
+        )
+
+        dpg.add_text(row.label, color=style.light_blue, parent=row.popup)
+        dpg.add_text(
+            µ("{dur:.3f} s").format(dur=row.duration),
+            color=style.light_grey,
+            parent=row.popup,
+        )
+        dpg.add_separator(parent=row.popup)
+
+        dpg.add_checkbox(
+            label=µ("Enabled", "track"),
+            default_value=row.enabled,
+            callback=self._on_row_enabled_toggled,
+            user_data=row,
+            parent=row.popup,
+        )
+        row.offset_input = dpg.add_input_float(
+            label=µ("Offset (ms)" if self._markers_in_ms else "Offset (s)", "track"),
+            default_value=self._out(row.offset),
+            min_value=0.0,
+            min_clamped=True,
+            step=10 if self._markers_in_ms else 0.01,
+            step_fast=100 if self._markers_in_ms else 0.1,
+            width=130,
+            callback=self._on_row_offset_input,
+            user_data=row,
+            parent=row.popup,
+        )
+        dpg.add_button(
+            label=µ("Reset offset", "button"),
+            callback=self._on_row_offset_reset,
+            user_data=row,
+            parent=row.popup,
+        )
+
+        if self._on_track_removed:
+            dpg.add_separator(parent=row.popup)
+            dpg.add_button(
+                label=µ("Remove track", "button"),
+                callback=self._on_row_remove,
+                user_data=row,
+                parent=row.popup,
+            )
+
+    # === Build =========================================================
+
+    def _setup_content(self, snap_enabled: bool) -> None:
+        with dpg.group(tag=self._tag, parent=self._parent):
+            if self._label:
+                dpg.add_text(self._label, color=style.pink.mix(style.white))
+
+            dpg.add_text(
+                "",
+                color=style.yellow,
+                show=False,
+                tag=self._t("errors"),
+            )
+
+            # Rebuilt wholesale whenever the track list changes
+            dpg.add_group(tag=self._t("plot_group"))
+
+        self._build_markers_popup()
+
+    def _build_markers_popup(self) -> None:
+        with dpg.window(
+            popup=True,
+            no_move=True,
+            no_title_bar=True,
+            no_resize=True,
+            tag=self._t("markers_popup"),
+            show=False,
+        ):
+            if self._loop_markers_enabled:
+                start, end = self._loop_abs_bounds()
+                dpg.add_input_float(
+                    label=µ("loop_start", "marker"),
+                    default_value=start,
+                    width=130,
+                    callback=self._set_loop_marker_pos,
+                    user_data="loop_start",
+                    tag=self._t("loop_start_value"),
+                )
+                dpg.add_input_float(
+                    label=µ("loop_end", "marker"),
+                    default_value=end,
+                    width=130,
+                    callback=self._set_loop_marker_pos,
+                    user_data="loop_end",
+                    tag=self._t("loop_end_value"),
+                )
+
+            if self._trim_enabled:
+                if self._loop_markers_enabled:
+                    dpg.add_separator()
+                dpg.add_input_float(
+                    label=µ("begin_trim", "marker"),
+                    default_value=self._begin_trim,
+                    min_value=0.0,
+                    min_clamped=True,
+                    width=130,
+                    callback=self.set_trim_marker_pos,
+                    user_data="begin_trim",
+                    tag=self._t("begin_trim_value"),
+                )
+                dpg.add_input_float(
+                    label=µ("end_trim", "marker"),
+                    default_value=self._end_trim,
+                    max_value=0.0,
+                    max_clamped=True,
+                    width=130,
+                    callback=self.set_trim_marker_pos,
+                    user_data="end_trim",
+                    tag=self._t("end_trim_value"),
+                )
+
+            if self._user_markers_enabled:
+                if self._loop_markers_enabled or self._trim_enabled:
+                    dpg.add_separator()
+                # TODO Make this a widget table instead
+                for mid, pos in self._user_markers.items():
+                    dpg.add_input_float(
+                        label=self._user_marker_labels[mid],
+                        default_value=pos,
+                        width=130,
+                        callback=self._set_user_marker_pos,
+                        user_data=mid,
+                        tag=self._t(f"marker_{mid}_value"),
+                    )
+
+
+# ===========================================================================
+
+
+def _demo() -> None:
+    """Run the arranger standalone.
+
+    ``python -m yonder.gui.widgets.audio_visualizer [wav ...]``
+
+    Without arguments a few throwaway wavs are synthesized into the temp dir.
+    """
+    import math
+    import struct
+    import sys
+    import tempfile
+
+    def make_wav(name: str, seconds: float, freq: float, channels: int) -> Path:
+        path = Path(tempfile.gettempdir()) / name
+        rate = 22050
+        n = int(rate * seconds)
+        frames = bytearray()
+        for i in range(n):
+            env = math.sin(math.pi * i / n) ** 2  # fade in/out
+            value = int(28000 * env * math.sin(2 * math.pi * freq * i / rate))
+            frames += struct.pack("<h", value) * channels
+
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(channels)
+            wf.setsampwidth(2)
+            wf.setframerate(rate)
+            wf.writeframes(bytes(frames))
+
+        return path
+
+    if len(sys.argv) > 1:
+        tracks = [
+            AudioTrack(Path(p), offset=i * 1000.0)
+            for i, p in enumerate(sys.argv[1:])
+        ]
+    else:
+        tracks = [
+            AudioTrack(make_wav("_yonder_demo_a.wav", 3.0, 220.0, 2)),
+            AudioTrack(make_wav("_yonder_demo_b.wav", 1.8, 330.0, 1), offset=1500.0),
+            AudioTrack(make_wav("_yonder_demo_c.wav", 2.4, 440.0, 2), offset=3000.0),
+        ]
+
+    def report(what: str) -> Callable:
+        return lambda tag, data, ud: print(f"{what}: {data}")
+
+    dpg.create_context()
+    style.init_themes()
+
+    with dpg.window(tag="demo"):
+        viz = add_audio_visualizer(
+            tracks,
+            label="Audio arranger",
+            loop_markers_enabled=True,
+            loop_start=500.0,
+            loop_end=2500.0,
+            on_loop_changed=report("loop"),
+            trim_enabled=True,
+            begin_trim=200.0,
+            end_trim=-300.0,
+            on_trims_changed=report("trims"),
+            user_markers_enabled=True,
+            user_markers={"Entry": 1000.0, "Exit": 4000.0},
+            on_user_markers_changed=report("markers"),
+            on_track_moved=report("moved"),
+            on_track_toggled=report("toggled"),
+            on_track_removed=report("removed"),
+        )
+
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label="Append",
+                callback=lambda: viz.append_track(
+                    AudioTrack(tracks[0].path, offset=viz.duration * 1000)
+                ),
+            )
+            dpg.add_button(label="Clear", callback=viz.clear)
+            dpg.add_button(
+                label="Dump",
+                callback=lambda: print(
+                    f"duration={viz.duration:.3f}",
+                    viz.tracks,
+                    viz.get_loop_state(True),
+                    viz.get_trims(True),
+                    viz.get_user_markers(True),
+                    sep="\n  ",
+                ),
+            )
+
+    dpg.create_viewport(title="Audio arranger", width=1100, height=700)
+    dpg.setup_dearpygui()
+    dpg.show_viewport()
+    dpg.set_primary_window("demo", True)
+    dpg.start_dearpygui()
+    dpg.destroy_context()
+
+
+if __name__ == "__main__":
+    _demo()
