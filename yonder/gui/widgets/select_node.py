@@ -299,5 +299,6 @@ class add_select_actormixer(add_select_node):
 
     def _on_node_selected(self, sender: str, info: AmxData, user_data: Any) -> None:
         dpg.set_value(self._t("text_input"), lookup_name(info.nid, f"#{info.nid}"))
+        self._selected_node = info.nid
         if self._callback:
             self._callback(self.tag, info, self._user_data)

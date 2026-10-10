@@ -20,17 +20,6 @@ from .serialization import _serialize_value, _deserialize_fields
 from .mixins import PropertyMixin
 
 
-# Properties with a dedicated set/reset action verb. Note that reset is *not*
-# simply set + 1 - the HPF actions sit in a different range than the rest.
-PROP_ACTIONS: dict[PropID, tuple[int, int]] = {
-    PropID.Pitch: (0x08, 0x09),
-    PropID.Volume: (0x0A, 0x0B),
-    PropID.BusVolume: (0x0C, 0x0D),
-    PropID.LPF: (0x0E, 0x0F),
-    PropID.HPF: (0x20, 0x30),
-}
-
-
 def resolve_action_type(verb: ActionVerb | int, scope: ActionScope) -> ActionType:
     """Combine a verb byte and an `ActionScope` into the matching `ActionType`.
 
@@ -65,13 +54,16 @@ def get_action_scope(action_type: ActionType) -> ActionScope:
         return None
 
 
-def get_valid_action_scopes(action_type: ActionType) -> list[ActionScope]:
+def get_valid_action_scopes(action_type: ActionType | ActionVerb) -> list[ActionScope]:
     """The scopes an action type's verb can be switched to, supported ones only."""
     ret = []
 
+    if isinstance(action_type, ActionType):
+        action_type = action_type.verb()
+
     for scope in ActionScope:
         try:
-            other = resolve_action_type(action_type.verb(), scope)
+            other = resolve_action_type(action_type, scope)
         except ValueError:
             continue
 
@@ -79,15 +71,6 @@ def get_valid_action_scopes(action_type: ActionType) -> list[ActionScope]:
             ret.append(scope)
 
     return ret
-
-
-def _prop_verbs(prop: PropID) -> tuple[int, int]:
-    verbs = PROP_ACTIONS.get(prop)
-    if verbs is None:
-        supported = ", ".join(p.name for p in PROP_ACTIONS)
-        raise ValueError(f"{prop.name} has no action, expected one of {supported}")
-
-    return verbs
 
 
 def _as_hash(value: Hash | HIRCNode) -> int:
@@ -349,9 +332,10 @@ class Action(PropertyMixin, HIRCNode):
         Only the properties in `PROP_ACTIONS` have their own action verb.
         `value_min`/`value_max` randomize the value per activation.
         """
+        verb = ActionVerb.get_property_verbs(prop)[0]
         return cls.new(
             nid,
-            resolve_action_type(_prop_verbs(prop)[0], scope),
+            resolve_action_type(verb, scope),
             target,
             is_bus=is_bus,
             set_ak_prop=ActionSetAkPropParams(
@@ -375,9 +359,10 @@ class Action(PropertyMixin, HIRCNode):
         is_bus: bool = False,
     ) -> Action:
         """Undo a `new_set_prop` action, restoring the authored value."""
+        verb = ActionVerb.get_property_verbs(prop)[1]
         return cls.new(
             nid,
-            resolve_action_type(_prop_verbs(prop)[1], scope),
+            resolve_action_type(verb, scope),
             target,
             is_bus=is_bus,
             set_ak_prop=ActionSetAkPropParams(),
@@ -794,7 +779,7 @@ def get_params_for_action(action_type: ActionType) -> type[ActionParams]:
         ActionType.StopEO: ActionStop,
         ActionType.StopALL: None,
         ActionType.StopALLO: None,
-        ActionType.StlopAE: None,
+        ActionType.StopAE: None,
         ActionType.StopAEO: None,
         ActionType.PauseE: ActionPause,
         ActionType.PauseEO: None,

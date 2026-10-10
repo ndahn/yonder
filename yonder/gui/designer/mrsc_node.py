@@ -3,7 +3,12 @@ from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.enums import RandomSequenceMode
-from yonder.types import HIRCNode, MusicRandomSequenceContainer, PlaylistTreeItem
+from yonder.types import (
+    HIRCNode,
+    MusicRandomSequenceContainer,
+    MusicSegment,
+    PlaylistTreeItem,
+)
 from yonder.gui.localization import μ
 from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.widgets import add_music_playlist_editor
@@ -46,7 +51,12 @@ class MRSCNode(GraphDesignerNode):
         input: str,
     ) -> bool:
         if source is self:
-            return output.startswith("Item") and input == "Playback"
+            # A playlist only ever refers to segments
+            return (
+                output.startswith("Item")
+                and target.node_type is MusicSegment
+                and input == "Playback"
+            )
 
         # Either a parent container plays us, or an action targets us
         return can_reference(source.node_type, target.node_type)
@@ -57,9 +67,14 @@ class MRSCNode(GraphDesignerNode):
         if self.playlist.item.ers_type_enum == RandomSequenceMode.Inherit:
             return µ("Playlist root cannot have mode 'Inherit'")
 
-        if "Playback" not in input_map:
-            return µ("Playback not connected")
-        
+        if not (input_map.get("Playback") or input_map.get("Event")):
+            # The root of a music hierarchy has no parent, so it has to be
+            # driven by an event instead
+            return µ("Not connected to a parent or an event")
+
+        if not any(output_map.values()):
+            return µ("No segments connected")
+
         return super().validate(bnk, input_map, output_map)
 
     def make_node(

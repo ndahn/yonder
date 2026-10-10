@@ -17,7 +17,7 @@ class SoundNode(GraphDesignerNode):
 
     node_type: ClassVar[type[HIRCNode]] = Sound
     label: ClassVar[str] = "Sound"
-    inputs: ClassVar[tuple[str, ...]] = ("Playback", "Effect0")
+    inputs: ClassVar[tuple[str, ...]] = ("Playback", "Event", "Effect 0")
     outputs: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
@@ -69,7 +69,7 @@ class SoundNode(GraphDesignerNode):
         # TODO effects
         parent = input_map.get("Playback", 0)
         return Sound.new(
-            self.nid,
+            self.node_id(),
             self.wem_path,
             SourceType.Embedded,
             props=self.properties,

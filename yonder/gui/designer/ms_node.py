@@ -88,7 +88,10 @@ class MSNode(GraphDesignerNode):
     ) -> str:
         if "Playback" not in input_map:
             return µ("Playback not connected")
-        
+
+        if not any(output_map.values()):
+            return µ("No tracks connected")
+
         return super().validate(bnk, input_map, output_map)
 
     def make_node(

@@ -1,13 +1,9 @@
-from .graph_designer_node import (
-    GraphDesignerNode,
-    can_reference,
-    get_designer_node,
-    get_designer_nodes,
-)
+from .graph_designer_node import GraphDesignerNode, can_reference
 
 # Need to import these so they register with the lookup table
 from .amx_node import AMXNode
 from .action_node import ActionNode
+from .bus_node import BusNode
 from .event_node import EventNode
 from .lc_node import LCNode
 from .mrsc_node import MRSCNode
@@ -42,8 +38,7 @@ designer_node_categories: dict[str, list[type[GraphDesignerNode]]] = {
         # Attenuation,
         # EffectShareSet,
         # EffectCustom,
-        # Bus,
-        # AuxiliaryBus,
+        BusNode,
         # LFOModulator,
         # TimeModulator,
         # DialogueEventNode,

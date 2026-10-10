@@ -54,25 +54,11 @@ class SoundType(StrEnum):
 
 class ActionType(IntEnum):
     None_ = 0x0000
-    SetState = 0x1204
-    BypassFXM = 0x1A02
-    BypassFXO = 0x1A03
-    ResetBypassFXM = 0x1B02
-    ResetBypassFXO = 0x1B03
-    ResetBypassFXALL = 0x1B04
-    ResetBypassFXALLO = 0x1B05
-    ResetBypassFXAE = 0x1B08
-    ResetBypassFXAEO = 0x1B09
-    SetSwitch = 0x1901
-    UseStateE = 0x1002
-    UnuseStateE = 0x1102
-    Play = 0x0403
-    PlayAndContinue = 0x0503
     StopE = 0x0102
     StopEO = 0x0103
     StopALL = 0x0104
     StopALLO = 0x0105
-    StlopAE = 0x0108
+    StopAE = 0x0108
     StopAEO = 0x0109
     PauseE = 0x0202
     PauseEO = 0x0203
@@ -86,8 +72,8 @@ class ActionType(IntEnum):
     ResumeALLO = 0x0305
     ResumeAE = 0x0308
     ResumeAEO = 0x0309
-    BreakE = 0x1C02
-    BreakEO = 0x1C03
+    Play = 0x0403
+    PlayAndContinue = 0x0503
     MuteM = 0x0602
     MuteO = 0x0603
     UnmuteM = 0x0702
@@ -96,14 +82,6 @@ class ActionType(IntEnum):
     UnmuteALLO = 0x0705
     UnmuteAE = 0x0708
     UnmuteAEO = 0x0709
-    SetVolumeM = 0x0A02
-    SetVolumeO = 0x0A03
-    ResetVolumeM = 0x0B02
-    ResetVolumeO = 0x0B03
-    ResetVolumeALL = 0x0B04
-    ResetVolumeALLO = 0x0B05
-    ResetVolumeAE = 0x0B08
-    ResetVolumeAEO = 0x0B09
     SetPitchM = 0x0802
     SetPitchO = 0x0803
     ResetPitchM = 0x0902
@@ -112,6 +90,20 @@ class ActionType(IntEnum):
     ResetPitchALLO = 0x0905
     ResetPitchAE = 0x0908
     ResetPitchAEO = 0x0909
+    SetVolumeM = 0x0A02
+    SetVolumeO = 0x0A03
+    ResetVolumeM = 0x0B02
+    ResetVolumeO = 0x0B03
+    ResetVolumeALL = 0x0B04
+    ResetVolumeALLO = 0x0B05
+    ResetVolumeAE = 0x0B08
+    ResetVolumeAEO = 0x0B09
+    SetBusVolumeM = 0x0C02
+    SetBusVolumeO = 0x0C03
+    ResetBusVolumeM = 0x0D02
+    ResetBusVolumeO = 0x0D03
+    ResetBusVolumeALL = 0x0D04
+    ResetBusVolumeAE = 0x0D08
     SetLPFM = 0x0E02
     SetLPFO = 0x0E03
     ResetLPFM = 0x0F02
@@ -120,24 +112,28 @@ class ActionType(IntEnum):
     ResetLPFALLO = 0x0F05
     ResetLPFAE = 0x0F08
     ResetLPFAEO = 0x0F09
-    SetHPFM = 0x2002
-    SetHPFO = 0x2003
-    ResetHPFM = 0x3002
-    ResetHPFO = 0x3003
-    ResetHPFALL = 0x3004
-    ResetHPFALLO = 0x3005
-    ResetHPFAE = 0x3008
-    ResetHPFAEO = 0x3009
-    SetBusVolumeM = 0x0C02
-    SetBusVolumeO = 0x0C03
-    ResetBusVolumeM = 0x0D02
-    ResetBusVolumeO = 0x0D03
-    ResetBusVolumeALL = 0x0D04
-    ResetBusVolumeAE = 0x0D08
+    UseStateE = 0x1002
+    UnuseStateE = 0x1102
+    SetState = 0x1204
+    SetGameParameter = 0x1302
+    SetGameParameterO = 0x1303
+    ResetGameParameter = 0x1402
+    ResetGameParameterO = 0x1403
     StopEvent = 0x1511
     PauseEvent = 0x1611
     ResumeEvent = 0x1711
     Duck = 0x1820
+    SetSwitch = 0x1901
+    BypassFXM = 0x1A02
+    BypassFXO = 0x1A03
+    ResetBypassFXM = 0x1B02
+    ResetBypassFXO = 0x1B03
+    ResetBypassFXALL = 0x1B04
+    ResetBypassFXALLO = 0x1B05
+    ResetBypassFXAE = 0x1B08
+    ResetBypassFXAEO = 0x1B09
+    BreakE = 0x1C02
+    BreakEO = 0x1C03
     Trigger = 0x1D00
     TriggerO = 0x1D01
     SeekE = 0x1E02
@@ -146,19 +142,24 @@ class ActionType(IntEnum):
     SeekALLO = 0x1E05
     SeekAE = 0x1E08
     SeekAEO = 0x1E09
-    ResetPlaylistE = 0x2202
-    ResetPlaylistEO = 0x2203
-    SetGameParameter = 0x1302
-    SetGameParameterO = 0x1303
-    ResetGameParameter = 0x1402
-    ResetGameParameterO = 0x1403
     Release = 0x1F02
     ReleaseO = 0x1F03
-    Unk2102 = 0x2102
+    SetHPFM = 0x2002
+    SetHPFO = 0x2003
+    Unk2102 = 0x2102  # StopEvent?
     PlayEvent = 0x2103
+    ResetPlaylistE = 0x2202
+    ResetPlaylistEO = 0x2203
+    ResetHPFM = 0x3002
+    ResetHPFO = 0x3003
+    ResetHPFALL = 0x3004
+    ResetHPFALLO = 0x3005
+    ResetHPFAE = 0x3008
+    ResetHPFAEO = 0x3009
 
-    def verb(self) -> int:
-        return self >> 8
+    def verb(self) -> ActionVerb:
+        # TODO handle properties
+        return ActionVerb(self >> 8)
 
 
 # The high byte of an ActionType picks the verb, the low byte the ActionScope.
@@ -170,12 +171,34 @@ class ActionVerb(IntEnum):
     Play = 0x04
     Mute = 0x06
     Unmute = 0x07
+    SetPitch = 0x08
+    ResetPitch = 0x09
+    SetVolume = 0x0A
+    ResetVolume = 0x0B
+    SetBusVolume = 0x0C
+    ResetBusVolume = 0x0D
+    SetLPF = 0x0E
+    ResetLPF = 0x0F
     SetGameParameter = 0x13
+    SetState = 0x12
+    #Duck = 0x18
+    SetSwitch = 0x19
     Seek = 0x1E
-    # These don't correspond to actual bytes and need to be treated separately
-    SetSwitch = 0xFD
-    SetState = 0xFE
-    PlayEvent = 0xFF
+    SetHPF = 0x20
+    PlayEvent = 0x21
+    ResetHPF = 0x30
+
+    @classmethod
+    def get_property_verbs(cls, prop: PropID) -> tuple[ActionVerb, ActionVerb]:
+        # Properties with a dedicated set/reset action verb. Note that reset is *not*
+        # simply set +1 - the HPF actions sit in a different range than the rest.
+        return {
+            PropID.Pitch: (cls.SetPitch, cls.ResetPitch),
+            PropID.Volume: (cls.SetVolume, cls.ResetVolume),
+            PropID.BusVolume: (cls.SetBusVolume, cls.ResetBusVolume),
+            PropID.LPF: (cls.SetLPF, cls.ResetLPF),
+            PropID.HPF: (cls.SetHPF, cls.ResetHPF),
+        }[prop]
 
 
 class ActionScope(IntEnum):

@@ -71,7 +71,11 @@ class EventNode(GraphDesignerNode):
     def validate(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
     ) -> str:
-        if "Play/Stop" not in input_map:
+        if not self.name:
+            # Events are posted by name, an ID only event can never fire
+            return µ("Name not set")
+
+        if not output_map.get("Play/Stop"):
             return µ("Play/Stop not connected")
 
         return super().validate(bnk, input_map, output_map)
@@ -86,8 +90,8 @@ class EventNode(GraphDesignerNode):
             if terminal.startswith("Extra") and aid > 0
         ]
 
-        play = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
-        stop = Action.new_stop(bnk.new_id(), target)
-        evt = Event.new(self.nid, [self._play.id, self._stop.id] + extras)
+        self._play = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
+        self._stop = Action.new_stop(bnk.new_id(), target)
+        evt = Event.new(self.node_id(), [self._play.id, self._stop.id] + extras)
 
-        return (evt, play, stop)
+        return (evt, self._play, self._stop)

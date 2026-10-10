@@ -67,7 +67,7 @@ class MTNode(GraphDesignerNode):
         # TODO effects
         parent = input_map.get("Playback", 0)
         return MusicTrack.new(
-            self.nid,
+            self.node_id(),
             self.wem_path,
             source_type=SourceType.Embedded,
             props=self.properties,

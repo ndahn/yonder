@@ -29,6 +29,15 @@ class ReferenceNode(GraphDesignerNode):
         self._bnk = bnk
         self._node_selector: add_select_node = None
 
+    def node_id(self) -> int:
+        # We stand in for a node that already exists, so whatever is linked to
+        # us has to refer to that one
+        node = self._node_selector.selected_node
+        if isinstance(node, HIRCNode):
+            return node.id
+
+        return node or super().node_id()
+
     def build_body(self) -> None:
         self._node_selector = add_select_node(
             self._bnk,
@@ -69,12 +78,18 @@ class ReferenceNode(GraphDesignerNode):
             logger.warning("Select a target node first")
             return False
 
-        # Verify this node can be referenced by its parent
-        if isinstance(node, HIRCNode):
-            if source is self:
-                return can_reference(type(node), target.node_type)
-            if target is self:
-                return can_reference(source.node_type, type(node))
+        # Stand in for the node we point to, i.e. check the link against its
+        # type rather than against HIRCNode
+        node_type = type(node) if isinstance(node, HIRCNode) else self.node_type
+
+        if source is self:
+            # We are the parent of whatever is connected to us
+            return input in ("Playback", "Parent") and can_reference(
+                node_type, target.node_type
+            )
+
+        if target is self:
+            return can_reference(source.node_type, node_type)
 
         return super().link_valid(source, output, target, input)
 
@@ -90,4 +105,16 @@ class ReferenceNode(GraphDesignerNode):
     def make_node(
         self, bnk: Soundbank, input_map: dict[str, int], output_map: dict[str, int]
     ) -> HIRCNode:
-        return self._node_selector.selected_node
+        # Nothing to create, see node_id(). In source mode we do have to make
+        # the existing node adopt whatever was connected to it though - the
+        # child only knows its parent ID, not the other way around.
+        child = output_map.get("Child")
+        node = self._node_selector.selected_node
+
+        if child and isinstance(node, HIRCNode):
+            if hasattr(node, "attach"):
+                node.attach(child)
+            else:
+                logger.warning(f"{node} cannot adopt #{child}")
+
+        return None

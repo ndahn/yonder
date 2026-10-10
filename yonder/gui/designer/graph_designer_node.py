@@ -8,7 +8,13 @@ from yonder.hash import Hash
 from yonder.types import (
     HIRCNode,
     Action,
+    AuxiliaryBus,
+    Bus,
     Event,
+    MusicRandomSequenceContainer,
+    MusicSegment,
+    MusicSwitchContainer,
+    MusicTrack,
 )
 from yonder.enums import PropID
 from yonder.types.mixins import PropertyMixin
@@ -16,18 +22,14 @@ from yonder.gui import style, Icons, µ
 from yonder.gui.widgets import DpgItem, add_properties_table
 
 
-# Node type -> designer node implementing it, filled by __init_subclass__
-_designer_nodes: dict[type[HIRCNode], type[GraphDesignerNode]] = {}
-
-
-def get_designer_node(node_type: type[HIRCNode]) -> type[GraphDesignerNode]:
-    """Return the designer node registered for a HIRC node type, if any."""
-    return _designer_nodes.get(node_type)
-
-
-def get_designer_nodes() -> dict[type[HIRCNode], type[GraphDesignerNode]]:
-    """Return all registered designer nodes, keyed by the HIRC type they create."""
-    return dict(_designer_nodes)
+# The interactive music hierarchy is separate from the actor mixer hierarchy,
+# the two can only meet through an event or an action
+MUSIC_NODES = (
+    MusicSegment,
+    MusicTrack,
+    MusicRandomSequenceContainer,
+    MusicSwitchContainer,
+)
 
 
 def can_reference(source: type[HIRCNode], target: type[HIRCNode]) -> bool:
@@ -54,6 +56,19 @@ def can_reference(source: type[HIRCNode], target: type[HIRCNode]) -> bool:
     if source is Action:
         # Actions can target pretty much anything playable
         return True
+
+    if source in (Bus, AuxiliaryBus):
+        # A bus only ever routes into another bus
+        return target in (Bus, AuxiliaryBus)
+
+    if target in (Bus, AuxiliaryBus):
+        # Everything that produces audio can be routed into a bus
+        return True
+
+    if (source in MUSIC_NODES) != (target in MUSIC_NODES):
+        # A music object cannot be a child of a regular container, nor the
+        # other way around
+        return False
 
     # Everything else has to be able to adopt the target as a child
     return hasattr(source, "attach")
@@ -125,9 +140,10 @@ class GraphDesignerNode:
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if cls.node_type is not None:
-            _designer_nodes[cls.node_type] = cls
             if cls.icon is None:
-                cls.icon = Icons.get_type_icon_tag(cls.node_type.__name__) or Icons.object
+                cls.icon = (
+                    Icons.get_type_icon_tag(cls.node_type.__name__) or Icons.object
+                )
             if cls.color is None:
                 cls.color = style.type_colors.get(cls.node_type.__name__, style.white)
 
@@ -304,6 +320,16 @@ class GraphDesignerNode:
             follower = next((f for f in wanted[i + 1 :] if f in terminals), None)
             self.add_terminal(label, is_input, before=follower)
 
+        self._group_terminals()
+
+    def _group_terminals(self) -> None:
+        # Move all outputs to the end, same order
+        for label in self._outputs:
+            dpg.move_item(
+                self.get_output_terminal(label),
+                parent=self.node_tag,
+            )
+
     def notify_connections(
         self,
         inputs: dict[str, GraphDesignerNode],
@@ -320,6 +346,7 @@ class GraphDesignerNode:
         self._updating += 1
         try:
             self.on_connections_changed(inputs, outputs)
+            self._group_terminals()
         finally:
             self._updating -= 1
 

@@ -5,6 +5,7 @@ import networkx as nx
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
+from yonder.hash import calc_hash
 from yonder.types import HIRCNode
 from yonder.gui.localization import µ
 from yonder.util import logger
@@ -87,8 +88,8 @@ class graph_designer_dialog(DpgItem):
 
     def _build(self, title: str) -> None:
         with dpg.window(
-            width=900,
-            height=600,
+            width=1200,
+            height=700,
             label=title,
             menubar=True,
             no_saved_settings=True,
@@ -284,22 +285,34 @@ class graph_designer_dialog(DpgItem):
     def _get_terminal_map(
         self, node: GraphDesignerNode
     ) -> tuple[dict[str, GraphDesignerNode], dict[str, GraphDesignerNode]]:
+        """The nodes connected to a node's terminals, keyed by terminal label."""
         # Children are attached in terminal order, which decides e.g. the
         # playlist order of a container
-        def link_order(edge: tuple[int, int, dict]) -> tuple[int, int]:
-            src, _, data = edge
-            return (src, self._get_node(src).terminal_index(data["output"], False))
+        def link_order(edge: tuple[int, int, dict]) -> int:
+            return node.terminal_index(edge[2]["output"], False)
 
-        edges = sorted(self._g.edges(node.nid, data=True), key=link_order)
-
-        input_map = {}
-        output_map = {}
-
-        for src, dst, data in edges:
-            input_map[data["input"]] = self._get_node(src)
-            output_map[data["output"]] = self._get_node(dst)
+        input_map = {
+            data["input"]: self._get_node(src)
+            for src, _, data in self._g.in_edges(node.nid, data=True)
+        }
+        output_map = {
+            data["output"]: self._get_node(dst)
+            for _, dst, data in sorted(
+                self._g.out_edges(node.nid, data=True), key=link_order
+            )
+        }
 
         return input_map, output_map
+
+    def _get_id_map(
+        self, node: GraphDesignerNode
+    ) -> tuple[dict[str, int], dict[str, int]]:
+        """Same as `_get_terminal_map`, but with the IDs the nodes will have."""
+        input_map, output_map = self._get_terminal_map(node)
+        return (
+            {label: calc_hash(n.node_id()) for label, n in input_map.items()},
+            {label: calc_hash(n.node_id()) for label, n in output_map.items()},
+        )
 
     def _notify_connections(self, node: GraphDesignerNode) -> None:
         """Let a node adjust its terminals to the links it currently has."""
@@ -579,9 +592,9 @@ class graph_designer_dialog(DpgItem):
         for nid, data in self._g.nodes(data=True):
             node: GraphDesignerNode = data["node"]
 
-            msg = node.validate(self._bnk)
+            msg = node.validate(self._bnk, *self._get_id_map(node))
             if msg:
-                raise ValueError(msg)
+                raise ValueError(f"{node}: {msg}")
 
             if node.name:
                 if node.name in names:
@@ -593,12 +606,28 @@ class graph_designer_dialog(DpgItem):
         created: list[HIRCNode] = []
 
         for nid in nx.topological_sort(self._g):
-            input_map, output_map = self._get_terminal_map(node)
-            ret = self._get_node(nid).make_node(self._bnk, input_map, output_map)
-            if isinstance(ret, (list, tuple)):
-                created.extend(ret)
-            else:
-                created.append(ret)
+            node = self._get_node(nid)
+            ret = node.make_node(self._bnk, *self._get_id_map(node))
+
+            for obj in ret if isinstance(ret, (list, tuple)) else [ret]:
+                if obj is None:
+                    # A node that only stands in for something that exists
+                    # already, e.g. a reference - see GraphDesignerNode.node_id
+                    continue
+
+                if not isinstance(obj, HIRCNode):
+                    raise TypeError(
+                        µ("{node} is not a HIRCNode", "msg").format(node=node)
+                    )
+
+                if obj.id in self._bnk:
+                    raise ValueError(
+                        µ("The soundbank already contains {name}", "msg").format(
+                            name=obj.get_name()
+                        )
+                    )
+
+                created.append(obj)
 
         self._bnk.add_nodes(*created)
         return created

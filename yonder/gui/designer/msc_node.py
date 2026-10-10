@@ -3,11 +3,20 @@ from copy import deepcopy
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
-from yonder.types import HIRCNode, MusicSwitchContainer
+from yonder.types import (
+    HIRCNode,
+    MusicRandomSequenceContainer,
+    MusicSegment,
+    MusicSwitchContainer,
+)
 from yonder.types.base_types import DecisionTreeNode, GameSync
 from yonder.gui.localization import μ
-from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.widgets import add_decision_tree_editor
+
+
+# What a branch of the decision tree may lead to
+_MUSIC_NODES = (MusicSegment, MusicRandomSequenceContainer, MusicSwitchContainer)
 
 
 class MSCNode(GraphDesignerNode):
@@ -46,7 +55,13 @@ class MSCNode(GraphDesignerNode):
         input: str,
     ) -> bool:
         if source is self:
-            return output.startswith("Item") and input == "Playback"
+            # Branches lead to other music objects, never into the actor mixer
+            # hierarchy
+            return (
+                output.startswith("Item")
+                and target.node_type in _MUSIC_NODES
+                and input == "Playback"
+            )
 
         # Either a parent container plays us, or an action targets us
         return super().link_valid(source, output, target, input)
@@ -65,9 +80,16 @@ class MSCNode(GraphDesignerNode):
             if 999999 in path:
                 return µ("Branch key for {path} not set").format(path=path)
 
-        if "Playback" not in input_map:
-            return µ("Playback not connected")
-        
+        if not (input_map.get("Playback") or input_map.get("Event")):
+            # The root of a music hierarchy has no parent, so it has to be
+            # driven by an event instead
+            return µ("Not connected to a parent or an event")
+
+        if not any(output_map.values()):
+            # make_node prunes the branches that don't lead anywhere, which
+            # would leave us with an empty tree
+            return µ("No branches connected")
+
         return super().validate(bnk, input_map, output_map)
 
     def make_node(

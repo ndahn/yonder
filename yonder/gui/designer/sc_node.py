@@ -1,5 +1,4 @@
 from typing import Any, ClassVar, Callable
-from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
 from yonder.types import HIRCNode, SwitchContainer
@@ -29,6 +28,8 @@ class SCNode(GraphDesignerNode):
         self.switch_group = switch_group
         self.switches: dict[str, str] = {}  # terminal to switch state
         self._game = get_selected_game()
+        # The game syncs are keyed by name, while switch_group is a hash
+        self._switch_group_name: str = None
         self._switch_group_widget: add_state_value_input = None
         self._switch_widgets: dict[str, add_state_value_input] = {}
 
@@ -88,13 +89,18 @@ class SCNode(GraphDesignerNode):
         if not self.switch_group:
             return µ("Switch group not set")
 
-        for val in self.switches.values():
-            if not val:
-                return µ("Terminal switch not set")
+        for terminal, state in self.switches.items():
+            # The free terminal at the bottom never has a switch, so only the
+            # ones that actually lead somewhere have to be set
+            if output_map.get(terminal) and not state:
+                return µ("Switch for {terminal} not set").format(terminal=terminal)
 
         if "Playback" not in input_map:
             return µ("Playback not connected")
-        
+
+        if not any(output_map.values()):
+            return µ("No switches connected")
+
         return super().validate(bnk, input_map, output_map)
 
     def make_node(
@@ -127,7 +133,7 @@ class SCNode(GraphDesignerNode):
         used = set(self.switches.values())
         used.update(exclude)
 
-        states = set(self._game.game_syncs.states.get(self.switch_group, []))
+        states = set(self._game.game_syncs.states.get(self._switch_group_name, []))
         return sorted(states.difference(used))
 
     def update_combo_items(self) -> None:
@@ -148,14 +154,14 @@ class SCNode(GraphDesignerNode):
     def _on_switch_group_changed(
         self, sender: str, switch_group: tuple[int, str], user_data: Any
     ) -> None:
-        self.switch_group = switch_group[0]
+        self.switch_group, self._switch_group_name = switch_group
         self.update_combo_items()
 
     def _on_switch_changed(
         self, sender: str, switch: tuple[int, str], user_data: Any
     ) -> None:
         self.switches = {
-            terminal: dpg.get_value(self._switch_widgets[terminal])
+            terminal: self._switch_widgets[terminal].string_value
             for terminal in self._outputs
             if terminal.startswith("Switch")
         }
