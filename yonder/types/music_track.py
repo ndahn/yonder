@@ -228,7 +228,6 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             raise ValueError("end_trim must be <= 0")
 
         self.playlist[idx].begin_trim_offset = begin_trim
-        self.playlist[idx].play_at = -begin_trim
         self.playlist[idx].end_trim_offset = end_trim
 
     def _build_pyo(self, my_pyo: PlaybackState) -> pyo.PyoObject:

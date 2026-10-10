@@ -323,6 +323,7 @@ def _setup_bgm(
             )
             intro_end = -(mt.playlist[0].source_duration - intro_length)
             mt.set_trims(bgm.trims[0], intro_end)
+            mt.playlist[0].play_at = -bgm.trims[0]
 
             for prop, val in bgm.properties.items():
                 mt.set_property(prop, val)
@@ -381,6 +382,7 @@ def _setup_bgm(
 
         begin_trim = intro_length if intro_length > 0 else bgm.trims[0]
         mt.set_trims(begin_trim, bgm.trims[1])
+        mt.playlist[0].play_at = -begin_trim
 
         for prop, val in bgm.properties.items():
             mt.set_property(prop, val)

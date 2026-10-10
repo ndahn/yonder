@@ -1377,6 +1377,7 @@ def _create_attributes_musictrack(
 
     def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
         node.set_trims(trims[0], trims[1], idx)
+        node.playlist[idx].play_at = -trims[0]
         on_node_changed(base_tag, node, user_data)
 
     def apply_curves(curves: list[GraphCurve]) -> None:

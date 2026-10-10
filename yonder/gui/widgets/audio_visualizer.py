@@ -8,14 +8,17 @@ import numpy as np
 from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name, Hash
-from yonder.util import logger
-from yonder.wem import read_wav
-from yonder.gui import style
+from yonder.types import Soundbank, MusicSegment, MusicTrack
+from yonder.types.base_types import MusicMarkerWwise
+from yonder.enums import MarkerId, SourceType
+from yonder.util import logger, get_temp_dir
+from yonder.wem import read_wav, wav2wem
+from yonder.gui import style, get_config
+from yonder.gui.helpers import get_sound_path
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
 
 
-# TODO add handler for MusicTracks
 @dataclass
 class AudioTrack:
     """A single track on the arranger timeline.
@@ -47,9 +50,6 @@ class AudioTrack:
     enabled: bool = True
 
 
-# eq=False: rows are identified by identity. The generated __eq__ would
-# compare the numpy envelopes, which raises instead of returning a bool, and
-# list.index() falls back to it whenever two rows share their leading fields.
 @dataclass(eq=False)
 class _Row:
     """Per-track runtime state. All times are in seconds."""
@@ -176,6 +176,160 @@ class add_audio_visualizer(DpgItem):
     # near a clip edge does not fight the trim handle sitting there
     _HANDLE_PIXELS = 7
 
+    @classmethod
+    def from_music_segment(
+        cls,
+        bnk: Soundbank,
+        segment: MusicSegment,
+        *,
+        on_segment_changed: Callable[[str, MusicSegment, Any], None] = None,
+        on_track_changed: Callable[[str, MusicTrack, Any], None] = None,
+        on_markers_changed: Callable[[str, dict[int, float], Any], None] = None,
+        label: str = "",
+        snap_enabled: bool = True,
+        snap_pixels: int = 8,
+        row_height: int = 90,
+        marker_height: int = 34,
+        max_points: int = 5000,
+        markers_in_ms: bool = True,
+        width: int = -1,
+        tag: str = 0,
+        parent: str = 0,
+        user_data: Any = None,
+    ) -> add_audio_visualizer:
+        tracks: list[MusicTrack] = [bnk[cid] for cid in segment.children]
+        if not tag:
+            tag = dpg.generate_uuid()
+
+        def set_marker(mid: int, pos: float, name: str = None) -> None:
+            for marker in segment.markers:
+                if marker.id == mid:
+                    marker.pos = pos
+                    break
+            else:
+                segment.markers.append(
+                    MusicMarkerWwise(
+                        mid,
+                        pos,
+                        len(name or ""),
+                        name or "",
+                    )
+                )
+
+        def on_loop_changed(
+            sender: str, info: tuple[float, float], cb_user_data: Any
+        ) -> None:
+            loop_start, loop_end = info
+            set_marker(MarkerId.LoopStart, loop_start)
+            set_marker(MarkerId.LoopEnd, loop_end)
+
+            if on_markers_changed:
+                on_markers_changed(
+                    tag, {m.id: m.position for m in segment.markers}, user_data
+                )
+
+        def on_user_marker_changed(
+            sender: str, markers: dict[Hash, float], cb_user_data: Any
+        ) -> None:
+            for mid, pos in markers:
+                set_marker(mid, pos)
+
+            if on_markers_changed:
+                on_markers_changed(
+                    tag, {m.id: m.position for m in segment.markers}, user_data
+                )
+
+        def on_trims_changed(
+            sender: str, info: tuple[int, tuple[float, float]], cb_user_data: Any
+        ) -> None:
+            idx, (begin_trim, end_trim) = info
+            tracks[idx].playlist[0].begin_trim_offset = begin_trim
+            tracks[idx].playlist[0].end_trim_offset = end_trim
+
+            if on_track_changed:
+                on_track_changed(tag, tracks[idx], user_data)
+
+        def on_track_moved(
+            sender: str, info: tuple[int, float], cb_user_data: Any
+        ) -> None:
+            idx, pos = info
+            tracks[idx].playlist[0].play_at = pos
+
+            if on_track_changed:
+                on_track_changed(tag, tracks[idx], user_data)
+
+        # TODO add somewhere
+        def on_track_added(
+            sender: str, info: tuple[int, Path], cb_user_data: Any
+        ) -> None:
+            idx, path = info
+            if path.suffix != ".wem":
+                path = wav2wem(get_config().locate_wwise(), path, get_temp_dir())
+
+            mt = MusicTrack.new(bnk.new_id(), path, parent=segment.id)
+
+            # Skip attach since we want it at a specific position
+            segment.children.items.insert(idx, mt.id)
+            bnk.add_nodes(mt)
+            bnk.add_wem(path, SourceType.Streaming)
+
+            if on_segment_changed:
+                on_segment_changed(tag, segment, user_data)
+
+        def on_track_removed(sender: str, idx: int, cb_user_data: Any) -> None:
+            bnk.delete_nodes(tracks[idx])
+            del tracks[idx]
+
+            if on_segment_changed:
+                on_segment_changed(tag, segment, user_data)
+
+        markers = {m.id: m.position for m in segment.markers}
+        loop_start = markers.pop(MarkerId.LoopStart, 0.0)
+        loop_end = markers.pop(MarkerId.LoopEnd, 0.0)
+
+        track_info = []
+
+        for child in tracks:
+            path = get_sound_path(
+                bnk, child.source_ids[0], child.sources[0].source_type
+            )
+            playback = child.playlist[0]
+            track_info.append(
+                AudioTrack(
+                    path,
+                    child.id,
+                    offset=playback.play_at,
+                    begin_trim=playback.begin_trim_offset,
+                    end_trim=playback.end_trim_offset,
+                )
+            )
+
+        return add_audio_visualizer(
+            track_info,
+            label=label,
+            loop_markers_enabled=on_loop_changed,
+            loop_start=loop_start,
+            loop_end=loop_end,
+            on_loop_changed=on_loop_changed,
+            trim_enabled=True,
+            on_trims_changed=on_trims_changed,
+            user_markers_enabled=True,
+            user_markers=markers,
+            on_user_markers_changed=on_user_marker_changed,
+            on_track_moved=on_track_moved,
+            on_track_toggled=None,
+            on_track_removed=on_track_removed,
+            snap_enabled=snap_enabled,
+            snap_pixels=snap_pixels,
+            row_height=row_height,
+            marker_height=marker_height,
+            max_points=max_points,
+            markers_in_ms=markers_in_ms,
+            width=width,
+            tag=tag,
+            parent=parent,
+        )
+
     def __init__(
         self,
         tracks: Iterable[Path | AudioTrack] = None,
@@ -184,7 +338,7 @@ class add_audio_visualizer(DpgItem):
         loop_markers_enabled: bool = False,
         loop_start: float = 0.0,
         loop_end: float = 0.0,
-        on_loop_changed: Callable[[str, tuple[float, float, bool], Any], None] = None,
+        on_loop_changed: Callable[[str, tuple[float, float], Any], None] = None,
         trim_enabled: bool = False,
         on_trims_changed: Callable[
             [str, tuple[int, tuple[float, float]], Any], None
@@ -255,7 +409,7 @@ class add_audio_visualizer(DpgItem):
                 mid = calc_hash(mid)
             else:
                 marker_label = lookup_name(mid, f"#{mid}")
-                
+
             self._user_markers[mid] = pos / 1000 if markers_in_ms else pos
             self._user_marker_labels[mid] = marker_label
             self._user_marker_colors[mid] = colorgen()
@@ -385,9 +539,7 @@ class add_audio_visualizer(DpgItem):
         )
         self._load_row(row)
         # Clamping needs the duration, so trims are applied after loading
-        self._clamp_trims(
-            row, self._into(track.begin_trim), self._into(track.end_trim)
-        )
+        self._clamp_trims(row, self._into(track.begin_trim), self._into(track.end_trim))
         return row
 
     def _load_row(self, row: _Row) -> None:
@@ -498,8 +650,10 @@ class add_audio_visualizer(DpgItem):
 
     def _hovered_row(self) -> _Row | None:
         for row in self._rows:
-            if row.plot and dpg.does_item_exist(row.plot) and dpg.is_item_hovered(
+            if (
                 row.plot
+                and dpg.does_item_exist(row.plot)
+                and dpg.is_item_hovered(row.plot)
             ):
                 return row
 
@@ -619,9 +773,7 @@ class add_audio_visualizer(DpgItem):
 
         for row in self._rows:
             if dpg.does_item_exist(row.xaxis):
-                dpg.set_axis_limits_constraints(
-                    row.xaxis, -padding, duration + padding
-                )
+                dpg.set_axis_limits_constraints(row.xaxis, -padding, duration + padding)
 
         if dpg.does_item_exist(self._marker_axis):
             dpg.set_axis_limits_constraints(
@@ -687,10 +839,10 @@ class add_audio_visualizer(DpgItem):
     def get_loop_state(self, millis: bool) -> tuple[float, float, bool]:
         """Return ``(loop_start, loop_end, enabled)``, absolute on the timeline."""
         if not self._loop_markers_enabled:
-            return (0.0, 0.0, False)
+            return (0.0, 0.0)
 
         factor = 1000 if millis else 1
-        return (self._loop_start * factor, self._loop_end * factor, True)
+        return (self._loop_start * factor, self._loop_end * factor)
 
     def set_loop_state(self, loop_start: float, loop_end: float) -> None:
         """Set loop positions (absolute on the timeline, seconds)."""
@@ -1418,8 +1570,7 @@ def _demo() -> None:
 
     if len(sys.argv) > 1:
         tracks = [
-            AudioTrack(Path(p), offset=i * 1000.0)
-            for i, p in enumerate(sys.argv[1:])
+            AudioTrack(Path(p), offset=i * 1000.0) for i, p in enumerate(sys.argv[1:])
         ]
     else:
         tracks = [
