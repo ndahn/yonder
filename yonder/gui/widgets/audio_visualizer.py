@@ -12,11 +12,13 @@ from yonder.types import Soundbank, MusicSegment, MusicTrack
 from yonder.types.base_types import MusicMarkerWwise
 from yonder.enums import MarkerId, SourceType
 from yonder.util import logger, get_temp_dir
-from yonder.wem import read_wav, wav2wem
+from yonder.wem import read_wav, wav2wem, wem2wav
+from yonder.audio.loop_points import find_loops
 from yonder.gui import style, get_config
 from yonder.gui.helpers import get_sound_path
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
+from yonder.gui.dialogs.file_dialog import open_file_dialog
 
 
 @dataclass
@@ -144,6 +146,9 @@ class add_audio_visualizer(DpgItem):
     on_track_toggled : callable, optional
         Fired as ``on_track_toggled(tag, (index, enabled), user_data)``.
     on_track_removed : callable, optional
+        Fired as ``on_track_added(tag, (index, path), user_data)``. Also decides
+        whether the row menu offers an add entry.
+    on_track_removed : callable, optional
         Fired as ``on_track_removed(tag, index, user_data)``. Also decides
         whether the row menu offers a remove entry.
     snap_enabled : bool
@@ -258,7 +263,6 @@ class add_audio_visualizer(DpgItem):
             if on_track_changed:
                 on_track_changed(tag, tracks[idx], user_data)
 
-        # TODO add somewhere
         def on_track_added(
             sender: str, info: tuple[int, Path], cb_user_data: Any
         ) -> None:
@@ -318,6 +322,7 @@ class add_audio_visualizer(DpgItem):
             on_user_markers_changed=on_user_marker_changed,
             on_track_moved=on_track_moved,
             on_track_toggled=None,
+            on_track_added=on_track_added,
             on_track_removed=on_track_removed,
             snap_enabled=snap_enabled,
             snap_pixels=snap_pixels,
@@ -348,6 +353,7 @@ class add_audio_visualizer(DpgItem):
         on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
         on_track_moved: Callable[[str, tuple[int, float], Any], None] = None,
         on_track_toggled: Callable[[str, tuple[int, bool], Any], None] = None,
+        on_track_added: Callable[[str, tuple[int, Path], Any], None] = None,
         on_track_removed: Callable[[str, int, Any], None] = None,
         snap_enabled: bool = True,
         snap_pixels: int = 8,
@@ -381,6 +387,7 @@ class add_audio_visualizer(DpgItem):
         self._on_user_markers_changed = on_user_markers_changed
         self._on_track_moved = on_track_moved
         self._on_track_toggled = on_track_toggled
+        self._on_track_added = on_track_added
         self._on_track_removed = on_track_removed
 
         self._user_data = user_data
@@ -527,10 +534,14 @@ class add_audio_visualizer(DpgItem):
         dpg.show_item(self._t("markers_popup"))
 
     def _make_row(self, track: Path | AudioTrack) -> _Row:
-        if not isinstance(track, AudioTrack):
+        if isinstance(track, Path):
             track = AudioTrack(Path(track))
 
         path = Path(track.path) if track.path else None
+        if path.suffix == ".wem":
+            path = wem2wav(get_config().locate_vgmstream(), path, get_temp_dir())
+            track.path = path
+
         row = _Row(
             path=path,
             label=track.label or (path.stem if path else µ("<empty>")),
@@ -825,6 +836,21 @@ class add_audio_visualizer(DpgItem):
         self._update_row_geometry(row)
         self._refresh_timeline()
         self._fire_track_moved(row)
+
+    def _on_row_add(self, sender: str, app_data: Any, row: _Row) -> None:
+        path = open_file_dialog(
+            default_dir=str(row.path.parent),
+            filetypes={
+                µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"],
+                µ("Wave (.wav)", "filetypes"): "*.wav",
+                µ("WEM (.wem)", "filetypes"): "*.wem",
+            },
+        )
+
+        if path:
+            index = self._rows.index(row)
+            self._rows.insert(index, self._make_row(Path(path)))
+            self._rebuild()
 
     def _on_row_remove(self, sender: str, app_data: Any, row: _Row) -> None:
         index = self._rows.index(row)
@@ -1318,7 +1344,6 @@ class add_audio_visualizer(DpgItem):
             default_value=pos,
             thickness=2,
             show_label=False,
-            no_cursor=True,
             no_fit=True,
             no_inputs=not row.enabled,
             callback=self._on_trim_handle_dragged,
@@ -1376,7 +1401,7 @@ class add_audio_visualizer(DpgItem):
             )
         dpg.bind_item_handler_registry(row.plot, row.popup_handlers)
 
-        dpg.add_window(
+        with dpg.window(
             popup=True,
             show=False,
             autosize=True,
@@ -1384,83 +1409,89 @@ class add_audio_visualizer(DpgItem):
             no_title_bar=True,
             no_resize=True,
             tag=row.popup,
-        )
+        ):
+            dpg.add_text(row.label, color=style.light_blue)
+            dpg.add_text(
+                µ("{dur:.3f} s").format(dur=row.duration),
+                color=style.light_grey,
+            )
 
-        dpg.add_text(row.label, color=style.light_blue, parent=row.popup)
-        dpg.add_text(
-            µ("{dur:.3f} s").format(dur=row.duration),
-            color=style.light_grey,
-            parent=row.popup,
-        )
-        dpg.add_separator(parent=row.popup)
+            dpg.add_separator()
 
-        dpg.add_checkbox(
-            label=µ("Enabled", "track"),
-            default_value=row.enabled,
-            callback=self._on_row_enabled_toggled,
-            user_data=row,
-            parent=row.popup,
-        )
-        row.offset_input = dpg.add_input_float(
-            label=µ("Offset (ms)" if self._markers_in_ms else "Offset (s)", "track"),
-            default_value=self._out(row.offset),
-            min_value=0.0,
-            min_clamped=True,
-            step=self._step(),
-            step_fast=self._step() * 10,
-            width=130,
-            callback=self._on_row_offset_input,
-            user_data=row,
-            parent=row.popup,
-        )
-        dpg.add_button(
-            label=µ("Reset offset", "button"),
-            callback=self._on_row_offset_reset,
-            user_data=row,
-            parent=row.popup,
-        )
+            if self._on_track_toggled:
+                dpg.add_checkbox(
+                    label=µ("Enabled", "track"),
+                    default_value=row.enabled,
+                    callback=self._on_row_enabled_toggled,
+                    user_data=row,
+                )
 
-        if self._trim_enabled:
-            dpg.add_separator(parent=row.popup)
-            row.begin_trim_input = dpg.add_input_float(
-                label=µ("begin_trim", "marker"),
-                default_value=self._out(row.begin_trim),
+            row.offset_input = dpg.add_input_float(
+                label=µ(
+                    "Offset (ms)" if self._markers_in_ms else "Offset (s)", "track"
+                ),
+                default_value=self._out(row.offset),
                 min_value=0.0,
                 min_clamped=True,
                 step=self._step(),
                 step_fast=self._step() * 10,
                 width=130,
-                callback=self._on_row_trim_input,
-                user_data=(row, "begin_trim"),
-                parent=row.popup,
-            )
-            row.end_trim_input = dpg.add_input_float(
-                label=µ("end_trim", "marker"),
-                default_value=self._out(row.end_trim),
-                max_value=0.0,
-                max_clamped=True,
-                step=self._step(),
-                step_fast=self._step() * 10,
-                width=130,
-                callback=self._on_row_trim_input,
-                user_data=(row, "end_trim"),
-                parent=row.popup,
-            )
-            dpg.add_button(
-                label=µ("Reset trims", "button"),
-                callback=self._on_row_trims_reset,
+                callback=self._on_row_offset_input,
                 user_data=row,
-                parent=row.popup,
             )
 
-        if self._on_track_removed:
-            dpg.add_separator(parent=row.popup)
-            dpg.add_button(
-                label=µ("Remove track", "button"),
-                callback=self._on_row_remove,
+            if self._trim_enabled:
+                row.begin_trim_input = dpg.add_input_float(
+                    label=µ("begin_trim", "marker"),
+                    default_value=self._out(row.begin_trim),
+                    min_value=0.0,
+                    min_clamped=True,
+                    step=self._step(),
+                    step_fast=self._step() * 10,
+                    width=130,
+                    callback=self._on_row_trim_input,
+                    user_data=(row, "begin_trim"),
+                )
+                row.end_trim_input = dpg.add_input_float(
+                    label=µ("end_trim", "marker"),
+                    default_value=self._out(row.end_trim),
+                    max_value=0.0,
+                    max_clamped=True,
+                    step=self._step(),
+                    step_fast=self._step() * 10,
+                    width=130,
+                    callback=self._on_row_trim_input,
+                    user_data=(row, "end_trim"),
+                )
+
+            # Tools
+            dpg.add_separator()
+            dpg.add_menu_item(
+                label=µ("Find loop points"),
+                callback=None,
                 user_data=row,
-                parent=row.popup,
             )
+            dpg.add_menu_item(
+                label=µ("Trim silence"),
+                callback=None,
+                user_data=row,
+            )
+
+            # Add/remove
+            if self._on_track_added or self._on_track_removed:
+                dpg.add_separator()
+                if self._on_track_added:
+                    dpg.add_menu_item(
+                        label=µ("Add track", "button"),
+                        callback=self._on_row_add,
+                        user_data=row,
+                    )
+                if self._on_track_removed:
+                    dpg.add_menu_item(
+                        label=µ("Remove track", "button"),
+                        callback=self._on_row_remove,
+                        user_data=row,
+                    )
 
     # === Build =========================================================
 
@@ -1608,6 +1639,7 @@ def _demo() -> None:
             on_user_markers_changed=report("markers"),
             on_track_moved=report("moved"),
             on_track_toggled=report("toggled"),
+            on_track_added=report("added"),
             on_track_removed=report("removed"),
         )
 
