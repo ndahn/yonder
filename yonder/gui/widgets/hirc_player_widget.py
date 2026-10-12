@@ -18,6 +18,7 @@ from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
 
 
+
 class add_hirc_player(DpgItem):
     def __init__(
         self,

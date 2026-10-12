@@ -971,7 +971,6 @@ class add_audio_visualizer(DpgItem):
         # Give dpg a frame so that another modal dialog can open again
         dpg.split_frame()
 
-        # Built outside the loading indicator - both are modal windows
         dlg = loop_point_candidates_dialog(
             candidates,
             combined,

@@ -48,6 +48,12 @@ class SoundType(StrEnum):
     def values(cls) -> str:
         return "".join(s.value for s in cls)
 
+    def __getitem__(self, key) -> SoundType:
+        if isinstance(key, int):
+            return list(SoundType)[key]
+
+        return super().__getitem__(key)
+
     def __str__(self) -> str:
         return f"{self.name} ({self.value})"
 

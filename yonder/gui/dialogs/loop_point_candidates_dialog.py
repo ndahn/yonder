@@ -7,6 +7,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.audio.loop_points import LoopPair
 from yonder.audio.wavesignal import minmax_envelope, to_channels
+from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, Icons
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
@@ -97,10 +98,14 @@ class loop_point_candidates_dialog(DpgItem):
         self._user_data = user_data
         self._selected = 0
 
+        self._player = SimplePlayer()
+        self._playing_idx = -1
+
         # Plot items
         self._region = 0
         self._line_start = 0
         self._line_end = 0
+        self._playback_pos = 0
 
         self._candidates: list[_Candidate] = []
         if current:
@@ -179,6 +184,7 @@ class loop_point_candidates_dialog(DpgItem):
         return np.concatenate([before, after])
 
     def close(self) -> None:
+        self._player.close()
         if dpg.does_item_exist(self.tag):
             dpg.delete_item(self.tag)
 
@@ -217,9 +223,18 @@ class loop_point_candidates_dialog(DpgItem):
         self._select(index)
 
     def _on_preview_clicked(self, sender: str, app_data: Any, index: int) -> None:
-        # TODO if currently playing index == index then stop playing, otherwise switch to new track
-        playing = False
-        candidate = self._candidates[index]
+        # Start/stop playback
+        if index == self._selected and self._player.playing:
+            self._player.stop()
+        else:
+            self._select(index)
+            self._player.play_signal(
+                self._signal,
+                self._framerate,
+                loop=True,
+            )
+
+        playing = self._player.playing
 
         # Swap the preview buttons between play and stop
         for i, candidate in enumerate(self._candidates):
@@ -231,7 +246,23 @@ class loop_point_candidates_dialog(DpgItem):
                 texture_tag=Icons.stop if playing and i == index else Icons.play,
             )
 
-        # TODO start/stop playback
+        self._update_playback_pos()
+
+    def _update_playback_pos(self) -> None:
+        if self._player.playing:
+            loop_start, loop_end = self.loop_points
+            pos = self._player.pos * self._duration
+            
+            if pos < loop_start:
+                self._player.seek(loop_start)
+            elif pos >= min(loop_start + 2.0, self._duration):
+                self._player.seek(max(0, max(loop_start, loop_end - 2.0)))
+            elif pos >= loop_end:
+                self._player.seek(loop_start)
+
+            dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
+
+        dpg.set_value(self._playback_pos, self._player.pos * self._duration)
 
     def _on_apply_clicked(self) -> None:
         loop = self.loop_points
@@ -255,6 +286,9 @@ class loop_point_candidates_dialog(DpgItem):
         dpg.set_value(self._region, (start, -self._Y_LIMIT, end, self._Y_LIMIT))
         dpg.set_value(self._line_start, start)
         dpg.set_value(self._line_end, end)
+
+        if not self._player.playing:
+            dpg.set_value(self._playback_pos, start)
 
     @staticmethod
     def _length_label(candidate: _Candidate) -> str:
@@ -326,6 +360,13 @@ class loop_point_candidates_dialog(DpgItem):
             self._line_end = dpg.add_drag_line(
                 label=µ("loop_end", "marker"),
                 color=style.green,
+                no_inputs=True,
+                no_cursor=True,
+                no_fit=True,
+            )
+            self._playback_pos = dpg.add_drag_line(
+                label=µ("pos", "marker"),
+                color=style.light_blue,
                 no_inputs=True,
                 no_cursor=True,
                 no_fit=True,

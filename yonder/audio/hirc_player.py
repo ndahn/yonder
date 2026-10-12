@@ -1,7 +1,7 @@
 from __future__ import annotations
-import time
-import atexit
 from typing import Callable
+import atexit
+import time
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
