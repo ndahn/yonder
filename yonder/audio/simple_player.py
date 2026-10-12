@@ -107,9 +107,9 @@ class SimplePlayer:
         src = self._signal_source
 
         if isinstance(src, pyo.Phasor):
-            return src.get()
+            return src.get() * self._duration
         elif hasattr(src, "phase"):
-            return src.phase
+            return src.phase * self._duration
 
         return 0.0
 

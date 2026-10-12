@@ -66,8 +66,6 @@ class loop_point_candidates_dialog(DpgItem):
         proposals against.
     title : str, optional
         Window title.
-    max_points : int
-        Maximum envelope points in the overview plot.
     tag : int or str
         Explicit tag; auto-generated if 0.
     user_data : any
@@ -86,7 +84,6 @@ class loop_point_candidates_dialog(DpgItem):
         title: str = None,
         on_apply: Callable[[str, tuple[float, float], Any], None] = None,
         current_loop_points: tuple[float, float] = None,
-        max_points: int = 4000,
         tag: str = 0,
         user_data: Any = None,
     ) -> None:
@@ -103,10 +100,10 @@ class loop_point_candidates_dialog(DpgItem):
         self._playing_idx = -1
 
         # Plot items
+        self._preview: add_signal_preview = None
         self._region = 0
         self._line_start = 0
         self._line_end = 0
-        self._playback_pos = 0
 
         self._candidates: list[_Candidate] = []
         if current_loop_points:
@@ -136,7 +133,8 @@ class loop_point_candidates_dialog(DpgItem):
                 _Candidate(µ("Current"), 0.0, self._duration, editable=False)
             )
 
-        self._build(title or µ("Loop points"), max_points)
+        self._build(title or µ("Loop points"))
+        self._preview.set_signal(signal, framerate)
         self._select(0)
 
     def destroy(self) -> None:
@@ -223,7 +221,7 @@ class loop_point_candidates_dialog(DpgItem):
     def _update_playback_pos(self) -> None:
         if self._player.playing:
             loop_start, loop_end = self.loop_points
-            pos = self._player.pos * self._duration
+            pos = self._player.pos
 
             if pos < loop_start:
                 self._player.seek(loop_start)
@@ -234,12 +232,11 @@ class loop_point_candidates_dialog(DpgItem):
 
             dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
 
-        dpg.set_value(self._playback_pos, self._player.pos * self._duration)
+        self._preview.seek(self._player.pos)
 
     def _on_apply_clicked(self) -> None:
-        loop = self.loop_points
         if self._on_apply:
-            self._on_apply(self.tag, loop, self._user_data)
+            self._on_apply(self.tag, self.loop_points, self._user_data)
 
         self.close()
 
@@ -250,17 +247,8 @@ class loop_point_candidates_dialog(DpgItem):
         for i, candidate in enumerate(self._candidates):
             dpg.set_value(candidate.check, i == index)
 
-        self._sync_region()
-
-    def _sync_region(self) -> None:
-        """Move the overview markers onto the selected loop."""
-        start, end = self.loop_points
-        dpg.set_value(self._region, (start, -self._Y_LIMIT, end, self._Y_LIMIT))
-        dpg.set_value(self._line_start, start)
-        dpg.set_value(self._line_end, end)
-
-        if not self._player.playing:
-            dpg.set_value(self._playback_pos, start)
+        candidate = self._candidates[index]
+        self._preview.loop_points = (candidate.start, candidate.end)
 
     @staticmethod
     def _length_label(candidate: _Candidate) -> str:
@@ -268,7 +256,7 @@ class loop_point_candidates_dialog(DpgItem):
 
     # === Build =========================================================
 
-    def _build(self, title: str, max_points: int) -> None:
+    def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
             modal=True,
@@ -278,7 +266,7 @@ class loop_point_candidates_dialog(DpgItem):
             tag=self.tag,
             on_close=self.close,
         ):
-            self._build_overview(max_points)
+            self._preview = add_signal_preview()
             dpg.add_spacer(height=4)
             self._build_table()
             dpg.add_separator()
@@ -288,64 +276,6 @@ class loop_point_candidates_dialog(DpgItem):
                 dpg.add_button(
                     label=µ("Apply", "button"), callback=self._on_apply_clicked
                 )
-
-    def _build_overview(self, max_points: int) -> None:
-        with dpg.plot(
-            height=130,
-            width=-1,
-            no_title=True,
-            no_menus=True,
-            no_mouse_pos=True,
-            no_box_select=True,
-        ) as plot:
-            xaxis = dpg.add_plot_axis(dpg.mvXAxis, no_label=True, no_highlight=True)
-            yaxis = dpg.add_plot_axis(
-                dpg.mvYAxis,
-                no_label=True,
-                no_highlight=True,
-                no_tick_labels=True,
-                no_tick_marks=True,
-            )
-
-            if len(self._signal):
-                time = np.linspace(0, self._duration, num=len(self._signal))
-                t_env, y_env = minmax_envelope(self._signal, time, max_points // 2)
-                series = dpg.add_line_series(
-                    t_env.tolist(), y_env.tolist(), shaded=True, parent=xaxis
-                )
-                dpg.bind_item_theme(series, style.themes.make_series_theme(style.blue))
-
-            # Read-only: the numeric fields in the table are the editor
-            self._region = dpg.add_drag_rect(
-                color=style.green.but(a=60),
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-            )
-            self._line_start = dpg.add_drag_line(
-                label=µ("loop_start", "marker"),
-                color=style.green,
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-            )
-            self._line_end = dpg.add_drag_line(
-                label=µ("loop_end", "marker"),
-                color=style.green,
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-            )
-            self._playback_pos = dpg.add_drag_line(
-                label=µ("pos", "marker"),
-                color=style.light_blue,
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-            )
-
-        dpg.bind_item_theme(plot, style.themes.player_plot)
-        dpg.set_axis_limits(yaxis, -self._Y_LIMIT, self._Y_LIMIT)
 
     def _build_table(self) -> None:
         with dpg.table(

@@ -17,8 +17,8 @@ class add_signal_preview(DpgItem):
 
     def __init__(
         self,
-        signal: np.ndarray,
-        framerate: int,
+        signal: np.ndarray = None,
+        framerate: int = None,
         *,
         playback: bool = True,
         loop_points: tuple[float, float] = None,
@@ -37,9 +37,11 @@ class add_signal_preview(DpgItem):
 
         self._player: SimplePlayer = None
 
-        self._build(playback, max_points)
-        self.set_signal(signal, framerate)
-        self._sync_region()
+        self._build(playback)
+
+        if signal is not None and framerate > 0:
+            self.set_signal(signal, framerate)
+            self._sync_region()
 
     def destroy(self) -> None:
         self.close()
@@ -53,7 +55,7 @@ class add_signal_preview(DpgItem):
     def set_signal(self, sig: np.ndarray, framerate: int) -> None:
         dpg.delete_item(self._t("xaxis"), slot=1, children_only=True)
 
-        self._signal = to_channels(sig, 2)
+        self._signal = to_channels(sig, 1)[:, 0]
         self._framerate = framerate
         self._duration = len(self._signal) / framerate
 
@@ -104,7 +106,7 @@ class add_signal_preview(DpgItem):
 
     # === DPG callbacks =================================================
 
-    def _on_play_stop_clicked(self, sender: str, app_data: Any, index: int) -> None:
+    def _on_play_stop_clicked(self) -> None:
         if not self._player:
             self._player = SimplePlayer()
 
@@ -180,13 +182,13 @@ class add_signal_preview(DpgItem):
     def _length_label(self) -> str:
         return µ("{len:.3f} s").format(len=self.playback_duration)
 
-    def _build(self, playback: bool, max_points: int) -> None:
+    def _build(self, playback: bool) -> None:
         with dpg.child_window(
             autosize_x=True,
-            autosize_y=True,
+            auto_resize_y=True,
             tag=self.tag,
         ):
-            self._build_plot(max_points)
+            self._build_plot()
             if playback:
                 dpg.add_spacer(height=4)
                 self._build_footer()
@@ -194,7 +196,7 @@ class add_signal_preview(DpgItem):
     def _build_plot(self) -> None:
         with dpg.plot(
             width=-1,
-            height=-60,
+            height=130,
             no_title=True,
             no_menus=True,
             no_mouse_pos=True,
