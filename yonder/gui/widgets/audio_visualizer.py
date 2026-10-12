@@ -975,7 +975,7 @@ class add_audio_visualizer(DpgItem):
             candidates,
             combined,
             framerate,
-            current=self._loop_abs_bounds(),
+            current_loop_points=self._loop_abs_bounds(),
             on_apply=self._on_loop_candidate_applied,
         )
         center_window(dlg.tag)

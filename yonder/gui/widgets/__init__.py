@@ -35,6 +35,7 @@ from .notifications import global_notification_man
 from .loading_indicator import loading_indicator
 from .select_node import add_select_node, add_select_actormixer
 from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph_height
+from .signal_preview import add_signal_preview
 from .state_value_input import add_state_value_input
 from .splash import add_splash
 from .wav_player_widget import add_wav_player

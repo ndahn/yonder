@@ -11,6 +11,7 @@ from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, Icons
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
+from yonder.gui.widgets.signal_preview import add_signal_preview
 
 
 # eq=False: rows are matched by identity, never by value - two candidates with
@@ -60,7 +61,7 @@ class loop_point_candidates_dialog(DpgItem):
     on_apply : callable, optional
         Fired as ``on_apply(tag, (loop_start, loop_end), user_data)`` when the
         user confirms. The dialog closes afterwards.
-    current : tuple of (float, float), optional
+    current_loop_points : tuple of (float, float), optional
         The loop already set, shown as a read-only first row to compare the
         proposals against.
     title : str, optional
@@ -82,9 +83,9 @@ class loop_point_candidates_dialog(DpgItem):
         signal: np.ndarray,
         framerate: int,
         *,
-        on_apply: Callable[[str, tuple[float, float], Any], None] = None,
-        current: tuple[float, float] = None,
         title: str = None,
+        on_apply: Callable[[str, tuple[float, float], Any], None] = None,
+        current_loop_points: tuple[float, float] = None,
         max_points: int = 4000,
         tag: str = 0,
         user_data: Any = None,
@@ -108,9 +109,14 @@ class loop_point_candidates_dialog(DpgItem):
         self._playback_pos = 0
 
         self._candidates: list[_Candidate] = []
-        if current:
+        if current_loop_points:
             self._candidates.append(
-                _Candidate(µ("Current"), current[0], current[1], editable=False)
+                _Candidate(
+                    µ("Current"),
+                    current_loop_points[0],
+                    current_loop_points[1],
+                    editable=False,
+                )
             )
 
         for i, pair in enumerate(candidates):
@@ -148,40 +154,6 @@ class loop_point_candidates_dialog(DpgItem):
         """The chosen loop as ``(start, end)`` in seconds."""
         candidate = self._candidates[self._selected]
         return candidate.start, candidate.end
-
-    def _loop_preview_signal(
-        self, index: int = None, lead: float = 3.0, tail: float = 3.0
-    ) -> np.ndarray:
-        """Audio of a loop's seam: the run-up to ``end`` spliced onto ``start``.
-
-        This is what the transition will actually sound like, and the only
-        part worth auditioning when judging a loop point.
-
-        Parameters
-        ----------
-        index : int, optional
-            Row to take the bounds from. Defaults to the selected one.
-        lead : float
-            Seconds of audio before the loop end.
-        tail : float
-            Seconds of audio after the loop start.
-
-        Returns
-        -------
-        numpy.ndarray
-            Mono samples, ``lead + tail`` seconds long at most.
-        """
-        if index is None:
-            index = self._selected
-
-        candidate = self._candidates[index]
-
-        def at(pos: float) -> int:
-            return max(0, min(len(self._signal), round(pos * self._framerate)))
-
-        before = self._signal[at(candidate.end - lead) : at(candidate.end)]
-        after = self._signal[at(candidate.start) : at(candidate.start + tail)]
-        return np.concatenate([before, after])
 
     def close(self) -> None:
         self._player.close()
@@ -252,7 +224,7 @@ class loop_point_candidates_dialog(DpgItem):
         if self._player.playing:
             loop_start, loop_end = self.loop_points
             pos = self._player.pos * self._duration
-            
+
             if pos < loop_start:
                 self._player.seek(loop_start)
             elif pos >= min(loop_start + 2.0, self._duration):
