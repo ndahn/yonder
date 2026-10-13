@@ -157,17 +157,14 @@ class add_signal_preview(DpgItem):
 
             if pos < loop_start:
                 self._player.seek(loop_start)
-                print("jump forward to start", loop_start)
             elif (
                 self.loop_preview_enabled
                 and pos >= min(loop_start + 2.0, self._duration)
                 and pos < loop_end - 2.0
             ):
                 self._player.seek(max((0, loop_start, loop_end - 2.0)))
-                print("jump to end: ", max((0, loop_start, loop_end - 2.0)))
             elif pos >= loop_end:
                 self._player.seek(loop_start)
-                print("jump back to start", loop_start)
 
             dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
 
