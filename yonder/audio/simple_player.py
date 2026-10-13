@@ -43,8 +43,7 @@ class SimplePlayer:
         self._server.deactivateMidi()
         self._server.boot()
 
-        # TODO use an InputFader instead
-        self._mixer = pyo.Mixer(outs=1, chnls=2, time=fade_time)
+        self._input = pyo.InputFader(pyo.Sig(0))
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=fade_time)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=fade_time)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=fade_time)
@@ -53,7 +52,7 @@ class SimplePlayer:
 
         # Could add additional processing on top (e.g. a master volume if we allow
         # mixing in additional sources)
-        self._master = self._mixer
+        self._master = self._input
         self._master.out()
         self._server.start()
 
@@ -108,8 +107,8 @@ class SimplePlayer:
 
         if isinstance(src, pyo.Phasor):
             return src.get() * self._duration
-        elif hasattr(src, "phase"):
-            return src.phase * self._duration
+        elif hasattr(src, "offset"):
+            return src.offset
 
         return 0.0
 
@@ -176,8 +175,7 @@ class SimplePlayer:
         out = (lpf * self._gain_ctrl).mix(2)
         chain.extend([hpf, lpf, out])
 
-        self._mixer.addInput(0, out)
-        self._mixer.setAmp(0, 0, 1.0)
+        self._input.setInput(out, self._fade_time)
 
         # Wait for the crossfade to finish before allowing the old sources
         # to be garbage collected

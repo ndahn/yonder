@@ -6,8 +6,7 @@ import numpy as np
 from dearpygui import dearpygui as dpg
 
 from yonder.audio.loop_points import LoopPair
-from yonder.audio.wavesignal import minmax_envelope, to_channels
-from yonder.audio.simple_player import SimplePlayer
+from yonder.audio.wavesignal import to_channels
 from yonder.gui import style, Icons
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
@@ -89,21 +88,10 @@ class loop_point_candidates_dialog(DpgItem):
     ) -> None:
         super().__init__(tag)
 
-        self._signal = to_channels(signal, 1)[:, 0]
-        self._framerate = framerate
-        self._duration = len(self._signal) / framerate if framerate else 0.0
         self._on_apply = on_apply
         self._user_data = user_data
         self._selected = 0
-
-        self._player = SimplePlayer()
-        self._playing_idx = -1
-
-        # Plot items
         self._preview: add_signal_preview = None
-        self._region = 0
-        self._line_start = 0
-        self._line_end = 0
 
         self._candidates: list[_Candidate] = []
         if current_loop_points:
@@ -127,13 +115,14 @@ class loop_point_candidates_dialog(DpgItem):
             )
 
         if not self._candidates:
-            # Nothing found and nothing set - still give the user a row rather
-            # than an empty window
+            # Nothing found and nothing set - still give the user a row
             self._candidates.append(
-                _Candidate(µ("Current"), 0.0, self._duration, editable=False)
+                _Candidate(µ("Current"), 0.0, self._preview.duration, editable=False)
             )
 
         self._build(title or µ("Loop points"))
+
+        signal = to_channels(signal, 1)[:, 0]
         self._preview.set_signal(signal, framerate)
         self._select(0)
 
@@ -154,7 +143,7 @@ class loop_point_candidates_dialog(DpgItem):
         return candidate.start, candidate.end
 
     def close(self) -> None:
-        self._player.close()
+        self._preview.close()
         if dpg.does_item_exist(self.tag):
             dpg.delete_item(self.tag)
 
@@ -175,8 +164,7 @@ class loop_point_candidates_dialog(DpgItem):
         candidate = self._candidates[index]
 
         value = max(0.0, value)
-        if self._duration:
-            value = min(value, self._duration)
+        value = min(value, self._preview.duration)
 
         # Keep the bounds ordered, otherwise the region and the length go
         # negative and the loop means nothing
@@ -194,17 +182,13 @@ class loop_point_candidates_dialog(DpgItem):
 
     def _on_preview_clicked(self, sender: str, app_data: Any, index: int) -> None:
         # Start/stop playback
-        if index == self._selected and self._player.playing:
-            self._player.stop()
+        if index == self._selected and self._preview.playing:
+            self._preview.stop()
         else:
             self._select(index)
-            self._player.play_signal(
-                self._signal,
-                self._framerate,
-                loop=True,
-            )
+            self._preview.play()
 
-        playing = self._player.playing
+        playing = self._preview.playing
 
         # Swap the preview buttons between play and stop
         for i, candidate in enumerate(self._candidates):
@@ -216,24 +200,6 @@ class loop_point_candidates_dialog(DpgItem):
                 texture_tag=Icons.stop if playing and i == index else Icons.play,
             )
 
-        self._update_playback_pos()
-
-    def _update_playback_pos(self) -> None:
-        if self._player.playing:
-            loop_start, loop_end = self.loop_points
-            pos = self._player.pos
-
-            if pos < loop_start:
-                self._player.seek(loop_start)
-            elif pos >= min(loop_start + 2.0, self._duration):
-                self._player.seek(max(0, max(loop_start, loop_end - 2.0)))
-            elif pos >= loop_end:
-                self._player.seek(loop_start)
-
-            dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
-
-        self._preview.seek(self._player.pos)
-
     def _on_apply_clicked(self) -> None:
         if self._on_apply:
             self._on_apply(self.tag, self.loop_points, self._user_data)
@@ -243,12 +209,12 @@ class loop_point_candidates_dialog(DpgItem):
     # === Internals =====================================================
 
     def _select(self, index: int) -> None:
-        self._selected = index
         for i, candidate in enumerate(self._candidates):
             dpg.set_value(candidate.check, i == index)
 
         candidate = self._candidates[index]
         self._preview.loop_points = (candidate.start, candidate.end)
+        self._selected = index
 
     @staticmethod
     def _length_label(candidate: _Candidate) -> str:
@@ -267,8 +233,11 @@ class loop_point_candidates_dialog(DpgItem):
             on_close=self.close,
         ):
             self._preview = add_signal_preview()
+            self._preview.loop_preview_enabled = True
+
             dpg.add_spacer(height=4)
             self._build_table()
+
             dpg.add_separator()
             dpg.add_spacer(height=3)
 

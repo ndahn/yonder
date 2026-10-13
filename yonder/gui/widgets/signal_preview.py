@@ -36,6 +36,7 @@ class add_signal_preview(DpgItem):
         self._user_data = user_data
 
         self._player: SimplePlayer = None
+        self.loop_preview_enabled = False
 
         self._build(playback)
 
@@ -88,6 +89,47 @@ class add_signal_preview(DpgItem):
         self._loop_points = points
         self._sync_region()
 
+    @property
+    def player(self) -> SimplePlayer:
+        if not self._player:
+            self._player = SimplePlayer()
+
+        return self._player
+
+    @property
+    def playing(self) -> bool:
+        if self._player:
+            return self._player.playing
+
+        return False
+
+    def play(self) -> None:
+        player = self.player
+        if player.playing:
+            return
+
+        player.play_signal(self._signal, self._framerate, loop=True)
+        # In case seek was called before
+        player.seek(dpg.get_value(self._t("playback_pos")))
+
+        if dpg.does_item_exist(self._t("play_stop")):
+            dpg.configure_item(
+                self._t("play_stop"), texture_tag=Icons.stop
+            )
+        
+        self._update_playback_pos()
+
+    def stop(self) -> None:
+        if not self._player:
+            return
+
+        self._player.stop()
+
+        if dpg.does_item_exist(self._t("play_stop")):
+            dpg.configure_item(
+                self._t("play_stop"), texture_tag=Icons.play
+            )
+
     def seek(self, pos: float, relative: bool = False) -> None:
         if self._player:
             self._player.seek(pos, relative)
@@ -107,44 +149,39 @@ class add_signal_preview(DpgItem):
     # === DPG callbacks =================================================
 
     def _on_play_stop_clicked(self) -> None:
-        if not self._player:
-            self._player = SimplePlayer()
-
-        # Start/stop playback
-        if self._player.playing:
-            self._player.stop()
+        if self.playing:
+            self.stop()
         else:
-            self._player.play_signal(
-                self._signal,
-                self._framerate,
-                loop=True,
-            )
-            self._player.seek(dpg.get_value(self._t("playback_pos")))
+            self.play()
 
-        playing = self._player.playing
+        playing = self.playing
 
         # Swap the preview buttons between play and stop
-        dpg.configure_item(
-            self._t("play_stop"), texture_tag=Icons.stop if playing else Icons.play
-        )
-
-        self._update_playback_pos()
+        if dpg.does_item_exist(self._t("play_stop")):
+            dpg.configure_item(
+                self._t("play_stop"), texture_tag=Icons.stop if playing else Icons.play
+            )
 
     def _update_playback_pos(self) -> None:
         if self._player.playing:
             loop_start, loop_end = self.loop_points
-            pos = self._player.pos * self._duration
+            pos = self._player.pos
 
             if pos < loop_start:
                 self._player.seek(loop_start)
-            elif pos >= min(loop_start + 2.0, self._duration):
-                self._player.seek(max(0, max(loop_start, loop_end - 2.0)))
+                print("jump forward to start", loop_start)
+            elif self.loop_preview_enabled and pos >= min(
+                loop_start + 2.0, self._duration
+            ) and pos < loop_end - 2.0:
+                self._player.seek(max((0, loop_start, loop_end - 2.0)))
+                print("jump to end: ", max((0, loop_start, loop_end - 2.0)))
             elif pos >= loop_end:
                 self._player.seek(loop_start)
+                print("jump back to start", loop_start)
 
             dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
 
-        dpg.set_value(self._t("playback_pos"), self._player.pos * self._duration)
+        dpg.set_value(self._t("playback_pos"), self._player.pos)
 
     # === Internals =====================================================
 
