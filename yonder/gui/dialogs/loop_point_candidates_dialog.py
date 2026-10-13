@@ -232,7 +232,7 @@ class loop_point_candidates_dialog(DpgItem):
             tag=self.tag,
             on_close=self.close,
         ):
-            self._preview = add_signal_preview()
+            self._preview = add_signal_preview(no_playback_controls=True)
             self._preview.loop_preview_enabled = True
 
             dpg.add_spacer(height=4)

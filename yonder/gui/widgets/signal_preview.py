@@ -20,7 +20,7 @@ class add_signal_preview(DpgItem):
         signal: np.ndarray = None,
         framerate: int = None,
         *,
-        playback: bool = True,
+        no_playback_controls: bool = False,
         loop_points: tuple[float, float] = None,
         max_points: int = 4000,
         tag: str = 0,
@@ -38,7 +38,7 @@ class add_signal_preview(DpgItem):
         self._player: SimplePlayer = None
         self.loop_preview_enabled = False
 
-        self._build(playback)
+        self._build(no_playback_controls)
 
         if signal is not None and framerate > 0:
             self.set_signal(signal, framerate)
@@ -113,10 +113,8 @@ class add_signal_preview(DpgItem):
         player.seek(dpg.get_value(self._t("playback_pos")))
 
         if dpg.does_item_exist(self._t("play_stop")):
-            dpg.configure_item(
-                self._t("play_stop"), texture_tag=Icons.stop
-            )
-        
+            dpg.configure_item(self._t("play_stop"), texture_tag=Icons.stop)
+
         self._update_playback_pos()
 
     def stop(self) -> None:
@@ -126,9 +124,7 @@ class add_signal_preview(DpgItem):
         self._player.stop()
 
         if dpg.does_item_exist(self._t("play_stop")):
-            dpg.configure_item(
-                self._t("play_stop"), texture_tag=Icons.play
-            )
+            dpg.configure_item(self._t("play_stop"), texture_tag=Icons.play)
 
     def seek(self, pos: float, relative: bool = False) -> None:
         if self._player:
@@ -154,14 +150,6 @@ class add_signal_preview(DpgItem):
         else:
             self.play()
 
-        playing = self.playing
-
-        # Swap the preview buttons between play and stop
-        if dpg.does_item_exist(self._t("play_stop")):
-            dpg.configure_item(
-                self._t("play_stop"), texture_tag=Icons.stop if playing else Icons.play
-            )
-
     def _update_playback_pos(self) -> None:
         if self._player.playing:
             loop_start, loop_end = self.loop_points
@@ -170,9 +158,11 @@ class add_signal_preview(DpgItem):
             if pos < loop_start:
                 self._player.seek(loop_start)
                 print("jump forward to start", loop_start)
-            elif self.loop_preview_enabled and pos >= min(
-                loop_start + 2.0, self._duration
-            ) and pos < loop_end - 2.0:
+            elif (
+                self.loop_preview_enabled
+                and pos >= min(loop_start + 2.0, self._duration)
+                and pos < loop_end - 2.0
+            ):
                 self._player.seek(max((0, loop_start, loop_end - 2.0)))
                 print("jump to end: ", max((0, loop_start, loop_end - 2.0)))
             elif pos >= loop_end:
@@ -219,14 +209,14 @@ class add_signal_preview(DpgItem):
     def _length_label(self) -> str:
         return µ("{len:.3f} s").format(len=self.playback_duration)
 
-    def _build(self, playback: bool) -> None:
+    def _build(self, no_playback_controls: bool) -> None:
         with dpg.child_window(
             autosize_x=True,
             auto_resize_y=True,
             tag=self.tag,
         ):
             self._build_plot()
-            if playback:
+            if not no_playback_controls:
                 dpg.add_spacer(height=4)
                 self._build_footer()
 
