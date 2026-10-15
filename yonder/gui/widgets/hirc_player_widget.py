@@ -18,7 +18,6 @@ from .equalizer_widget import add_equalizer
 from .attenuation_plot import add_attenuation_plot
 
 
-
 class add_hirc_player(DpgItem):
     def __init__(
         self,
@@ -467,3 +466,15 @@ class add_hirc_player(DpgItem):
             )
             dpg.add_separator(label=µ("Voices"))
             dpg.add_group(tag=self._t("voice_settings"))
+
+
+_global_instance: add_hirc_player = None
+
+
+def set_global_player(instance: add_hirc_player) -> None:
+    global _global_instance
+    _global_instance = instance
+
+
+def get_global_player() -> add_hirc_player:
+    return _global_instance

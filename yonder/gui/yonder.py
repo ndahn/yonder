@@ -84,7 +84,7 @@ from .panels.node_widgets import create_node_widgets
 from .panels.section_widgets import create_section_widgets
 from .widgets.splash import add_splash
 from .widgets.kofi import add_kofi_button
-from .widgets.hirc_player_widget import add_hirc_player
+from .widgets.hirc_player_widget import add_hirc_player, set_global_player
 from .widgets.notifications import global_notification_man
 
 
@@ -504,6 +504,7 @@ class BanksOfYonder(DpgItem):
                 )
                 dpg.add_spacer(height=1)
                 self._hirc_player = add_hirc_player(tag=self._t("hirc_player"))
+                set_global_player(self._hirc_player)
 
             with dpg.child_window(
                 width=400,

@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Any
-
+from typing import Any, Callable
 import numpy as np
 from dearpygui import dearpygui as dpg
 
+from yonder import lookup_name
 from yonder.audio.wavesignal import minmax_envelope, to_channels
 from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, Icons
@@ -22,6 +22,8 @@ class add_signal_preview(DpgItem):
         *,
         no_playback_controls: bool = False,
         loop_points: tuple[float, float] = None,
+        user_markers: dict[int, float] = None,
+        on_marker_changed: Callable[[str, tuple[int, float], Any], None] = None,
         max_points: int = 4000,
         tag: str = 0,
         user_data: Any = None,
@@ -32,10 +34,12 @@ class add_signal_preview(DpgItem):
         self._framerate = 0
         self._duration = 0.0
         self._loop_points = loop_points or (0, 0)
+        self._user_markers = user_markers or {}
         self._max_points = max_points
         self._user_data = user_data
 
         self._player: SimplePlayer = None
+        self._playing = False
         self.loop_preview_enabled = False
 
         self._build(no_playback_controls)
@@ -90,6 +94,33 @@ class add_signal_preview(DpgItem):
         self._sync_region()
 
     @property
+    def user_markers(self) -> dict[int, float]:
+        """Return all user marker positions ``{id: pos}`` in seconds."""
+        return dict(self._user_markers)
+
+    @user_markers.setter
+    def user_markers(self, markers: dict[int, float]) -> None:        
+        dpg.delete_item(self._t("user_markers_container"), children_only=True)
+
+        for mid in self._user_markers:
+            if dpg.does_item_exist(self._t(f"user_marker_{mid}")):
+                dpg.delete_item(self._t(f"user_marker_{mid}"))
+
+        self._user_markers = markers
+
+        for mid, pos in self._user_markers.items():
+            marker_label = lookup_name(mid, f"#{mid}")
+            dpg.add_input_float(
+                label=marker_label,
+                default_value=pos,
+                width=130,
+                callback=self._on_user_marker_changed,
+                user_data=mid,
+                tag=self._t(f"marker_{mid}_value"),
+            )
+            # TODO plot markers
+
+    @property
     def player(self) -> SimplePlayer:
         if not self._player:
             self._player = SimplePlayer()
@@ -98,16 +129,13 @@ class add_signal_preview(DpgItem):
 
     @property
     def playing(self) -> bool:
-        if self._player:
-            return self._player.playing
-
-        return False
+        return self._playing
 
     def play(self) -> None:
-        player = self.player
-        if player.playing:
+        if self.playing:
             return
 
+        player = self.player
         player.play_signal(self._signal, self._framerate, loop=True)
         # In case seek was called before
         player.seek(dpg.get_value(self._t("playback_pos")))
@@ -299,3 +327,33 @@ class add_signal_preview(DpgItem):
                 )
 
             dpg.add_text(self._length_label(), tag=self._t("length_text"))
+
+        # TODO use the marker editor widget instead
+        with dpg.window(
+            popup=True,
+            no_move=True,
+            no_title_bar=True,
+            no_resize=True,
+            tag=self._t("markers_popup"),
+            show=False,
+        ):
+            dpg.add_input_float(
+                label=µ("loop_start", "marker"),
+                default_value=self._loop_start,
+                width=130,
+                callback=self._set_loop_marker_pos,
+                user_data="loop_start",
+                tag=self._t("loop_start_value"),
+            )
+            dpg.add_input_float(
+                label=µ("loop_end", "marker"),
+                default_value=self._loop_end,
+                width=130,
+                callback=self._set_loop_marker_pos,
+                user_data="loop_end",
+                tag=self._t("loop_end_value"),
+            )
+
+            dpg.add_separator()
+            dpg.add_group(tag=self._t("user_markers_container"))
+
