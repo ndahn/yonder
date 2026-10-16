@@ -9,7 +9,6 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.types import Soundbank, MusicSegment, MusicTrack
-from yonder.types.base_types import MusicMarkerWwise
 from yonder.enums import MarkerId, SourceType
 from yonder.util import logger, get_temp_dir
 from yonder.wem import wav2wem, wem2wav
@@ -37,7 +36,8 @@ class AudioTrack:
     offset : float
         Where the untrimmed source starts on the timeline, in ms if the
         arranger was built with ``markers_in_ms``, else in seconds. This is
-        Wwise's ``play_at``: trimming does not change it.
+        Wwise's ``play_at``: trimming does not change it. Usually negative
+        when the begin trim is balanced to keep the track at the segment start.
     begin_trim : float
         How much of the source head is trimmed away (>= 0).
     end_trim : float
@@ -110,7 +110,8 @@ class add_audio_visualizer(DpgItem):
     so all rows share one time axis and one amplitude scale. Each track is a
     DAW-style clip: press anywhere inside its playback region and drag to move
     it along the timeline, or grab the handle at either end to trim that end.
-    Both snap to the other tracks' edges, to the markers and to zero.
+    Both snap to the other tracks' edges, to the markers and to zero. Moving a
+    track by hand never lets its audible part start before zero.
     Trimmed-away audio stays visible under a shade so it can be dragged back
     out.
 
@@ -126,26 +127,24 @@ class add_audio_visualizer(DpgItem):
         Initial tracks, top row first.
     label : str
         Text label rendered above the plots.
-    loop_markers_enabled : bool
-        Enable the global loop start/end markers.
-    loop_start : float
-        Initial loop start, absolute on the timeline.
-    loop_end : float
-        Initial loop end, absolute on the timeline. ``0.0`` means "to end".
+    loop_points : tuple of (float, float), optional
+        Initial ``(start, end)`` of the loop, absolute on the timeline. A loop
+        end of ``0.0`` means "to end". None means the loop is not handled and
+        its markers are not shown.
     on_loop_changed : callable, optional
-        Fired as ``on_loop_changed(tag, (start, end, enabled), user_data)``.
-    trim_enabled : bool
-        Let each track be trimmed by dragging its clip edges.
+        Fired as ``on_loop_changed(tag, (start, end), user_data)``.
     on_trims_changed : callable, optional
         Fired as ``on_trims_changed(tag, (index, (begin, end)), user_data)``.
-    user_markers_enabled : bool
-        Enable the global named user markers.
+        Also decides whether tracks can be trimmed. The tracks' trims are
+        shown either way.
     user_markers : dict of (int or str) to float, optional
-        Initial marker positions keyed by ID or name.
+        Initial marker positions keyed by ID or name. None means user markers
+        are not handled and not shown.
     on_user_markers_changed : callable, optional
         Fired as ``on_user_markers_changed(tag, markers_dict, user_data)``.
     on_track_moved : callable, optional
-        Fired as ``on_track_moved(tag, (index, offset), user_data)``.
+        Fired as ``on_track_moved(tag, (index, offset), user_data)``. Also
+        decides whether tracks can be moved at all.
     on_track_toggled : callable, optional
         Fired as ``on_track_toggled(tag, (index, enabled), user_data)``.
     on_track_removed : callable, optional
@@ -209,27 +208,12 @@ class add_audio_visualizer(DpgItem):
         if not tag:
             tag = dpg.generate_uuid()
 
-        def set_marker(mid: int, pos: float, name: str = None) -> None:
-            for marker in segment.markers:
-                if marker.id == mid:
-                    marker.pos = pos
-                    break
-            else:
-                segment.markers.append(
-                    MusicMarkerWwise(
-                        mid,
-                        pos,
-                        len(name or ""),
-                        name or "",
-                    )
-                )
-
         def on_loop_changed(
             sender: str, info: tuple[float, float], cb_user_data: Any
         ) -> None:
             loop_start, loop_end = info
-            set_marker(MarkerId.LoopStart, loop_start)
-            set_marker(MarkerId.LoopEnd, loop_end)
+            segment.set_marker(MarkerId.LoopStart, loop_start)
+            segment.set_marker(MarkerId.LoopEnd, loop_end)
 
             if on_markers_changed:
                 on_markers_changed(
@@ -239,8 +223,8 @@ class add_audio_visualizer(DpgItem):
         def on_user_marker_changed(
             sender: str, markers: dict[Hash, float], cb_user_data: Any
         ) -> None:
-            for mid, pos in markers:
-                set_marker(mid, pos)
+            for mid, pos in markers.items():
+                segment.set_marker(mid, pos)
 
             if on_markers_changed:
                 on_markers_changed(
@@ -291,8 +275,12 @@ class add_audio_visualizer(DpgItem):
                 on_segment_changed(tag, segment, user_data)
 
         markers = {m.id: m.position for m in segment.markers}
-        loop_start = markers.pop(MarkerId.LoopStart, 0.0)
-        loop_end = markers.pop(MarkerId.LoopEnd, 0.0)
+        loop_start = markers.pop(int(MarkerId.LoopStart), None)
+        loop_end = markers.pop(int(MarkerId.LoopEnd), None)
+        if loop_start is None and loop_end is None:
+            loop_points = None
+        else:
+            loop_points = (loop_start or 0.0, loop_end or 0.0)
 
         track_info = []
 
@@ -304,7 +292,7 @@ class add_audio_visualizer(DpgItem):
             track_info.append(
                 AudioTrack(
                     path,
-                    child.id,
+                    str(child.id),
                     offset=playback.play_at,
                     begin_trim=playback.begin_trim_offset,
                     end_trim=playback.end_trim_offset,
@@ -314,13 +302,9 @@ class add_audio_visualizer(DpgItem):
         return add_audio_visualizer(
             track_info,
             label=label,
-            loop_markers_enabled=on_loop_changed,
-            loop_start=loop_start,
-            loop_end=loop_end,
+            loop_points=loop_points,
             on_loop_changed=on_loop_changed,
-            trim_enabled=True,
             on_trims_changed=on_trims_changed,
-            user_markers_enabled=True,
             user_markers=markers,
             on_user_markers_changed=on_user_marker_changed,
             on_track_moved=on_track_moved,
@@ -343,15 +327,11 @@ class add_audio_visualizer(DpgItem):
         tracks: Iterable[Path | AudioTrack] = None,
         *,
         label: str = "",
-        loop_markers_enabled: bool = False,
-        loop_start: float = 0.0,
-        loop_end: float = 0.0,
+        loop_points: tuple[float, float] = None,
         on_loop_changed: Callable[[str, tuple[float, float], Any], None] = None,
-        trim_enabled: bool = False,
         on_trims_changed: Callable[
             [str, tuple[int, tuple[float, float]], Any], None
         ] = None,
-        user_markers_enabled: bool = False,
         user_markers: dict[Hash, float] = None,
         on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
         on_track_moved: Callable[[str, tuple[int, float], Any], None] = None,
@@ -373,9 +353,6 @@ class add_audio_visualizer(DpgItem):
 
         # Layout / construction-time settings (fixed for lifetime)
         self._label = label
-        self._loop_markers_enabled = loop_markers_enabled
-        self._trim_enabled = trim_enabled
-        self._user_markers_enabled = user_markers_enabled
         self._snap_pixels = snap_pixels
         self._row_height = row_height
         self._marker_height = marker_height
@@ -407,32 +384,16 @@ class add_audio_visualizer(DpgItem):
         # (row, anchor time, offset at press) while a clip is being dragged
         self._drag: tuple[_Row, float, float] | None = None
 
-        # Parse user markers - resolves str keys to int hashes
-        self._user_markers: dict[int, float] = {}
+        # Loop points are absolute on the timeline, in seconds. None means
+        # they are not handled. loop_end == 0.0 means "to end".
+        self._loop_points: tuple[float, float] = None
+        # None means they are not handled
+        self._user_markers: dict[int, float] = None
         self._user_marker_labels: dict[int, str] = {}
         self._user_marker_colors: dict[int, style.RGBA] = {}
 
-        colorgen = style.HighContrastColorGenerator()
-        for mid, pos in (user_markers or {}).items():
-            if isinstance(mid, str):
-                marker_label = mid
-                mid = calc_hash(mid)
-            else:
-                marker_label = lookup_name(mid, f"#{mid}")
-
-            self._user_markers[mid] = pos / 1000 if markers_in_ms else pos
-            self._user_marker_labels[mid] = marker_label
-            self._user_marker_colors[mid] = colorgen()
-
-        if markers_in_ms:
-            loop_start /= 1000
-            loop_end /= 1000
-
-        # Loop points are absolute on the timeline — with per-track trims
-        # there is no global begin trim left to anchor them to.
-        # loop_end == 0.0 means "to end".
-        self._loop_start: float = loop_start
-        self._loop_end: float = loop_end
+        self._set_loop_points(loop_points)
+        self._set_user_markers(user_markers)
 
         self._setup_content(snap_enabled)
         self.set_tracks(tracks or [])
@@ -510,7 +471,7 @@ class add_audio_visualizer(DpgItem):
     def set_track_offset(self, index: int, offset: float) -> None:
         """Move a track to a timeline position (snapping is not applied)."""
         row = self._rows[index]
-        row.offset = max(0.0, self._into(offset))
+        row.offset = self._into(offset)
         self._update_row_geometry(row)
         self._refresh_timeline()
 
@@ -542,13 +503,13 @@ class add_audio_visualizer(DpgItem):
 
         path = Path(track.path) if track.path else None
         if path.suffix == ".wem":
-            path = wem2wav(get_config().locate_vgmstream(), path, get_temp_dir())
+            path = wem2wav(get_config().locate_vgmstream(), path, get_temp_dir())[0]
             track.path = path
 
         row = _Row(
             path=path,
             label=track.label or (path.stem if path else µ("<empty>")),
-            offset=max(0.0, self._into(track.offset)),
+            offset=self._into(track.offset),
             enabled=track.enabled,
         )
         self._load_row(row)
@@ -597,10 +558,10 @@ class add_audio_visualizer(DpgItem):
             targets.append(row.start)
             targets.append(row.end)
 
-        if self._loop_markers_enabled:
+        if self._loop_points is not None:
             targets.extend(self._loop_abs_bounds())
 
-        if self._user_markers_enabled:
+        if self._user_markers is not None:
             targets.extend(self._user_markers.values())
 
         return targets
@@ -692,6 +653,8 @@ class add_audio_visualizer(DpgItem):
 
     def _on_mouse_click(self, sender: str, button: int) -> None:
         self._drag = None
+        if not self._on_track_moved:
+            return
 
         row = self._hovered_row()
         if row is None or not row.enabled or row.error:
@@ -701,7 +664,7 @@ class add_audio_visualizer(DpgItem):
         if not row.start <= pos <= row.end:
             return  # outside the playback region, e.g. on a trimmed-away part
 
-        if self._trim_enabled:
+        if self._on_trims_changed:
             # Leave the trim handles their own keep-out zone at either end
             handle = self._px_to_time(self._HANDLE_PIXELS)
             if abs(pos - row.start) <= handle or abs(pos - row.end) <= handle:
@@ -724,11 +687,11 @@ class add_audio_visualizer(DpgItem):
 
         # Derived from the anchor rather than accumulated, so a snap that
         # engages and releases again cannot drift the clip.
-        offset = max(0.0, start_offset + (pos - anchor))
+        offset = max(-row.begin_trim, start_offset + (pos - anchor))
         offset += self._snap_delta(
             row, (offset + row.begin_trim, offset + row.duration + row.end_trim)
         )
-        offset = max(0.0, offset)
+        offset = max(-row.begin_trim, offset)
 
         if offset == row.offset:
             return
@@ -784,15 +747,16 @@ class add_audio_visualizer(DpgItem):
         """Re-clamp the view and the markers after the timeline length moved."""
         duration = self.duration
         padding = max(0.05 * duration, 0.1)
+        # Keep trimmed-away heads in view so they can be dragged back out
+        lo = min([0.0] + [r.offset for r in self._rows if not r.error]) - padding
+        hi = duration + padding
 
         for row in self._rows:
             if dpg.does_item_exist(row.xaxis):
-                dpg.set_axis_limits_constraints(row.xaxis, -padding, duration + padding)
+                dpg.set_axis_limits_constraints(row.xaxis, lo, hi)
 
         if dpg.does_item_exist(self._marker_axis):
-            dpg.set_axis_limits_constraints(
-                self._marker_axis, -padding, duration + padding
-            )
+            dpg.set_axis_limits_constraints(self._marker_axis, lo, hi)
 
         self._sync_markers()
 
@@ -829,7 +793,7 @@ class add_audio_visualizer(DpgItem):
             dpg.bind_item_theme(series, self._series_theme(row, i))
 
     def _on_row_offset_input(self, sender: str, value: float, row: _Row) -> None:
-        row.offset = max(0.0, self._into(value))
+        row.offset = max(-row.begin_trim, self._into(value))
         self._update_row_geometry(row)
         self._refresh_timeline()
         self._fire_track_moved(row)
@@ -865,51 +829,58 @@ class add_audio_visualizer(DpgItem):
 
     # === Loop markers ==================================================
 
-    def get_loop_state(self, millis: bool) -> tuple[float, float, bool]:
-        """Return ``(loop_start, loop_end, enabled)``, absolute on the timeline."""
-        if not self._loop_markers_enabled:
-            return (0.0, 0.0)
+    def get_loop_points(self, millis: bool) -> tuple[float, float]:
+        """Return ``(loop_start, loop_end)`` absolute on the timeline, or None."""
+        if self._loop_points is None:
+            return None
 
         factor = 1000 if millis else 1
-        return (self._loop_start * factor, self._loop_end * factor)
+        return (self._loop_points[0] * factor, self._loop_points[1] * factor)
 
-    def set_loop_state(self, loop_start: float, loop_end: float) -> None:
-        """Set loop positions (absolute on the timeline, seconds)."""
-        if not self._loop_markers_enabled:
-            raise RuntimeError("loop_markers_enabled is False")
+    def set_loop_points(self, loop_points: tuple[float, float]) -> None:
+        """Set the loop (absolute on the timeline), or None to remove it."""
+        had_loop = self._loop_points is not None
+        self._set_loop_points(loop_points)
 
-        self._loop_start = loop_start
-        self._loop_end = loop_end
-        self._sync_markers()
+        if had_loop != (loop_points is not None):
+            # The marker items only exist while a loop is handled
+            self._rebuild_markers()
+        else:
+            self._sync_markers()
+
+    def _set_loop_points(self, loop_points: tuple[float, float]) -> None:
+        if loop_points is None:
+            self._loop_points = None
+        else:
+            self._loop_points = (self._into(loop_points[0]), self._into(loop_points[1]))
 
     def _loop_abs_bounds(self) -> tuple[float, float]:
         """Loop ``(start, end)``; ``loop_end == 0.0`` means the timeline end."""
-        end = self.duration if self._loop_end == 0.0 else self._loop_end
-        return self._loop_start, end
+        start, end = self._loop_points
+        return start, self.duration if end == 0.0 else end
 
     def _fire_loop_changed(self) -> None:
         if self._on_loop_changed:
-            self._on_loop_changed(self._tag, self.get_loop_state(True), self._user_data)
+            self._on_loop_changed(self._tag, self.get_loop_points(True), self._user_data)
+
+    def _set_loop_bound(self, which: str, pos: float) -> None:
+        start, end = self._loop_points
+        pos = self._get_valid_pos(pos)
+        if which == "loop_start":
+            start = max(0.0, pos)
+        else:
+            end = max(0.001, pos)  # keep clear of the 0.0 sentinel
+
+        self._loop_points = (start, end)
+        self._sync_markers()
+        self._fire_loop_changed()
 
     def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
-        pos = self._get_valid_pos(pos)
-        if loop_marker == "loop_start":
-            self._loop_start = max(0.0, pos)
-        else:
-            self._loop_end = max(0.001, pos)  # keep clear of the 0.0 sentinel
-
-        self._sync_markers()
-        self._fire_loop_changed()
+        self._set_loop_bound(loop_marker, self._into(pos))
 
     def _on_loop_marker_moved(self, sender: str) -> None:
-        pos = self._get_valid_pos(dpg.get_value(sender))
-        if sender == self._strip.get("loop_start"):
-            self._loop_start = max(0.0, pos)
-        else:
-            self._loop_end = max(0.001, pos)
-
-        self._sync_markers()
-        self._fire_loop_changed()
+        which = "loop_start" if sender == self._strip.get("loop_start") else "loop_end"
+        self._set_loop_bound(which, dpg.get_value(sender))
 
     def _mixdown(self, row_indices: list[int] = None) -> tuple[np.ndarray, int]:
         """Mix every audible track into one mono signal on the timeline.
@@ -975,7 +946,11 @@ class add_audio_visualizer(DpgItem):
             candidates,
             combined,
             framerate,
-            current_loop_points=self._loop_abs_bounds(),
+            current_loop_points=(
+                tuple(t * 1000 for t in self._loop_abs_bounds())
+                if self._loop_points is not None
+                else None
+            ),
             on_apply=self._on_loop_candidate_applied,
         )
         center_window(dlg.tag)
@@ -983,7 +958,8 @@ class add_audio_visualizer(DpgItem):
     def _on_loop_candidate_applied(
         self, sender: str, loop: tuple[float, float], ud: Any
     ) -> None:
-        self.set_loop_state(*loop)
+        # The candidates are in ms
+        self.set_loop_points((self._out(loop[0] / 1000), self._out(loop[1] / 1000)))
         self._fire_loop_changed()
 
     # === Trim markers ==================================================
@@ -994,9 +970,6 @@ class add_audio_visualizer(DpgItem):
         Begin trim is measured from the source start, end trim from the
         source end (and is therefore <= 0).
         """
-        if not self._trim_enabled:
-            return (0.0, 0.0)
-
         row = self._rows[index]
         factor = 1000 if millis else 1
         return (row.begin_trim * factor, row.end_trim * factor)
@@ -1007,9 +980,6 @@ class add_audio_visualizer(DpgItem):
 
     def set_trims(self, index: int, begin_trim: float, end_trim: float) -> None:
         """Set one track's trims programmatically (snapping is not applied)."""
-        if not self._trim_enabled:
-            raise RuntimeError("trim_enabled is False")
-
         if end_trim > 0.0:
             raise ValueError("end_trim must be <0")
 
@@ -1049,7 +1019,10 @@ class add_audio_visualizer(DpgItem):
     # === User markers ==================================================
 
     def get_user_markers(self, millis: bool) -> dict[int, float]:
-        """Return all user marker positions ``{id: pos}``."""
+        """Return all user marker positions ``{id: pos}``, or None."""
+        if self._user_markers is None:
+            return None
+
         if millis:
             return {k: v * 1000 for k, v in self._user_markers.items()}
 
@@ -1060,7 +1033,34 @@ class add_audio_visualizer(DpgItem):
         if isinstance(mid, str):
             mid = calc_hash(mid)
 
-        return self._user_markers.get(mid, default)
+        return (self._user_markers or {}).get(mid, default)
+
+    def set_user_markers(self, markers: dict[Hash, float]) -> None:
+        """Replace the user markers keyed by ID or name, or None to remove them."""
+        self._set_user_markers(markers)
+        self._rebuild_markers()
+
+    def _set_user_markers(self, markers: dict[Hash, float]) -> None:
+        self._user_marker_labels.clear()
+        self._user_marker_colors.clear()
+
+        if markers is None:
+            self._user_markers = None
+            return
+
+        # Resolves str keys to int hashes
+        self._user_markers = {}
+        colorgen = style.HighContrastColorGenerator()
+        for mid, pos in markers.items():
+            if isinstance(mid, str):
+                marker_label = mid
+                mid = calc_hash(mid)
+            else:
+                marker_label = lookup_name(mid, f"#{mid}")
+
+            self._user_markers[mid] = self._into(pos)
+            self._user_marker_labels[mid] = marker_label
+            self._user_marker_colors[mid] = colorgen()
 
     def _fire_user_markers_changed(self) -> None:
         if self._on_user_markers_changed:
@@ -1069,7 +1069,7 @@ class add_audio_visualizer(DpgItem):
             )
 
     def _set_user_marker_pos(self, sender: str, pos: float, mid: int) -> None:
-        self._user_markers[mid] = self._get_valid_pos(pos)
+        self._user_markers[mid] = self._get_valid_pos(self._into(pos))
         self._sync_markers()
         self._fire_user_markers_changed()
 
@@ -1121,20 +1121,19 @@ class add_audio_visualizer(DpgItem):
 
     def _sync_markers(self) -> None:
         """Push the authoritative marker state into every plot item."""
-        if self._loop_markers_enabled:
+        if self._loop_points is not None:
             start, end = self._loop_abs_bounds()
             start_viz = min(self._get_valid_pos(start), end)
             self._set_marker_line("loop_start", start_viz)
             self._set_marker_line("loop_end", end)
-            self._set_value(self._t("loop_start_value"), start)
-            self._set_value(self._t("loop_end_value"), end)
+            self._set_value(self._t("loop_start_value"), self._out(start))
+            self._set_value(self._t("loop_end_value"), self._out(end))
 
-        if self._user_markers_enabled:
-            for mid in self._user_markers:
-                pos = self._get_valid_pos(self._user_markers[mid])
-                self._user_markers[mid] = pos
-                self._set_marker_line(f"m{mid}", pos)
-                self._set_value(self._t(f"marker_{mid}_value"), pos)
+        for mid in self._user_markers or ():
+            pos = self._get_valid_pos(self._user_markers[mid])
+            self._user_markers[mid] = pos
+            self._set_marker_line(f"m{mid}", pos)
+            self._set_value(self._t(f"marker_{mid}_value"), self._out(pos))
 
     @staticmethod
     def _set_value(item: str | int, value: Any) -> None:
@@ -1274,7 +1273,7 @@ class add_audio_visualizer(DpgItem):
                 no_gridlines=True,
             )
 
-            if self._loop_markers_enabled:
+            if self._loop_points is not None:
                 start, end = self._loop_abs_bounds()
                 self._axis_tags["loop_start"] = dpg.add_axis_tag(
                     label=µ("L0", "marker"),
@@ -1303,7 +1302,7 @@ class add_audio_visualizer(DpgItem):
                     callback=self._on_loop_marker_moved,
                 )
 
-            if self._user_markers_enabled:
+            if self._user_markers is not None:
                 for i, (mid, pos) in enumerate(self._user_markers.items()):
                     color = self._user_marker_colors[mid]
                     marker_label = self._user_marker_labels[mid]
@@ -1362,9 +1361,8 @@ class add_audio_visualizer(DpgItem):
                 row.series.append(series)
 
             # Shades over the trimmed-away source head and tail
-            if self._trim_enabled:
-                row.head = self._add_trim_shade()
-                row.tail = self._add_trim_shade()
+            row.head = self._add_trim_shade()
+            row.tail = self._add_trim_shade()
 
             # Read-only mirrors of the global markers
             self._build_row_mirrors(row)
@@ -1382,7 +1380,7 @@ class add_audio_visualizer(DpgItem):
 
             # Trim handles, added last so they win the hit test over anything
             # else drawn in the row.
-            if self._trim_enabled:
+            if self._on_trims_changed:
                 row.trim_lo = self._add_trim_handle(row, "lo", row.start)
                 row.trim_hi = self._add_trim_handle(row, "hi", row.end)
 
@@ -1414,7 +1412,7 @@ class add_audio_visualizer(DpgItem):
         )
 
     def _build_row_mirrors(self, row: _Row) -> None:
-        if self._loop_markers_enabled:
+        if self._loop_points is not None:
             for key, color in (
                 ("loop_start", style.green),
                 ("loop_end", style.green),
@@ -1427,15 +1425,14 @@ class add_audio_visualizer(DpgItem):
                     no_fit=True,
                 )
 
-        if self._user_markers_enabled:
-            for mid in self._user_markers:
-                row.mirrors[f"m{mid}"] = dpg.add_drag_line(
-                    color=self._user_marker_colors[mid].but(a=160),
-                    show_label=False,
-                    no_inputs=True,
-                    no_cursor=True,
-                    no_fit=True,
-                )
+        for mid in self._user_markers or ():
+            row.mirrors[f"m{mid}"] = dpg.add_drag_line(
+                color=self._user_marker_colors[mid].but(a=160),
+                show_label=False,
+                no_inputs=True,
+                no_cursor=True,
+                no_fit=True,
+            )
 
     def _build_row_menu(self, row: _Row) -> None:
         """Right-click menu for a waveform row.
@@ -1478,21 +1475,20 @@ class add_audio_visualizer(DpgItem):
                     user_data=row,
                 )
 
-            row.offset_input = dpg.add_input_float(
-                label=µ(
-                    "Offset (ms)" if self._markers_in_ms else "Offset (s)", "track"
-                ),
-                default_value=self._out(row.offset),
-                min_value=0.0,
-                min_clamped=True,
-                step=self._step(),
-                step_fast=self._step() * 10,
-                width=130,
-                callback=self._on_row_offset_input,
-                user_data=row,
-            )
+            if self._on_track_moved:
+                row.offset_input = dpg.add_input_float(
+                    label=µ(
+                        "Offset (ms)" if self._markers_in_ms else "Offset (s)", "track"
+                    ),
+                    default_value=self._out(row.offset),
+                    step=self._step(),
+                    step_fast=self._step() * 10,
+                    width=130,
+                    callback=self._on_row_offset_input,
+                    user_data=row,
+                )
 
-            if self._trim_enabled:
+            if self._on_trims_changed:
                 row.begin_trim_input = dpg.add_input_float(
                     label=µ("begin_trim", "marker"),
                     default_value=self._out(row.begin_trim),
@@ -1575,6 +1571,12 @@ class add_audio_visualizer(DpgItem):
                 dpg.mvMouseButton_Left, callback=self._on_mouse_release
             )
 
+    def _rebuild_markers(self) -> None:
+        """Recreate every marker item after markers were added or removed."""
+        self._delete_item(self._t("markers_popup"))
+        self._build_markers_popup()
+        self._rebuild()
+
     def _build_markers_popup(self) -> None:
         with dpg.window(
             popup=True,
@@ -1584,11 +1586,11 @@ class add_audio_visualizer(DpgItem):
             tag=self._t("markers_popup"),
             show=False,
         ):
-            if self._loop_markers_enabled:
+            if self._loop_points is not None:
                 start, end = self._loop_abs_bounds()
                 dpg.add_input_float(
                     label=µ("loop_start", "marker"),
-                    default_value=start,
+                    default_value=self._out(start),
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_start",
@@ -1596,21 +1598,21 @@ class add_audio_visualizer(DpgItem):
                 )
                 dpg.add_input_float(
                     label=µ("loop_end", "marker"),
-                    default_value=end,
+                    default_value=self._out(end),
                     width=130,
                     callback=self._set_loop_marker_pos,
                     user_data="loop_end",
                     tag=self._t("loop_end_value"),
                 )
 
-            if self._user_markers_enabled:
-                if self._loop_markers_enabled:
+            if self._user_markers:
+                if self._loop_points is not None:
                     dpg.add_separator()
                 # TODO Make this a widget table instead
                 for mid, pos in self._user_markers.items():
                     dpg.add_input_float(
                         label=self._user_marker_labels[mid],
-                        default_value=pos,
+                        default_value=self._out(pos),
                         width=130,
                         callback=self._set_user_marker_pos,
                         user_data=mid,
@@ -1682,13 +1684,9 @@ def _demo() -> None:
         viz = add_audio_visualizer(
             tracks,
             label="Audio arranger",
-            loop_markers_enabled=True,
-            loop_start=500.0,
-            loop_end=2500.0,
+            loop_points=(500.0, 2500.0),
             on_loop_changed=report("loop"),
-            trim_enabled=True,
             on_trims_changed=report("trims"),
-            user_markers_enabled=True,
             user_markers={"Entry": 1000.0, "Exit": 4000.0},
             on_user_markers_changed=report("markers"),
             on_track_moved=report("moved"),
@@ -1710,7 +1708,7 @@ def _demo() -> None:
                 callback=lambda: print(
                     f"duration={viz.duration:.3f}",
                     viz.tracks,
-                    viz.get_loop_state(True),
+                    viz.get_loop_points(True),
                     viz.get_all_trims(True),
                     viz.get_user_markers(True),
                     sep="\n  ",

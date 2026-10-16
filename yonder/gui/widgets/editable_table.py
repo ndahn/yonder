@@ -503,32 +503,36 @@ class add_filepaths_table(DpgItem):
 
 
 class add_player_table(DpgItem):
-    """A track list widget where each row embeds a full ``add_wav_player``.
+    """A track list widget where each row embeds an ``add_signal_preview``.
 
-    Supports per-track loop markers, trim markers, and user markers.
-    Player instances are accessible via ``players``.
+    Supports per-track loop markers, trim markers, and user markers. Each of
+    them is only shown if its callback is set. All positions are reported in
+    milliseconds. Preview instances are accessible via ``players``.
 
     Parameters
     ----------
     initial_tracks : list of Path, optional
         Audio files to pre-populate the table with.
-    on_filepaths_changed : callable, optional
-        Fired as ``on_filepaths_changed(tag, (paths, loop_info, trims,
-        markers), user_data)`` after any track change.
     label : str
         Text label rendered above the table.
     add_item_label : str
         Label for the add button.
     get_row_label : callable, optional
         Called as ``get_row_label(index)`` to produce a display name per row.
+    on_track_added : callable, optional
+        Fired as ``on_track_added(tag, path, user_data)``.
+    on_track_removed : callable, optional
+        Fired as ``on_track_removed(tag, index, user_data)``.
+    on_track_changed : callable, optional
+        Fired as ``on_track_changed(tag, (index, path), user_data)``.
     on_loop_changed : callable, optional
-        Fired as ``on_loop_changed(tag, (index, loop_info), user_data)``.
-    on_trim_changed : callable, optional
-        Fired as ``on_trim_changed(tag, (index, trim_info), user_data)``.
-    on_user_marker_changed : callable, optional
-        Fired as ``on_user_marker_changed(tag, (index, markers), user_data)``.
+        Fired as ``on_loop_changed(tag, (index, (start, end)), user_data)``.
+    on_trims_changed : callable, optional
+        Fired as ``on_trims_changed(tag, (index, (begin, end)), user_data)``.
+    on_usermarker_changed : callable, optional
+        Fired as ``on_usermarker_changed(tag, (index, markers), user_data)``.
     initial_user_markers : list of (str, float), optional
-        Markers pre-loaded into each player on track add.
+        Markers pre-loaded into each player on track add, in milliseconds.
     show_clear : bool
         Show a clear-all button.
     parent : int or str
@@ -550,23 +554,21 @@ class add_player_table(DpgItem):
         on_track_removed: Callable[[str, int, Any], None] = None,
         on_track_changed: Callable[[str, tuple[int, Path], Any], None] = None,
         on_loop_changed: Callable[
-            [str, tuple[int, tuple[float, float, bool]], Any], None
+            [str, tuple[int, tuple[float, float]], Any], None
         ] = None,
         on_trims_changed: Callable[
             [str, tuple[int, tuple[float, float]], Any], None
         ] = None,
-        on_usermarker_changed: Callable[[str, tuple[int, list], Any], None] = None,
+        on_usermarker_changed: Callable[
+            [str, tuple[int, dict[int, float]], Any], None
+        ] = None,
         initial_user_markers: list[tuple[str, float]] = None,
         show_clear: bool = False,
         parent: str | int = 0,
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from yonder.gui.dialogs.file_dialog import open_multiple_dialog
-        from .wav_player_widget import add_wav_player as _wav_player
-
-        self._wav_player_cls = _wav_player
-        self._open_multiple_dialog = open_multiple_dialog
+        from .signal_preview import add_signal_preview
 
         super().__init__(tag)
 
@@ -576,16 +578,25 @@ class add_player_table(DpgItem):
         self._on_loop_changed_cb = on_loop_changed
         self._on_trims_changed_cb = on_trims_changed
         self._on_usermarker_changed_cb = on_usermarker_changed
-        self._initial_user_markers = list(initial_user_markers or [])
+        self._initial_user_markers = dict(initial_user_markers or [])
         self._get_row_label = get_row_label or (
             lambda i: µ("Track #{idx}").format(idx=i)
         )
         self._user_data = user_data
 
-        self.players: list[_wav_player] = []  # add_wav_player instances, one per track
+        self.players: list[add_signal_preview] = []
+
+        # The table rebuilds every row on changes, so the per-row marker state
+        # has to live here rather than in the players.
+        initial_tracks = list(initial_tracks or [])
+        self._loops: list[tuple[float, float]] = []
+        self._trims: list[tuple[float, float]] = []
+        self._markers: list[dict] = []
+        for _ in initial_tracks:
+            self._append_state()
 
         self._table = add_widget_table(
-            list(initial_tracks or []),
+            initial_tracks,
             self._create_row,
             new_item=self._new_sound,
             on_add=self._on_track_added,
@@ -600,7 +611,9 @@ class add_player_table(DpgItem):
     # === DPG callbacks =================================================
 
     def _new_sound(self, done: Callable[[Path], None]) -> None:
-        ret = self._open_multiple_dialog(
+        from yonder.gui.dialogs.file_dialog import open_multiple_dialog
+
+        ret = open_multiple_dialog(
             title=µ("Select Audio"),
             filetypes={µ("Audio (.wem, .wav)", "filetypes"): ["*.wem", "*.wav"]},
         )
@@ -611,12 +624,16 @@ class add_player_table(DpgItem):
     def _on_track_added(
         self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
+        idx = info[0]
+        # The row was already built with the defaults, see _create_row
+        while len(self._loops) < len(info[2]):
+            self._append_state()
+
         if self._on_track_added_cb:
             self._on_track_added_cb(self.tag, info[1], self._user_data)
 
-        idx = info[0]
         if self._on_loop_changed_cb:
-            self._on_loop_changed_cb(self.tag, (idx, (0.0, 0.0, True)), self._user_data)
+            self._on_loop_changed_cb(self.tag, (idx, (0.0, 0.0)), self._user_data)
 
         if self._on_trims_changed_cb:
             self._on_trims_changed_cb(self.tag, (idx, (0.0, 0.0)), self._user_data)
@@ -624,47 +641,93 @@ class add_player_table(DpgItem):
     def _on_track_removed(
         self, sender: str, info: tuple[int, Path, list[Path]], cb_user_data: Any
     ) -> None:
-        idx = info[0]
-        self.players.pop(idx)
+        idx, path, items = info
+        if path is None:
+            # The table was cleared
+            self._loops.clear()
+            self._trims.clear()
+            self._markers.clear()
+        else:
+            del self._loops[idx]
+            del self._trims[idx]
+            del self._markers[idx]
+
+        # Rows were rebuilt already, drop the players that lost their row
+        for player in self.players[len(items) :]:
+            player.close()
+        del self.players[len(items) :]
+
         if self._on_track_removed_cb:
-            self._on_track_removed_cb(self.tag, info[0], self._user_data)
+            self._on_track_removed_cb(self.tag, idx, self._user_data)
 
     def _on_track_changed(self, sender: str, new_path: Path, idx: int) -> None:
+        self.players[idx].set_signal_from_wav(new_path)
+
         if self._on_track_changed_cb:
             self._on_track_changed_cb(self.tag, (idx, new_path), self._user_data)
 
-    def _on_loop_edit(self, sender: str, new_loop: tuple, idx: int) -> None:
+    def _on_loop_edit(self, sender: str, loop: tuple[float, float], idx: int) -> None:
+        self._loops[idx] = loop
         if self._on_loop_changed_cb:
-            self._on_loop_changed_cb(self.tag, (idx, new_loop), self._user_data)
+            self._on_loop_changed_cb(self.tag, (idx, loop), self._user_data)
 
-    def _on_trim_edit(self, sender: str, new_trim: tuple, idx: int) -> None:
+    def _on_trim_edit(self, sender: str, trims: tuple[float, float], idx: int) -> None:
+        self._trims[idx] = trims
         if self._on_trims_changed_cb:
-            self._on_trims_changed_cb(self.tag, (idx, new_trim), self._user_data)
+            self._on_trims_changed_cb(self.tag, (idx, trims), self._user_data)
 
-    def _on_user_marker_edit(self, sender: str, new_marker: tuple, idx: int) -> None:
+    def _on_user_marker_edit(
+        self, sender: str, markers: dict[int, float], idx: int
+    ) -> None:
+        self._markers[idx] = markers
         if self._on_usermarker_changed_cb:
-            markers = self.players[idx].get_user_marker_pos()
             self._on_usermarker_changed_cb(self.tag, (idx, markers), self._user_data)
 
+    # === Internals =====================================================
+
+    def _append_state(self) -> None:
+        self._loops.append((0.0, 0.0))
+        self._trims.append((0.0, 0.0))
+        self._markers.append(dict(self._initial_user_markers))
+
     def _create_row(self, path: Path, idx: int) -> None:
+        from .signal_preview import add_signal_preview
+        from .generic_input_widget import add_generic_widget
+
+        # Called before on_add fires for new tracks
+        if idx >= len(self._loops):
+            self._append_state()
+
         with dpg.tree_node(label=self._get_row_label(idx), span_full_width=True):
-            player = self._wav_player_cls(
-                path,
-                on_file_changed=self._on_track_changed,
-                loop_markers_enabled=bool(self._on_loop_changed_cb),
-                on_loop_changed=self._on_loop_edit,
-                trim_enabled=bool(self._on_trims_changed_cb),
-                on_trims_changed=self._on_trim_edit,
-                user_markers_enabled=bool(self._on_usermarker_changed_cb),
-                user_markers=list(self._initial_user_markers),
-                on_user_markers_changed=self._on_user_marker_edit,
-                show_filepath=True,
+            add_generic_widget(
+                Path,
+                None,
+                callback=self._on_track_changed,
+                default=path,
+                filetypes={
+                    µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]
+                },
                 user_data=idx,
             )
-            if idx < len(self.players):
-                self.players[idx] = player
-            else:
-                self.players.append(player)
+            player = add_signal_preview(
+                loop_points=self._loops[idx] if self._on_loop_changed_cb else None,
+                on_loop_changed=self._on_loop_edit,
+                trims=self._trims[idx] if self._on_trims_changed_cb else None,
+                on_trims_changed=self._on_trim_edit,
+                user_markers=(
+                    self._markers[idx] if self._on_usermarker_changed_cb else None
+                ),
+                on_user_markers_changed=self._on_user_marker_edit,
+                user_data=idx,
+            )
+            player.set_signal_from_wav(path)
+
+        if idx < len(self.players):
+            # Its row is gone already, but the player and popup are not
+            self.players[idx].close()
+            self.players[idx] = player
+        else:
+            self.players.append(player)
 
     # === Public ========================================================
 
@@ -674,23 +737,41 @@ class add_player_table(DpgItem):
 
     @audiofiles.setter
     def audiofiles(self, items: list[Path]) -> None:
+        self._loops.clear()
+        self._trims.clear()
+        self._markers.clear()
         self._table.items = items
+        for player in self.players[len(items) :]:
+            player.close()
+        del self.players[len(items) :]
 
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)
 
     def remove(self, idx: int, *, fire_callbacks: bool = False) -> None:
+        if not fire_callbacks:
+            # Otherwise handled in _on_track_removed
+            del self._loops[idx]
+            del self._trims[idx]
+            del self._markers[idx]
+
         self._table.remove(idx, fire_callbacks=fire_callbacks)
 
+        for player in self.players[len(self._table.items) :]:
+            player.close()
+        del self.players[len(self._table.items) :]
+
     def clear(self, *, fire_callbacks: bool = False) -> None:
-        self._table.clear(fire_callbacks=fire_callbacks)
+        self.audiofiles = []
+        if fire_callbacks and self._on_track_removed_cb:
+            self._on_track_removed_cb(self.tag, 0, self._user_data)
 
 
 # ===========================================================================
 
 
 class add_player_table_compact(DpgItem):
-    """A compact track list with a single shared ``add_wav_player`` below.
+    """A compact track list with a single shared ``add_signal_preview`` below.
 
     Selecting a row loads that track into the shared player without starting
     playback. Does not support loop markers, trims, or user markers.
@@ -735,7 +816,7 @@ class add_player_table_compact(DpgItem):
         tag: str | int = 0,
         user_data: Any = None,
     ) -> None:
-        from .wav_player_widget import add_wav_player
+        from .signal_preview import add_signal_preview
 
         super().__init__(tag)
 
@@ -747,7 +828,7 @@ class add_player_table_compact(DpgItem):
         self._on_remove = on_remove
         self._on_select = on_select
         self._user_data = user_data
-        self.player = None  # single shared add_wav_player instance
+        self.player: add_signal_preview = None  # single shared instance
 
         with dpg.group(parent=parent):
             self._table = add_widget_table(
@@ -764,7 +845,7 @@ class add_player_table_compact(DpgItem):
                 tag=self.tag,
             )
             # Shared player — created empty, loaded on row selection
-            self.player = add_wav_player(None, allow_change_file=False)
+            self.player = add_signal_preview()
 
     # === DPG callbacks =================================================
 
@@ -789,7 +870,7 @@ class add_player_table_compact(DpgItem):
 
     def _on_track_selected(self, sender: str, info: tuple, cb_user_data: Any) -> None:
         _, path, _ = info
-        self.player.set_file(path)
+        self.player.set_signal_from_wav(path)
         if self._on_select:
             self._on_select(self.tag, info, self._user_data)
 
@@ -818,9 +899,9 @@ class add_player_table_compact(DpgItem):
     def select(self, index: int) -> None:
         self._table.select(index)
         if index is None:
-            self.player.set_file(None)
+            self.player.clear()
         else:
-            self.player.set_file(self._table.items[index])
+            self.player.set_signal_from_wav(self._table.items[index])
 
     def append(self, path: Path, *, fire_callbacks: bool = False) -> None:
         self._table.append(path, fire_callbacks=fire_callbacks)

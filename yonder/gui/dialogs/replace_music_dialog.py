@@ -9,7 +9,7 @@ from yonder.types import MusicSwitchContainer, MusicTrack
 from yonder.enums import SourceType
 from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav, wav2wem, get_wem_id
-from yonder.audio.old.wav_player import WavPlayer
+from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -41,7 +41,7 @@ class replace_music_dialog(DpgItem):
         self._music_tracks: set[int] = set()
         self._replacements: dict[tuple[int, int], Path] = {}
         self._buttons: dict[int, list[tuple[int, int]]] = {}
-        self._player: WavPlayer = None
+        self._player: SimplePlayer = None
         self._playback_source_id: int = None
 
         self._build(title)
@@ -49,14 +49,19 @@ class replace_music_dialog(DpgItem):
     def _on_msc_changed(
         self, sender: str, msc: MusicSwitchContainer, user_data: Any
     ) -> None:
-        self._close_player()
+        self._stop_player()
         self._replacements.clear()
         self.regenerate()
+
+    def destroy(self) -> None:
+        if self._player:
+            self._player.close()
+            self._player = None
 
     def _on_music_path_changed(
         self, sender: str, path: Path, info: tuple[int, int]
     ) -> None:
-        self._close_player()
+        self._stop_player()
 
         track, sidx = info
         node: MusicTrack = self._bnk[track]
@@ -79,23 +84,21 @@ class replace_music_dialog(DpgItem):
     def _on_restore_track(
         self, sender: str, app_data: Any, info: tuple[int, int]
     ) -> None:
-        self._close_player()
+        self._stop_player()
         prev = self._replacements.pop(info, None)
         
         if prev is not None:
             dpg.configure_item(sender, tint_color=style.white)
             self.regenerate()
 
-    def _close_player(self) -> None:
+    def _stop_player(self) -> None:
         self._set_play_buttons_state(self._playback_source_id, False)
         self._playback_source_id = None
 
-        if self._player:
+        if self._player and self._player.playing:
             self._player.stop()
-            self._player = None
 
-    def _init_player(self, track: int, sidx: int) -> WavPlayer:
-        self._close_player()
+    def _get_wav(self, track: int, sidx: int) -> Path:
         cfg = get_config()
 
         if (track, sidx) in self._replacements:
@@ -121,14 +124,14 @@ class replace_music_dialog(DpgItem):
             vgmstream_exe = cfg.locate_vgmstream()
             wav = wem2wav(vgmstream_exe, audio, get_temp_dir())[0]
 
-        return WavPlayer(str(wav))
+        return wav
 
     def _set_play_buttons_state(self, source_id: int, playing: bool) -> None:
         if source_id is None:
             return
 
         tint = style.light_blue if playing else style.white
-        icon = Icons.pause if playing else Icons.play
+        icon = Icons.stop if playing else Icons.play
 
         for _, btn in self._buttons.get(source_id, []):
             if dpg.does_item_exist(btn):
@@ -140,23 +143,34 @@ class replace_music_dialog(DpgItem):
         track, sidx = info
         node: MusicTrack = self._bnk[track]
         source_id = node.source_ids[sidx]
-        player = self._player
+        stop_only = source_id == self._playback_source_id
 
-        if not player or source_id != self._playback_source_id:
-            player = self._init_player(track, sidx)
-            if not player:
-                return
+        self._stop_player()
+        if stop_only:
+            return
 
-            self._player = player
+        wav = self._get_wav(track, sidx)
+        if not wav:
+            return
 
-        if player.playing:
-            player.pause()
-            self._set_play_buttons_state(source_id, False)
-            self._playback_source_id = None
-        else:
-            player.play()
-            self._set_play_buttons_state(source_id, True)
-            self._playback_source_id = source_id
+        if not self._player:
+            self._player = SimplePlayer()
+
+        self._player.play_file(wav)
+        self._set_play_buttons_state(source_id, True)
+        self._playback_source_id = source_id
+        self._check_playback()
+
+    def _check_playback(self) -> None:
+        # Reset the buttons once a track finished on its own
+        if self._playback_source_id is None:
+            return
+
+        if not self._player or not self._player.playing:
+            self._stop_player()
+            return
+
+        dpg.set_frame_callback(dpg.get_frame_count() + 10, self._check_playback)
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("music_table"), slot=1, children_only=True)
@@ -294,7 +308,7 @@ class replace_music_dialog(DpgItem):
             self.show_message(µ("No replacements"))
             return
 
-        self._close_player()
+        self._stop_player()
         self.show_message()
         delete_originals = dpg.get_value(self._t("delete_originals"))
         successes = 0
@@ -340,6 +354,11 @@ class replace_music_dialog(DpgItem):
         logger.info(f"Replaced {successes} music tracks")
         yay()
 
+    def _on_close(self) -> None:
+        self._stop_player()
+        self.destroy()
+        dpg.delete_item(self.tag)
+
     def _build(self, title: str) -> None:
         with dpg.window(
             label=title,
@@ -347,8 +366,8 @@ class replace_music_dialog(DpgItem):
             height=480,
             no_saved_settings=True,
             tag=self.tag,
-            on_close=lambda: dpg.delete_item(window),
-        ) as window:
+            on_close=self._on_close,
+        ):
             self._msc_select = add_select_node(
                 self._bnk,
                 µ("Music manager"),

@@ -59,6 +59,12 @@ class StateCtrl:
 
 @dataclass
 class BgmTrack:
+    """A music track to turn into a segment.
+
+    ``loop_info`` and ``trims`` are positions on the track's audio in ms. A
+    loop end <= 0 is measured from the end of the audio.
+    """
+
     track: Path = None
     loop_info: tuple[float, float] = (0.0, 0.0)
     trims: tuple[float, float] = (0.0, 0.0)
@@ -76,20 +82,22 @@ class BgmTrack:
 @dataclass
 class BossBgm:
     track: BgmTrack = None
-    intro_length: float = 0.0
+    # Play the part before loop_start once as an intro
+    intro: bool = False
 
 
 @dataclass
 class AreaBgm:
     regular: BgmTrack = None
     battle: BgmTrack = None
-    intro_length: float = 0.0
+    # Play the part before the regular track's loop_start once as an intro
+    intro: bool = False
 
     def __str__(self):
         return f"""\
 Regular: {self.regular}
 Battle: {self.battle}
-Intro: {self.intro_length} ms
+Intro: {self.intro}
 """
 
 
@@ -288,40 +296,56 @@ def _setup_bgm(
     parent: int | HIRCNode,
     tracks: BgmTrack | list[BgmTrack],
     *,
-    intro_length: float = 0.0,
+    intro: bool = False,
     intro_transition: MusicTransitionRule = None,
     track_transition: MusicTransitionRule = None,
 ) -> list[HIRCNode]:
+    """Create a music container with a looping segment for the tracks.
+
+    The loop points are taken from the first track and are positions on its
+    audio. If ``intro`` is set, the audio before the loop start is split off
+    into an intro segment that plays once, and the main segment starts at the
+    loop start.
+    """
     new_nodes = []
     if isinstance(tracks, BgmTrack):
         tracks = [tracks]
 
+    tracks = [bgm for bgm in tracks if bgm.track]
+    ref = tracks[0] if tracks else BgmTrack()
+
     for bgm in tracks:
-        if bgm.track:
-            bnk.add_wem(bgm.track, SourceType.Streaming)
+        bnk.add_wem(bgm.track, SourceType.Streaming)
+
+    # Segment markers cannot take the track trims into account. Each track's
+    # begin trim is balanced with a negative play_at instead, so that its
+    # audible part starts with the segment. The markers are therefore shifted
+    # by the reference track's begin trim.
+    loop_start, loop_end, *_ = ref.loop_info
+    intro = intro and loop_start > ref.trims[0]
+    intro_length = loop_start - ref.trims[0] if intro else 0.0
 
     root_mrsc = MusicRandomSequenceContainer.new(bnk.new_id(), parent=parent)
     new_nodes.append(root_mrsc)
 
-    if intro_length > 0:
+    if intro:
         if intro_length <= 1.0:
-            logger.warning(f"Extremly short intro ({intro_length:0d}ms)")
+            logger.warning(f"Extremly short intro ({intro_length:.0f}ms)")
 
         intro_seg = MusicSegment.new(
             bnk.new_id(), parent=root_mrsc, props={PropID.Priority: 80.0}
         )
+        # Like vanilla intros: the exit marker sits at the end of the audio
         intro_seg.set_marker(MarkerId.LoopStart.value, 0.0)
-        intro_seg.set_marker(MarkerId.LoopEnd.value, intro_length + 1000)
+        intro_seg.set_marker(MarkerId.LoopEnd.value, intro_length)
         new_nodes.append(intro_seg)
 
         for bgm in tracks:
-            if not bgm.track:
-                continue
-
             mt = MusicTrack.new(
                 bnk.new_id(), bgm.track, parent=intro_seg, props={PropID.Priority: 80.0}
             )
-            intro_end = -(mt.playlist[0].source_duration - intro_length)
+            # The intro ends where the main segment's loop starts
+            intro_end = -(mt.playlist[0].source_duration - loop_start)
             mt.set_trims(bgm.trims[0], intro_end)
             mt.playlist[0].play_at = -bgm.trims[0]
 
@@ -372,15 +396,15 @@ def _setup_bgm(
     )
     new_nodes.append(bgm_seg)
 
+    ref_duration = 0.0
     for bgm in tracks:
-        if not bgm.track:
-            continue
-
         mt = MusicTrack.new(
             bnk.new_id(), bgm.track, parent=bgm_seg, props={PropID.Priority: 80.0}
         )
+        if not ref_duration:
+            ref_duration = mt.playlist[0].source_duration
 
-        begin_trim = intro_length if intro_length > 0 else bgm.trims[0]
+        begin_trim = loop_start if intro else bgm.trims[0]
         mt.set_trims(begin_trim, bgm.trims[1])
         mt.playlist[0].play_at = -begin_trim
 
@@ -388,7 +412,7 @@ def _setup_bgm(
             mt.set_property(prop, val)
 
         # Pronounced fade in for the track
-        if intro_length == 0.0 and bgm.fadein > 0.0:
+        if not intro and bgm.fadein > 0.0:
             mt.add_clip_automation(
                 ClipAutomationType.FadeIn,
                 [
@@ -407,27 +431,22 @@ def _setup_bgm(
                     bnk, ctrl.group, ctrl.state, state_props, ctrl.default
                 )
 
-        # Add to segment
-        track_duration_ms = mt.playlist[0].source_duration
-        bgm_seg.duration = max(bgm_seg.duration, track_duration_ms)
+        # Like in vanilla banks the segment is as long as the audible track
+        begin_trim, end_trim = mt.get_trims()
+        audible_ms = mt.playlist[0].source_duration - begin_trim + end_trim
+        bgm_seg.duration = max(bgm_seg.duration, audible_ms)
         bgm_seg.attach(mt)
         new_nodes.append(mt)
 
-    # Add markers for looping; might sometimes contain the loop_enabled flag, too
-    loop_start, loop_end, *_ = tracks[0].loop_info
-
-    if not loop_end:
-        loop_end = bgm_seg.duration
-
+    # Add markers for looping, moved from the audio onto the segment timeline
     if loop_end <= 0:
-        loop_end = bgm_seg.duration + loop_end
+        loop_end = ref_duration + loop_end
 
-    # NOTE: Either the begin_trim or the LoopStart marker should remain at 0!
-    # Leaving the loop marker at 0 and adjusting the begin trim instead should
-    # be more reliable as it will work even if an intro is used, but can still
-    # be adjusted per track
+    # With an intro the segment is trimmed to start at the loop
+    shift = loop_start if intro else ref.trims[0]
+    loop_start = max(0.0, loop_start - shift)
+    loop_end = min(loop_end - shift, bgm_seg.duration)
 
-    # Intentionally set to 0! We'll trim to loop start instead
     bgm_seg.set_marker(MarkerId.LoopStart.value, loop_start)
     # According to Shion this is probably just for testing
     bgm_seg.set_marker("LoopCheck", loop_end - 3000)
@@ -452,7 +471,7 @@ def _setup_bgm(
 
     root_mrsc.music_trans_node_params.transition_rules[0] = track_transition
 
-    if intro_length > 0:
+    if intro:
         if intro_transition:
             intro_transition.configure(src_sync_type=SyncType.ExitMarker)
         else:
@@ -611,7 +630,7 @@ def create_boss_bgm(
             bnk,
             boss_msc,
             bgm.track,
-            intro_length=bgm.intro_length,
+            intro=bgm.intro,
             track_transition=track_transitions[i],
         )
 
@@ -719,7 +738,7 @@ def create_area_bgm(
             bnk,
             area_msc,
             tracks,
-            intro_length=bgm.intro_length,
+            intro=bgm.intro,
             track_transition=track_transitions[idx],
         )
 

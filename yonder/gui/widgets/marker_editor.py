@@ -221,9 +221,9 @@ class add_marker_editor(DpgItem):
         self.notify_changed()
 
     def _on_loop_changed(
-        self, sender: str, loop_info: tuple[float, float, bool], cb_user_data: Any
+        self, sender: str, loop_info: tuple[float, float], cb_user_data: Any
     ) -> None:
-        loop_start, loop_end, _ = loop_info
+        loop_start, loop_end = loop_info
         self.segment.set_marker(MarkerId.LoopStart, loop_start)
         self.segment.set_marker(MarkerId.LoopEnd, loop_end)
 
@@ -256,8 +256,11 @@ class add_marker_editor(DpgItem):
         edit_markers_dialog(
             path,
             accept_on_okay=True,
-            loop_markers_enabled=True,
-            loop_start=self.segment.get_marker_pos(MarkerId.LoopStart, 1000.0),
-            loop_end=self.segment.get_marker_pos(MarkerId.LoopEnd, -1000.0),
+            loop_points=(
+                self.segment.get_marker_pos(MarkerId.LoopStart, 0.0),
+                self.segment.get_marker_pos(MarkerId.LoopEnd, 0.0),
+            ),
             on_loop_changed=self._on_loop_changed,
+            # Place the track where it plays within the segment
+            track_offset=track.playlist[0].play_at,
         )

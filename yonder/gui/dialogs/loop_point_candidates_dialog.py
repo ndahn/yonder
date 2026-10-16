@@ -17,7 +17,7 @@ from yonder.gui.widgets.signal_preview import add_signal_preview
 # the same bounds are still two separate rows
 @dataclass(eq=False)
 class _Candidate:
-    """One selectable row. All times are in seconds."""
+    """One selectable row. All times are in milliseconds."""
 
     label: str
     start: float
@@ -45,7 +45,7 @@ class loop_point_candidates_dialog(DpgItem):
     before committing to one.
 
     ``find_loops`` reports sample indices; everything this dialog shows,
-    returns and passes to its callbacks is in seconds.
+    returns and passes to its callbacks is in milliseconds.
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ class loop_point_candidates_dialog(DpgItem):
         ``(n_frames, n_channels)``. Folded to mono for display.
     framerate : int
         Sample rate of ``signal``. Required to turn the candidates' sample
-        indices into the seconds the rest of the arranger speaks.
+        indices into milliseconds.
     on_apply : callable, optional
         Fired as ``on_apply(tag, (loop_start, loop_end), user_data)`` when the
         user confirms. The dialog closes afterwards.
@@ -108,8 +108,8 @@ class loop_point_candidates_dialog(DpgItem):
             self._candidates.append(
                 _Candidate(
                     µ("#{idx}").format(idx=i + 1),
-                    pair.start / framerate,
-                    pair.end / framerate,
+                    pair.start / framerate * 1000,
+                    pair.end / framerate * 1000,
                     score=pair.score,
                 )
             )
@@ -117,7 +117,9 @@ class loop_point_candidates_dialog(DpgItem):
         if not self._candidates:
             # Nothing found and nothing set - still give the user a row
             self._candidates.append(
-                _Candidate(µ("Current"), 0.0, self._preview.duration, editable=False)
+                _Candidate(
+                    µ("Current"), 0.0, len(signal) / framerate * 1000, editable=False
+                )
             )
 
         self._build(title or µ("Loop points"))
@@ -138,7 +140,7 @@ class loop_point_candidates_dialog(DpgItem):
 
     @property
     def loop_points(self) -> tuple[float, float]:
-        """The chosen loop as ``(start, end)`` in seconds."""
+        """The chosen loop as ``(start, end)`` in milliseconds."""
         candidate = self._candidates[self._selected]
         return candidate.start, candidate.end
 
@@ -218,7 +220,7 @@ class loop_point_candidates_dialog(DpgItem):
 
     @staticmethod
     def _length_label(candidate: _Candidate) -> str:
-        return µ("{len:.3f} s").format(len=candidate.length)
+        return µ("{len:.0f} ms").format(len=candidate.length)
 
     # === Build =========================================================
 
@@ -262,12 +264,12 @@ class loop_point_candidates_dialog(DpgItem):
                 label=µ("Score", "table"), width_fixed=True, init_width_or_weight=55
             )
             dpg.add_table_column(
-                label=µ("Start (s)", "table"),
+                label=µ("Start (ms)", "table"),
                 width_stretch=True,
                 init_width_or_weight=75,
             )
             dpg.add_table_column(
-                label=µ("End (s)", "table"),
+                label=µ("End (ms)", "table"),
                 width_stretch=True,
                 init_width_or_weight=75,
             )
@@ -295,8 +297,9 @@ class loop_point_candidates_dialog(DpgItem):
                 item = dpg.add_input_float(
                     default_value=value,
                     width=-1,
-                    step=0.01,
-                    format="%.3f",
+                    step=10.0,
+                    step_fast=100.0,
+                    format="%.1f",
                     enabled=candidate.editable,
                     readonly=not candidate.editable,
                     callback=self._on_bound_changed,

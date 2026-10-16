@@ -1,30 +1,99 @@
 from __future__ import annotations
 from typing import Any, Callable
+from pathlib import Path
+import wave
 import numpy as np
 from dearpygui import dearpygui as dpg
 
-from yonder import lookup_name
-from yonder.audio.wavesignal import minmax_envelope, to_channels
+from yonder.hash import calc_hash, lookup_name, Hash
+from yonder.util import logger, get_temp_dir
+from yonder.wem import wem2wav
+from yonder.audio.wavesignal import minmax_envelope, to_channels, read_wav
 from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, Icons
+from yonder.gui.config import get_config
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
 
 
 class add_signal_preview(DpgItem):
+    """A waveform preview with simple playback.
+
+    Loop points, trims and user markers are all optional: setting one of them
+    to None hides its markers from the plot and stops playback from respecting
+    it. All values are in milliseconds, like everywhere else in Wwise. Only the
+    player and the plot's time axis work in seconds.
+
+    Like Wwise segment markers, loop points and user markers are absolute
+    positions and are not affected by the trims. A loop end <= 0 is measured
+    from the end of the signal instead.
+
+    When previewing a music track of a segment, the markers are on the
+    segment's timeline while the signal is placed on it at the track's
+    ``play_at``. Set ``marker_offset`` to ``-play_at`` so the markers line up
+    with the audio.
+
+    Parameters
+    ----------
+    signal : numpy.ndarray, optional
+        Samples to show, mixed down to mono.
+    framerate : int, optional
+        Sample rate of ``signal``.
+    loop_points : tuple of (float, float), optional
+        Initial ``(start, end)`` of the loop. None hides the loop markers.
+    on_loop_changed : callable, optional
+        Fired as ``on_loop_changed(tag, (start, end), user_data)``.
+    trims : tuple of (float, float), optional
+        Initial ``(begin_trim, end_trim)``. Begin trim is >= 0 and measured
+        from the start, end trim is <= 0 and measured from the end. None hides
+        the trim markers.
+    on_trims_changed : callable, optional
+        Fired as ``on_trims_changed(tag, (begin, end), user_data)``.
+    user_markers : dict of (int or str) to float, optional
+        Initial marker positions keyed by ID or name. None hides them.
+    on_user_markers_changed : callable, optional
+        Fired as ``on_user_markers_changed(tag, {id: pos}, user_data)``.
+    marker_offset : float
+        Signal position of the markers' origin, i.e. a marker at ``pos`` is
+        drawn at ``pos + marker_offset``. Does not apply to the trims.
+    markers_editable : bool
+        Whether the markers on the plot can be dragged.
+    no_playback_controls : bool
+        Hide the footer with the play button and marker inputs.
+    max_points : int
+        Maximum waveform envelope points rendered.
+    height : int
+        Pixel height of the plot.
+    tag : int or str
+        Explicit tag; auto-generated if 0.
+    user_data : any
+        Passed through to all callbacks.
+    """
+
     # Y range of the plot
     _Y_LIMIT = 1.05
+    # Length of the audio played on either side of the loop seam in loop preview
+    _LOOP_PREVIEW_LEN = 2000.0
+    # Steps of the numeric marker inputs
+    _STEP = 10.0
+    _STEP_FAST = 100.0
 
     def __init__(
         self,
         signal: np.ndarray = None,
         framerate: int = None,
         *,
-        no_playback_controls: bool = False,
         loop_points: tuple[float, float] = None,
-        user_markers: dict[int, float] = None,
-        on_marker_changed: Callable[[str, tuple[int, float], Any], None] = None,
+        on_loop_changed: Callable[[str, tuple[float, float], Any], None] = None,
+        trims: tuple[float, float] = None,
+        on_trims_changed: Callable[[str, tuple[float, float], Any], None] = None,
+        user_markers: dict[Hash, float] = None,
+        on_user_markers_changed: Callable[[str, dict[int, float], Any], None] = None,
+        marker_offset: float = 0.0,
+        markers_editable: bool = False,
+        no_playback_controls: bool = False,
         max_points: int = 4000,
+        height: int = 130,
         tag: str = 0,
         user_data: Any = None,
     ) -> None:
@@ -33,20 +102,31 @@ class add_signal_preview(DpgItem):
         self._signal = None
         self._framerate = 0
         self._duration = 0.0
-        self._loop_points = loop_points or (0, 0)
-        self._user_markers = user_markers or {}
+        self._loop_points: tuple[float, float] = None
+        self._trims: tuple[float, float] = None
+        self._user_markers: dict[int, float] = None
+        self._marker_offset = marker_offset
+        self._markers_editable = markers_editable
         self._max_points = max_points
         self._user_data = user_data
 
+        self._on_loop_changed = on_loop_changed
+        self._on_trims_changed = on_trims_changed
+        self._on_user_markers_changed = on_user_markers_changed
+
         self._player: SimplePlayer = None
-        self._playing = False
+        self._want_playing = False
+        self._last_pos = 0.0
         self.loop_preview_enabled = False
 
-        self._build(no_playback_controls)
+        self._build(no_playback_controls, height)
 
-        if signal is not None and framerate > 0:
+        self.trims = trims
+        self.loop_points = loop_points
+        self.user_markers = user_markers
+
+        if signal is not None and framerate:
             self.set_signal(signal, framerate)
-            self._sync_region()
 
     def destroy(self) -> None:
         self.close()
@@ -58,18 +138,53 @@ class add_signal_preview(DpgItem):
         return self._signal
 
     def set_signal(self, sig: np.ndarray, framerate: int) -> None:
+        self.stop()
         dpg.delete_item(self._t("xaxis"), slot=1, children_only=True)
+        dpg.hide_item(self._t("error"))
 
         self._signal = to_channels(sig, 1)[:, 0]
         self._framerate = framerate
-        self._duration = len(self._signal) / framerate
+        self._duration = len(self._signal) / framerate * 1000
 
-        time = np.linspace(0, self._duration, num=len(self._signal))
+        time = np.linspace(0, self._duration / 1000, num=len(self._signal))
         t_env, y_env = minmax_envelope(self._signal, time, self._max_points // 2)
         series = dpg.add_line_series(
             t_env.tolist(), y_env.tolist(), shaded=True, parent=self._t("xaxis")
         )
         dpg.bind_item_theme(series, style.themes.make_series_theme(style.blue))
+
+        self._sync_markers()
+        self.seek(self._region()[0])
+        dpg.fit_axis_data(self._t("xaxis"))
+
+    def clear(self) -> None:
+        """Remove the signal."""
+        self.stop()
+        dpg.delete_item(self._t("xaxis"), slot=1, children_only=True)
+        dpg.hide_item(self._t("error"))
+
+        self._signal = None
+        self._framerate = 0
+        self._duration = 0.0
+        self._sync_markers()
+        self.seek(0.0)
+
+    def set_signal_from_wav(self, path: Path, mono: bool = False) -> None:
+        """Load a wav or wem file. Wem files are converted first."""
+        try:
+            path = Path(path)
+            if path.suffix == ".wem":
+                vgmstream = get_config().locate_vgmstream()
+                path = wem2wav(vgmstream, path, get_temp_dir())[0]
+
+            if not path or not path.is_file():
+                raise FileNotFoundError(path)
+
+            self.set_signal(*read_wav(path, mono=mono))
+        except (wave.Error, ValueError, OSError) as e:
+            msg = µ("Error reading file: {exc}", "log").format(exc=e)
+            logger.error(msg, exc_info=e)
+            dpg.configure_item(self._t("error"), default_value=msg, show=True)
 
     @property
     def framerate(self) -> int:
@@ -81,44 +196,127 @@ class add_signal_preview(DpgItem):
 
     @property
     def playback_duration(self) -> float:
-        return max(0.0, self._loop_points[1] - self._loop_points[0])
+        """Length of the loop, or of the trimmed signal if there is no loop."""
+        start, end = self._abs_loop() or self._region()
+        return max(0.0, end - start)
 
     @property
     def loop_points(self) -> tuple[float, float]:
-        """The chosen loop as ``(start, end)`` in seconds."""
+        """The loop as ``(start, end)``, or None."""
         return self._loop_points
 
     @loop_points.setter
     def loop_points(self, points: tuple[float, float]) -> None:
-        self._loop_points = points
-        self._sync_region()
+        self._loop_points = tuple(points) if points is not None else None
+
+        if self._player:
+            self._player.loop = points is not None
+
+        self._update_visibility()
+        self._sync_markers()
+
+        if not self.playing and points is not None:
+            self.seek(self._playback_loop()[0])
+
+    @property
+    def trims(self) -> tuple[float, float]:
+        """The ``(begin_trim, end_trim)``, or None."""
+        return self._trims
+
+    @trims.setter
+    def trims(self, trims: tuple[float, float]) -> None:
+        if trims is not None:
+            trims = (max(0.0, trims[0]), min(0.0, trims[1]))
+
+        self._trims = trims
+        self._update_visibility()
+        self._sync_markers()
 
     @property
     def user_markers(self) -> dict[int, float]:
-        """Return all user marker positions ``{id: pos}`` in seconds."""
+        """User marker positions ``{id: pos}``, or None."""
+        if self._user_markers is None:
+            return None
+
         return dict(self._user_markers)
 
     @user_markers.setter
-    def user_markers(self, markers: dict[int, float]) -> None:        
-        dpg.delete_item(self._t("user_markers_container"), children_only=True)
+    def user_markers(self, markers: dict[Hash, float]) -> None:
+        for mid in self._user_markers or ():
+            self._delete_item(self._t(f"marker_{mid}"))
 
-        for mid in self._user_markers:
-            if dpg.does_item_exist(self._t(f"user_marker_{mid}")):
-                dpg.delete_item(self._t(f"user_marker_{mid}"))
+        if dpg.does_item_exist(self._t("user_markers_inputs")):
+            dpg.delete_item(self._t("user_markers_inputs"), children_only=True)
 
-        self._user_markers = markers
+        if markers is None:
+            self._user_markers = None
+            self._update_visibility()
+            return
 
-        for mid, pos in self._user_markers.items():
-            marker_label = lookup_name(mid, f"#{mid}")
-            dpg.add_input_float(
+        self._user_markers = {}
+        colorgen = style.HighContrastColorGenerator()
+
+        for mid, pos in markers.items():
+            if isinstance(mid, str):
+                marker_label = mid
+                mid = calc_hash(mid)
+            else:
+                marker_label = lookup_name(mid, f"#{mid}")
+
+            self._user_markers[mid] = pos
+
+            # Inserted before the playback cursor so it stays on top
+            dpg.add_drag_line(
                 label=marker_label,
-                default_value=pos,
-                width=130,
-                callback=self._on_user_marker_changed,
+                color=colorgen(),
+                no_inputs=not self._markers_editable,
+                no_fit=True,
+                callback=self._on_user_marker_dragged,
                 user_data=mid,
-                tag=self._t(f"marker_{mid}_value"),
+                parent=self._t("plot"),
+                before=self._t("playback_pos"),
+                tag=self._t(f"marker_{mid}"),
             )
-            # TODO plot markers
+
+            if dpg.does_item_exist(self._t("user_markers_inputs")):
+                dpg.add_input_float(
+                    label=marker_label,
+                    default_value=pos,
+                    step=self._STEP,
+                    step_fast=self._STEP_FAST,
+                    format="%.1f",
+                    width=130,
+                    callback=self._on_user_marker_input,
+                    user_data=mid,
+                    parent=self._t("user_markers_inputs"),
+                    tag=self._t(f"marker_{mid}_value"),
+                )
+
+        self._update_visibility()
+        self._sync_markers()
+
+    @property
+    def marker_offset(self) -> float:
+        """Signal position of the markers' origin."""
+        return self._marker_offset
+
+    @marker_offset.setter
+    def marker_offset(self, offset: float) -> None:
+        self._marker_offset = offset
+        self._sync_markers()
+
+    @property
+    def markers_editable(self) -> bool:
+        return self._markers_editable
+
+    @markers_editable.setter
+    def markers_editable(self, editable: bool) -> None:
+        self._markers_editable = editable
+
+        items = ["loop_start", "loop_end", "begin_trim", "end_trim"]
+        items.extend(f"marker_{mid}" for mid in self._user_markers or ())
+        for item in items:
+            dpg.configure_item(self._t(item), no_inputs=not editable)
 
     @property
     def player(self) -> SimplePlayer:
@@ -129,16 +327,19 @@ class add_signal_preview(DpgItem):
 
     @property
     def playing(self) -> bool:
-        return self._playing
+        return self._want_playing
 
     def play(self) -> None:
-        if self.playing:
+        if self.playing or self._signal is None:
             return
 
         player = self.player
-        player.play_signal(self._signal, self._framerate, loop=True)
+        player.play_signal(
+            self._signal, self._framerate, loop=self._loop_points is not None
+        )
         # In case seek was called before
-        player.seek(dpg.get_value(self._t("playback_pos")))
+        self.seek(self._get_plot_pos(self._t("playback_pos")))
+        self._want_playing = True
 
         if dpg.does_item_exist(self._t("play_stop")):
             dpg.configure_item(self._t("play_stop"), texture_tag=Icons.stop)
@@ -146,27 +347,32 @@ class add_signal_preview(DpgItem):
         self._update_playback_pos()
 
     def stop(self) -> None:
-        if not self._player:
-            return
+        self._want_playing = False
 
-        self._player.stop()
+        if self._player and self._player.playing:
+            self._player.stop()
 
         if dpg.does_item_exist(self._t("play_stop")):
             dpg.configure_item(self._t("play_stop"), texture_tag=Icons.play)
 
     def seek(self, pos: float, relative: bool = False) -> None:
-        if self._player:
-            self._player.seek(pos, relative)
-
         if relative:
             pos *= self._duration
 
-        dpg.set_value(self._t("playback_pos"), pos)
+        if self._player:
+            # The player works in seconds
+            self._player.seek(pos / 1000)
+
+        self._last_pos = pos
+        self._set_plot_pos(self._t("playback_pos"), pos)
 
     def close(self) -> None:
+        self._want_playing = False
         if self._player:
             self._player.close()
+            self._player = None
 
+        self._delete_item(self._t("markers_popup"))
         if dpg.does_item_exist(self.tag):
             dpg.delete_item(self.tag)
 
@@ -178,77 +384,268 @@ class add_signal_preview(DpgItem):
         else:
             self.play()
 
-    def _update_playback_pos(self) -> None:
-        if self._player.playing:
-            loop_start, loop_end = self.loop_points
-            pos = self._player.pos
+    def _on_playback_pos_dragged(self, sender: str) -> None:
+        start, end = self._region()
+        self.seek(min(max(start, self._get_plot_pos(sender)), end))
 
-            if pos < loop_start:
-                self._player.seek(loop_start)
+    def _update_playback_pos(self) -> None:
+        if not self._want_playing or not dpg.does_item_exist(self._t("playback_pos")):
+            return
+
+        start, end = self._region()
+
+        if not self._player.playing:
+            # Reached the end on its own
+            self.stop()
+            self.seek(start)
+            return
+
+        pos = self._player.pos * 1000
+        jump = None
+        loop = self._playback_loop()
+
+        if loop:
+            loop_start, loop_end = loop
+            preview_len = self._LOOP_PREVIEW_LEN
+
+            if self.loop_preview_enabled and (pos < loop_start or pos >= loop_end):
+                jump = loop_start
             elif (
                 self.loop_preview_enabled
-                and pos >= min(loop_start + 2.0, self._duration)
-                and pos < loop_end - 2.0
+                and loop_start + preview_len <= pos < loop_end - preview_len
             ):
-                self._player.seek(max((0, loop_start, loop_end - 2.0)))
-            elif pos >= loop_end:
-                self._player.seek(loop_start)
+                jump = loop_end - preview_len
+            elif pos >= loop_end or pos < self._last_pos:
+                # The player wraps around at the end of the signal
+                jump = loop_start
+        elif pos >= end:
+            self.stop()
+            self.seek(start)
+            return
 
-            dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
+        if jump is None and pos < start:
+            jump = start
 
-        dpg.set_value(self._t("playback_pos"), self._player.pos)
+        if jump is not None:
+            pos = jump
+            self._player.seek(pos / 1000)
+
+        self._last_pos = pos
+        self._set_plot_pos(self._t("playback_pos"), pos)
+        dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
+
+    def _on_loop_dragged(self, sender: str, app_data: Any, which: str) -> None:
+        self._set_loop_bound(which, self._get_plot_pos(sender) - self._marker_offset)
+
+    def _on_loop_input(self, sender: str, value: float, which: str) -> None:
+        self._set_loop_bound(which, value)
+
+    def _on_trim_dragged(self, sender: str, app_data: Any, which: str) -> None:
+        pos = self._get_plot_pos(sender)
+        if which == "begin":
+            self._set_trim(which, pos)
+        else:
+            self._set_trim(which, pos - self._duration)
+
+    def _on_trim_input(self, sender: str, value: float, which: str) -> None:
+        self._set_trim(which, value)
+
+    def _on_user_marker_dragged(self, sender: str, app_data: Any, mid: int) -> None:
+        self._set_user_marker(mid, self._get_plot_pos(sender) - self._marker_offset)
+
+    def _on_user_marker_input(self, sender: str, value: float, mid: int) -> None:
+        self._set_user_marker(mid, value)
 
     # === Internals =====================================================
 
-    def _sync_region(self) -> None:
-        """Move the overview markers onto the selected loop."""
-        start, end = self.loop_points
-        dpg.set_value(
-            self._t("playback_region"), (start, -self._Y_LIMIT, end, self._Y_LIMIT)
-        )
-        dpg.set_value(self._t("loop_start"), start)
-        dpg.set_value(self._t("loop_end"), end)
+    def _region(self) -> tuple[float, float]:
+        """The absolute ``(start, end)`` of the trimmed signal."""
+        if self._trims is None:
+            return 0.0, self._duration
 
-        if dpg.does_item_exist(self._t("playback_pos")):
-            dpg.set_value(self._t("playback_pos"), start)
+        begin, end = self._trims
+        start = min(begin, self._duration)
+        return start, max(start, self._duration + end)
 
-    def _on_bound_changed(self, sender: str, value: float, which: str) -> None:
-        value = max(0.0, value)
-        if self._duration:
-            value = min(value, self._duration)
+    def _abs_loop(self) -> tuple[float, float]:
+        """The ``(start, end)`` of the loop within the signal, or None."""
+        if self._loop_points is None:
+            return None
 
-        if which == "start":
-            end = self._loop_points[1]
-            start = min(value, end)
+        offset = self._marker_offset
+        loop_start, loop_end = self._loop_points
+        loop_start += offset
+        if loop_end <= 0.0:
+            loop_end = self._duration + loop_end
         else:
-            start = self._loop_points[0]
-            end = max(value, start)
+            loop_end += offset
+
+        start = min(max(0.0, loop_start), self._duration)
+        return start, min(max(start, loop_end), self._duration)
+
+    def _playback_loop(self) -> tuple[float, float]:
+        """The loop limited to the trimmed signal, or None."""
+        loop = self._abs_loop()
+        if loop is None:
+            return None
+
+        region_start, region_end = self._region()
+        start = min(max(region_start, loop[0]), region_end)
+        end = min(max(start, loop[1]), region_end)
+
+        if end <= start:
+            # The loop was trimmed away, loop the trimmed signal instead
+            return region_start, region_end
+
+        return start, end
+
+    def _set_loop_bound(self, which: str, value: float) -> None:
+        if self._loop_points is None:
+            return
+
+        start, end = self._loop_points
+        if which == "start":
+            start = max(0.0, value)
+            if end > 0.0:
+                start = min(start, end)
+        else:
+            # Keep clear of the "measured from the end" range when dragging
+            end = max(value, start, 1.0)
 
         self._loop_points = (start, end)
-        dpg.set_value(self._t("start_input"), start)
-        dpg.set_value(self._t("end_input"), end)
-        dpg.set_value(self._t("length_text"), self._length_label())
+        self._sync_markers()
 
-        self._sync_region()
+        if self._on_loop_changed:
+            self._on_loop_changed(self.tag, self._loop_points, self._user_data)
+
+    def _set_trim(self, which: str, value: float) -> None:
+        if self._trims is None:
+            return
+
+        begin, end = self._trims
+        if which == "begin":
+            begin = min(max(0.0, value), self._duration + end)
+        else:
+            end = max(min(0.0, value), begin - self._duration)
+
+        self._trims = (begin, end)
+        self._sync_markers()
+
+        if self._on_trims_changed:
+            self._on_trims_changed(self.tag, self._trims, self._user_data)
+
+    def _set_user_marker(self, mid: int, value: float) -> None:
+        if self._user_markers is None:
+            return
+
+        self._user_markers[mid] = max(0.0, value)
+        self._sync_markers()
+
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(self.tag, self.user_markers, self._user_data)
+
+    # The plot shows the signal in seconds, the values are edited in ms
+
+    @staticmethod
+    def _get_plot_pos(item: str) -> float:
+        return dpg.get_value(item) * 1000
+
+    @staticmethod
+    def _set_plot_pos(item: str, pos: float) -> None:
+        dpg.set_value(item, pos / 1000)
+
+    @staticmethod
+    def _set_plot_span(item: str, start: float, end: float, y: float) -> None:
+        dpg.set_value(item, (start / 1000, -y, end / 1000, y))
+
+    @staticmethod
+    def _set_value(item: str, value: Any) -> None:
+        if dpg.does_item_exist(item):
+            dpg.set_value(item, value)
+
+    def _update_visibility(self) -> None:
+        has_loop = self._loop_points is not None
+        has_trims = self._trims is not None
+        # An empty dict leaves nothing to edit
+        has_markers = bool(self._user_markers)
+
+        for item in ("playback_region", "loop_start", "loop_end", "loop_inputs"):
+            if dpg.does_item_exist(self._t(item)):
+                dpg.configure_item(self._t(item), show=has_loop)
+
+        for item in ("head", "tail", "begin_trim", "end_trim", "trim_inputs"):
+            if dpg.does_item_exist(self._t(item)):
+                dpg.configure_item(self._t(item), show=has_trims)
+
+        if dpg.does_item_exist(self._t("markers_button")):
+            show = {
+                "markers_button": has_loop or has_trims or has_markers,
+                "trims_separator": has_trims and has_loop,
+                "markers_separator": has_markers and (has_loop or has_trims),
+                "user_markers_inputs": has_markers,
+            }
+            for item, visible in show.items():
+                dpg.configure_item(self._t(item), show=visible)
+
+            if not show["markers_button"]:
+                dpg.hide_item(self._t("markers_popup"))
+
+    def _sync_markers(self) -> None:
+        """Push the marker state into the plot and the inputs."""
+        y = self._Y_LIMIT
+        start, end = self._region()
+
+        if self._trims is not None:
+            self._set_plot_span(self._t("head"), 0.0, start, y)
+            self._set_plot_span(self._t("tail"), end, self._duration, y)
+            self._set_plot_pos(self._t("begin_trim"), start)
+            self._set_plot_pos(self._t("end_trim"), end)
+            self._set_value(self._t("begin_trim_value"), self._trims[0])
+            self._set_value(self._t("end_trim_value"), self._trims[1])
+
+        loop = self._abs_loop()
+        if loop:
+            loop_start, loop_end = loop
+            self._set_plot_span(self._t("playback_region"), loop_start, loop_end, y)
+            self._set_plot_pos(self._t("loop_start"), loop_start)
+            self._set_plot_pos(self._t("loop_end"), loop_end)
+            self._set_value(self._t("start_input"), self._loop_points[0])
+            self._set_value(self._t("end_input"), self._loop_points[1])
+
+        for mid, pos in (self._user_markers or {}).items():
+            self._set_plot_pos(self._t(f"marker_{mid}"), pos + self._marker_offset)
+            self._set_value(self._t(f"marker_{mid}_value"), pos)
+
+        self._set_value(self._t("length_text"), self._length_label())
 
     def _length_label(self) -> str:
-        return µ("{len:.3f} s").format(len=self.playback_duration)
+        return µ("{len:.0f} ms").format(len=self.playback_duration)
 
-    def _build(self, no_playback_controls: bool) -> None:
+    # === Build =========================================================
+
+    def _build(self, no_playback_controls: bool, height: int) -> None:
         with dpg.child_window(
             autosize_x=True,
             auto_resize_y=True,
             tag=self.tag,
         ):
-            self._build_plot()
+            dpg.add_text(
+                "",
+                color=style.yellow,
+                show=False,
+                tag=self._t("error"),
+            )
+            self._build_plot(height)
             if not no_playback_controls:
                 dpg.add_spacer(height=4)
                 self._build_footer()
 
-    def _build_plot(self) -> None:
+    def _build_plot(self, height: int) -> None:
+        editable = self._markers_editable
+
         with dpg.plot(
             width=-1,
-            height=130,
+            height=height,
             no_title=True,
             no_menus=True,
             no_mouse_pos=True,
@@ -269,7 +666,16 @@ class add_signal_preview(DpgItem):
                 no_tick_marks=True,
             )
 
-            # Read-only: the numeric fields in the table are the editor
+            # Shades over the trimmed-away head and tail
+            for item in ("head", "tail"):
+                dpg.add_drag_rect(
+                    color=style.red.but(a=110),
+                    no_inputs=True,
+                    no_cursor=True,
+                    no_fit=True,
+                    tag=self._t(item),
+                )
+
             dpg.add_drag_rect(
                 color=style.green.but(a=60),
                 no_inputs=True,
@@ -277,28 +683,37 @@ class add_signal_preview(DpgItem):
                 no_fit=True,
                 tag=self._t("playback_region"),
             )
-            dpg.add_drag_line(
-                label=µ("loop_start", "marker"),
-                color=style.green,
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-                tag=self._t("loop_start"),
-            )
-            dpg.add_drag_line(
-                label=µ("loop_end", "marker"),
-                color=style.green,
-                no_inputs=True,
-                no_cursor=True,
-                no_fit=True,
-                tag=self._t("loop_end"),
-            )
+
+            for which in ("start", "end"):
+                dpg.add_drag_line(
+                    label=µ(f"loop_{which}", "marker"),
+                    color=style.green,
+                    no_inputs=not editable,
+                    no_fit=True,
+                    callback=self._on_loop_dragged,
+                    user_data=which,
+                    tag=self._t(f"loop_{which}"),
+                )
+
+            for which in ("begin", "end"):
+                dpg.add_drag_line(
+                    label=µ(f"{which}_trim", "marker"),
+                    color=style.red,
+                    thickness=2,
+                    no_inputs=not editable,
+                    no_fit=True,
+                    callback=self._on_trim_dragged,
+                    user_data=which,
+                    tag=self._t(f"{which}_trim"),
+                )
+
+            # User markers are inserted before this, it should stay on top
             dpg.add_drag_line(
                 label=µ("pos", "marker"),
                 color=style.light_blue,
-                no_inputs=True,
-                no_cursor=True,
+                show_label=False,
                 no_fit=True,
+                callback=self._on_playback_pos_dragged,
                 tag=self._t("playback_pos"),
             )
 
@@ -315,45 +730,63 @@ class add_signal_preview(DpgItem):
                 tag=self._t("play_stop"),
             )
 
-            for which, value in zip(("start", "end"), self._loop_points):
-                dpg.add_input_float(
-                    default_value=value,
-                    width=-1,
-                    step=0.01,
-                    format="%.3f",
-                    callback=self._on_bound_changed,
-                    user_data=(which),
-                    tag=self._t(f"{which}_input"),
-                )
+            dpg.add_button(
+                label=µ("Markers", "button"),
+                callback=lambda: dpg.show_item(self._t("markers_popup")),
+                tag=self._t("markers_button"),
+            )
 
             dpg.add_text(self._length_label(), tag=self._t("length_text"))
 
-        # TODO use the marker editor widget instead
         with dpg.window(
             popup=True,
             no_move=True,
             no_title_bar=True,
             no_resize=True,
-            tag=self._t("markers_popup"),
+            autosize=True,
             show=False,
+            tag=self._t("markers_popup"),
         ):
-            dpg.add_input_float(
-                label=µ("loop_start", "marker"),
-                default_value=self._loop_start,
-                width=130,
-                callback=self._set_loop_marker_pos,
-                user_data="loop_start",
-                tag=self._t("loop_start_value"),
-            )
-            dpg.add_input_float(
-                label=µ("loop_end", "marker"),
-                default_value=self._loop_end,
-                width=130,
-                callback=self._set_loop_marker_pos,
-                user_data="loop_end",
-                tag=self._t("loop_end_value"),
-            )
+            # Each section is only shown if its markers are handled at all
+            with dpg.group(tag=self._t("loop_inputs")):
+                for which in ("start", "end"):
+                    dpg.add_input_float(
+                        label=µ(f"loop_{which}", "marker"),
+                        step=self._STEP,
+                        step_fast=self._STEP_FAST,
+                        format="%.1f",
+                        width=130,
+                        callback=self._on_loop_input,
+                        user_data=which,
+                        tag=self._t(f"{which}_input"),
+                    )
 
-            dpg.add_separator()
-            dpg.add_group(tag=self._t("user_markers_container"))
+            dpg.add_separator(tag=self._t("trims_separator"))
+            with dpg.group(tag=self._t("trim_inputs")):
+                dpg.add_input_float(
+                    label=µ("begin_trim", "marker"),
+                    min_value=0.0,
+                    min_clamped=True,
+                    step=self._STEP,
+                    step_fast=self._STEP_FAST,
+                    format="%.1f",
+                    width=130,
+                    callback=self._on_trim_input,
+                    user_data="begin",
+                    tag=self._t("begin_trim_value"),
+                )
+                dpg.add_input_float(
+                    label=µ("end_trim", "marker"),
+                    max_value=0.0,
+                    max_clamped=True,
+                    step=self._STEP,
+                    step_fast=self._STEP_FAST,
+                    format="%.1f",
+                    width=130,
+                    callback=self._on_trim_input,
+                    user_data="end",
+                    tag=self._t("end_trim_value"),
+                )
 
+            dpg.add_separator(tag=self._t("markers_separator"))
+            dpg.add_group(tag=self._t("user_markers_inputs"))

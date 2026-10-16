@@ -31,7 +31,8 @@ from yonder.gui.widgets import (
     DpgItem,
     add_select_node,
     add_paragraphs,
-    add_wav_player,
+    add_signal_preview,
+    add_generic_widget,
     add_widget_table,
     loading_indicator,
     add_transition_matrix,
@@ -104,18 +105,10 @@ class _BgmInfo:
             self.battle
         )
 
-        def get_loop_info(track: _BgmVariant) -> tuple[float, float]:
-            if self.intro:
-                # We use loop_start as our intro marker. Since the track will be
-                # trimmed up to this point and loop markers are relative to the
-                # begin trim, we have to set it to 0 so it starts at the trim.
-                return (0.0, track.loop_info[1])
-            return track.loop_info
-
         return AreaBgm(
             BgmTrack(
                 self.regular.track,
-                get_loop_info(self.regular),
+                self.regular.loop_info,
                 self.regular.trims,
                 self.fadein,
                 reg_default,
@@ -123,13 +116,13 @@ class _BgmInfo:
             ),
             BgmTrack(
                 self.battle.track,
-                get_loop_info(self.battle),
+                self.battle.loop_info,
                 self.battle.trims,
                 self.fadein,
                 bat_default,
                 [bat_ctrl_normal, bat_ctrl_battle],
             ),
-            self.regular.loop_info[0] if self.regular and self.intro else 0.0,
+            self.intro,
         )
 
 
@@ -418,14 +411,7 @@ Area tree:
                 lines=dpg.mvTreeLines_ToNodes,
                 span_full_width=True,
             ) as tree_node_regular:
-                add_wav_player(
-                    entry.regular.track,
-                    on_file_changed=self._make_callback(entry.regular, "track"),
-                    loop_markers_enabled=True,
-                    on_loop_changed=self._make_callback(entry.regular, "loop_info"),
-                    trim_enabled=True,
-                    on_trims_changed=self._make_callback(entry.regular, "trims"),
-                )
+                self._add_variant_preview(entry.regular)
                 dpg.add_spacer(height=3)
                 add_widget_table(
                     entry.regular.props,
@@ -449,14 +435,7 @@ Area tree:
                 lines=dpg.mvTreeLines_ToNodes,
                 span_full_width=True,
             ) as tree_node_battle:
-                add_wav_player(
-                    entry.battle.track,
-                    on_file_changed=self._make_callback(entry.battle, "track"),
-                    loop_markers_enabled=True,
-                    on_loop_changed=self._make_callback(entry.battle, "loop_info"),
-                    trim_enabled=True,
-                    on_trims_changed=self._make_callback(entry.battle, "trims"),
-                )
+                self._add_variant_preview(entry.battle)
                 dpg.add_spacer(height=3)
                 add_widget_table(
                     entry.battle.props,
@@ -947,6 +926,28 @@ Area tree:
                 show=False,
                 color=style.red,
             )
+
+    def _add_variant_preview(self, variant: _BgmVariant) -> None:
+        def on_track_changed(sender: str, path: Path, cb_user_data: Any) -> None:
+            variant.track = path
+            preview.set_signal_from_wav(path)
+            self._update_summary()
+
+        add_generic_widget(
+            Path,
+            None,
+            callback=on_track_changed,
+            default=variant.track,
+            filetypes={µ("Audio Files (.wav, .wem)", "filetypes"): ["*.wav", "*.wem"]},
+        )
+        preview = add_signal_preview(
+            loop_points=variant.loop_info,
+            on_loop_changed=self._make_callback(variant, "loop_info"),
+            trims=variant.trims,
+            on_trims_changed=self._make_callback(variant, "trims"),
+        )
+        if variant.track:
+            preview.set_signal_from_wav(variant.track)
 
     def _make_callback(
         self, obj: Any, attr: str, transformer: Callable[[Any], Any] = None

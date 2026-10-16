@@ -71,7 +71,7 @@ from ..widgets.loading_indicator import loading_indicator
 from ..widgets.properties_table import add_properties_table
 from ..widgets.rtpc_table import add_rtpc_table
 from ..widgets.states_table import add_states_table
-from ..widgets.wav_player_widget import add_wav_player
+from ..widgets.signal_preview import add_signal_preview
 from ..widgets.transition_matrix import add_transition_matrix
 from ..widgets.editable_table import add_widget_table, add_curves_table, add_nodes_table
 from ..widgets.hash_widget import add_hash_widget
@@ -1362,44 +1362,53 @@ def _create_attributes_musictrack(
     ) -> None:
         # Veeery important.... >.<
         node.set_source(source_index, info[1])
-        players[source_index].set_file(info[1])
+        players[source_index].set_signal_from_wav(info[1])
+        paths[source_index] = info[1]
         on_node_changed(base_tag, node, user_data)
 
     def on_loop_changed(
-        sender: str,
-        loop_info: tuple[float, float, bool],
-        cb_user_data: Any,
+        sender: str, loop_info: tuple[float, float], cb_user_data: Any
     ) -> None:
-        loop_start, loop_end, _ = loop_info
+        loop_start, loop_end = loop_info
         segment.set_marker(MarkerId.LoopStart, loop_start)
         segment.set_marker(MarkerId.LoopEnd, loop_end)
         on_node_changed(base_tag, node, user_data)
 
     def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
-        node.set_trims(trims[0], trims[1], idx)
-        node.playlist[idx].play_at = -trims[0]
+        begin_trim, end_trim = trims
+        node.set_trims(begin_trim, end_trim, idx)
+        # Balance the trim so the track keeps starting with the segment. The
+        # segment markers stay put, so they move relative to the audio.
+        node.playlist[idx].play_at = -begin_trim
+        players[idx].marker_offset = begin_trim
         on_node_changed(base_tag, node, user_data)
 
-    def apply_curves(curves: list[GraphCurve]) -> None:
-        for curve in curves:
-            auto_type = ClipAutomationType[curve.curve_type]
-            for player in players:
-                if auto_type == ClipAutomationType.Volume:
-                    player.set_volume(curve)
-                elif auto_type == ClipAutomationType.LPF:
-                    player.set_lowpass(curve)
-                elif auto_type == ClipAutomationType.HPF:
-                    player.set_highpass(curve)
-                elif auto_type == ClipAutomationType.FadeIn:
-                    player.set_fadein(curve)
-                elif auto_type == ClipAutomationType.FadeOut:
-                    player.set_fadeout(curve)
-                else:
-                    logger.warning(
-                        µ("Unknown clip automation type {type}", "log").format(
-                            type=auto_type
-                        )
-                    )
+    def on_markers_edited(
+        sender: str, loop_info: tuple[float, float], idx: int
+    ) -> None:
+        players[idx].loop_points = loop_info
+        on_loop_changed(sender, players[idx].loop_points, idx)
+
+    def on_trims_edited(sender: str, trims: tuple[float, float], idx: int) -> None:
+        players[idx].trims = trims
+        set_trims(sender, players[idx].trims, idx)
+
+    def open_edit_markers_dialog(sender: str, app_data: Any, idx: int) -> None:
+        from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
+
+        player = players[idx]
+        edit_markers_dialog(
+            paths[idx],
+            accept_on_okay=True,
+            loop_points=player.loop_points,
+            on_loop_changed=on_markers_edited,
+            trims=player.trims,
+            on_trims_changed=on_trims_edited,
+            track_offset=node.playlist[idx].play_at,
+            balance_trims=True,
+            markers_in_ms=True,
+            user_data=idx,
+        )
 
     def on_clips_changed(
         sender: str, curves: list[GraphCurve], cb_user_data: Any
@@ -1411,19 +1420,19 @@ def _create_attributes_musictrack(
                 ClipAutomation(idx, auto_type, graph_points=curve.points)
             )
 
-        apply_curves(curves)
         on_node_changed(base_tag, node, user_data)
 
     segment: MusicSegment = bnk.get(node.parent)
-    markers_enabled = bool(isinstance(segment, MusicSegment))
-    players: list[add_wav_player] = []
+    players: list[add_signal_preview] = []
+    paths: list[Path] = []
 
-    if markers_enabled:
-        loop_start = segment.get_marker_pos(MarkerId.LoopStart)
-        loop_end = segment.get_marker_pos(MarkerId.LoopEnd)
+    if isinstance(segment, MusicSegment):
+        loop_points = (
+            segment.get_marker_pos(MarkerId.LoopStart),
+            segment.get_marker_pos(MarkerId.LoopEnd),
+        )
     else:
-        loop_start = 1000.0
-        loop_end = -1000.0
+        loop_points = None
 
     if len(node.sources) > 1:
         dpg.add_text(
@@ -1443,21 +1452,25 @@ def _create_attributes_musictrack(
             trims = node.get_trims(i)
 
             add_change_source_type(bnk, source, on_source_changed, user_data=i)
-            player = add_wav_player(
-                path,
-                allow_change_file=False,
-                loop_markers_enabled=markers_enabled,
-                edit_markers_inplace=False,
+            player = add_signal_preview(
+                loop_points=loop_points,
                 on_loop_changed=on_loop_changed,
-                loop_start=loop_start,
-                loop_end=loop_end,
-                trim_enabled=True,
-                begin_trim=trims[0],
-                end_trim=trims[1],
+                trims=trims,
                 on_trims_changed=set_trims,
+                marker_offset=-node.playlist[i].play_at,
+                user_data=i,
+            )
+            if path:
+                player.set_signal_from_wav(path)
+
+            dpg.add_button(
+                label=µ("Edit Markers", "button"),
+                enabled=bool(path),
+                callback=open_edit_markers_dialog,
                 user_data=i,
             )
             players.append(player)
+            paths.append(path)
 
         add_curves_table(
             [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items],
@@ -1470,10 +1483,6 @@ def _create_attributes_musictrack(
         dpg.add_spacer(height=3)
         dpg.add_separator()
         dpg.add_spacer(height=3)
-
-    apply_curves(
-        [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items]
-    )
 
 
 def _create_attributes_randomsequencecontainer(
@@ -1592,7 +1601,7 @@ def _create_attributes_sound(
     def on_source_changed(
         sender: str, info: tuple[SourceType, Path], user_data: Any
     ) -> None:
-        player.set_file(info[1])
+        player.set_signal_from_wav(info[1])
         on_node_changed(base_tag, node, user_data)
 
     source = node.bank_source_data
@@ -1600,7 +1609,9 @@ def _create_attributes_sound(
 
     with dpg.group():
         add_change_source_type(bnk, node.bank_source_data, on_source_changed)
-        player = add_wav_player(path, allow_change_file=False)
+        player = add_signal_preview()
+        if path:
+            player.set_signal_from_wav(path)
 
         dpg.add_spacer(height=3)
         dpg.add_separator()

@@ -104,7 +104,7 @@ class create_boss_track_dialog(DpgItem):
 
             for i, bgm in enumerate(self.bgm_tracks):
                 dpg.add_checkbox(
-                    default_value=bgm.intro_length > 0,
+                    default_value=bgm.intro,
                     callback=self._update_play_intro,
                     tag=self._t(f"play_intro:{i}"),
                     user_data=i,
@@ -165,7 +165,7 @@ class create_boss_track_dialog(DpgItem):
         self.show_message()
 
     def _on_track_added(self, sender: str, path: Path, user_data: Any) -> None:
-        self.bgm_tracks.append(BossBgm(BgmTrack(path), 0.0))
+        self.bgm_tracks.append(BossBgm(BgmTrack(path)))
         self._regenerate_per_track_widgets()
 
     def _on_track_removed(self, sender: str, idx: int, user_data: Any) -> None:
@@ -179,7 +179,7 @@ class create_boss_track_dialog(DpgItem):
         self.bgm_tracks[idx].track.track = path
 
     def _update_loop_infos(
-        self, sender: str, data: tuple[int, tuple[float, float, bool]], user_data: Any
+        self, sender: str, data: tuple[int, tuple[float, float]], user_data: Any
     ) -> None:
         idx, loop_info = data
         self.bgm_tracks[idx].track.loop_info = loop_info
@@ -192,7 +192,7 @@ class create_boss_track_dialog(DpgItem):
 
     def _update_play_intro(self, sender: str, enabled: bool, idx: int) -> None:
         # length will be taken from loop_start in on_okay
-        self.bgm_tracks[idx].intro_length = enabled
+        self.bgm_tracks[idx].intro = enabled
 
     def _on_phase_transitions_changed(
         self, sender: str, transitions: list[MusicTransitionRule], user_data: Any
@@ -214,10 +214,12 @@ class create_boss_track_dialog(DpgItem):
             self.show_message(µ("No tracks added", "msg"))
             return
 
-        for track in self.bgm_tracks:
-            if track.intro_length > 0 and track.track.loop_info[0] <= 0:
+        for idx, track in enumerate(self.bgm_tracks):
+            if track.intro and track.track.loop_info[0] <= track.track.trims[0]:
                 self.show_message(
-                    µ("Track #{idx} has intro enabled but loop_start is 0")
+                    µ("Track #{idx} has intro enabled but no loop_start").format(
+                        idx=idx
+                    )
                 )
                 return
 
@@ -251,13 +253,6 @@ class create_boss_track_dialog(DpgItem):
                         trans.destination_ids[idx] = track_idx
 
                 phase_transitions.append(trans)
-
-            # Fix up intro lengths
-            for track in self.bgm_tracks:
-                if track.intro_length > 0:
-                    track.intro_length = track.track.loop_info[0]
-                    # loop markers are relative to the begin trim
-                    track.track.loop_info = (0.0, track.track.loop_info[1])
 
             nodes = create_boss_bgm(
                 self.bnk,
