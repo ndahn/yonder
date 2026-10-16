@@ -603,20 +603,21 @@ class Soundbank:
         # Not an event or action, go up the chain until we find the root
         root = node
         while True:
-            parent_ids = list(self.tree.predecessors(root.id))
-            if not parent_ids:
+            parents = list(
+                filter(
+                    lambda x: x and not isinstance(x, (Event, Action)),
+                    (self.get(pid) for pid in self.tree.predecessors(root.id)),
+                )
+            )
+            if not parents:
                 return root
 
-            for pid in parent_ids:
-                parent_node = self.get(pid)
-                if not parent_node:
+            for parent_node in parents:
+                if isinstance(parent_node, ActorMixer):
                     return root
 
-                if parent_node and isinstance(parent_node, ActorMixer):
-                    return root
-
-                if not isinstance(parent_node, (Event, Action)):
-                    root = parent_node
+                root = parent_node
+                break
 
     def find_events(
         self, action_type: ActionType = ActionType.Play
@@ -696,14 +697,12 @@ class Soundbank:
                         # Explicitly plays our target_id, should be included
                         break
                 else:
-                    if evt.has_action_type(
-                        self, ActionType.StopEO, ActionType.StopE
-                    ):
+                    if evt.has_action_type(self, ActionType.StopEO, ActionType.StopE):
                         # Has a play action targeting a different node, don't include it
                         continue
 
                 related.append(evt)
-        
+
         return related
 
     def solve(self) -> None:

@@ -1875,7 +1875,7 @@ class BanksOfYonder(DpgItem):
 
                 if properties:
                     self._hirc_player.update_context(properties=properties)
-            except ValueError as e:
+            except Exception as e:
                 logger.error(f"HIRC player failed to load: {e}")
                 self._hirc_player.set_enabled(False)
 
