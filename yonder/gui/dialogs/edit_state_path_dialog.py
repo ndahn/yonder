@@ -171,12 +171,12 @@ class edit_state_path_dialog(DpgItem):
 
         keys: list[int] = []
         for arg in self._arguments:
-            key = self._state_inputs[arg].value
+            key = self._state_inputs[arg].string_value
             if not key:
                 self.show_message(µ("Keys must not be empty", "msg"))
                 return
 
-            keys.append(key)
+            keys.append(self._state_inputs[arg].value)
 
         if not self._raw:
             keys = [lookup_name(k, f"#{k}") for k in keys]

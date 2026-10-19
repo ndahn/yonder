@@ -145,7 +145,7 @@ class create_boss_track_dialog(DpgItem):
         )
         self.show_message()
 
-    def _on_bgmenemytype_changed(self, sender: str, value: str, user_data: Any) -> None:
+    def _on_bgmenemytype_changed(self, sender: str, value: tuple[int, str], user_data: Any) -> None:
         _, name = value
         if not name or name == "*":
             self.show_message(µ("BgmEnemyType not set", "msg"))
@@ -205,7 +205,7 @@ class create_boss_track_dialog(DpgItem):
             self.show_message(µ("Select MusicSwitchContainer first", "msg"))
             return
 
-        bgm_enemy_type = dpg.get_value(self._t("bgm_enemy_type"))
+        bgm_enemy_type = self._bgm_enemy_type_widget.string_value
         if not bgm_enemy_type or bgm_enemy_type == "*":
             self.show_message(µ("BgmEnemyType not set", "msg"))
             return
@@ -325,7 +325,6 @@ class create_boss_track_dialog(DpgItem):
                 label="BgmEnemyType",
                 default_value="*",
                 custom_values={"*": 0},
-                tag=self._t("bgm_enemy_type"),
             )
 
             dpg.add_button(
