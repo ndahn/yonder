@@ -27,8 +27,6 @@ class EventNode(GraphDesignerNode):
         self.name = name
 
         self.extra_actions: list[str] = []
-        self._play: Action = None
-        self._stop: Action = None
 
     def build_body(self) -> None:
         pass
@@ -90,8 +88,10 @@ class EventNode(GraphDesignerNode):
             if terminal.startswith("Extra") and aid > 0
         ]
 
-        self._play = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
-        self._stop = Action.new_stop(bnk.new_id(), target)
-        evt = Event.new(self.node_id(), [self._play.id, self._stop.id] + extras)
+        play_act = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
+        play_evt = Event.new(f"Play_{self.node_id()}", [play_act.id] + extras)
+        
+        stop_act = Action.new_stop(bnk.new_id(), target)
+        stop_evt = Event.new(f"Stop_{self.node_id()}", [stop_act.id])
 
-        return (evt, self._play, self._stop)
+        return (play_evt, play_act, stop_evt, stop_act)

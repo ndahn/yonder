@@ -1,7 +1,8 @@
-from typing import Any, ClassVar, Callable
+from typing import ClassVar, Callable
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank, calc_hash
+from yonder.util import logger
 from yonder.types import HIRCNode, LayerContainer
 from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 from yonder.gui.localization import μ
@@ -82,7 +83,7 @@ class LCNode(GraphDesignerNode):
             return µ("Playback not connected")
 
         if not any(output_map.values()):
-            return µ("No items connected")
+            logger.warning(µ("No items connected"))
 
         return super().validate(bnk, input_map, output_map)
 

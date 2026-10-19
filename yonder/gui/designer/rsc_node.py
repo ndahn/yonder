@@ -2,6 +2,7 @@ from typing import Any, ClassVar
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
+from yonder.util import logger
 from yonder.enums import PlaybackMode, RandomMode
 from yonder.gui.designer.graph_designer_node import GraphDesignerNode, can_reference
 from yonder.gui.localization import μ
@@ -92,7 +93,7 @@ class RSCNode(GraphDesignerNode):
             return µ("Playback not connected")
 
         if not any(output_map.values()):
-            return µ("No items connected")
+            logger.warning(µ("No items connected"))
 
         return super().validate(bnk, input_map, output_map)
 

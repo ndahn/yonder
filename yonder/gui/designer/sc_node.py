@@ -1,6 +1,7 @@
 from typing import Any, ClassVar, Callable
 
 from yonder import Soundbank
+from yonder.util import logger
 from yonder.types import HIRCNode, SwitchContainer
 from yonder.game import get_selected_game
 from yonder.gui.designer.graph_designer_node import GraphDesignerNode
@@ -99,7 +100,7 @@ class SCNode(GraphDesignerNode):
             return µ("Playback not connected")
 
         if not any(output_map.values()):
-            return µ("No switches connected")
+            logger.warning(µ("No switches connected"))
 
         return super().validate(bnk, input_map, output_map)
 

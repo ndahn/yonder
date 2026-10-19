@@ -2,6 +2,7 @@ from typing import Any, ClassVar
 from dearpygui import dearpygui as dpg
 
 from yonder import Soundbank
+from yonder.util import logger
 from yonder.enums import RandomSequenceMode
 from yonder.types import (
     HIRCNode,
@@ -73,7 +74,7 @@ class MRSCNode(GraphDesignerNode):
             return µ("Not connected to a parent or an event")
 
         if not any(output_map.values()):
-            return µ("No segments connected")
+            logger.warning(µ("No segments connected"))
 
         return super().validate(bnk, input_map, output_map)
 
