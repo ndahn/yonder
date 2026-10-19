@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Callable
 from dataclasses import dataclass
 import webbrowser
@@ -19,6 +20,7 @@ from yonder.gui.widgets import (
 from yonder.gui.designer import (
     GraphDesignerNode,
     designer_node_categories,
+    get_templates,
 )
 
 
@@ -26,6 +28,66 @@ from yonder.gui.designer import (
 class GraphNode:
     pos: tuple[float, float]
     type_name: str
+
+
+class GraphBuilder:
+    def __init__(self, dlg: graph_designer_dialog, *tails: GraphDesignerNode):
+        self.dlg = dlg
+        self.tails: list[GraphDesignerNode] = list(tails)
+
+    def node(self, node: GraphDesignerNode) -> GraphBuilder:
+        self.dlg.add_node(node)
+        self.tails = [node]
+        return self
+
+    def to(self, output: str, target: GraphDesignerNode, input: str) -> GraphBuilder:
+        self.dlg.add_node(target)
+
+        for tail in self.tails:
+            self.dlg.link_nodes(tail, output, target, input)
+
+        self.tails = [target]
+        return self
+
+    def fork(self, *chain_funcs: Callable[[GraphBuilder], Any]) -> GraphBuilder:
+        merged = []
+
+        for func in chain_funcs:
+            sub = GraphBuilder(self.dlg, *self.tails)
+            func(sub)
+            merged += sub.tails
+
+        self.tails = merged
+        return self
+
+    def merge(
+        self,
+        func: Callable[[GraphBuilder], Any],
+        output: str,
+        *inputs: str,
+        tail_idx: int = 0,
+    ) -> GraphBuilder:
+        sub = GraphBuilder(self.dlg, *self.tails)
+        func(sub)
+
+        for tail, input in zip(sub.tails, inputs):
+            self.dlg.link_nodes(tail, output, self.tails[tail_idx], input)
+
+        return self
+
+    def select(self, tail_idx: int) -> GraphBuilder:
+        self.tails = self.tails[tail_idx]
+        return self
+
+    def configure(
+        self, func: Callable[[GraphDesignerNode], Any], tail_idx: int = 0
+    ) -> GraphBuilder:
+        func(self.tails[tail_idx])
+        return self
+
+    def call(self, func: Callable[[GraphBuilder], Any]) -> GraphBuilder:
+        func(self)
+        return self
 
 
 class graph_designer_dialog(DpgItem):
@@ -199,10 +261,18 @@ class graph_designer_dialog(DpgItem):
 
     def _build_templates_menu(self) -> None:
         with dpg.menu(label=µ("Templates", "menu")):
-            # TODO prebuilt graphs (simple sound, bgm, ...)
-            dpg.add_menu_item(label=µ("(none yet)"), enabled=False)
+            for label in get_templates():
+                dpg.add_menu_item(
+                    label=µ(label),
+                    callback=self._add_template,
+                    user_data=label,
+                )
 
     # === Helpers =======================================================
+
+    def _add_template(self, sender: str, user_data: Any, key: str) -> None:
+        get_templates()[key](self, self._bnk)
+        self.auto_layout()
 
     def _get_node(self, nid: int) -> GraphDesignerNode:
         data = self._g.nodes.get(nid)
@@ -286,6 +356,7 @@ class graph_designer_dialog(DpgItem):
         self, node: GraphDesignerNode
     ) -> tuple[dict[str, GraphDesignerNode], dict[str, GraphDesignerNode]]:
         """The nodes connected to a node's terminals, keyed by terminal label."""
+
         # Children are attached in terminal order, which decides e.g. the
         # playlist order of a container
         def link_order(edge: tuple[int, int, dict]) -> int:
@@ -433,6 +504,66 @@ class graph_designer_dialog(DpgItem):
         if not target:
             return
 
+        self.link_nodes(source, output, target, input)
+
+    def _on_unlink_nodes(self, sender: str, app_data: Any, user_data: Any) -> None:
+        edge = self._get_edge_for_link(app_data)
+        if edge:
+            self._remove_edge(*edge)
+        elif dpg.does_item_exist(app_data):
+            dpg.delete_item(app_data)
+
+    def _on_okay(self) -> None:
+        try:
+            nodes = self.build_nodes()
+        except ValueError as e:
+            self.show_message(str(e))
+            return
+        except Exception as e:
+            logger.exception(f"Failed to create graph: {e}")
+            self.show_message(str(e))
+            return
+
+        logger.info(µ("Created {count} nodes", "log").format(count=len(nodes)))
+        self._callback(nodes)
+        self._on_close()
+        yay()
+
+    # === Public ========================================================
+
+    def chain(self) -> GraphBuilder:
+        # Builder style graph builder
+        return GraphBuilder(self)
+
+    def add_node(
+        self,
+        designer_node: GraphDesignerNode | type[GraphDesignerNode],
+        pos: tuple[float, float] = None,
+    ) -> GraphDesignerNode:
+        """Add a new node of the given HIRC type to the canvas."""
+
+        if isinstance(designer_node, type):
+            node = designer_node(self._bnk, self._bnk.new_id())
+        else:
+            node = designer_node
+
+        node.set_unlink_handler(self.unlink_terminal)
+        self._g.add_node(node.nid, type=designer_node.node_type, node=node)
+
+        pos = pos or self._spawn_pos
+        node.build(self._t("canvas"), pos)
+        self._spawn_pos = self._cascade(pos)
+
+        self.show_message()
+        return node
+
+    def link_nodes(
+        self,
+        source: GraphDesignerNode,
+        output: str,
+        target: GraphDesignerNode,
+        input: str,
+    ) -> None:
         if not self._link_allowed(source, output, target, input):
             return
 
@@ -460,45 +591,6 @@ class graph_designer_dialog(DpgItem):
         self._notify_connections(source)
         self._notify_connections(target)
         self.show_message()
-
-    def _on_unlink_nodes(self, sender: str, app_data: Any, user_data: Any) -> None:
-        edge = self._get_edge_for_link(app_data)
-        if edge:
-            self._remove_edge(*edge)
-        elif dpg.does_item_exist(app_data):
-            dpg.delete_item(app_data)
-
-    def _on_okay(self) -> None:
-        try:
-            nodes = self.build_nodes()
-        except ValueError as e:
-            self.show_message(str(e))
-            return
-        except Exception as e:
-            logger.exception(f"Failed to create graph: {e}")
-            self.show_message(str(e))
-            return
-
-        logger.info(µ("Created {count} nodes", "log").format(count=len(nodes)))
-        self._callback(nodes)
-        self._on_close()
-        yay()
-
-    # === Public ========================================================
-
-    def add_node(
-        self, designer_node: type[GraphDesignerNode], pos: tuple[float, float] = None
-    ) -> GraphDesignerNode:
-        """Add a new node of the given HIRC type to the canvas."""
-        pos = pos or self._spawn_pos
-        node = designer_node(self._bnk, self._bnk.new_id())
-        node.set_unlink_handler(self.unlink_terminal)
-        self._g.add_node(node.nid, type=designer_node.node_type, node=node)
-        node.build(self._t("canvas"), pos)
-        self._spawn_pos = self._cascade(pos)
-
-        self.show_message()
-        return node
 
     def unlink_terminal(
         self, node: GraphDesignerNode, label: str, is_input: bool

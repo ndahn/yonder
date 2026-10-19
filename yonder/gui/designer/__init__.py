@@ -15,6 +15,7 @@ from .rsc_node import RSCNode
 from .sc_node import SCNode
 from .sound_node import SoundNode
 
+from .designer_templates import get_templates
 
 designer_node_categories: dict[str, list[type[GraphDesignerNode]]] = {
     "Sounds": [
