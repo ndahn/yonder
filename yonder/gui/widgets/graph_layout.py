@@ -47,10 +47,12 @@ class GraphLayout[T]:
 
         half_sweep = math.pi / 4  # 45 degrees either side of center
         lo = -half_sweep
+        # Multiple nodes must have an initial depth or they will all land at the same spot
+        initial_depth = 0 if len(roots) == 0 else 1
 
         for root in roots:
             share = 2 * half_sweep * leafs[root] / total
-            self._place(g, root, 0, lo, lo + share, leafs, layout)
+            self._place(g, root, initial_depth, lo, lo + share, leafs, layout)
             lo += share
 
         return layout
