@@ -43,7 +43,7 @@ class SimplePlayer:
         self._server.deactivateMidi()
         self._server.boot()
 
-        self._input = pyo.InputFader(pyo.Sig(0))
+        self._input = pyo.InputFader(pyo.Sig([0, 0]))
         self._gain_ctrl = pyo.SigTo(db_to_amp(volume_db), time=fade_time)
         self._hpf_ctrl = pyo.SigTo(hpf_to_hz(hpf_cents), time=fade_time)
         self._lpf_ctrl = pyo.SigTo(lpf_to_hz(lpf_cents), time=fade_time)
@@ -172,9 +172,14 @@ class SimplePlayer:
 
         hpf = pyo.ButHP(chain[-1], self._hpf_ctrl)
         lpf = pyo.ButLP(hpf, self._lpf_ctrl)
-        out = (lpf * self._gain_ctrl).mix(2)
-        chain.extend([hpf, lpf, out])
+        sig = (lpf * self._gain_ctrl)
 
+        if self._channels == 1:
+            out = pyo.Pan(sig, outs=2, pan=0.5, spread=0.5)
+        else:
+            out = sig.mix(2)
+
+        chain.extend([hpf, lpf, out])
         self._input.setInput(out, self._fade_time)
 
         # Wait for the crossfade to finish before allowing the old sources
