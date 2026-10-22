@@ -5,7 +5,7 @@ from dearpygui import dearpygui as dpg
 from yonder.hash import Hash
 from yonder.gui import style
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, add_audio_visualizer, AudioTrack
+from yonder.gui.widgets import DpgItem, add_track_arranger, AudioTrack
 
 
 class edit_markers_dialog(DpgItem):
@@ -86,7 +86,7 @@ class edit_markers_dialog(DpgItem):
         self._on_user_markers_changed = on_user_markers_changed
         self._markers_in_ms = markers_in_ms
         self._user_data = user_data
-        self._viz: add_audio_visualizer = None
+        self._viz: add_track_arranger = None
 
         begin_trim = trims[0] if trims else 0.0
         self._balance_trims = balance_trims
@@ -123,7 +123,7 @@ class edit_markers_dialog(DpgItem):
         ):
             dpg.add_spacer(height=10)
 
-            self._viz = add_audio_visualizer(
+            self._viz = add_track_arranger(
                 [track],
                 loop_points=loop_points,
                 on_loop_changed=self._dlg_on_loop_changed,

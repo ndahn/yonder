@@ -38,7 +38,7 @@ from .paragraphs import add_paragraphs, estimate_paragraph_height, get_paragraph
 from .signal_preview import add_signal_preview
 from .state_value_input import add_state_value_input
 from .splash import add_splash
-from .audio_visualizer import add_audio_visualizer, AudioTrack
+from .track_arranger import add_track_arranger, AudioTrack
 from .properties_table import add_properties_table
 from .transition_matrix import add_transition_matrix
 from .yay import yay

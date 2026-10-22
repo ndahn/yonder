@@ -103,7 +103,7 @@ class _Row:
         return self.offset + self.duration
 
 
-class add_audio_visualizer(DpgItem):
+class add_track_arranger(DpgItem):
     """A multi-track audio arranger.
 
     Every track gets its own waveform row inside a linked ``subplots`` block,
@@ -203,7 +203,7 @@ class add_audio_visualizer(DpgItem):
         tag: str = 0,
         parent: str = 0,
         user_data: Any = None,
-    ) -> add_audio_visualizer:
+    ) -> add_track_arranger:
         tracks: list[MusicTrack] = [bnk[cid] for cid in segment.children]
         if not tag:
             tag = dpg.generate_uuid()
@@ -299,7 +299,7 @@ class add_audio_visualizer(DpgItem):
                 )
             )
 
-        return add_audio_visualizer(
+        return add_track_arranger(
             track_info,
             label=label,
             loop_points=loop_points,
@@ -861,7 +861,9 @@ class add_audio_visualizer(DpgItem):
 
     def _fire_loop_changed(self) -> None:
         if self._on_loop_changed:
-            self._on_loop_changed(self._tag, self.get_loop_points(True), self._user_data)
+            self._on_loop_changed(
+                self._tag, self.get_loop_points(True), self._user_data
+            )
 
     def _set_loop_bound(self, which: str, pos: float) -> None:
         start, end = self._loop_points
@@ -1681,7 +1683,7 @@ def _demo() -> None:
     load_icons()
 
     with dpg.window(tag="demo"):
-        viz = add_audio_visualizer(
+        viz = add_track_arranger(
             tracks,
             label="Audio arranger",
             loop_points=(500.0, 2500.0),
