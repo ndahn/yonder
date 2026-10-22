@@ -33,6 +33,8 @@ class DecisionTreeMixin:
             num_tree_nodes += len(item.children)
             todo.extend(item.children)
 
+        return num_tree_nodes
+
     def get_flat_tree(self, string_keys: bool = True) -> dict[tuple[str | int], int]:
         todo = [(c, []) for c in self.tree.children]
         ret = {}

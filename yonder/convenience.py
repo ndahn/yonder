@@ -542,8 +542,8 @@ def _get_unique_name(
         for val in suffixes:
             if isinstance(val, int):
                 val = lookup_name(val, val)
-            if val:
-                base += "_" + val
+            if val and val not in "*0_ ":
+                base += "_" + val.strip("_")
 
     base = base.rstrip("_")
     if base in bnk:
@@ -634,7 +634,13 @@ def create_boss_bgm(
             track_transition=track_transitions[i],
         )
 
-        boss_msc.add_branch([phase], phase_nodes[0])
+        if phase == 0:
+            # No need to add a new path, just adjust the default path
+            boss_msc.select_child([phase]).node_id = phase_nodes[0].id
+            boss_msc.children.add(phase_nodes[0].id)
+        else:
+            boss_msc.add_branch([phase], phase_nodes[0])
+        
         phase_masters.append(phase_nodes[0])
         new_nodes.extend(phase_nodes)
 

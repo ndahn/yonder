@@ -152,17 +152,76 @@
     "isBuddy"
   ],
   "states": {
-    "#1807931947": [
-      "A",
-      "B"
-    ],
-    "#3289890711": [
-      "#2673105805"
-    ],
-    "BgmCutsceneId": [
-      "s13000040"
-    ],
+    "#1807931947": ["A", "B"],
+    "#3289890711": ["#2673105805"],
+    "BgmCutsceneId": ["s13000040"],
     "BgmEnemyType": [
+      "_BgmSilent",
+      "_BgmSilent_MistWall",
+      "c2030",
+      "c2030",
+      "c2030_B",
+      "c2030_B",
+      "c2110",
+      "c2110",
+      "c2120",
+      "c2120",
+      "c2130_A",
+      "c2130_A",
+      "c2130_B",
+      "c2130_B",
+      "c2190",
+      "c2190",
+      "c3560",
+      "c3560",
+      "c4510",
+      "c4510",
+      "c4520",
+      "c4520",
+      "c4670",
+      "c4670",
+      "c4710",
+      "c4710",
+      "c4720",
+      "c4720",
+      "c4720_B",
+      "c4720_B",
+      "c4730",
+      "c4730",
+      "c4750",
+      "c4750",
+      "c4760",
+      "c4760",
+      "c4800",
+      "c4800",
+      "c5020",
+      "c5020",
+      "c5030",
+      "c5030",
+      "c5050",
+      "c5050",
+      "c5120",
+      "c5120",
+      "c5130",
+      "c5130",
+      "c5200",
+      "c5200",
+      "c5210",
+      "c5210",
+      "c5220",
+      "c5220",
+      "c5230",
+      "c5230",
+      "c5300",
+      "c5300",
+      "EventBoss_Reserved08",
+      "EventBoss_Reserved09",
+      "EventBoss_Reserved10",
+      "EventBoss_Reserved11",
+      "EventBoss_Reserved12",
+      "EventBoss_Reserved13",
+      "EventBoss_Reserved14",
+      "EventBoss_Reserved15",
       "FieldBoss_Lv02",
       "FieldBoss_Lv03",
       "FieldBoss_Lv04",
@@ -196,31 +255,58 @@
       "FieldStrongEnemyA",
       "FieldStrongEnemyB",
       "MidBoss_Aster",
+      "MidBoss_Aster",
+      "MidBoss_BasementRoom",
       "MidBoss_BasementRoom",
       "MidBoss_BlackSword",
+      "MidBoss_BlackSword",
+      "MidBoss_CarianRoyal",
       "MidBoss_CarianRoyal",
       "MidBoss_Catacombs",
+      "MidBoss_Catacombs",
+      "MidBoss_Catacombs_B",
       "MidBoss_Catacombs_B",
       "MidBoss_Cave",
+      "MidBoss_Cave",
+      "MidBoss_CircleEvent",
       "MidBoss_CircleEvent",
       "MidBoss_Creepy",
+      "MidBoss_Creepy",
+      "MidBoss_DaemonPhantom",
       "MidBoss_DaemonPhantom",
       "MidBoss_DarkKnights",
+      "MidBoss_DarkKnights",
+      "MidBoss_DeathGenus",
       "MidBoss_DeathGenus",
       "MidBoss_DeepBlood",
+      "MidBoss_DeepBlood",
+      "MidBoss_FieldDragon",
       "MidBoss_FieldDragon",
       "MidBoss_Fortress",
+      "MidBoss_Fortress",
+      "MidBoss_Godman",
       "MidBoss_Godman",
       "MidBoss_Melee",
+      "MidBoss_Melee",
+      "MidBoss_MeleeLast",
       "MidBoss_MeleeLast",
       "MidBoss_MeteoricIronBeast",
+      "MidBoss_MeteoricIronBeast",
+      "MidBoss_NewCircle",
       "MidBoss_NewCircle",
       "MidBoss_Prison",
+      "MidBoss_Prison",
+      "MidBoss_TreeDaemon",
       "MidBoss_TreeDaemon",
       "MidBoss_TreeKnights",
+      "MidBoss_TreeKnights",
+      "MidBoss_Tunnel",
       "MidBoss_Tunnel",
       "MidBoss_UgRemains",
+      "MidBoss_UgRemains",
       "MidBoss_Wolf",
+      "MidBoss_Wolf",
+      "MidBoss_Wyvern",
       "MidBoss_Wyvern",
       "MultiHostile_00",
       "MultiHostile_01",
@@ -228,36 +314,8 @@
       "MultiHostile_03",
       "MultiHostile_04",
       "MultiHostile_05",
-      "_BgmSilent",
-      "_BgmSilent_MistWall",
-      "c2030",
-      "c2030_B",
-      "c2110",
-      "c2120",
-      "c2130_A",
-      "c2130_B",
-      "c2190",
-      "c3560",
-      "c4510",
-      "c4520",
-      "c4670",
-      "c4710",
-      "c4720",
-      "c4720_B",
-      "c4730",
-      "c4750",
-      "c4760",
-      "c4800",
-      "c5020",
-      "c5030",
-      "c5050",
-      "c5120",
-      "c5130",
-      "c5200",
-      "c5210",
-      "c5220",
-      "c5230",
-      "c5300"
+      "None",
+      "Reserved"
     ],
     "BgmPlaceType": [
       "Bgm_000_Green",
@@ -313,12 +371,7 @@
       "Bgm_562_FingerRuin",
       "Bgm_563_MediumVil"
     ],
-    "BossBattleState": [
-      "Battle",
-      "HU1",
-      "HU2",
-      "NoBattle"
-    ],
+    "BossBattleState": ["Battle", "HU1", "HU2", "NoBattle"],
     "CommonPlaceType": [
       "_00",
       "_01",
@@ -352,41 +405,15 @@
       "_29",
       "_30"
     ],
-    "EasyOcclusionID": [
-      "_1"
-    ],
-    "FallenLeaves": [
-      "On"
-    ],
-    "FieldBattleState": [
-      "FieldBattle",
-      "FieldNormal"
-    ],
-    "FieldBgmSilent": [
-      "On"
-    ],
-    "IsVisibleRetryDialog": [
-      "Yes"
-    ],
-    "LoopCheck": [
-      "None",
-      "On"
-    ],
-    "OutdoorIndoor": [
-      "IndoorAll",
-      "IndoorHalf",
-      "Outdoor"
-    ],
-    "OutdoorIndoorForEnv": [
-      "IndoorAll",
-      "IndoorHalf",
-      "Outdoor"
-    ],
-    "OutdoorIndoorForRain": [
-      "IndoorAll",
-      "IndoorHalf",
-      "Outdoor"
-    ],
+    "EasyOcclusionID": ["_1"],
+    "FallenLeaves": ["On"],
+    "FieldBattleState": ["FieldBattle", "FieldNormal"],
+    "FieldBgmSilent": ["On"],
+    "IsVisibleRetryDialog": ["Yes"],
+    "LoopCheck": ["None", "On"],
+    "OutdoorIndoor": ["IndoorAll", "IndoorHalf", "Outdoor"],
+    "OutdoorIndoorForEnv": ["IndoorAll", "IndoorHalf", "Outdoor"],
+    "OutdoorIndoorForRain": ["IndoorAll", "IndoorHalf", "Outdoor"],
     "Set_State_EnvPlaceType": [
       "Env_000_Green",
       "Env_010_Lake",
@@ -433,10 +460,7 @@
       "Env_563_MediumVil",
       "None"
     ],
-    "Set_State_PlayerState": [
-      "PlayerCrouching",
-      "PlayerResting"
-    ],
+    "Set_State_PlayerState": ["PlayerCrouching", "PlayerResting"],
     "StateWeatherType": [
       "_00_Sunny",
       "_01_ClearSky",
@@ -461,37 +485,15 @@
       "_87_Reserved",
       "_88_Reserved"
     ],
-    "TimeZone": [
-      "DayTime",
-      "NightTime"
-    ],
-    "TreeBurning": [
-      "Burning_petit",
-      "No"
-    ]
+    "TimeZone": ["DayTime", "NightTime"],
+    "TreeBurning": ["Burning_petit", "No"]
   },
   "switches": {
-    "#0": [
-      "#0"
-    ],
-    "#4043700211": [
-      "_00",
-      "_03",
-      "_04",
-      "_05"
-    ],
-    "AttackStrength": [
-      "_01_Small"
-    ],
-    "AttackType": [
-      "_0_Cut",
-      "_1_Pierce",
-      "_2_Hit"
-    ],
-    "DamageAmount": [
-      "_0_Small",
-      "_1_Big"
-    ],
+    "#0": ["#0"],
+    "#4043700211": ["_00", "_03", "_04", "_05"],
+    "AttackStrength": ["_01_Small"],
+    "AttackType": ["_0_Cut", "_1_Pierce", "_2_Hit"],
+    "DamageAmount": ["_0_Small", "_1_Big"],
     "DeffensiveMaterial": [
       "#0",
       "#940968422",
@@ -610,18 +612,9 @@
       "_173_ScaleWeaknessHuge",
       "_174_HardScale"
     ],
-    "GrassHitType": [
-      "HitNormal",
-      "NotHit"
-    ],
-    "HitStop": [
-      "_1_On",
-      "_2_Repel"
-    ],
-    "IsChrSilence": [
-      "Off",
-      "On"
-    ],
+    "GrassHitType": ["HitNormal", "NotHit"],
+    "HitStop": ["_1_On", "_2_Repel"],
+    "IsChrSilence": ["Off", "On"],
     "OffensiveMaterial": [
       "_000_Iron",
       "_001_Leather",
@@ -644,16 +637,8 @@
       "LeatherArmour",
       "Nude"
     ],
-    "PlayerMoveSpeed": [
-      "Fast",
-      "Normal",
-      "Slow"
-    ],
-    "PlayerShoes": [
-      "Barefoot",
-      "Boots",
-      "Cloth"
-    ],
+    "PlayerMoveSpeed": ["Fast", "Normal", "Slow"],
+    "PlayerShoes": ["Barefoot", "Boots", "Cloth"],
     "PlayerVoice": [
       "NPC_vc300",
       "NPC_vc301",
@@ -737,25 +722,9 @@
       "_61_NPC_Female_Middle",
       "_62_NPC_Female_Old"
     ],
-    "TimeZone": [
-      "DayTime",
-      "Midnight",
-      "Night"
-    ],
-    "WaterDepthFootSE": [
-      "_20_Paddle",
-      "_21_Ankle",
-      "_22_Knee",
-      "_27_Hip"
-    ],
-    "c8000_Soft_Landing": [
-      "Play",
-      "noPlay"
-    ],
-    "isBuddy": [
-      "#0",
-      "No",
-      "Yes"
-    ]
+    "TimeZone": ["DayTime", "Midnight", "Night"],
+    "WaterDepthFootSE": ["_20_Paddle", "_21_Ankle", "_22_Knee", "_27_Hip"],
+    "c8000_Soft_Landing": ["Play", "noPlay"],
+    "isBuddy": ["#0", "No", "Yes"]
   }
 }
