@@ -185,7 +185,7 @@ class edit_transition_dialog(DpgItem):
                 label=µ("Play post-exit"),
                 default_value=bool(src.play_post_exit),
                 callback=lambda s, a, u: setattr(
-                    self._src_rule, "play_post_exit", bool(a)
+                    self._src_rule, "play_post_exit", int(a)
                 ),
                 tag=self._t("edit_transition/src_play_post_exit"),
             )
@@ -244,9 +244,9 @@ class edit_transition_dialog(DpgItem):
             )
             dpg.add_checkbox(
                 label=µ("Play pre-entry"),
-                default_value=dst.play_pre_entry,
+                default_value=bool(dst.play_pre_entry),
                 callback=lambda s, a, u: setattr(
-                    self._dst_rule, "play_pre_entry", bool(a)
+                    self._dst_rule, "play_pre_entry", int(a)
                 ),
                 tag=self._t("edit_transition/dst_play_pre_entry"),
             )
