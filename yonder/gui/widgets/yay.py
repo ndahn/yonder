@@ -2,6 +2,7 @@ import time
 from dearpygui import dearpygui as dpg
 
 from yonder.util import resource_dir
+from yonder.gui.frame_tasks import call_in_frames
 
 
 _texture_w: int = 0
@@ -31,7 +32,7 @@ def yay(fadeout: float = 2.0):
         else:
             alpha = 255 - int(t / fadeout * 255)
             dpg.configure_item(f"{tag}_overlay", color=(255, 255, 255, alpha))
-            dpg.set_frame_callback(dpg.get_frame_count() + 1, fadeout_cb)
+            call_in_frames(fadeout_cb, 1)
 
     vw = dpg.get_viewport_width()
     vh = dpg.get_viewport_height()
@@ -46,6 +47,4 @@ def yay(fadeout: float = 2.0):
     fadeout_cb()
 
     # Make sure this gets deleted even if our callback is somehow lost
-    dpg.set_frame_callback(
-        dpg.get_frame_count() + int(fadeout * 60), fadeout_cb
-    )
+    call_in_frames(fadeout_cb, int(fadeout * 60))

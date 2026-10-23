@@ -2,12 +2,12 @@ from __future__ import annotations
 from typing import Callable
 from dataclasses import dataclass, field
 import atexit
-import time
 from pathlib import Path
 import numpy as np
 import pyo
 
 from yonder.util import logger
+from .audio_server import acquire_server, release_server, retire
 from .audiomath import (
     db_to_amp,
     amp_to_db,
@@ -27,7 +27,7 @@ class _Source:
     ``nodes`` is the chain in creation order and gets played and stopped as a
     unit. ``tables`` holds the table objects, which have no transport of their
     own but still have to stay referenced for as long as a reader points at
-    them. Releasing both is `SimplePlayer._retire`'s job.
+    them. Releasing both is `yonder.audio.audio_server.retire`'s job.
     """
 
     duration: float = 0.0
@@ -44,14 +44,18 @@ class _Source:
 
 
 class SimplePlayer:
-    """Plays a single signal or audio file through one pyo server.
+    """Plays a single signal or audio file.
 
     Loading a source and driving it are two separate steps: `set_signal` and
     `set_file` build the pyo chain, `play`, `pause`, `stop` and `seek` only
-    operate on an already built one. 
+    operate on an already built one.
     Chains that do get replaced are stopped and released from pyo's own
     callback thread after a short grace period, which is the same approach
     `yonder.types.HIRCNode.release_pyo` takes.
+
+    Several players can be alive at once - a signal preview and the marker
+    dialog it opened, say - so they share one pyo server rather than booting
+    one each, see `yonder.audio.audio_server`.
 
     All times are in seconds.
     """
@@ -77,14 +81,7 @@ class SimplePlayer:
         self._pos = 0.0
         self._clock_ready_at = 0
 
-        # Sources waiting out their grace period before being dropped,
-        # keyed by an ascending token, see _retire
-        self._retired: dict[int, tuple[_Source, pyo.CallAfter]] = {}
-        self._retire_token = 0
-
-        self._server: pyo.Server = pyo.Server(duplex=0)
-        self._server.deactivateMidi()
-        self._server.boot()
+        self._server = acquire_server()
 
         # What the fader reads while nothing is loaded. Has to stay referenced
         # for as long as the fader might fall back to it
@@ -100,7 +97,6 @@ class SimplePlayer:
         # mixing in additional sources)
         self._master = self._input
         self._master.out()
-        self._server.start()
 
         # Important for proper exit
         atexit.register(self.close)
@@ -118,24 +114,25 @@ class SimplePlayer:
 
         self._closed = True
 
-        if self._server.getIsStarted():
-            self._server.stop()
-            # Allow the server to drain all buffers and callbacks
-            time.sleep(0.25)
-
-        # Deleting the objects is safe now that processing has ended. Any
-        # pending CallAfter would never fire with the server stopped, so the
-        # grace period has to be skipped here
+        # Everything this player owns goes to the graveyard while the server
+        # is still up, since other players may well be keeping it there. It
+        # outlives us either way, so none of it can be dropped from here
         source, self._source = self._source, None
-        self._retire(source, 0)
-        for retired, _ in list(self._retired.values()):
-            self._stop_nodes(retired)
+        self._retire(source)
+        retire(
+            [
+                self._master,
+                self._input,
+                self._gain_ctrl,
+                self._hpf_ctrl,
+                self._lpf_ctrl,
+                self._speed_ctrl,
+            ],
+            keep=(self._silence,),
+            delay=self._fade_time + 0.1,
+        )
 
-        self._retired.clear()
-
-        if self._server.getIsBooted():
-            self._server.shutdown()
-
+        release_server()
         atexit.unregister(self.close)
 
     def set_finished_callback(self, callback: Callable[[], None]) -> None:
@@ -429,16 +426,7 @@ class SimplePlayer:
             self._on_finished()
 
     def _retire(self, source: _Source, delay: float = None) -> None:
-        """Stop a source and release its pyo objects.
-
-        Dropping the last reference to a pyo object while the server may still
-        be processing it is what hard crashes the whole app, so a replaced
-        chain is parked until the server has moved past it. `pyo.CallAfter`
-        runs the release from the server's own callback thread, the one place
-        where nothing can be touching the streams at the same time. A delay of
-        0 releases immediately and is only safe while the server is stopped,
-        since no callback would ever fire to do it later.
-        """
+        """Hand a source over to the server's graveyard, see `audio_server.retire`."""
         if source is None:
             return
 
@@ -446,22 +434,7 @@ class SimplePlayer:
             # Long enough for the crossfade onto the new source to finish
             delay = self._fade_time + 0.1
 
-        if delay <= 0 or not self._server.getIsStarted():
-            self._stop_nodes(source)
-            return
-
-        self._retire_token += 1
-        token = self._retire_token
-        self._retired[token] = (
-            source,
-            pyo.CallAfter(self._release, delay, token),
-        )
-
-    def _release(self, token: int) -> None:
-        """Called from pyo's callback thread once a retired source's grace period is up. Dropping the entry here is what finally frees the objects."""
-        entry = self._retired.pop(token, None)
-        if entry:
-            self._stop_nodes(entry[0])
+        retire(source.nodes, keep=(source.tables, source.signal), delay=delay)
 
     @staticmethod
     def _stop_nodes(source: _Source) -> None:

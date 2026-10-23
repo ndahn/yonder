@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.audio.audiomath import DB_FLOOR, amp_to_db
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 from .dpg_item import DpgItem
 
 
@@ -37,7 +38,7 @@ class add_bar_equalizer(DpgItem):
         ]
 
         self._build(parent)
-        dpg.set_frame_callback(dpg.get_frame_count() + 2, self._redraw)
+        call_in_frames(self._redraw, 2)
 
     def destroy(self) -> None:
         self._delete_item(self._t("handler"))

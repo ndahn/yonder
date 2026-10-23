@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 from pathlib import Path
@@ -15,10 +16,13 @@ from yonder.wem import wav2wem, wem2wav
 from yonder.audio.wavesignal import read_wav, minmax_envelope
 from yonder.audio.audiomath import mix
 from yonder.audio.loop_points import find_loops
-from yonder.gui import style, get_config
+from yonder.audio.simple_player import SimplePlayer
+from yonder.gui import style, get_config, Icons
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.helpers import get_sound_path, center_window
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, loading_indicator
+from yonder.gui.widgets.editable_table import add_widget_table
 from yonder.gui.dialogs.file_dialog import open_file_dialog
 from yonder.gui.dialogs.loop_point_candidates_dialog import loop_point_candidates_dialog
 
@@ -53,6 +57,20 @@ class AudioTrack:
     begin_trim: float = 0.0
     end_trim: float = 0.0
     enabled: bool = True
+
+
+@dataclass
+class _MarkerRow:
+    """One row of the markers popup's table.
+
+    The loop bounds are fixed entries that can only be moved, user markers
+    can also be renamed and removed. Positions are never cached here, they
+    are read back off the arranger so a drag and the table cannot disagree.
+    """
+
+    kind: str  # "loop_start", "loop_end" or "user"
+    mid: int = 0  # user markers only
+    pos_input: int = 0
 
 
 @dataclass(eq=False)
@@ -119,7 +137,13 @@ class add_track_arranger(DpgItem):
     a thin marker strip above the rows, mirrored read-only into every waveform
     row. Right-clicking a row opens its options menu.
 
-    There is no playback - this widget only arranges and visualizes.
+    The transport above the rows plays the arrangement back so marker edits
+    can be heard. What it plays is the same mixdown the loop point search
+    works on, rebuilt whenever playback starts and the arrangement moved since
+    - re-reading every track mid-drag would not keep up. The loop points are
+    applied live though, which is the point: drag a loop marker and the next
+    pass around already uses it. The playhead on the marker strip can be
+    dragged to seek.
 
     Parameters
     ----------
@@ -165,6 +189,9 @@ class add_track_arranger(DpgItem):
         Maximum waveform envelope points rendered per channel.
     markers_in_ms : bool
         Interpret and report all marker and offset values in milliseconds.
+    no_transport : bool
+        Skip the transport above the rows. Call ``build_transport`` to place
+        it somewhere else instead.
     width : int
         Plot width in pixels (-1 = auto).
     tag : int or str
@@ -182,6 +209,11 @@ class add_track_arranger(DpgItem):
     # Keep-out zone around the trim handles, in pixels, so a move drag started
     # near a clip edge does not fight the trim handle sitting there
     _HANDLE_PIXELS = 7
+    # Seconds played on either side of the loop seam in loop test mode
+    _LOOP_PREVIEW_LEN = 2.0
+    # Pixel widths of the marker table's name and position columns. The table
+    # is compact, so these are fixed rather than stretch weights
+    _MARKER_COLUMNS = (150, 110)
 
     @classmethod
     def from_music_segment(
@@ -344,6 +376,7 @@ class add_track_arranger(DpgItem):
         marker_height: int = 34,
         max_points: int = 5000,
         markers_in_ms: bool = True,
+        no_transport: bool = False,
         width: int = -1,
         tag: str = 0,
         parent: str = 0,
@@ -353,6 +386,7 @@ class add_track_arranger(DpgItem):
 
         # Layout / construction-time settings (fixed for lifetime)
         self._label = label
+        self._no_transport = no_transport
         self._snap_pixels = snap_pixels
         self._row_height = row_height
         self._marker_height = marker_height
@@ -376,13 +410,28 @@ class add_track_arranger(DpgItem):
         self._rows: list[_Row] = []
         self._strip: dict[str, int] = {}  # marker items on the marker strip
         self._axis_tags: dict[str, int] = {}
+        # Short name per axis tag; the position is appended to it on every sync
+        self._tag_names: dict[str, str] = {}
+        # The markers popup's table, and a guard for while it drives a change
+        self._marker_table: add_widget_table = None
+        self._in_table_edit = False
         self._subplots: int = 0
         self._marker_plot: int = 0
         self._marker_axis: int = 0
         self._handlers: int = 0
-        self._snap_enabled: bool = True
+        self._snap_enabled: bool = snap_enabled
         # (row, anchor time, offset at press) while a clip is being dragged
         self._drag: tuple[_Row, float, float] | None = None
+
+        # Playback. The player is created on the first play, since every one
+        # of them boots a pyo server of its own
+        self._player: SimplePlayer = None
+        self._want_playing = False
+        self._playhead = 0.0
+        # The mix is only as current as the last play, see _mixdown
+        self._mix_dirty = True
+        # Skip the middle of the loop so only the seam is heard
+        self.loop_preview_enabled = False
 
         # Loop points are absolute on the timeline, in seconds. None means
         # they are not handled. loop_end == 0.0 means "to end".
@@ -395,10 +444,15 @@ class add_track_arranger(DpgItem):
         self._set_loop_points(loop_points)
         self._set_user_markers(user_markers)
 
-        self._setup_content(snap_enabled)
+        self._setup_content()
         self.set_tracks(tracks or [])
 
     def destroy(self) -> None:
+        self.stop()
+        if self._player:
+            self._player.close()
+            self._player = None
+
         self._destroy_plots()
         self._drop(self._handlers)
         self._handlers = 0
@@ -459,9 +513,7 @@ class add_track_arranger(DpgItem):
 
         # set_axis_limits locks the axis - release it once the range landed,
         # otherwise the user can no longer zoom or pan.
-        dpg.set_frame_callback(
-            dpg.get_frame_count() + 2, lambda: self._unlock_axis(xaxis)
-        )
+        call_in_frames(lambda: self._unlock_axis(xaxis))
 
     def get_track_offsets(self, millis: bool) -> list[float]:
         """Return every track's timeline start, in row order."""
@@ -609,8 +661,10 @@ class add_track_arranger(DpgItem):
 
         if which == "lo":
             self._clamp_trims(row, edge - row.offset, row.end_trim)
+            self._report_drag(µ("begin_trim", "marker"), row.begin_trim)
         else:
             self._clamp_trims(row, row.begin_trim, edge - row.src_end)
+            self._report_drag(µ("end_trim", "marker"), row.end_trim)
 
         self._update_row_geometry(row)
         self._refresh_timeline()
@@ -700,6 +754,7 @@ class add_track_arranger(DpgItem):
         self._update_row_geometry(row)
         self._refresh_timeline()
         self._fire_track_moved(row)
+        self._report_drag(row.label, row.offset)
 
     def _on_mouse_release(self, sender: str, app_data: Any) -> None:
         self._drag = None
@@ -744,7 +799,14 @@ class add_track_arranger(DpgItem):
         self._set_value(row.end_trim_input, self._out(row.end_trim))
 
     def _refresh_timeline(self) -> None:
-        """Re-clamp the view and the markers after the timeline length moved."""
+        """Re-clamp the view and the markers after the timeline length moved.
+
+        Every change to where a track sits or how far it is trimmed ends up
+        here, which makes it the one place that has to retire the mix. Marker
+        edits go straight to ``_sync_markers`` instead and leave it alone,
+        since they do not change a single sample.
+        """
+        self._mix_dirty = True
         duration = self.duration
         padding = max(0.05 * duration, 0.1)
         # Keep trimmed-away heads in view so they can be dragged back out
@@ -865,9 +927,9 @@ class add_track_arranger(DpgItem):
                 self._tag, self.get_loop_points(True), self._user_data
             )
 
-    def _set_loop_bound(self, which: str, pos: float) -> None:
+    def _set_loop_bound(self, which: str, pos: float, *, dragged: bool = False) -> None:
         start, end = self._loop_points
-        pos = self._get_valid_pos(pos)
+        pos = self._clamp_pos(pos) if dragged else self._get_valid_pos(pos)
         if which == "loop_start":
             start = max(0.0, pos)
         else:
@@ -877,26 +939,35 @@ class add_track_arranger(DpgItem):
         self._sync_markers()
         self._fire_loop_changed()
 
-    def _set_loop_marker_pos(self, sender: str, pos: float, loop_marker: str) -> None:
-        self._set_loop_bound(loop_marker, self._into(pos))
-
     def _on_loop_marker_moved(self, sender: str) -> None:
         which = "loop_start" if sender == self._strip.get("loop_start") else "loop_end"
-        self._set_loop_bound(which, dpg.get_value(sender))
+        self._set_loop_bound(which, dpg.get_value(sender), dragged=True)
 
-    def _mixdown(self, row_indices: list[int] = None) -> tuple[np.ndarray, int]:
-        """Mix every audible track into one mono signal on the timeline.
+        start, end = self._loop_abs_bounds()
+        self._report_drag(µ(which, "marker"), start if which == "loop_start" else end)
+
+    def _mixdown(
+        self, row_indices: list[int] = None, *, mono: bool = True
+    ) -> tuple[np.ndarray, int]:
+        """Mix every audible track into one signal on the timeline.
+
+        Reads every track off disk, so this is far too slow to redo while a
+        clip is being dragged. Playback mixes once and marks the result stale
+        instead, see ``_mix_dirty``.
 
         Parameters
         ----------
         row_indices : list[int], optional
             Rows to mix, or all rows if None.
+        mono : bool
+            Fold the result to one channel and return it flat, which is what
+            the analysis code wants. Playback asks for stereo instead.
 
         Returns
         -------
         tuple of (numpy.ndarray, int)
-            Flat mono samples and their sample rate. Empty if nothing is
-            audible.
+            Flat mono samples, or ``(n_frames, 2)`` when ``mono`` is False,
+            and their sample rate. Empty if nothing is audible.
         """
         if not row_indices:
             row_indices = list(range(len(self._rows)))
@@ -924,11 +995,153 @@ class add_track_arranger(DpgItem):
             framerates.append(framerate)
 
         if not signals:
-            return np.empty(0, dtype=np.float32), 0
+            empty = np.empty(0 if mono else (0, 2), dtype=np.float32)
+            return empty, 0
 
-        combined, framerate = mix(signals, offsets, framerates, mono=True)
-        # find_loops wants a flat mono signal; mix returns (n_frames, 1)
-        return combined[:, 0], framerate
+        combined, framerate = mix(signals, offsets, framerates, mono=mono)
+        # mix always returns (n_frames, channels), find_loops wants it flat
+        return (combined[:, 0] if mono else combined), framerate
+
+    # === Playback ======================================================
+
+    @property
+    def player(self) -> SimplePlayer:
+        if not self._player:
+            self._player = SimplePlayer()
+
+        return self._player
+
+    @property
+    def playing(self) -> bool:
+        return self._want_playing
+
+    @property
+    def playhead(self) -> float:
+        """Where the playback cursor sits on the timeline."""
+        return self._out(self._playhead)
+
+    def play(self) -> None:
+        """Play the arrangement back from the playhead."""
+        if self._want_playing:
+            return
+
+        player = self.player
+        if self._mix_dirty or not player.has_source:
+            signal, framerate = self._mixdown(mono=False)
+            if not len(signal):
+                logger.warning(µ("No audio to play", "log"))
+                return
+
+            player.set_signal(signal, framerate)
+            self._mix_dirty = False
+
+        player.loop = self._playback_loop() is not None
+        # Resume where the playhead sits, which also covers a seek made while
+        # there was no player yet to hold the position
+        self._set_playhead(self._playhead)
+        player.play()
+
+        self._want_playing = True
+
+        if dpg.does_item_exist(self._t("play_stop")):
+            dpg.configure_item(self._t("play_stop"), texture_tag=Icons.stop)
+
+        self._update_playback_pos()
+
+    def stop(self) -> None:
+        """Halt playback, leaving the playhead where it is."""
+        self._want_playing = False
+
+        if self._player and self._player.playing:
+            self._player.pause()
+
+        if dpg.does_item_exist(self._t("play_stop")):
+            dpg.configure_item(self._t("play_stop"), texture_tag=Icons.play)
+
+    def seek(self, pos: float) -> None:
+        """Move the playhead to a timeline position."""
+        self._set_playhead(self._into(pos))
+
+    def _playback_loop(self) -> tuple[float, float] | None:
+        """The loop clamped to the timeline, or None if it cannot be played."""
+        if self._loop_points is None:
+            return None
+
+        duration = self.duration
+        start, end = self._loop_abs_bounds()
+        start = min(max(0.0, start), duration)
+        end = min(max(start, end), duration)
+        # A loop with nothing in it would trap playback on one sample
+        return (start, end) if end > start else None
+
+    def _set_playhead(self, pos: float, *, seek: bool = True) -> None:
+        """Move the playhead, and the player with it unless it is the one
+        that moved. Following playback must pass ``seek=False``: telling the
+        player to go where it already is would reset its clock every frame."""
+        pos = min(max(0.0, pos), self.duration)
+        self._playhead = pos
+
+        if seek and self._player:
+            self._player.seek(pos)
+
+        self._set_marker_line("playhead", pos)
+        self._set_value(self._t("pos_text"), self._time_label(pos))
+
+    def _on_play_stop_clicked(self) -> None:
+        if self._want_playing:
+            self.stop()
+        else:
+            self.play()
+
+    def _on_loop_test_changed(self, sender: str, enabled: bool, ud: Any) -> None:
+        self.loop_preview_enabled = enabled
+
+    def _on_markers_clicked(self) -> None:
+        self.show_markers_popup()
+
+    def _on_playhead_moved(self, sender: str) -> None:
+        # Not _get_valid_pos: a negative position means "from the end" there,
+        # which would fling the playhead across the timeline when dragged left
+        self._set_playhead(dpg.get_value(sender))
+
+    def _update_playback_pos(self) -> None:
+        if not self._want_playing:
+            return
+
+        if not self._player.playing:
+            # Ran out on its own
+            self.stop()
+            self._set_playhead(0.0)
+            return
+
+        pos = self._player.pos
+        loop = self._playback_loop()
+        jumped = False
+
+        if loop:
+            start, end = loop
+            preview = self._LOOP_PREVIEW_LEN
+
+            if self.loop_preview_enabled and not start <= pos < end:
+                jumped, pos = True, start
+            elif self.loop_preview_enabled and start + preview <= pos < end - preview:
+                # Heard the run-in, skip ahead to the run-out
+                jumped, pos = True, end - preview
+            elif pos >= end or pos < self._playhead:
+                # The player wraps at the end of the mix, which is the end of
+                # the timeline rather than the end of the loop
+                jumped, pos = True, start
+        elif pos >= self.duration:
+            self.stop()
+            self._set_playhead(0.0)
+            return
+
+        self._set_playhead(pos, seek=jumped)
+        call_in_frames(self._update_playback_pos)
+
+    @staticmethod
+    def _time_label(seconds: float) -> str:
+        return µ("{len:.03f} s").format(len=seconds)
 
     def _find_loop_markers(self) -> None:
         """Search the mixed-down timeline for loop points and offer them."""
@@ -938,8 +1151,8 @@ class add_track_arranger(DpgItem):
                 logger.warning(µ("No audio to search for loop points", "log"))
                 return
 
-            # TODO remove min_len
-            candidates = find_loops(combined, framerate, candidates=5, min_len_s=1.0)
+            min_len = 0.6 * len(combined) / framerate
+            candidates = find_loops(combined, framerate, candidates=5, min_len_s=min_len)
 
         # Give dpg a frame so that another modal dialog can open again
         dpg.split_frame()
@@ -1030,6 +1243,13 @@ class add_track_arranger(DpgItem):
 
         return dict(self._user_markers)
 
+    def get_user_marker_names(self) -> dict[int, str]:
+        """Display name per marker id, or None if markers are not handled."""
+        if self._user_markers is None:
+            return None
+
+        return dict(self._user_marker_labels)
+
     def get_user_marker_pos(self, mid: Hash, default: float = 0.0) -> float:
         """Return a single marker position by ID or name, in seconds."""
         if isinstance(mid, str):
@@ -1038,9 +1258,84 @@ class add_track_arranger(DpgItem):
         return (self._user_markers or {}).get(mid, default)
 
     def set_user_markers(self, markers: dict[Hash, float]) -> None:
-        """Replace the user markers keyed by ID or name, or None to remove them."""
+        """Replace the user markers keyed by ID or name, or None to remove them.
+
+        Keys given as plain ids carry no name, so a marker that was added
+        under one only keeps its label while the hash lookup knows it. Use
+        `add_user_marker` and friends to edit the set without that round trip.
+        """
         self._set_user_markers(markers)
         self._rebuild_markers()
+
+    def add_user_marker(self, name: str, pos: float) -> int:
+        """Add one marker, leaving the others' names and colors alone.
+
+        Returns the new marker's id, which is the hash of its name. Adding a
+        name that is already taken just moves the existing marker.
+        """
+        if self._user_markers is None:
+            self._user_markers = {}
+
+        mid = calc_hash(name)
+        self._user_markers[mid] = self._get_valid_pos(self._into(pos))
+        self._user_marker_labels[mid] = name
+
+        if mid not in self._user_marker_colors:
+            self._user_marker_colors[mid] = self._next_marker_color()
+
+        self._rebuild_markers()
+        self._fire_user_markers_changed()
+        return mid
+
+    def remove_user_marker(self, mid: Hash) -> None:
+        """Remove one marker, leaving the others' names and colors alone."""
+        mid = calc_hash(mid)
+        if self._user_markers is None or mid not in self._user_markers:
+            return
+
+        del self._user_markers[mid]
+        self._user_marker_labels.pop(mid, None)
+        self._user_marker_colors.pop(mid, None)
+
+        self._rebuild_markers()
+        self._fire_user_markers_changed()
+
+    def rename_user_marker(self, mid: Hash, name: str) -> int:
+        """Rename one marker, keeping its position. Returns its new id.
+
+        A marker is identified by the hash of its name, so renaming hands it
+        a new id; everything else about the marker set stays put.
+        """
+        mid = calc_hash(mid)
+        new_mid = calc_hash(name)
+        if self._user_markers is None or mid not in self._user_markers:
+            return mid
+
+        if new_mid == mid:
+            # Same hash, but the spelling may still be new to us
+            self._user_marker_labels[mid] = name
+            self._rebuild_markers()
+            return mid
+
+        self._user_markers[new_mid] = self._user_markers.pop(mid)
+        self._user_marker_labels[new_mid] = name
+        self._user_marker_labels.pop(mid, None)
+        self._user_marker_colors[new_mid] = self._user_marker_colors.pop(
+            mid, self._next_marker_color()
+        )
+
+        self._rebuild_markers()
+        self._fire_user_markers_changed()
+        return new_mid
+
+    def _next_marker_color(self) -> style.RGBA:
+        """A color far enough from the ones already handed out."""
+        colorgen = style.HighContrastColorGenerator()
+        color = colorgen()
+        for _ in range(len(self._user_marker_colors)):
+            color = colorgen()
+
+        return color
 
     def _set_user_markers(self, markers: dict[Hash, float]) -> None:
         self._user_marker_labels.clear()
@@ -1070,15 +1365,29 @@ class add_track_arranger(DpgItem):
                 self._tag, self.get_user_markers(True), self._user_data
             )
 
-    def _set_user_marker_pos(self, sender: str, pos: float, mid: int) -> None:
+    def set_user_marker_pos(self, mid: Hash, pos: float) -> None:
+        """Move one marker, leaving the rest of them alone.
+
+        Unlike `set_user_markers` this does not rebuild the marker items, so
+        it is safe to call from something that is itself drawn from them.
+        """
+        if isinstance(mid, str):
+            mid = calc_hash(mid)
+
+        if self._user_markers is None or mid not in self._user_markers:
+            return
+
         self._user_markers[mid] = self._get_valid_pos(self._into(pos))
         self._sync_markers()
         self._fire_user_markers_changed()
 
     def _on_user_marker_moved(self, sender: str, app_data: Any, mid: int) -> None:
-        self._user_markers[mid] = self._get_valid_pos(dpg.get_value(sender))
+        self._user_markers[mid] = self._clamp_pos(dpg.get_value(sender))
         self._sync_markers()
         self._fire_user_markers_changed()
+        self._report_drag(
+            self._user_marker_labels.get(mid, ""), self._user_markers[mid]
+        )
 
     # === Marker plumbing ===============================================
 
@@ -1107,6 +1416,32 @@ class add_track_arranger(DpgItem):
 
         return max(0.0, min(pos, duration))
 
+    def _clamp_pos(self, pos: float) -> float:
+        """Constrain a dragged position to the timeline.
+
+        Unlike `_get_valid_pos` a negative value is simply the start here.
+        Dragging a marker off the left edge should park it at zero, not read
+        as "measured from the end" and warp it across the timeline.
+        """
+        return min(max(0.0, pos), self.duration)
+
+    def _pos_label(self, pos: float) -> str:
+        """Format an internal position in the public unit."""
+        value = self._out(pos)
+        return f"{value:.1f}" if self._markers_in_ms else f"{value:.3f}"
+
+    def _report_drag(self, label: str, pos: float) -> None:
+        """Show what is being dragged and where it landed.
+
+        The markers carry their own position on the strip, but trim handles
+        and clips sit inside the rows where there is no room for a tag, so
+        the transport doubles as a readout for whatever moved last.
+        """
+        self._set_value(
+            self._t("drag_text"),
+            µ("| {name}: {pos}").format(name=label, pos=self._pos_label(pos)),
+        )
+
     def _marker_items(self, key: str) -> list[int]:
         """The strip item plus the read-only mirror in every waveform row."""
         items = [self._strip.get(key, 0)]
@@ -1120,6 +1455,13 @@ class add_track_arranger(DpgItem):
         tag = self._axis_tags.get(key)
         if tag and dpg.does_item_exist(tag):
             dpg.set_value(tag, pos)
+            # The tag is the only part of a marker with room for text, so it
+            # carries the position rather than just the marker's short name.
+            # Rewriting it on every sync is what makes a drag read out live
+            dpg.configure_item(
+                tag,
+                label=f"{self._tag_names.get(key, '')} {self._pos_label(pos)}",
+            )
 
     def _sync_markers(self) -> None:
         """Push the authoritative marker state into every plot item."""
@@ -1128,14 +1470,18 @@ class add_track_arranger(DpgItem):
             start_viz = min(self._get_valid_pos(start), end)
             self._set_marker_line("loop_start", start_viz)
             self._set_marker_line("loop_end", end)
-            self._set_value(self._t("loop_start_value"), self._out(start))
-            self._set_value(self._t("loop_end_value"), self._out(end))
 
         for mid in self._user_markers or ():
             pos = self._get_valid_pos(self._user_markers[mid])
             self._user_markers[mid] = pos
             self._set_marker_line(f"m{mid}", pos)
-            self._set_value(self._t(f"marker_{mid}_value"), self._out(pos))
+
+        self._sync_marker_inputs()
+
+        self._playhead = min(self._playhead, self.duration)
+        self._set_marker_line("playhead", self._playhead)
+        self._set_value(self._t("pos_text"), self._time_label(self._playhead))
+        self._set_value(self._t("duration_text"), self._time_label(self.duration))
 
     @staticmethod
     def _set_value(item: str | int, value: Any) -> None:
@@ -1192,6 +1538,7 @@ class add_track_arranger(DpgItem):
         self._marker_axis = 0
         self._strip.clear()
         self._axis_tags.clear()
+        self._tag_names.clear()
 
     def _rebuild(self) -> None:
         """Recreate the subplots block. DPG cannot resize it in place."""
@@ -1277,14 +1624,14 @@ class add_track_arranger(DpgItem):
 
             if self._loop_points is not None:
                 start, end = self._loop_abs_bounds()
+                self._tag_names["loop_start"] = µ("L0", "marker")
+                self._tag_names["loop_end"] = µ("L1", "marker")
                 self._axis_tags["loop_start"] = dpg.add_axis_tag(
-                    label=µ("L0", "marker"),
                     default_value=start,
                     color=style.green,
                     parent=self._marker_axis,
                 )
                 self._axis_tags["loop_end"] = dpg.add_axis_tag(
-                    label=µ("L1", "marker"),
                     default_value=end,
                     color=style.green,
                     parent=self._marker_axis,
@@ -1308,8 +1655,8 @@ class add_track_arranger(DpgItem):
                 for i, (mid, pos) in enumerate(self._user_markers.items()):
                     color = self._user_marker_colors[mid]
                     marker_label = self._user_marker_labels[mid]
+                    self._tag_names[f"m{mid}"] = µ("m{idx}", "marker").format(idx=i)
                     self._axis_tags[f"m{mid}"] = dpg.add_axis_tag(
-                        label=µ("m{idx}", "marker").format(idx=i),
                         default_value=pos,
                         color=color,
                         parent=self._marker_axis,
@@ -1322,6 +1669,16 @@ class add_track_arranger(DpgItem):
                         callback=self._on_user_marker_moved,
                         user_data=mid,
                     )
+
+            # Added last so it wins the hit test over the markers under it
+            self._strip["playhead"] = dpg.add_drag_line(
+                label=µ("pos", "marker"),
+                color=style.light_blue,
+                default_value=self._playhead,
+                show_label=False,
+                no_fit=True,
+                callback=self._on_playhead_moved,
+            )
 
         dpg.bind_item_theme(self._marker_plot, style.themes.player_plot)
 
@@ -1436,6 +1793,16 @@ class add_track_arranger(DpgItem):
                 no_fit=True,
             )
 
+        # Seeking happens on the strip, a draggable line here would fight the
+        # move gesture that owns the whole row
+        row.mirrors["playhead"] = dpg.add_drag_line(
+            color=style.light_blue.but(a=160),
+            show_label=False,
+            no_inputs=True,
+            no_cursor=True,
+            no_fit=True,
+        )
+
     def _build_row_menu(self, row: _Row) -> None:
         """Right-click menu for a waveform row.
 
@@ -1545,7 +1912,7 @@ class add_track_arranger(DpgItem):
 
     # === Build =========================================================
 
-    def _setup_content(self, snap_enabled: bool) -> None:
+    def _setup_content(self) -> None:
         with dpg.group(tag=self._tag, parent=self._parent):
             if self._label:
                 dpg.add_text(self._label, color=style.pink.mix(style.white))
@@ -1557,10 +1924,51 @@ class add_track_arranger(DpgItem):
                 tag=self._t("errors"),
             )
 
+            # Built first: the transport only offers a Markers button once
+            # there is a popup for it to open
+            self._build_markers_popup()
+
+            # Outside the plot group, which is torn down on every rebuild
+            if not self._no_transport:
+                self.build_transport()
+
             # Rebuilt wholesale whenever the track list changes
             dpg.add_group(tag=self._t("plot_group"))
 
-        self._build_markers_popup()
+    def build_transport(self, parent: str | int = 0) -> None:
+        """Build the transport controls, by default above the rows.
+
+        Split out so an owner can place them somewhere of its own choosing,
+        next to a dialog's buttons say. Pass ``no_transport`` on construction
+        and call this once the intended parent exists.
+        """
+        with dpg.group(horizontal=True, parent=parent):
+            dpg.add_image_button(
+                Icons.play,
+                width=18,
+                height=18,
+                callback=self._on_play_stop_clicked,
+                tag=self._t("play_stop"),
+            )
+            dpg.add_checkbox(
+                label=µ("Loop Test"),
+                default_value=self.loop_preview_enabled,
+                callback=self._on_loop_test_changed,
+                show=self._loop_points is not None,
+                tag=self._t("loop_test"),
+            )
+            dpg.add_text(self._time_label(self._playhead), tag=self._t("pos_text"))
+            dpg.add_text(self._time_label(self.duration), tag=self._t("duration_text"))
+            dpg.add_text("|")
+            dpg.add_button(
+                label=µ("Markers", "button"),
+                callback=self._on_markers_clicked,
+                show=self._marker_table is not None,
+                tag=self._t("markers_button"),
+            )
+            # Empty until something is dragged, see _report_drag. It brings its
+            # own separator so the transport does not end in a dangling one
+            dpg.add_text("", color=style.light_blue, tag=self._t("drag_text"))
 
         # Global handlers drive the "drag the playback region" move gesture.
         # They are harmless when none of our plots is hovered.
@@ -1575,51 +1983,179 @@ class add_track_arranger(DpgItem):
 
     def _rebuild_markers(self) -> None:
         """Recreate every marker item after markers were added or removed."""
+        if self._in_table_edit:
+            # The table is already keeping its own rows in step, and rebuilding
+            # the popup would delete the widget whose callback we are in
+            self._rebuild()
+            return
+
         self._delete_item(self._t("markers_popup"))
         self._build_markers_popup()
+        self._sync_transport_visibility()
         self._rebuild()
 
+    def _sync_transport_visibility(self) -> None:
+        """Only offer controls that have something behind them."""
+        for item, visible in (
+            ("markers_button", self._marker_table is not None),
+            ("loop_test", self._loop_points is not None),
+        ):
+            if dpg.does_item_exist(self._t(item)):
+                dpg.configure_item(self._t(item), show=visible)
+
     def _build_markers_popup(self) -> None:
+        """Every marker in one table, with exact numbers.
+
+        Dragging on the strip is quick but imprecise, and a marker has room
+        for little more than its position tag, so the same markers also get
+        a table. New ones can only be added when user markers are handled at
+        all - there would be nowhere to report them otherwise.
+        """
+        self._marker_table = None
+        if self._loop_points is None and self._user_markers is None:
+            return
+
+        unit = µ("Position (ms)") if self._markers_in_ms else µ("Position (s)")
+
         with dpg.window(
             popup=True,
             no_move=True,
             no_title_bar=True,
             no_resize=True,
+            autosize=True,
             tag=self._t("markers_popup"),
             show=False,
         ):
-            if self._loop_points is not None:
-                start, end = self._loop_abs_bounds()
-                dpg.add_input_float(
-                    label=µ("loop_start", "marker"),
-                    default_value=self._out(start),
-                    width=130,
-                    callback=self._set_loop_marker_pos,
-                    user_data="loop_start",
-                    tag=self._t("loop_start_value"),
-                )
-                dpg.add_input_float(
-                    label=µ("loop_end", "marker"),
-                    default_value=self._out(end),
-                    width=130,
-                    callback=self._set_loop_marker_pos,
-                    user_data="loop_end",
-                    tag=self._t("loop_end_value"),
-                )
+            # Compact, so the table hugs its content: an autosizing popup and
+            # a table that stretches to its host would collapse each other
+            self._marker_table = add_widget_table(
+                self._marker_rows(),
+                self._create_marker_row,
+                new_item=(
+                    self._new_marker if self._user_markers is not None else None
+                ),
+                on_remove=self._on_marker_removed,
+                can_remove=lambda row, idx: row.kind == "user",
+                columns=[µ("Marker"), unit],
+                column_weights=self._MARKER_COLUMNS,
+                header_row=True,
+                add_item_label=µ("+ Add Marker", "button"),
+                compact=True,
+            )
 
-            if self._user_markers:
-                if self._loop_points is not None:
-                    dpg.add_separator()
-                # TODO Make this a widget table instead
-                for mid, pos in self._user_markers.items():
-                    dpg.add_input_float(
-                        label=self._user_marker_labels[mid],
-                        default_value=self._out(pos),
-                        width=130,
-                        callback=self._set_user_marker_pos,
-                        user_data=mid,
-                        tag=self._t(f"marker_{mid}_value"),
-                    )
+    def _marker_rows(self) -> list[_MarkerRow]:
+        rows = []
+        if self._loop_points is not None:
+            rows.append(_MarkerRow("loop_start"))
+            rows.append(_MarkerRow("loop_end"))
+
+        for mid in self._user_markers or ():
+            rows.append(_MarkerRow("user", mid))
+
+        return rows
+
+    def _create_marker_row(self, row: _MarkerRow, idx: int) -> None:
+        if row.kind == "user":
+            dpg.add_input_text(
+                default_value=self._user_marker_labels.get(row.mid, f"#{row.mid}"),
+                width=-1,
+                on_enter=True,
+                callback=self._on_marker_renamed,
+                user_data=row,
+            )
+        else:
+            dpg.add_text(µ(row.kind, "marker"))
+
+        row.pos_input = dpg.add_input_float(
+            default_value=self._out(self._marker_pos(row)),
+            width=-1,
+            format="%.1f" if self._markers_in_ms else "%.3f",
+            step=self._step(),
+            step_fast=self._step() * 10,
+            callback=self._on_marker_pos_input,
+            user_data=row,
+        )
+
+    def _marker_pos(self, row: _MarkerRow) -> float:
+        """A row's position, in internal seconds."""
+        if row.kind == "user":
+            return (self._user_markers or {}).get(row.mid, 0.0)
+
+        start, end = self._loop_abs_bounds()
+        return start if row.kind == "loop_start" else end
+
+    def _sync_marker_inputs(self) -> None:
+        """Push the positions back into the table after a marker moved."""
+        if not self._marker_table:
+            return
+
+        for row in self._marker_table.items:
+            self._set_value(row.pos_input, self._out(self._marker_pos(row)))
+
+    def _sync_marker_table(self) -> None:
+        """Rebuild the table's rows after the marker set itself changed."""
+        if self._marker_table and not self._in_table_edit:
+            self._marker_table.items = self._marker_rows()
+
+    @contextmanager
+    def _table_edit(self):
+        """Mark a change as coming from the table.
+
+        While one of its own callbacks is running the table keeps its rows in
+        step itself, and rebuilding them from underneath would delete the
+        very widget that is mid-callback.
+        """
+        self._in_table_edit = True
+        try:
+            yield
+        finally:
+            self._in_table_edit = False
+
+    # --- markers popup callbacks ----------------------------------------
+
+    def _on_marker_pos_input(self, sender: str, value: float, row: _MarkerRow) -> None:
+        with self._table_edit():
+            if row.kind == "user":
+                self.set_user_marker_pos(row.mid, value)
+            else:
+                self._set_loop_bound(row.kind, self._into(value))
+
+    def _on_marker_renamed(self, sender: str, name: str, row: _MarkerRow) -> None:
+        name = name.strip()
+        if not name or calc_hash(name) == row.mid:
+            return
+
+        with self._table_edit():
+            # The rename syncs the table off the row's id, so adopt the new
+            # one before syncing again or the row reads back a marker that
+            # does not exist any more
+            row.mid = self.rename_user_marker(row.mid, name)
+            self._sync_marker_inputs()
+
+    def _new_marker(self, done: Callable[[_MarkerRow], None]) -> None:
+        # Drop it where the playhead is, which is where the user was looking
+        with self._table_edit():
+            name = self._unused_marker_name()
+            mid = self.add_user_marker(name, self._out(self._playhead))
+
+        done(_MarkerRow("user", mid))
+
+    def _on_marker_removed(self, sender: str, info: tuple, ud: Any) -> None:
+        _, row, _ = info
+        if row is None or row.kind != "user":
+            return
+
+        with self._table_edit():
+            self.remove_user_marker(row.mid)
+
+    def _unused_marker_name(self) -> str:
+        taken = set(self._user_marker_labels.values())
+        i = 1
+        while True:
+            name = µ("Marker {idx}", "marker").format(idx=i)
+            if name not in taken:
+                return name
+            i += 1
 
 
 # ===========================================================================
@@ -1705,6 +2241,7 @@ def _demo() -> None:
                 ),
             )
             dpg.add_button(label="Clear", callback=viz.clear)
+            dpg.add_button(label="Rewind", callback=lambda: viz.seek(0.0))
             dpg.add_button(
                 label="Dump",
                 callback=lambda: print(

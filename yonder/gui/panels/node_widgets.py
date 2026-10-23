@@ -1363,7 +1363,6 @@ def _create_attributes_musictrack(
         # Veeery important.... >.<
         node.set_source(source_index, info[1])
         players[source_index].set_signal_from_wav(info[1])
-        paths[source_index] = info[1]
         on_node_changed(base_tag, node, user_data)
 
     def on_loop_changed(
@@ -1374,6 +1373,14 @@ def _create_attributes_musictrack(
         segment.set_marker(MarkerId.LoopEnd, loop_end)
         on_node_changed(base_tag, node, user_data)
 
+    def on_user_markers_changed(
+        sender: str, markers: dict[int, float], user_data: Any
+    ) -> None:
+        markers[MarkerId.LoopStart] = segment.get_marker_pos(MarkerId.LoopStart)
+        markers[MarkerId.LoopEnd] = segment.get_marker_pos(MarkerId.LoopEnd)
+        segment.set_markers(markers)
+        on_node_changed(base_tag, node, user_data)
+
     def set_trims(sender: str, trims: tuple[float, float], idx: int) -> None:
         begin_trim, end_trim = trims
         node.set_trims(begin_trim, end_trim, idx)
@@ -1382,33 +1389,6 @@ def _create_attributes_musictrack(
         node.playlist[idx].play_at = -begin_trim
         players[idx].marker_offset = begin_trim
         on_node_changed(base_tag, node, user_data)
-
-    def on_markers_edited(
-        sender: str, loop_info: tuple[float, float], idx: int
-    ) -> None:
-        players[idx].loop_points = loop_info
-        on_loop_changed(sender, players[idx].loop_points, idx)
-
-    def on_trims_edited(sender: str, trims: tuple[float, float], idx: int) -> None:
-        players[idx].trims = trims
-        set_trims(sender, players[idx].trims, idx)
-
-    def open_edit_markers_dialog(sender: str, app_data: Any, idx: int) -> None:
-        from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
-
-        player = players[idx]
-        edit_markers_dialog(
-            paths[idx],
-            accept_on_okay=True,
-            loop_points=player.loop_points,
-            on_loop_changed=on_markers_edited,
-            trims=player.trims,
-            on_trims_changed=on_trims_edited,
-            track_offset=node.playlist[idx].play_at,
-            balance_trims=True,
-            markers_in_ms=True,
-            user_data=idx,
-        )
 
     def on_clips_changed(
         sender: str, curves: list[GraphCurve], cb_user_data: Any
@@ -1424,14 +1404,15 @@ def _create_attributes_musictrack(
 
     segment: MusicSegment = bnk.get(node.parent)
     players: list[add_signal_preview] = []
-    paths: list[Path] = []
 
     if isinstance(segment, MusicSegment):
+        user_markers = {m.id: m.position for m in segment.markers}
         loop_points = (
-            segment.get_marker_pos(MarkerId.LoopStart),
-            segment.get_marker_pos(MarkerId.LoopEnd),
+            user_markers.pop(MarkerId.LoopStart, 0.0),
+            user_markers.pop(MarkerId.LoopEnd, 0.0),
         )
     else:
+        user_markers = {}
         loop_points = None
 
     if len(node.sources) > 1:
@@ -1455,22 +1436,19 @@ def _create_attributes_musictrack(
             player = add_signal_preview(
                 loop_points=loop_points,
                 on_loop_changed=on_loop_changed,
+                user_markers=user_markers,
+                on_user_markers_changed=on_user_markers_changed,
                 trims=trims,
                 on_trims_changed=set_trims,
                 marker_offset=-node.playlist[i].play_at,
+                # set_trims balances the begin trim with play_at below
+                balance_trims=True,
                 user_data=i,
             )
             if path:
                 player.set_signal_from_wav(path)
 
-            dpg.add_button(
-                label=µ("Edit Markers", "button"),
-                enabled=bool(path),
-                callback=open_edit_markers_dialog,
-                user_data=i,
-            )
             players.append(player)
-            paths.append(path)
 
         add_curves_table(
             [GraphCurve(c.auto_type.name, c.graph_points) for c in node.clip_items],

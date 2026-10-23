@@ -12,6 +12,7 @@ from yonder.audio.wavesignal import minmax_envelope, to_channels, read_wav
 from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, Icons
 from yonder.gui.config import get_config
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.localization import µ
 from yonder.gui.widgets.dpg_item import DpgItem
 
@@ -33,10 +34,19 @@ class add_signal_preview(DpgItem):
     ``play_at``. Set ``marker_offset`` to ``-play_at`` so the markers line up
     with the audio.
 
+    The markers popup in the footer holds a numeric input per marker, plus an
+    entry into ``edit_markers_dialog`` for editing them on a full timeline.
+    That entry needs a file to hand the dialog, so it only appears when the
+    signal came from ``set_signal_from_wav``.
+
     Parameters
     ----------
     signal : numpy.ndarray, optional
-        Samples to show, mixed down to mono.
+        Samples to show, shaped ``(n_frames,)`` or ``(n_frames, n_channels)``.
+        A mono signal is drawn as a single envelope filling the plot; two or
+        more channels are stacked, the first above the axis and the second
+        below, each in its own color. Anything past the second channel is
+        folded away, see ``to_channels``.
     framerate : int, optional
         Sample rate of ``signal``.
     loop_points : tuple of (float, float), optional
@@ -58,6 +68,10 @@ class add_signal_preview(DpgItem):
         drawn at ``pos + marker_offset``. Does not apply to the trims.
     markers_editable : bool
         Whether the markers on the plot can be dragged.
+    balance_trims : bool
+        Forwarded to the marker dialog: move the signal along with its begin
+        trim so its audible part keeps starting at the same position. Set this
+        when the owner balances the begin trim with a negative ``play_at``.
     no_playback_controls : bool
         Hide the footer with the play button and marker inputs.
     max_points : int
@@ -72,6 +86,8 @@ class add_signal_preview(DpgItem):
 
     # Y range of the plot
     _Y_LIMIT = 1.05
+    # One per channel of a multi channel signal, same pairing as the arranger
+    _CHANNEL_COLORS = (style.blue, style.orange)
     # Length of the audio played on either side of the loop seam in loop preview
     _LOOP_PREVIEW_LEN = 2000.0
     # Steps of the numeric marker inputs
@@ -91,6 +107,7 @@ class add_signal_preview(DpgItem):
         on_user_markers_changed: Callable[[str, dict[int, float], Any], None] = None,
         marker_offset: float = 0.0,
         markers_editable: bool = False,
+        balance_trims: bool = False,
         no_playback_controls: bool = False,
         max_points: int = 4000,
         height: int = 130,
@@ -100,6 +117,7 @@ class add_signal_preview(DpgItem):
         super().__init__(tag)
 
         self._signal = None
+        self._source_path: Path = None
         self._framerate = 0
         self._duration = 0.0
         self._loop_points: tuple[float, float] = None
@@ -107,6 +125,7 @@ class add_signal_preview(DpgItem):
         self._user_markers: dict[int, float] = None
         self._marker_offset = marker_offset
         self._markers_editable = markers_editable
+        self._balance_trims = balance_trims
         self._max_points = max_points
         self._user_data = user_data
 
@@ -135,24 +154,37 @@ class add_signal_preview(DpgItem):
 
     @property
     def signal(self) -> np.ndarray:
+        """The samples being shown: flat if mono, ``(n, 2)`` otherwise."""
         return self._signal
+
+    @property
+    def channels(self) -> int:
+        if self._signal is None:
+            return 0
+
+        return self._signal.shape[1] if self._signal.ndim > 1 else 1
 
     def set_signal(self, sig: np.ndarray, framerate: int) -> None:
         self.stop()
         dpg.delete_item(self._t("xaxis"), slot=1, children_only=True)
         dpg.hide_item(self._t("error"))
 
-        self._signal = to_channels(sig, 1)[:, 0]
+        sig = np.asarray(sig, dtype=np.float32)
+        if sig.ndim > 1:
+            if sig.shape[1] == 1:
+                sig = sig[:, 0]
+            elif sig.shape[1] > 2:
+                # A two sided plot can only show a pair, and folding surround
+                # down properly needs a layout a wav header does not carry
+                sig = to_channels(sig, 2)
+
+        self._signal = sig
         self._framerate = framerate
-        self._duration = len(self._signal) / framerate * 1000
+        self._duration = len(sig) / framerate * 1000
 
-        time = np.linspace(0, self._duration / 1000, num=len(self._signal))
-        t_env, y_env = minmax_envelope(self._signal, time, self._max_points // 2)
-        series = dpg.add_line_series(
-            t_env.tolist(), y_env.tolist(), shaded=True, parent=self._t("xaxis")
-        )
-        dpg.bind_item_theme(series, style.themes.make_series_theme(style.blue))
-
+        self._draw_waveform()
+        # Whether the marker dialog can be offered depends on the source
+        self._update_visibility()
         self._sync_markers()
         self.seek(self._region()[0])
         dpg.fit_axis_data(self._t("xaxis"))
@@ -167,8 +199,10 @@ class add_signal_preview(DpgItem):
             self._player.clear()
 
         self._signal = None
+        self._source_path = None
         self._framerate = 0
         self._duration = 0.0
+        self._update_visibility()
         self._sync_markers()
         self.seek(0.0)
 
@@ -176,6 +210,10 @@ class add_signal_preview(DpgItem):
         """Load a wav or wem file. Wem files are converted first."""
         try:
             path = Path(path)
+            # Kept as passed in: this is what the marker dialog is handed, and
+            # it converts wem files of its own accord
+            self._source_path = path
+
             if path.suffix == ".wem":
                 vgmstream = get_config().locate_vgmstream()
                 path = wem2wav(vgmstream, path, get_temp_dir())[0]
@@ -188,6 +226,11 @@ class add_signal_preview(DpgItem):
             msg = µ("Error reading file: {exc}", "log").format(exc=e)
             logger.error(msg, exc_info=e)
             dpg.configure_item(self._t("error"), default_value=msg, show=True)
+
+    @property
+    def source_path(self) -> Path:
+        """File the signal was loaded from, or None if it was set directly."""
+        return self._source_path
 
     @property
     def framerate(self) -> int:
@@ -447,7 +490,7 @@ class add_signal_preview(DpgItem):
         if dpg.does_item_exist(self._t("pos_text")):
             dpg.set_value(self._t("pos_text"), self._time_label(pos))
 
-        dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
+        call_in_frames(self._update_playback_pos)
 
     def _on_loop_dragged(self, sender: str, app_data: Any, which: str) -> None:
         self._set_loop_bound(which, self._get_plot_pos(sender) - self._marker_offset)
@@ -471,7 +514,88 @@ class add_signal_preview(DpgItem):
     def _on_user_marker_input(self, sender: str, value: float, mid: int) -> None:
         self._set_user_marker(mid, value)
 
+    # --- Marker dialog --------------------------------------------------
+    #
+    # The dialog edits the same markers on a far roomier timeline. It hands
+    # back whole tuples rather than single bounds, so these adopt the value
+    # and then fire the same callback a drag would have.
+
+    def _on_edit_markers_clicked(self) -> None:
+        from yonder.gui.dialogs.edit_markers_dialog import edit_markers_dialog
+
+        dpg.hide_item(self._t("markers_popup"))
+        edit_markers_dialog(
+            self._source_path,
+            accept_on_okay=True,
+            loop_points=self._loop_points,
+            on_loop_changed=self._on_dialog_loop_changed,
+            trims=self._trims,
+            on_trims_changed=self._on_dialog_trims_changed,
+            user_markers=self.user_markers,
+            on_user_markers_changed=self._on_dialog_user_markers_changed,
+            # We store where the markers' origin sits relative to the signal,
+            # the dialog wants where the signal sits on the markers' timeline
+            track_offset=-self._marker_offset,
+            balance_trims=self._balance_trims,
+            markers_in_ms=True,
+        )
+
+    def _on_dialog_loop_changed(
+        self, sender: str, loop: tuple[float, float], ud: Any
+    ) -> None:
+        self.loop_points = loop
+        if self._on_loop_changed:
+            self._on_loop_changed(self.tag, self._loop_points, self._user_data)
+
+    def _on_dialog_trims_changed(
+        self, sender: str, trims: tuple[float, float], ud: Any
+    ) -> None:
+        self.trims = trims
+        if self._on_trims_changed:
+            self._on_trims_changed(self.tag, self._trims, self._user_data)
+
+    def _on_dialog_user_markers_changed(
+        self, sender: str, markers: dict[int, float], ud: Any
+    ) -> None:
+        self.user_markers = markers
+        if self._on_user_markers_changed:
+            self._on_user_markers_changed(self.tag, self.user_markers, self._user_data)
+
     # === Internals =====================================================
+
+    def _draw_waveform(self) -> None:
+        """Draw one waveform envelope per channel.
+
+        A mono signal gets the whole row to itself, as its plain min/max
+        envelope around the axis. Two channels are stacked instead, the first
+        folded above the axis and the second below, each in its own color, so
+        the stereo image can be read at a glance. The point budget is shared,
+        so a stereo plot does not cost twice the vertices of a mono one.
+        """
+        if self._signal is None:
+            return
+
+        channels = self.channels
+        time = np.linspace(0, self._duration / 1000, num=len(self._signal))
+        buckets = max(1, self._max_points // (2 * channels))
+
+        for channel in range(channels):
+            samples = self._signal if channels == 1 else self._signal[:, channel]
+            t_env, y_env = minmax_envelope(samples, time, buckets)
+
+            if channels > 1:
+                # Fold onto one side each so the two do not overlap
+                y_env = np.abs(y_env) if channel == 0 else -np.abs(y_env)
+
+            series = dpg.add_line_series(
+                t_env.tolist(),
+                y_env.tolist(),
+                shaded=True,
+                label=µ("Ch{idx}", "plot").format(idx=channel),
+                parent=self._t("xaxis"),
+            )
+            color = self._CHANNEL_COLORS[channel % len(self._CHANNEL_COLORS)]
+            dpg.bind_item_theme(series, style.themes.make_series_theme(color))
 
     # Trims, loop points and markers are all in ms, like the rest of the
     # widget. The conversion to the player's and the plot's seconds happens in
@@ -602,6 +726,10 @@ class add_signal_preview(DpgItem):
                 "trims_separator": has_trims and has_loop,
                 "markers_separator": has_markers and (has_loop or has_trims),
                 "user_markers_inputs": has_markers,
+                # The dialog arranges the signal on a timeline, which needs a
+                # file it can load for itself
+                "edit_markers_separator": self._source_path is not None,
+                "edit_markers": self._source_path is not None,
             }
             for item, visible in show.items():
                 dpg.configure_item(self._t(item), show=visible)
@@ -824,3 +952,10 @@ class add_signal_preview(DpgItem):
 
             dpg.add_separator(tag=self._t("markers_separator"))
             dpg.add_group(tag=self._t("user_markers_inputs"))
+
+            dpg.add_separator(tag=self._t("edit_markers_separator"))
+            dpg.add_button(
+                label=µ("Edit Markers", "button"),
+                callback=self._on_edit_markers_clicked,
+                tag=self._t("edit_markers"),
+            )

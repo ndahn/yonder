@@ -11,6 +11,7 @@ from yonder.util import get_temp_dir, logger
 from yonder.wem import wem2wav, wav2wem, get_wem_id
 from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from yonder.gui.config import get_config
@@ -173,7 +174,7 @@ class replace_music_dialog(DpgItem):
             self._stop_player()
             return
 
-        dpg.set_frame_callback(dpg.get_frame_count() + 10, self._check_playback)
+        call_in_frames(self._check_playback, 10)
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("music_table"), slot=1, children_only=True)

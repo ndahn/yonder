@@ -4,6 +4,7 @@ import time
 from dearpygui import dearpygui as dpg
 
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 
 
 _level_to_color = {
@@ -70,11 +71,9 @@ class _NotificationManager:
         self._active_notifications[window] = now
         self._rearrange()
         # We need another rearrange pass to adjust for the changed size
-        dpg.set_frame_callback(dpg.get_frame_count() + 3, self._rearrange)
+        call_in_frames(self._rearrange, 3)
         # Fallback to hide the message eventually
-        dpg.set_frame_callback(
-            dpg.get_frame_count() + int(self._timeout * 60), self._rearrange
-        )
+        call_in_frames(self._rearrange, int(self._timeout * 60))
 
     def _on_notification_clicked(self, sender: str, app_data: Any, tag: int) -> None:
         if dpg.is_item_focused(tag):

@@ -9,6 +9,7 @@ from yonder.audio.hirc_player import HIRCPlayer
 from yonder.audio.play_context import PlayContext
 from yonder.audio.analysis import BarEqualizer
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.config import get_config
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
@@ -199,7 +200,7 @@ class add_hirc_player(DpgItem):
             # Not playing anymore and all amplitudes have calmed down
             return
 
-        dpg.set_frame_callback(dpg.get_frame_count() + 3, self._update_visualizer)
+        call_in_frames(self._update_visualizer, 3)
 
     def regenerate(self) -> None:
         dpg.delete_item(self._t("voice_settings"), children_only=True)

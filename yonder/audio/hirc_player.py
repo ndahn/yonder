@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Callable
 import atexit
-import time
 
 # If there is no official wheel yet:
 # pip install -i https://test.pypi.org/simple/ pyo
@@ -9,6 +8,7 @@ import pyo
 
 from yonder.types import HIRCNode, Sound, MusicTrack
 from yonder.util import logger
+from .audio_server import acquire_server, release_server
 from .audiomath import db_to_amp
 from .equalizer import Equalizer
 from .play_context import PlayContext
@@ -30,10 +30,8 @@ class HIRCPlayer:
         self._play_epoch = 0
         self._on_finished: Callable[[], None] = on_finished
 
-        # NOTE crashes on some systems with input enabled, but we don't need it
-        self._server: pyo.Server = pyo.Server(duplex=0)
-        self._server.deactivateMidi()
-        self._server.boot()
+        # Shared with the preview players, see yonder.audio.audio_server
+        self._server: pyo.Server = acquire_server()
 
         self._mixer = pyo.Mixer(outs=1, chnls=2, time=0.05)
         self._equalizer = Equalizer(self._mixer[0])
@@ -42,7 +40,6 @@ class HIRCPlayer:
         # master chain: mixer -> gate -> dac
         self._master = self._equalizer * self._gate
         self._master.out()
-        self._server.start()
 
         # Important for proper exit
         atexit.register(self.close)
@@ -64,16 +61,16 @@ class HIRCPlayer:
 
         self._closed = True
 
-        if self._server.getIsStarted():
-            self._server.stop()
-            # Allow the server to drain all buffers and callbacks
-            time.sleep(0.25)
+        self.stop()
+        self._master.stop()
 
-        # Deleting the objects is safe now that processing has ended
-        self.entrypoint.release_pyo(self.context, 0)
-
-        if self._server.getIsBooted():
-            self._server.shutdown()
+        if release_server():
+            # Processing has ended, so deleting the objects is safe right away
+            self.entrypoint.release_pyo(self.context, 0)
+        else:
+            # Preview players are still running on the shared server, so the
+            # nodes have to wait their grace period out like everything else
+            self.entrypoint.release_pyo(self.context)
 
         atexit.unregister(self.close)
 

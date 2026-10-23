@@ -3,6 +3,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder import HIRCNode
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.icons import Icons
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem
@@ -58,7 +59,7 @@ class add_node_palette(DpgItem):
             dpg.add_item_resize_handler(callback=self._on_resize)
         dpg.bind_item_handler_registry(self.tag, self._t("resize_handler_registry"))
 
-        dpg.set_frame_callback(dpg.get_frame_count() + 2, self._on_resize)
+        call_in_frames(self._on_resize, 2)
 
     def _is_enabled(self, tp: type) -> bool:
         if self._is_enabled_hook:

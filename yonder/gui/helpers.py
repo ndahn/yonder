@@ -12,6 +12,7 @@ from yonder.types.base_types import RTPCGraphPoint
 from yonder.enums import CurveInterpolation, SourceType
 from yonder.util import logger
 from yonder.gui.config import get_config
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.localization import µ
 from yonder.gui import style
 
@@ -150,9 +151,7 @@ def success_countdown(
         if countdown > 0:
             dpg.set_item_label(label, µ("Yay!") + f" ({countdown})")
             countdown -= 1
-            dpg.set_frame_callback(
-                int(dpg.get_frame_count() + dpg.get_frame_rate()), callback
-            )
+            call_in_frames(callback, int(dpg.get_frame_rate()))
         else:
             close()
 

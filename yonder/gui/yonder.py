@@ -33,6 +33,7 @@ from yonder.util import logger, unpack_soundbank, repack_soundbank, get_temp_dir
 from yonder.query import query_nodes
 from yonder.game import set_game, guess_game, get_selected_game
 from .config import Config, get_config
+from .frame_tasks import call_in_frames
 from .helpers import center_window, shorten_path
 from .widgets import (
     DpgItem,
@@ -790,9 +791,7 @@ class BanksOfYonder(DpgItem):
 
     def _setup_splash(self) -> None:
         add_splash(tag=self._t("splash"))
-        dpg.set_frame_callback(
-            dpg.get_frame_count() + 1, lambda s, a, u: center_window(self._t("splash"))
-        )
+        call_in_frames(lambda: center_window(self._t("splash")), 1)
 
         with dpg.window(
             pos=(dpg.get_viewport_width() - 65, -10),

@@ -4,6 +4,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import Hash
 from yonder.gui import style
+from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.localization import µ
 from yonder.gui.widgets import DpgItem, add_track_arranger, AudioTrack
 
@@ -114,8 +115,8 @@ class edit_markers_dialog(DpgItem):
 
         with dpg.window(
             label=title,
-            width=700,
-            height=400,
+            width=860,
+            height=420,
             autosize=False,
             no_saved_settings=True,
             tag=self._tag,
@@ -134,6 +135,8 @@ class edit_markers_dialog(DpgItem):
                 on_user_markers_changed=self._dlg_on_user_markers_changed,
                 markers_in_ms=self._markers_in_ms,
                 row_height=220,
+                # Lives next to the Apply button instead, see below
+                no_transport=True,
             )
 
             if loop_points is not None and loop_points[1] < 0.0:
@@ -143,13 +146,15 @@ class edit_markers_dialog(DpgItem):
             dpg.add_spacer(height=2)
             dpg.add_text(show=False, tag=self._t("notification"), color=style.red)
 
-            if self._accept_on_okay:
-                with dpg.group(horizontal=True):
+            with dpg.group(horizontal=True):
+                if self._accept_on_okay:
                     dpg.add_button(
                         label=µ("Apply", "button"),
                         callback=self._on_okay,
                         tag=self._t("button_okay"),
                     )
+
+                self._viz.build_transport()
 
     def _set_loop_from_end(
         self, loop_points: tuple[float, float], end_trim: float
@@ -203,7 +208,7 @@ class edit_markers_dialog(DpgItem):
     def _schedule_balance(self) -> None:
         if not self._balance_pending:
             self._balance_pending = True
-            dpg.set_frame_callback(dpg.get_frame_count() + 1, self._apply_balance)
+            call_in_frames(self._apply_balance, 1)
 
     def _apply_balance(self) -> None:
         if not self._viz:
@@ -212,7 +217,7 @@ class edit_markers_dialog(DpgItem):
         # Moving the track while its trim handle is dragged would make the
         # handle run away, so wait for the drag to end
         if dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
-            dpg.set_frame_callback(dpg.get_frame_count() + 1, self._apply_balance)
+            call_in_frames(self._apply_balance, 1)
             return
 
         self._balance_pending = False

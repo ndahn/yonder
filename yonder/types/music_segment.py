@@ -145,6 +145,11 @@ class MusicSegment(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         return marker
 
+    def set_markers(self, markers: dict[Hash, float]) -> None:
+        self.markers.clear()
+        for mid, pos in markers.items():
+            self.set_marker(mid, pos)
+
     def get_marker_pos(self, mid: Hash | MarkerId, default: float = 0.0) -> float:
         if isinstance(mid, str):
             mid = calc_hash(mid)
