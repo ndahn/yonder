@@ -186,7 +186,7 @@ class themes:
                     dpg.mvPlotCol_Line, color, category=dpg.mvThemeCat_Plots
                 )
                 dpg.add_theme_color(
-                    dpg.mvPlotCol_Fill, color.but(a=70), category=dpg.mvThemeCat_Plots
+                    dpg.mvPlotCol_Fill, color, category=dpg.mvThemeCat_Plots
                 )
 
         return theme

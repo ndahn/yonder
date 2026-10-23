@@ -163,6 +163,9 @@ class add_signal_preview(DpgItem):
         dpg.delete_item(self._t("xaxis"), slot=1, children_only=True)
         dpg.hide_item(self._t("error"))
 
+        if self._player:
+            self._player.clear()
+
         self._signal = None
         self._framerate = 0
         self._duration = 0.0
@@ -333,12 +336,19 @@ class add_signal_preview(DpgItem):
         if self.playing or self._signal is None:
             return
 
+        # Deliberately lazy: every player boots a pyo server of its own, and a
+        # track table can hold a lot of previews that are never played
         player = self.player
-        player.play_signal(
-            self._signal, self._framerate, loop=self._loop_points is not None
-        )
-        # In case seek was called before
-        self.seek(self._get_plot_pos(self._t("playback_pos")))
+
+        if player.signal is not self._signal or player.framerate != self._framerate:
+            player.set_signal(self._signal, self._framerate)
+
+        player.loop = self._loop_points is not None
+        # Resume from wherever the cursor sits. Also covers a seek made while
+        # there was no player yet, which the player could not store
+        self.seek(self._last_pos)
+        player.play()
+
         self._want_playing = True
 
         if dpg.does_item_exist(self._t("play_stop")):
@@ -350,7 +360,8 @@ class add_signal_preview(DpgItem):
         self._want_playing = False
 
         if self._player and self._player.playing:
-            self._player.stop()
+            # Keeps the position, the cursor is not moved either
+            self._player.pause()
 
         if dpg.does_item_exist(self._t("play_stop")):
             dpg.configure_item(self._t("play_stop"), texture_tag=Icons.play)
@@ -389,7 +400,7 @@ class add_signal_preview(DpgItem):
         self.seek(min(max(start, self._get_plot_pos(sender)), end))
 
     def _update_playback_pos(self) -> None:
-        if not self._want_playing or not dpg.does_item_exist(self._t("playback_pos")):
+        if not self._want_playing:
             return
 
         start, end = self._region()
@@ -432,6 +443,10 @@ class add_signal_preview(DpgItem):
 
         self._last_pos = pos
         self._set_plot_pos(self._t("playback_pos"), pos)
+
+        if dpg.does_item_exist(self._t("pos_text")):
+            dpg.set_value(self._t("pos_text"), self._time_label(pos))
+
         dpg.set_frame_callback(dpg.get_frame_count() + 2, self._update_playback_pos)
 
     def _on_loop_dragged(self, sender: str, app_data: Any, which: str) -> None:
@@ -458,8 +473,12 @@ class add_signal_preview(DpgItem):
 
     # === Internals =====================================================
 
+    # Trims, loop points and markers are all in ms, like the rest of the
+    # widget. The conversion to the player's and the plot's seconds happens in
+    # seek and the _..._plot_... helpers below, nowhere else
+
     def _region(self) -> tuple[float, float]:
-        """The absolute ``(start, end)`` of the trimmed signal."""
+        """The absolute ``(start, end)`` of the trimmed signal, in ms."""
         if self._trims is None:
             return 0.0, self._duration
 
@@ -468,7 +487,7 @@ class add_signal_preview(DpgItem):
         return start, max(start, self._duration + end)
 
     def _abs_loop(self) -> tuple[float, float]:
-        """The ``(start, end)`` of the loop within the signal, or None."""
+        """The ``(start, end)`` of the loop within the signal in ms, or None."""
         if self._loop_points is None:
             return None
 
@@ -484,7 +503,7 @@ class add_signal_preview(DpgItem):
         return start, min(max(start, loop_end), self._duration)
 
     def _playback_loop(self) -> tuple[float, float]:
-        """The loop limited to the trimmed signal, or None."""
+        """The loop in ms, limited to the trimmed signal, or None."""
         loop = self._abs_loop()
         if loop is None:
             return None
@@ -616,10 +635,11 @@ class add_signal_preview(DpgItem):
             self._set_plot_pos(self._t(f"marker_{mid}"), pos + self._marker_offset)
             self._set_value(self._t(f"marker_{mid}_value"), pos)
 
-        self._set_value(self._t("length_text"), self._length_label())
+        self._set_value(self._t("pos_text"), self._time_label(self._last_pos))
+        self._set_value(self._t("duration_text"), self._time_label(self.duration))
 
-    def _length_label(self) -> str:
-        return µ("{len:.0f} ms").format(len=self.playback_duration)
+    def _time_label(self, pos_ms: float) -> str:
+        return µ("{len:.03f} s").format(len=pos_ms / 1000)
 
     # === Build =========================================================
 
@@ -636,6 +656,7 @@ class add_signal_preview(DpgItem):
                 tag=self._t("error"),
             )
             self._build_plot(height)
+
             if not no_playback_controls:
                 dpg.add_spacer(height=4)
                 self._build_footer()
@@ -730,13 +751,26 @@ class add_signal_preview(DpgItem):
                 tag=self._t("play_stop"),
             )
 
+            def _on_loop_test_changed(sender: str, enabled: bool, ud: Any) -> None:
+                self.loop_preview_enabled = enabled
+
+            dpg.add_checkbox(
+                label=µ("Loop Test"),
+                default_value=self.loop_preview_enabled,
+                callback=_on_loop_test_changed,
+                tag=self._t("loop_test"),
+            )
+
+            dpg.add_text("|")
+            dpg.add_text(self._time_label(0.0), tag=self._t("pos_text"))
+            dpg.add_text(self._time_label(self.duration), tag=self._t("duration_text"))
+            dpg.add_text("|")
+
             dpg.add_button(
                 label=µ("Markers", "button"),
                 callback=lambda: dpg.show_item(self._t("markers_popup")),
                 tag=self._t("markers_button"),
             )
-
-            dpg.add_text(self._length_label(), tag=self._t("length_text"))
 
         with dpg.window(
             popup=True,

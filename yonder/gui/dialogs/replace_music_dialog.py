@@ -156,7 +156,10 @@ class replace_music_dialog(DpgItem):
         if not self._player:
             self._player = SimplePlayer()
 
-        self._player.play_file(wav)
+        if self._player.path != wav:
+            self._player.set_file(wav)
+
+        self._player.play()
         self._set_play_buttons_state(source_id, True)
         self._playback_source_id = source_id
         self._check_playback()
