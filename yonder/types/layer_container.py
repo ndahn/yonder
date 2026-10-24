@@ -45,8 +45,9 @@ class LayerContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         obj = cls(nid)
 
         if layer_nodes:
-            for layer in layer_nodes:
-                obj.add_layer(layer)
+            for idx, layer in enumerate(layer_nodes):
+                # TODO must layer IDs be unique across the soundbank?
+                obj.add_layer(idx + 1, layer)
 
         if props:
             for prop, val in props.items():

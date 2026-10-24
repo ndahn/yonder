@@ -519,6 +519,11 @@ class add_player_table(DpgItem):
         Label for the add button.
     get_row_label : callable, optional
         Called as ``get_row_label(index)`` to produce a display name per row.
+    add_row_extras : callable, optional
+        Called as ``add_row_extras(index, path)`` while a row is being built,
+        to put extra widgets next to the file. Rows are rebuilt whenever the
+        track list changes, so whatever it adds has to be driven from state
+        the caller keeps itself.
     on_track_added : callable, optional
         Fired as ``on_track_added(tag, path, user_data)``.
     on_track_removed : callable, optional
@@ -550,6 +555,7 @@ class add_player_table(DpgItem):
         label: str = "Tracks",
         add_item_label: str = "+ Add Tracks",
         get_row_label: Callable[[int], str] = None,
+        add_row_extras: Callable[[int, Path], None] = None,
         on_track_added: Callable[[str, Path, Any], None] = None,
         on_track_removed: Callable[[str, int, Any], None] = None,
         on_track_changed: Callable[[str, tuple[int, Path], Any], None] = None,
@@ -582,6 +588,7 @@ class add_player_table(DpgItem):
         self._get_row_label = get_row_label or (
             lambda i: µ("Track #{idx}").format(idx=i)
         )
+        self._add_row_extras = add_row_extras
         self._user_data = user_data
 
         self.players: list[add_signal_preview] = []
@@ -709,6 +716,10 @@ class add_player_table(DpgItem):
                 },
                 user_data=idx,
             )
+
+            if self._add_row_extras:
+                self._add_row_extras(idx, path)
+
             player = add_signal_preview(
                 loop_points=self._loops[idx] if self._on_loop_changed_cb else None,
                 on_loop_changed=self._on_loop_edit,

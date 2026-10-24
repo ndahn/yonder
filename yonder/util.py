@@ -129,7 +129,7 @@ def repack_soundbank(bnk2json_exe: Path, bnk_dir: Path) -> Path:
 
 def is_event_name_valid(name: str) -> bool:
     name = name.removeprefix("Play_").removeprefix("Stop_")
-    return bool(re.match(rf"{SoundType.values()}[0-9]+", name))
+    return bool(re.match(rf"[{SoundType.values()}][0-9]+$", name))
 
 
 def format_hierarchy(

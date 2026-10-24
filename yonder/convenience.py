@@ -146,6 +146,102 @@ class DecisionNode(Generic[_T]):
         )
 
 
+def _add_sound(bnk: Soundbank, wem: Path, parent: HIRCNode) -> Sound:
+    """Embed one audio file and hang a Sound for it under `parent`."""
+    wem = bnk.add_wem(wem, SourceType.Embedded)
+    snd = Sound.new(bnk.new_id(), wem, parent=parent.id)
+
+    if isinstance(parent, RandomSequenceContainer):
+        parent.add_playlist_item(snd)
+    else:
+        parent.children.add(snd.id)
+
+    return snd
+
+
+def _group_by_layer(
+    wems: "list[Path] | Path", layers: list[int] = None
+) -> dict[int, list[Path]]:
+    """Bucket the audio files by layer, keeping the order they came in.
+
+    Files sharing a layer belong together: in an RSC they are alternatives of
+    one slot, in a LayerContainer they are one of the parallel voices.
+    """
+    if isinstance(wems, Path):
+        wems = [wems]
+
+    if layers and len(layers) != len(wems):
+        raise ValueError("Length of layers must match length of wems")
+
+    layer_map: dict[int, list[Path]] = {}
+    for wem, layer in zip(wems, layers or range(len(wems))):
+        layer_map.setdefault(layer, []).append(wem)
+
+    return layer_map
+
+
+def _add_alternatives(
+    bnk: Soundbank, wems: list[Path], parent: HIRCNode
+) -> list[HIRCNode]:
+    """Attach one slot's audio under `parent`, picking a shape to suit it.
+
+    A single file becomes a plain Sound. Several become an RSC that picks one
+    of them, which is how Fromsoft nests alternatives inside a slot.
+    """
+    if len(wems) == 1:
+        return [_add_sound(bnk, wems[0], parent)]
+
+    rsc = RandomSequenceContainer.new(bnk.new_id(), avoid_repeat_count=1, parent=parent.id)
+    if isinstance(parent, RandomSequenceContainer):
+        parent.add_playlist_item(rsc)
+    else:
+        parent.children.add(rsc.id)
+
+    return [rsc] + [_add_sound(bnk, w, rsc) for w in wems]
+
+
+def _make_events(
+    bnk: Soundbank, event_name: str, target: HIRCNode
+) -> tuple[Event, Action, Event, Action]:
+    """The Play_/Stop_ event pair that drives `target`."""
+    play = Event.new(f"Play_{event_name}")
+    play_action = Action.new_play(bnk.new_id(), target, bank_id=bnk.bank_id)
+    play.actions.append(play_action.id)
+
+    stop = Event.new(f"Stop_{event_name}")
+    stop_action = Action.new_stop(bnk.new_id(), target)
+    stop.actions.append(stop_action.id)
+
+    return play, play_action, stop, stop_action
+
+
+def _attach_to_actor_mixer(
+    bnk: Soundbank,
+    actor_mixer: "int | ActorMixer",
+    node: HIRCNode,
+    event_name: str,
+) -> None:
+    """Hang the structure off its ActorMixer, warning if that is not possible."""
+    if isinstance(actor_mixer, int):
+        if actor_mixer == 0:
+            logger.warning(
+                f"No ActorMixer specified for {node.type_name} {node.id} of new sound {event_name}"
+            )
+            return
+
+        resolved = bnk.get(actor_mixer)
+        if not resolved:
+            logger.warning(
+                f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, consider adding the container's ID ({node.id}) to its children!"
+            )
+            return
+
+        actor_mixer = resolved
+
+    if isinstance(actor_mixer, HIRCNode):
+        actor_mixer.attach(node)
+
+
 def create_simple_sound_rsc(
     bnk: Soundbank,
     event_name: str,
@@ -158,8 +254,12 @@ def create_simple_sound_rsc(
     loop_count: int = 1,
     avoid_repeat_count: int = 0,
     properties: dict[PropID, float] = None,
-) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[Sound]]:
-    """Create a new sound structure with one or more sounds in a RandomSequenceContainer controlled by a start and stop event.
+) -> tuple[tuple[Event, Event], RandomSequenceContainer, list[HIRCNode]]:
+    """Create a sound structure that plays one of its sounds, picked per play.
+
+    ActorMixer -> RandomSequenceContainer -> Sound, with the container choosing
+    between the sounds. Files sharing a layer are nested under a LayerContainer
+    so that they play together as one alternative.
 
     Parameters
     ----------
@@ -169,37 +269,32 @@ def create_simple_sound_rsc(
         Base name of the new events.
     wems : list[Path] | Path
         Audio files to add.
-    actor_mixer : int | Node
+    actor_mixer : int | ActorMixer
         The ActorMixer to attach the new RandomSequenceContainer to.
-    layers : list[int]
-        If specified this must match the length of `wems`. Wems with matching layer IDs in this list will be grouped under the same layer, and thus play in parallel.
-    avoid_repeats : bool, optional
-        If True the container will avoid playing the same sound twice in a row.
-    properties : dict[str, float], optional
+    layers : list[int], optional
+        One layer id per wem. Wems sharing an id are grouped under a
+        LayerContainer and thus play in parallel. Defaults to one each.
+    playback_mode : PlaybackMode
+        Whether the container picks randomly or steps through in sequence.
+    random_mode : RandomMode
+        Standard or shuffle, when picking randomly.
+    loop_count : int
+        How often the container repeats. 0 loops forever.
+    avoid_repeat_count : int
+        How many recent picks the container refuses to repeat.
+    properties : dict[PropID, float], optional
         Properties to apply to the RandomSequenceContainer.
 
     Returns
     -------
-    Node
-        _description_
+    tuple
+        ``((play_event, stop_event), container, nodes)``, where `nodes` holds
+        everything created below the container.
     """
     if f"Play_{event_name}" in bnk:
         raise ValueError(f"Wwise event 'Play_{event_name}' already exists")
 
-    if layers:
-        if len(layers) != len(wems):
-            raise ValueError("Length of layers must match length of wems")
-    else:
-        layers = list(range(len(wems)))
-
-    if isinstance(wems, Path):
-        wems = [wems]
-
-    def make_sound(w: Path, rsc: RandomSequenceContainer) -> Sound:
-        w = bnk.add_wem(w, SourceType.Embedded)
-        snd = Sound.new(bnk.new_id(), w, parent=rsc.id)
-        rsc.add_playlist_item(snd)
-        return snd
+    layer_map = _group_by_layer(wems, layers)
 
     master_rsc = RandomSequenceContainer.new(
         bnk.new_id(),
@@ -213,53 +308,22 @@ def create_simple_sound_rsc(
     )
 
     nodes = []
-    layer_map = {}
-    for wem, layer in zip(wems, layers):
-        layer_map.setdefault(layer, []).append(wem)
-
-    for layer, wems in layer_map.items():
-        if len(wems) == 1:
-            # Directly attach to the master RSC
-            nodes.append(make_sound(wems[0], master_rsc))
+    for layer_wems in layer_map.values():
+        if len(layer_wems) == 1:
+            # One sound is an alternative all by itself
+            nodes.append(_add_sound(bnk, layer_wems[0], master_rsc))
         else:
-            # Create layer container -> RSC -> Sound (Fromsoft-style)
+            # Several play together: LayerContainer -> RSC -> Sound
             lc = LayerContainer.new(bnk.new_id(), parent=master_rsc.id)
-            master_rsc.children.add(lc.id)
+            master_rsc.add_playlist_item(lc)
             nodes.append(lc)
 
-            for w in wems:
-                rsc = RandomSequenceContainer.new(
-                    bnk.new_id(), avoid_repeat_count=1, parent=lc.id
-                )
-                lc.children.add(rsc.id)
-                snd = make_sound(w, rsc)
-                nodes.extend((rsc, snd))
+            for w in layer_wems:
+                nodes.extend(_add_alternatives(bnk, [w], lc))
 
-    play = Event.new(f"Play_{event_name}")
-    play_action = Action.new_play(bnk.new_id(), master_rsc, bank_id=bnk.bank_id)
-    play.actions.append(play_action.id)
+    play, play_action, stop, stop_action = _make_events(bnk, event_name, master_rsc)
+    _attach_to_actor_mixer(bnk, actor_mixer, master_rsc, event_name)
 
-    stop = Event.new(f"Stop_{event_name}")
-    stop_action = Action.new_stop(bnk.new_id(), master_rsc)
-    stop.actions.append(stop_action.id)
-
-    # Add the RSC to the actor mixer
-    if isinstance(actor_mixer, int):
-        if actor_mixer == 0:
-            logger.warning(
-                f"No ActorMixer specified for RSC {master_rsc.id} of new sound {event_name}"
-            )
-        else:
-            actor_mixer = bnk.get(actor_mixer)
-            if not actor_mixer:
-                logger.warning(
-                    f"ActorMixer {actor_mixer} not found in soundbank {bnk}. If it is part of another soundbank, consider adding the RSC's ID ({master_rsc.id}) to its children!"
-                )
-
-    if isinstance(actor_mixer, HIRCNode):
-        actor_mixer.attach(master_rsc)
-
-    # Add nodes to soundbank
     bnk.add_nodes(master_rsc, *nodes, play, play_action, stop, stop_action)
     return ((play, stop), master_rsc, nodes)
 
@@ -272,9 +336,61 @@ def create_simple_sound_lc(
     *,
     layers: list[int] = None,
     properties: dict[PropID, float] = None,
-) -> tuple[tuple[Event, Event], LayerContainer, list[Sound]]:
-    # TODO
-    pass
+) -> tuple[tuple[Event, Event], LayerContainer, list[HIRCNode]]:
+    """Create a sound structure that plays all of its sounds at once.
+
+    ActorMixer -> RandomSequenceContainer -> LayerContainer -> Sound. The
+    LayerContainer is the interesting part, but it still hangs off an RSC: that
+    is the shape Fromsoft uses under an ActorMixer, and it is what the events
+    target, so all three create_simple_sound variants are wired alike.
+
+    No blend tracks are set up, the children simply sound together. Add them
+    with `LayerContainer.add_layer` if they should crossfade on an RTPC.
+
+    Parameters
+    ----------
+    bnk : Soundbank
+        The soundbank to add the structure to.
+    event_name : str
+        Base name of the new events.
+    wems : list[Path] | Path
+        Audio files to add. Each becomes one simultaneous voice.
+    actor_mixer : int | ActorMixer
+        The ActorMixer to attach the new RandomSequenceContainer to.
+    layers : list[int], optional
+        One layer id per wem. Wems sharing an id become alternatives of a
+        single voice (RSC -> Sound) instead of voices of their own, so that a
+        layer can vary between plays. Defaults to one each.
+    properties : dict[PropID, float], optional
+        Properties to apply to the LayerContainer.
+
+    Returns
+    -------
+    tuple
+        ``((play_event, stop_event), container, nodes)``, where `container` is
+        the LayerContainer and `nodes` holds the RSC above it along with
+        everything created below it.
+    """
+    if f"Play_{event_name}" in bnk:
+        raise ValueError(f"Wwise event 'Play_{event_name}' already exists")
+
+    layer_map = _group_by_layer(wems, layers)
+
+    master_rsc = RandomSequenceContainer.new(bnk.new_id(), None, parent=actor_mixer)
+    layer_container = LayerContainer.new(
+        bnk.new_id(), props=properties, parent=master_rsc.id
+    )
+    master_rsc.add_playlist_item(layer_container)
+
+    nodes = [layer_container]
+    for layer_wems in layer_map.values():
+        nodes.extend(_add_alternatives(bnk, layer_wems, layer_container))
+
+    play, play_action, stop, stop_action = _make_events(bnk, event_name, master_rsc)
+    _attach_to_actor_mixer(bnk, actor_mixer, master_rsc, event_name)
+
+    bnk.add_nodes(master_rsc, *nodes, play, play_action, stop, stop_action)
+    return ((play, stop), layer_container, nodes)
 
 
 def create_simple_sound_sc(
@@ -282,13 +398,89 @@ def create_simple_sound_sc(
     event_name: str,
     wems: list[Path] | Path,
     switch_group: str | int,
-    switch_map: dict[str | int, int],
+    switch_map: dict[str | int, int | list[int]],
     actor_mixer: int | ActorMixer,
     *,
+    default_switch: str | int = None,
     properties: dict[PropID, float] = None,
-) -> tuple[tuple[Event, Event], SwitchContainer, list[Sound]]:
-    # TODO
-    pass
+) -> tuple[tuple[Event, Event], SwitchContainer, list[HIRCNode]]:
+    """Create a sound structure that plays whichever sound the switch selects.
+
+    ActorMixer -> RandomSequenceContainer -> SwitchContainer -> Sound. As with
+    the LayerContainer variant the main container hangs off an RSC, which is
+    what the events target.
+
+    Parameters
+    ----------
+    bnk : Soundbank
+        The soundbank to add the structure to.
+    event_name : str
+        Base name of the new events.
+    wems : list[Path] | Path
+        Audio files to add.
+    switch_group : str | int
+        The switch group the container reads, by name or id.
+    switch_map : dict
+        Which sounds each switch value plays, as indices into `wems`. A value
+        mapped to several of them gets an RSC that picks between those. Wems
+        that no switch asks for are left out of the structure entirely.
+    actor_mixer : int | ActorMixer
+        The ActorMixer to attach the new RandomSequenceContainer to.
+    default_switch : str | int, optional
+        The switch value to fall back on. Defaults to the first mapped one.
+    properties : dict[PropID, float], optional
+        Properties to apply to the SwitchContainer.
+
+    Returns
+    -------
+    tuple
+        ``((play_event, stop_event), container, nodes)``, where `container` is
+        the SwitchContainer and `nodes` holds the RSC above it along with
+        everything created below it.
+    """
+    if f"Play_{event_name}" in bnk:
+        raise ValueError(f"Wwise event 'Play_{event_name}' already exists")
+
+    if isinstance(wems, Path):
+        wems = [wems]
+
+    if not switch_map:
+        raise ValueError("switch_map must assign at least one switch value")
+
+    master_rsc = RandomSequenceContainer.new(bnk.new_id(), None, parent=actor_mixer)
+
+    # The states are filled in below: a switch can only point at nodes that
+    # exist, and those are created under the container itself
+    switch_container = SwitchContainer.new(
+        bnk.new_id(),
+        switch_group,
+        {},
+        default_state=default_switch or next(iter(switch_map)),
+        props=properties,
+        parent=master_rsc.id,
+    )
+    master_rsc.add_playlist_item(switch_container)
+
+    nodes = [switch_container]
+    for state, indices in switch_map.items():
+        if isinstance(indices, int):
+            indices = [indices]
+
+        chosen = [wems[i] for i in indices if 0 <= i < len(wems)]
+        if not chosen:
+            continue
+
+        created = _add_alternatives(bnk, chosen, switch_container)
+        nodes.extend(created)
+
+        # The switch selects the node it was given, not the sounds below it
+        switch_container.attach(created[0], state)
+
+    play, play_action, stop, stop_action = _make_events(bnk, event_name, master_rsc)
+    _attach_to_actor_mixer(bnk, actor_mixer, master_rsc, event_name)
+
+    bnk.add_nodes(master_rsc, *nodes, play, play_action, stop, stop_action)
+    return ((play, stop), switch_container, nodes)
 
 
 def _setup_bgm(

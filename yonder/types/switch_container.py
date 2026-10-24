@@ -61,7 +61,7 @@ class SwitchContainer(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
                 first_node = nodes[0]
 
             node_ids = [n.id if isinstance(n, HIRCNode) else n for n in nodes]
-            obj.switch_groups.append(SwitchPackage(state, node_ids))
+            obj.switch_groups.append(SwitchPackage(state, len(node_ids), node_ids))
 
         if isinstance(xfade, float):
             xfade = (xfade, xfade)
