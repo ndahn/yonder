@@ -52,6 +52,7 @@ READING ORDER
 from __future__ import annotations
 
 import wave
+from collections.abc import Sequence
 from dataclasses import dataclass
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -185,6 +186,55 @@ def _candidates(flux: np.ndarray, max_n: int = 300) -> np.ndarray:
         pk = np.arange(0, len(f), max(1, len(f) // max_n))
 
     return np.union1d(pk, [0])
+
+
+def _seed_samples(
+    seed_points: Sequence[float], rate: int, n_samples: int
+) -> np.ndarray:
+    """Caller-supplied positions in seconds -> sample positions inside the file.
+
+    Parameters
+    ----------
+    seed_points : sequence of float
+        Positions in seconds, e.g. a loop the user already set.
+    rate : int
+        Sample rate in Hz.
+    n_samples : int
+        Length of the signal, to clamp against.
+
+    Returns
+    -------
+    np.ndarray
+        Sample positions, sorted and deduplicated. Empty if nothing was passed.
+    """
+    if seed_points is None or not len(seed_points):
+        return np.empty(0)
+
+    seeds = np.asarray(seed_points, dtype=np.float64) * rate
+    return np.unique(np.clip(seeds, 0, max(0, n_samples - 1)))
+
+
+def _seed_frames(seeds: np.ndarray, n_frames: int) -> np.ndarray:
+    """The frames the seeds fall in, so they can be used as loop points at all.
+
+    `_candidates` only offers onset peaks. A point the user set by hand need not
+    sit on one, and without adding it here the search could never return it (or
+    anything within a frame of it).
+
+    Parameters
+    ----------
+    seeds : np.ndarray
+        Seed positions in samples, from `_seed_samples`.
+    n_frames : int
+        Number of analysis frames, to clamp against.
+
+    Returns
+    -------
+    np.ndarray
+        One frame index per seed, in the same order. Not deduplicated: the
+        caller indexes back into the seeds with it.
+    """
+    return np.clip(np.round(seeds / HOP).astype(int), 0, max(0, n_frames - 1))
 
 
 def _onset_env(x: np.ndarray) -> np.ndarray:
@@ -485,6 +535,30 @@ def _bar_fit(gap: np.ndarray, bar: float) -> np.ndarray:
 # ---------------------------------------------------------------- step 5: refinement
 
 
+def _seed_proximity(t: np.ndarray, seeds: np.ndarray, radius: float) -> np.ndarray:
+    """Step 4b: how close is each candidate to the nearest seed?
+
+    Gaussian, so the pull falls off smoothly rather than at a hard edge: a
+    candidate one radius from a seed still counts for ~37 %, two radii for ~2 %.
+
+    Parameters
+    ----------
+    t : np.ndarray
+        Candidate positions in samples.
+    seeds : np.ndarray
+        Seed positions in samples, from `_seed_samples`.
+    radius : float
+        Distance in samples at which the pull has decayed to 1 / e.
+
+    Returns
+    -------
+    np.ndarray
+        (len(t),) in 0..1, 1 right on a seed.
+    """
+    d = np.abs(t[:, None] - seeds[None, :]).min(axis=1)
+    return np.exp(-((d / max(radius, 1e-9)) ** 2))
+
+
 def _refine(
     x: np.ndarray, start: int, end: int, win: int = N_FFT, radius: int = N_FFT // 2
 ) -> int:
@@ -546,6 +620,9 @@ def find_loops(
     *,
     candidates: int = 3,
     min_len_s: float = 5.0,
+    seed_points: Sequence[float] = None,
+    seed_weight: float = 0.5,
+    seed_radius: float = 1.0,
     context_length: float = 4.0,
     loudness_weight: float = 0.05,
     length_weight: float = 0.02,
@@ -564,6 +641,7 @@ def find_loops(
       + bar_weight      * bar_fit(gap)                    whole number of bars
       + chord_weight    * chord_move(end -> start)        harmonic motion across the jump
       + seam_weight     * cos(notes before end, after start)
+      + seed_weight     * mean(nearness of start, of end, to a seed point)
 
     Parameters
     ----------
@@ -575,6 +653,21 @@ def find_loops(
         Number of pairs to return (neighbours of the best pair may show up too).
     min_len_s : float
         Shortest loop to consider, in seconds.
+    seed_points : sequence of float, optional
+        Positions in seconds that the result should stay near, e.g. the loop a
+        user already set. Each one is added to the candidates, so a seed can be
+        returned as-is even when no onset was detected there, and pairs near a
+        seed are favoured by `seed_weight`. None searches the whole track.
+        Refining a loop means passing both of its points.
+    seed_weight : float
+        How hard `seed_points` pull. Deliberately far above the transition
+        weights: refining means staying put, so this has to be able to outvote
+        a better match elsewhere. A pair with both ends on a seed gets the full
+        weight, one end gets half, which keeps a single seed useful. 0 switches
+        the pull off and leaves the seeds as ordinary candidates.
+    seed_radius : float
+        How far from a seed, in seconds, the pull has faded to 1 / e. Roughly
+        "how wrong the seeds may be"; beyond twice this they count for nothing.
     context_length : float
         Number of frames to analyze around candidate points, in seconds.
     loudness_weight : float
@@ -607,6 +700,12 @@ def find_loops(
     chroma, flux, level = _features(x, rate)
     cand = _candidates(flux)  # n frame indices
 
+    # Positions the caller wants refined have to be reachable, onset or not
+    seeds = _seed_samples(seed_points, rate, len(x))
+    seed_frames = _seed_frames(seeds, len(flux))
+    if len(seeds):
+        cand = np.union1d(cand, seed_frames)
+
     # --- 4a. similarity of the music around every pair: (n, n), row = start, col = end
     sim = _context_sim(chroma, cand, ctx=int(context_length * rate / HOP))  # ctx = frames in s
 
@@ -621,6 +720,12 @@ def find_loops(
     # Positions in samples. Snapped onto the note itself, not the (earlier) frame start.
     onset = _onset_env(x)
     t = _snap_to_onset(onset, cand * HOP)
+
+    if len(seeds):
+        # A seed already sits where the caller put it. Snapping is meant to move
+        # a flux peak forward onto the note that caused it, which would drag a
+        # seed up to a frame away from the position being refined
+        t[np.searchsorted(cand, seed_frames)] = seeds.astype(int)
     gap = (
         t[None, :] - t[:, None]
     )  # (n, n): loop length if row i is the start and column j the end
@@ -633,6 +738,12 @@ def find_loops(
     )
 
     # --- 4b. transition terms, each only computed if switched on
+    if len(seeds) and seed_weight:
+        # Averaged over both ends: a pair sitting on two seeds earns the full
+        # weight, one that only starts on one still beats an unrelated pair
+        near = _seed_proximity(t, seeds, seed_radius * rate)
+        score += seed_weight * 0.5 * (near[:, None] + near[None, :])
+
     if bar_weight:
         score += bar_weight * _bar_fit(gap, beats_per_bar * _beat_period(onset, rate))
 

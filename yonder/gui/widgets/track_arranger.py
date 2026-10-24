@@ -15,16 +15,14 @@ from yonder.util import logger, get_temp_dir
 from yonder.wem import wav2wem, wem2wav
 from yonder.audio.wavesignal import read_wav, minmax_envelope
 from yonder.audio.audiomath import mix
-from yonder.audio.loop_points import find_loops
 from yonder.audio.simple_player import SimplePlayer
 from yonder.gui import style, get_config, Icons
 from yonder.gui.frame_tasks import call_in_frames
 from yonder.gui.helpers import get_sound_path, center_window
 from yonder.gui.localization import µ
-from yonder.gui.widgets import DpgItem, loading_indicator
+from yonder.gui.widgets import DpgItem
 from yonder.gui.widgets.editable_table import add_widget_table
 from yonder.gui.dialogs.file_dialog import open_file_dialog
-from yonder.gui.dialogs.loop_point_candidates_dialog import loop_point_candidates_dialog
 
 
 @dataclass
@@ -1145,20 +1143,19 @@ class add_track_arranger(DpgItem):
 
     def _find_loop_markers(self) -> None:
         """Search the mixed-down timeline for loop points and offer them."""
-        with loading_indicator(µ("Searching...")):
-            combined, framerate = self._mixdown()
-            if not len(combined):
-                logger.warning(µ("No audio to search for loop points", "log"))
-                return
+        from yonder.gui.dialogs.loop_point_candidates_dialog import (
+            loop_point_candidates_dialog,
+        )
 
-            min_len = 0.6 * len(combined) / framerate
-            candidates = find_loops(combined, framerate, candidates=5, min_len_s=min_len)
+        combined, framerate = self._mixdown()
+        if not len(combined):
+            logger.warning(µ("No audio to search for loop points", "log"))
+            return
 
         # Give dpg a frame so that another modal dialog can open again
         dpg.split_frame()
 
         dlg = loop_point_candidates_dialog(
-            candidates,
             combined,
             framerate,
             current_loop_points=(
@@ -2031,9 +2028,7 @@ class add_track_arranger(DpgItem):
             self._marker_table = add_widget_table(
                 self._marker_rows(),
                 self._create_marker_row,
-                new_item=(
-                    self._new_marker if self._user_markers is not None else None
-                ),
+                new_item=(self._new_marker if self._user_markers is not None else None),
                 on_remove=self._on_marker_removed,
                 can_remove=lambda row, idx: row.kind == "user",
                 columns=[µ("Marker"), unit],
@@ -2080,6 +2075,10 @@ class add_track_arranger(DpgItem):
         """A row's position, in internal seconds."""
         if row.kind == "user":
             return (self._user_markers or {}).get(row.mid, 0.0)
+
+        if self._loop_points is None:
+            # A loop row outliving its loop, i.e. mid-rebuild
+            return 0.0
 
         start, end = self._loop_abs_bounds()
         return start if row.kind == "loop_start" else end

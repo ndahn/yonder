@@ -5,11 +5,10 @@ from typing import Any, Callable
 import numpy as np
 from dearpygui import dearpygui as dpg
 
-from yonder.audio.loop_points import LoopPair
-from yonder.audio.wavesignal import to_channels
+from yonder.audio.loop_points import find_loops
 from yonder.gui import style, Icons
 from yonder.gui.localization import µ
-from yonder.gui.widgets.dpg_item import DpgItem
+from yonder.gui.widgets import DpgItem, loading_indicator
 from yonder.gui.widgets.signal_preview import add_signal_preview
 
 
@@ -76,7 +75,6 @@ class loop_point_candidates_dialog(DpgItem):
 
     def __init__(
         self,
-        candidates: list[LoopPair],
         signal: np.ndarray,
         framerate: int,
         *,
@@ -93,43 +91,78 @@ class loop_point_candidates_dialog(DpgItem):
         self._selected = 0
         self._preview: add_signal_preview = None
 
+        self._signal = signal
+        self._framerate = framerate
+        self._current_loop_points = current_loop_points
         self._candidates: list[_Candidate] = []
-        if current_loop_points:
-            self._candidates.append(
-                _Candidate(
-                    µ("Current"),
-                    current_loop_points[0],
-                    current_loop_points[1],
-                    editable=False,
-                )
-            )
-
-        for i, pair in enumerate(candidates):
-            self._candidates.append(
-                _Candidate(
-                    µ("#{idx}").format(idx=i + 1),
-                    pair.start / framerate * 1000,
-                    pair.end / framerate * 1000,
-                    score=pair.score,
-                )
-            )
-
-        if not self._candidates:
-            # Nothing found and nothing set - still give the user a row
-            self._candidates.append(
-                _Candidate(
-                    µ("Current"), 0.0, len(signal) / framerate * 1000, editable=False
-                )
-            )
 
         self._build(title or µ("Loop points"))
-
-        signal = to_channels(signal, 1)[:, 0]
         self._preview.set_signal(signal, framerate)
-        self._select(0)
+
+        self.find_loop_points()
 
     def destroy(self) -> None:
         self.close()
+
+    def find_loop_points(self) -> None:
+        self._preview.stop()
+        self._candidates.clear()
+        dpg.delete_item(self._t("candidates_table"), children_only=True, slot=1)
+
+        refine = False
+        if dpg.does_item_exist(self._t("mode_refine")):
+            refine = dpg.get_value(self._t("mode_refine"))
+
+        with loading_indicator(µ("Searching")):
+            seed_points = None
+            if refine:
+                # find_loops works in seconds, the dialog in ms
+                seed_points = [p / 1000 for p in self._current_loop_points]
+
+            min_len = 0.6 * len(self._signal) / self._framerate
+            candidates = find_loops(
+                self._signal,
+                self._framerate,
+                candidates=5,
+                min_len_s=min_len,
+                seed_points=seed_points,
+            )
+
+            if self._current_loop_points:
+                self._candidates.append(
+                    _Candidate(
+                        µ("Current"),
+                        self._current_loop_points[0],
+                        self._current_loop_points[1],
+                        editable=False,
+                    )
+                )
+
+            for i, pair in enumerate(candidates):
+                self._candidates.append(
+                    _Candidate(
+                        µ("#{idx}").format(idx=i + 1),
+                        pair.start / self._framerate * 1000,
+                        pair.end / self._framerate * 1000,
+                        score=pair.score,
+                    )
+                )
+
+            if not self._candidates:
+                # Nothing found and nothing set - still give the user a row
+                self._candidates.append(
+                    _Candidate(
+                        µ("Current"),
+                        0.0,
+                        len(self._signal) / self._framerate * 1000,
+                        editable=False,
+                    )
+                )
+
+            for index, candidate in enumerate(self._candidates):
+                self._build_row(index, candidate)
+
+            self._select(0)
 
     # === Public ========================================================
 
@@ -150,6 +183,9 @@ class loop_point_candidates_dialog(DpgItem):
             dpg.delete_item(self.tag)
 
     # === DPG callbacks =================================================
+
+    def _on_loop_test_changed(self, sender: str, enabled: bool, ud: Any) -> None:
+        self._preview.loop_preview_enabled = enabled
 
     def _on_row_selected(self, sender: str, value: bool, index: int) -> None:
         if not value:
@@ -237,6 +273,20 @@ class loop_point_candidates_dialog(DpgItem):
             self._preview = add_signal_preview(no_playback_controls=True)
             self._preview.loop_preview_enabled = True
 
+            with dpg.group(horizontal=True):
+                dpg.add_checkbox(
+                    label=µ("Loop Test"),
+                    default_value=self._preview.loop_preview_enabled,
+                    callback=self._on_loop_test_changed,
+                )
+                if self._current_loop_points:
+                    dpg.add_checkbox(
+                        label=µ("Refine"),
+                        default_value=True,
+                        callback=self.find_loop_points,
+                        tag=self._t("mode_refine"),
+                    )
+
             dpg.add_spacer(height=4)
             self._build_table()
 
@@ -254,6 +304,7 @@ class loop_point_candidates_dialog(DpgItem):
             policy=dpg.mvTable_SizingStretchProp,
             scrollY=True,
             height=-40,
+            tag=self._t("candidates_table"),
         ):
             # Select
             dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=26)
@@ -278,9 +329,6 @@ class loop_point_candidates_dialog(DpgItem):
             )
             # Playback button
             dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=26)
-
-            for index, candidate in enumerate(self._candidates):
-                self._build_row(index, candidate)
 
     def _build_row(self, index: int, candidate: _Candidate) -> None:
         with dpg.table_row():
