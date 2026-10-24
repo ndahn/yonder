@@ -6,10 +6,11 @@ from dearpygui import dearpygui as dpg
 from yonder import Soundbank
 from yonder.types import HIRCNode, Sound
 from yonder.enums import SourceType
-from yonder.wem import get_wem_metadata
-from yonder.gui.designer.graph_designer_node import GraphDesignerNode
-from yonder.gui.localization import μ
+from yonder.wem import get_wem_metadata, wav2wem
+from yonder.util import get_temp_dir
+from yonder.gui import μ, get_config
 from yonder.gui.widgets import add_generic_widget
+from yonder.gui.designer.graph_designer_node import GraphDesignerNode
 
 
 class SoundNode(GraphDesignerNode):
@@ -68,6 +69,13 @@ class SoundNode(GraphDesignerNode):
     ) -> Sound:
         # TODO effects
         parent = input_map.get("Playback", 0)
+
+        wem = self.wem_path
+        if wem.suffix == ".wav":
+            wem = wav2wem(get_config().locate_wwise(), wem, get_temp_dir())[0]
+
+        bnk.add_wem(wem, SourceType.Embedded)
+
         return Sound.new(
             self.node_id(),
             self.wem_path,

@@ -13,6 +13,7 @@ from . import (
     MRSCNode,
     MSNode,
     MTNode,
+    SCNode,
 )
 
 if TYPE_CHECKING:
@@ -44,6 +45,15 @@ def layered_sound(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
     )
 
 
+def switchable_sound(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
+    dlg.chain().node(EventNode(bnk)).to("Play/Stop", RSCNode(bnk), "Event").merge(
+        lambda b: b.node(AMXNode(bnk)), "Child 0", "Playback"
+    ).to("Item 0", SCNode(bnk), "Playback").fork(
+        lambda lc: lc.to("Switch 0", SoundNode(bnk), "Playback"),
+        lambda lc: lc.to("Switch 1", SoundNode(bnk), "Playback"),
+    )
+
+
 def music_playlist(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
     # Music nodes usually don't have an AMX
     dlg.chain().node(EventNode(bnk)).to("Play/Stop", MRSCNode(bnk), "Event").fork(
@@ -58,4 +68,5 @@ def music_playlist(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
 
 _templates["Simple Sound"] = simple_sound
 _templates["Layered Sound"] = layered_sound
+_templates["Switchable Sound"] = switchable_sound
 _templates["Music"] = music_playlist
