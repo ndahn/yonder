@@ -60,7 +60,6 @@ from .dialogs.about_dialog import about_dialog
 from .dialogs.licenses_dialog import licenses_dialog
 from .dialogs.choice_dialog import simple_choice_dialog
 from .dialogs.create_node_dialog import create_node_dialog
-from .dialogs.create_playstop_event_dialog import create_wwise_event_dialog
 from .dialogs.file_dialog import (
     open_file_dialog,
     save_file_dialog,
@@ -265,22 +264,7 @@ class BanksOfYonder(DpgItem):
                     )
 
             with dpg.menu(label=µ("Create", "menu"), tag=self._t("menu/create")):
-                dpg.add_menu_item(
-                    label=µ("Isolated Node", "menu"),
-                    callback=self._open_create_node_dialog,
-                    tag=self._t("menu/create_node"),
-                )
-                dpg.add_menu_item(
-                    label=µ("Designer", "menu"),
-                    callback=self._open_graph_designer_dialog,
-                    tag=self._t("menu/graph_designer"),
-                )
-                dpg.add_separator()
-                dpg.add_menu_item(
-                    label=µ("Play/Stop Event", "menu"),
-                    callback=self._open_new_wwise_event_dialog,
-                    tag=self._t("menu/create_event"),
-                )
+                
                 dpg.add_menu_item(
                     label=µ("Simple Sound", "menu"),
                     callback=self._open_simple_sound_dialog,
@@ -302,12 +286,22 @@ class BanksOfYonder(DpgItem):
                     enabled=False,  # TODO
                     tag=self._t("menu/create_ambience"),
                 )
+                dpg.add_separator()
+                dpg.add_menu_item(
+                    label=µ("Isolated Node", "menu"),
+                    callback=self._open_create_node_dialog,
+                    tag=self._t("menu/create_node"),
+                )
                 dpg.add_menu_item(
                     label=µ("Replace Music", "menu"),
                     callback=self._open_replace_music_dialog,
                     tag=self._t("menu/replace_music"),
                 )
-                dpg.add_separator()
+                dpg.add_menu_item(
+                    label=µ("Graph Designer", "menu"),
+                    callback=self._open_graph_designer_dialog,
+                    tag=self._t("menu/graph_designer"),
+                )
                 dpg.add_menu_item(
                     label=µ("Batch Sound Builder", "menu"),
                     callback=self._open_batch_sound_builder_dialog,
@@ -2240,24 +2234,6 @@ class BanksOfYonder(DpgItem):
             self.regenerate()
 
         rename_bank_dialog(self.bnk, on_bank_renamed, tag=tag)
-        center_window(tag)
-
-    def _open_new_wwise_event_dialog(self) -> None:
-        tag = self._t("new_wwise_event_dialog")
-        if dpg.does_item_exist(tag):
-            dpg.show_item(tag)
-            dpg.focus_item(tag)
-            return
-
-        def on_events_created(nodes: list[HIRCNode]) -> None:
-            for n in nodes:
-                self.add_pinned_objects(n)
-
-            logger.info(µ("Created new event {node}", "log").format(node=nodes[0]))
-            self.regenerate()
-            self.select_node(nodes[0])
-
-        create_wwise_event_dialog(self.bnk, on_events_created, tag=tag)
         center_window(tag)
 
     def _open_simple_sound_dialog(self) -> None:
