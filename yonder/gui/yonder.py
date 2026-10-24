@@ -28,6 +28,7 @@ from yonder.hash import (
     unload_lookup_table,
     get_bank_lookup_table_path,
     get_active_lookup_table,
+    add_lookup_name,
 )
 from yonder.util import logger, unpack_soundbank, repack_soundbank, get_temp_dir
 from yonder.query import query_nodes
@@ -1091,10 +1092,13 @@ class BanksOfYonder(DpgItem):
                         logger.warning(
                             "A lookup table already exists in the new bank location, original table was not moved"
                         )
-                    else:
+                    elif table.file and table.file.is_file():
                         shutil.move(table.file, dst)
                         table.file = dst
                         logger.info(f"Moved lookup table to {dst}")
+                    else:
+                        # Nothing recorded yet, so there is no file to move
+                        table.file = dst
 
                 self._save_bank_lookup_table()
 
@@ -2173,10 +2177,7 @@ class BanksOfYonder(DpgItem):
         def on_soundbank_created(bnk: Soundbank) -> None:
             # If the soundbank name's hash is unknown add an entry to its (new) lookup table
             if not bnk.name:
-                name = bnk.bnk_dir.name
-                table_path = get_bank_lookup_table_path(bnk)
-                with table_path.open("a", encoding="utf-8") as f:
-                    f.writelines("\n" + name)
+                add_lookup_name(get_bank_lookup_table_path(bnk), bnk.bnk_dir.name)
 
             self._load_soundbank_confirm(bnk.json_path)
 
