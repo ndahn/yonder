@@ -42,6 +42,8 @@ PIPELINE (step numbers are used in the code comments)
           - chords: chord before `end` -> chord after `start`, rated by root motion
                     (same chord, 4th/5th = V->I / IV->I best, tritone worst)
           - seam:   do the notes just before `end` match the notes just after `start`?
+          - drop:   do both points sit in an intentional, beat-aligned gap
+                    ("mic drop")? Silence hides the jump completely.
     5. Refine: frames are coarse, so slide `end` by up to +-N_FFT/2 samples to where
        the waveform lines up best with `start` (cross-correlation) -> no click.
 
@@ -237,6 +239,18 @@ def _seed_frames(seeds: np.ndarray, n_frames: int) -> np.ndarray:
     return np.clip(np.round(seeds / HOP).astype(int), 0, max(0, n_frames - 1))
 
 
+def _block_rms(x: np.ndarray) -> np.ndarray:
+    """RMS loudness per BLK-sample block (11.6 ms at 44.1 kHz).
+
+    Returns
+    -------
+    np.ndarray
+        (len(x) // BLK,): the signal reshaped into rows of BLK samples, each
+        row reduced to its loudness.
+    """
+    return np.sqrt((x[: len(x) // BLK * BLK].reshape(-1, BLK) ** 2).mean(axis=1))
+
+
 def _onset_env(x: np.ndarray) -> np.ndarray:
     """Fine time-domain onset curve: loudness *rises* per 11.6 ms block.
 
@@ -249,9 +263,7 @@ def _onset_env(x: np.ndarray) -> np.ndarray:
     np.ndarray
         (len(x) // BLK - 1,): index i = loudness rise between block i and block i + 1.
     """
-    # RMS loudness per block: reshape the signal into (blocks, BLK) rows
-    env = np.sqrt((x[: len(x) // BLK * BLK].reshape(-1, BLK) ** 2).mean(axis=1))
-    return np.maximum(np.diff(env), 0)  # keep rises only
+    return np.maximum(np.diff(_block_rms(x)), 0)  # keep rises only
 
 
 def _snap_to_onset(onset: np.ndarray, t: np.ndarray) -> np.ndarray:
@@ -503,6 +515,136 @@ def _beat_period(onset: np.ndarray, rate: int) -> float:
     ) * BLK  # 1e-12: avoid dividing by zero
 
 
+def _beat_phase(onset: np.ndarray, period: float) -> float:
+    """Where the beat grid sits, as an offset in blocks (0 <= phase < period).
+
+    `_beat_period` says how far apart the beats are, not where they fall. One
+    Fourier coefficient at the beat frequency answers that: its angle is the
+    phase of the pulse train hiding in the onset curve. Exact for a fractional
+    period, unlike folding the curve into integer-length rows, where the
+    rounding error piles up and smears the grid over a long track.
+
+    Parameters
+    ----------
+    onset : np.ndarray
+        Output of `_onset_env`.
+    period : float
+        Beat period in blocks.
+
+    Returns
+    -------
+    float
+        Offset in blocks: beats sit at phase, phase + period, ... 0.0 if the
+        period is too short or too long to measure.
+    """
+    if period < 2 or len(onset) < period:
+        return 0.0
+
+    turn = np.exp(-2j * np.pi * np.arange(len(onset)) / period)
+    angle = np.angle((onset - onset.mean()) @ turn)  # -pi .. pi
+
+    return float((-angle / (2 * np.pi) * period) % period)
+
+
+def _drop_env(
+    x: np.ndarray, onset: np.ndarray, beat: float, drop_db: float = 18.0
+) -> np.ndarray:
+    """Step 4b: where does the music take a deliberate, beat-aligned gap?
+
+    A "mic drop": the music cuts out for a beat or so, on the grid, and comes
+    back. That rest is the safest place a loop can jump from, because a
+    waveform discontinuity inside silence is inaudible. The similarity term
+    cannot see it - `_features` blanks the chroma of near-silent frames, so the
+    quiet part of two matching gaps contributes nothing and actually drags the
+    score down - which is why this gets its own term.
+
+    Three things have to hold at the candidate:
+      quiet  the level drops well below the track's usual one (`drop_db`)
+      brief  the surrounding bars are *not* quiet, so this is a rest rather
+             than an intro, an outro or just a quiet passage
+      beat   the gap lands on the beat grid instead of somewhere arbitrary
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Mono samples.
+    onset : np.ndarray
+        Output of `_onset_env`, used to place the beat grid.
+    beat : float
+        Beat period in samples from `_beat_period`. 0 = unknown.
+    drop_db : float
+        Where a dip starts counting as a gap, in dB below the usual level. It
+        counts fully at twice that.
+
+    Returns
+    -------
+    np.ndarray
+        One value per BLK block, 0..1. All zeros without a beat to align to,
+        which leaves the ranking unchanged.
+    """
+    if beat <= 0:
+        return np.zeros(len(x) // BLK)
+
+    db = 20 * np.log10(_block_rms(x) + 1e-9)
+    # 75th percentile = how loud this track normally is, unmoved by the gaps
+    # themselves or by a couple of loud hits
+    ref = np.percentile(db, 75)
+    # Nothing below drop_db down, ramping to 1 at twice that. A plucked note
+    # already dips a good 10 dB before the next one lands, so counting any dip
+    # would read every beat of a staccato line as a rest
+    quiet = np.clip((ref - db) / drop_db - 1.0, 0, 1)
+
+    period = beat / BLK  # beat length in blocks
+    half, wide = max(1, round(period / 2)), max(2, round(2 * period))
+
+    # Silence right here? Sliding max over half a beat each way, so a candidate
+    # on either edge of the gap counts, not only one sitting inside it
+    here = sliding_window_view(np.pad(quiet, half), 2 * half + 1).max(axis=1)
+
+    # ... and only here? Mean over two beats each way stays low for a rest, but
+    # rises towards 1 across an outro or a quiet section
+    box = np.ones(2 * wide + 1) / (2 * wide + 1)
+    brief = 1 - np.convolve(np.pad(quiet, wide, "edge"), box, "valid")
+
+    # On the grid? Distance to the nearest beat, folded into 0 .. period / 2
+    off = (np.arange(len(quiet)) - _beat_phase(onset, period)) % period
+    on_beat = np.exp(-((np.minimum(off, period - off) / (period / 8)) ** 2))
+
+    return here * brief * on_beat
+
+
+def _drop_points(env: np.ndarray, threshold: float = 0.5) -> np.ndarray:
+    """Blocks where a gap is good enough to try as a loop point.
+
+    `_candidates` only offers onsets, and a mic drop is the opposite of one:
+    the music *stopping* makes no flux peak, so without harvesting these the
+    drop term could never fire on the position it is meant to reward.
+
+    Parameters
+    ----------
+    env : np.ndarray
+        Output of `_drop_env`.
+    threshold : float
+        How convincing a gap has to be to be worth a candidate slot.
+
+    Returns
+    -------
+    np.ndarray
+        One block index per run above the threshold: its best block, so a gap
+        contributes a position per beat it covers rather than a smear.
+    """
+    above = env > threshold
+    if not above.any():
+        return np.empty(0, dtype=int)
+
+    # Starts and ends of the contiguous runs, via the edges of the step curve
+    edges = np.flatnonzero(np.diff(np.r_[False, above, False]))
+
+    return np.array(
+        [s + int(np.argmax(env[s:e])) for s, e in zip(edges[::2], edges[1::2])]
+    )
+
+
 def _bar_fit(gap: np.ndarray, bar: float) -> np.ndarray:
     """Is the loop a whole number of bars long?
 
@@ -532,14 +674,8 @@ def _bar_fit(gap: np.ndarray, bar: float) -> np.ndarray:
     )  # distance to the nearest whole bar, scaled to 0..1
 
 
-# ---------------------------------------------------------------- step 5: refinement
-
-
-def _seed_proximity(t: np.ndarray, seeds: np.ndarray, radius: float) -> np.ndarray:
-    """Step 4b: how close is each candidate to the nearest seed?
-
-    Gaussian, so the pull falls off smoothly rather than at a hard edge: a
-    candidate one radius from a seed still counts for ~37 %, two radii for ~2 %.
+def _seed_distance(t: np.ndarray, seeds: np.ndarray) -> np.ndarray:
+    """How far each candidate is from the nearest seed, in samples.
 
     Parameters
     ----------
@@ -547,16 +683,16 @@ def _seed_proximity(t: np.ndarray, seeds: np.ndarray, radius: float) -> np.ndarr
         Candidate positions in samples.
     seeds : np.ndarray
         Seed positions in samples, from `_seed_samples`.
-    radius : float
-        Distance in samples at which the pull has decayed to 1 / e.
 
     Returns
     -------
     np.ndarray
-        (len(t),) in 0..1, 1 right on a seed.
+        (len(t),) distances, 0 right on a seed.
     """
-    d = np.abs(t[:, None] - seeds[None, :]).min(axis=1)
-    return np.exp(-((d / max(radius, 1e-9)) ** 2))
+    return np.abs(t[:, None] - seeds[None, :]).min(axis=1)
+
+
+# ---------------------------------------------------------------- step 5: refinement
 
 
 def _refine(
@@ -621,14 +757,15 @@ def find_loops(
     candidates: int = 3,
     min_len_s: float = 5.0,
     seed_points: Sequence[float] = None,
-    seed_weight: float = 0.5,
     seed_radius: float = 1.0,
+    seed_weight: float = 0.15,
     context_length: float = 4.0,
     loudness_weight: float = 0.05,
     length_weight: float = 0.02,
     bar_weight: float = 0.03,
     chord_weight: float = 0.03,
     seam_weight: float = 0.05,
+    drop_weight: float = 0.1,
     beats_per_bar: int = 4,
 ) -> list[LoopPair]:
     """Best loop (start, end) pairs of a mono float signal, best first.
@@ -641,7 +778,12 @@ def find_loops(
       + bar_weight      * bar_fit(gap)                    whole number of bars
       + chord_weight    * chord_move(end -> start)        harmonic motion across the jump
       + seam_weight     * cos(notes before end, after start)
+      + drop_weight     * gap_at(start) * gap_at(end)      both ends in a beat-aligned rest
       + seed_weight     * mean(nearness of start, of end, to a seed point)
+
+    With `seed_points` set, pairs whose start or end is further than
+    `seed_radius` from every seed are dropped entirely, so the result is always
+    a variant of what was passed in.
 
     Parameters
     ----------
@@ -654,20 +796,22 @@ def find_loops(
     min_len_s : float
         Shortest loop to consider, in seconds.
     seed_points : sequence of float, optional
-        Positions in seconds that the result should stay near, e.g. the loop a
-        user already set. Each one is added to the candidates, so a seed can be
-        returned as-is even when no onset was detected there, and pairs near a
-        seed are favoured by `seed_weight`. None searches the whole track.
-        Refining a loop means passing both of its points.
-    seed_weight : float
-        How hard `seed_points` pull. Deliberately far above the transition
-        weights: refining means staying put, so this has to be able to outvote
-        a better match elsewhere. A pair with both ends on a seed gets the full
-        weight, one end gets half, which keeps a single seed useful. 0 switches
-        the pull off and leaves the seeds as ordinary candidates.
+        Positions in seconds to refine, e.g. the loop a user already set. Each
+        one is added to the candidates, so a seed can be returned as-is even
+        when no onset was detected there, and the search is then confined to
+        `seed_radius` around them. None searches the whole track. Refining a
+        loop means passing both of its points: every returned point has to be
+        near a seed, so a lone seed only yields a loop if `min_len_s` fits
+        inside its window.
     seed_radius : float
-        How far from a seed, in seconds, the pull has faded to 1 / e. Roughly
-        "how wrong the seeds may be"; beyond twice this they count for nothing.
+        How far a refined point may move from its seed, in seconds. A hard
+        bound, not a hint - this is what keeps "refine" from wandering off to
+        a better match elsewhere in the track.
+    seed_weight : float
+        Tie-break inside that window: all else equal, prefer the point the
+        caller actually chose. A pair with both ends on a seed gets the full
+        weight, one end gets half. 0 leaves the ranking inside the window to
+        the musical terms alone; it does not widen the window.
     context_length : float
         Number of frames to analyze around candidate points, in seconds.
     loudness_weight : float
@@ -676,6 +820,13 @@ def find_loops(
     length_weight : float
         Bonus for a loop spanning the whole track. Periodic music has many nearly
         equal pairs (1 bar, 2 bars, ...), this makes the longest one win.
+    drop_weight : float
+        Bonus for a "mic drop" loop: both points sit in a deliberate, on-beat
+        gap in the music. Jumping inside silence cannot click, and the music
+        picks up on the grid afterwards. Multiplied rather than averaged over
+        the two ends, so one gap alone earns nothing - leaving a rest only to
+        land in the middle of a phrase is no better than any other seam.
+        0 switches the term off and skips its computation.
     bar_weight, chord_weight, seam_weight : float
         Transition terms (step 4b), each worth at most this much score. 0 switches
         a term off and skips its computation. Raise them to favour smooth
@@ -698,13 +849,25 @@ def find_loops(
     """
     # --- 1-3. features per frame, then the frames worth trying as loop points
     chroma, flux, level = _features(x, rate)
+    onset = _onset_env(x)
+    beat = _beat_period(onset, rate) if bar_weight or drop_weight else 0.0
+
     cand = _candidates(flux)  # n frame indices
 
     # Positions the caller wants refined have to be reachable, onset or not
     seeds = _seed_samples(seed_points, rate, len(x))
     seed_frames = _seed_frames(seeds, len(flux))
-    if len(seeds):
-        cand = np.union1d(cand, seed_frames)
+
+    # So do the mic drops: the music stopping is not an onset either
+    drop_env = _drop_env(x, onset, beat) if drop_weight else np.zeros(0)
+    drops = _drop_points(drop_env) * BLK if len(drop_env) else np.empty(0, dtype=int)
+    drop_frames = np.clip(drops // HOP, 0, max(0, len(flux) - 1))
+
+    # Both kinds keep their exact position below, so they go in together
+    exact = np.concatenate([seeds, drops])
+    exact_frames = np.concatenate([seed_frames, drop_frames]).astype(int)
+    if len(exact):
+        cand = np.union1d(cand, exact_frames)
 
     # --- 4a. similarity of the music around every pair: (n, n), row = start, col = end
     sim = _context_sim(chroma, cand, ctx=int(context_length * rate / HOP))  # ctx = frames in s
@@ -718,14 +881,15 @@ def find_loops(
     lv = smooth[cand]
 
     # Positions in samples. Snapped onto the note itself, not the (earlier) frame start.
-    onset = _onset_env(x)
     t = _snap_to_onset(onset, cand * HOP)
 
-    if len(seeds):
-        # A seed already sits where the caller put it. Snapping is meant to move
-        # a flux peak forward onto the note that caused it, which would drag a
-        # seed up to a frame away from the position being refined
-        t[np.searchsorted(cand, seed_frames)] = seeds.astype(int)
+    if len(exact):
+        # Snapping is meant to move a flux peak forward onto the note that
+        # caused it. These positions are not flux peaks and are already where
+        # they belong: it would drag a seed off the point being refined, and a
+        # mic drop onto the very note that ends the silence
+        t[np.searchsorted(cand, exact_frames)] = exact.astype(int)
+
     gap = (
         t[None, :] - t[:, None]
     )  # (n, n): loop length if row i is the start and column j the end
@@ -738,14 +902,31 @@ def find_loops(
     )
 
     # --- 4b. transition terms, each only computed if switched on
-    if len(seeds) and seed_weight:
-        # Averaged over both ends: a pair sitting on two seeds earns the full
-        # weight, one that only starts on one still beats an unrelated pair
-        near = _seed_proximity(t, seeds, seed_radius * rate)
-        score += seed_weight * 0.5 * (near[:, None] + near[None, :])
+    if len(seeds):
+        d = _seed_distance(t, seeds)
+
+        # Refining means staying put. A point further than seed_radius from
+        # every seed is a different loop, not a variant of the one passed in,
+        # so it is ruled out outright the way a too-short loop is - a bonus
+        # alone would still let a better-matching pair elsewhere outrank it,
+        # and the runners-up would come from anywhere in the track
+        far = d > seed_radius * rate
+        score[far, :] = -np.inf
+        score[:, far] = -np.inf
+
+        if seed_weight:
+            # Inside the window it is only a tie-break: all else equal, keep
+            # the point the caller chose. Averaged over both ends, so a pair
+            # sitting on two seeds earns the full weight
+            near = np.exp(-((d / max(seed_radius * rate, 1e-9)) ** 2))
+            score += seed_weight * 0.5 * (near[:, None] + near[None, :])
 
     if bar_weight:
-        score += bar_weight * _bar_fit(gap, beats_per_bar * _beat_period(onset, rate))
+        score += bar_weight * _bar_fit(gap, beats_per_bar * beat)
+
+    if drop_weight and len(drop_env):
+        drop = drop_env[np.clip(t // BLK, 0, len(drop_env) - 1)]
+        score += drop_weight * drop[:, None] * drop[None, :]
 
     if chord_weight or seam_weight:
         after, before = _edge_chroma(

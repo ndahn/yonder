@@ -113,7 +113,7 @@ class loop_point_candidates_dialog(DpgItem):
         if dpg.does_item_exist(self._t("mode_refine")):
             refine = dpg.get_value(self._t("mode_refine"))
 
-        with loading_indicator(µ("Searching")):
+        with loading_indicator(µ("Searching"), color=style.purple):
             seed_points = None
             if refine:
                 seed_points = [p / 1000 for p in self._current_loop_points]
