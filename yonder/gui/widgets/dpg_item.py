@@ -47,6 +47,7 @@ class DpgItem:
             item = DpgItem.get_instance(tag)
             if item:
                 item.destroy()
+                DpgItem.__instance_store.pop(item.tag, None)
 
         delve(dpg_root)
 
@@ -59,7 +60,17 @@ class DpgItem:
         DpgItem.__instance_store[tag] = self
 
     def __del__(self):
-        DpgItem.__instance_store.pop(self._tag, None)
+        # __init__ may have failed before it got this far
+        tag = getattr(self, "_tag", None)
+        if tag is None:
+            return
+
+        if DpgItem.__instance_store.get(tag) is not self:
+            # A later widget took this tag over. Its items are not ours to
+            # delete, and many destroy() implementations would do exactly that
+            return
+
+        DpgItem.__instance_store.pop(tag, None)
         self.destroy()
 
     def destroy(self) -> None:

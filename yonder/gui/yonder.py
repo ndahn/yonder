@@ -101,6 +101,9 @@ class BanksOfYonder(DpgItem):
         self._hirc_player: add_hirc_player = None
         self._hirc_player_panel: add_hirc_player_panel = None
         self._selected_root: str = None
+        # Guards the attributes panel against overlapping rebuilds, see
+        # _on_node_selected
+        self._attributes_epoch = 0
         self._selected_node: HIRCNode = None
         self._selected_section: Section = None
         self._backup: DataNode = None
@@ -1708,7 +1711,20 @@ class BanksOfYonder(DpgItem):
         self._clear_attributes_panel()
 
         if node:
+            # The panel is rebuilt under fixed tags, so it has to be deleted
+            # before it is created again - and dpg only applies the deletion on
+            # a frame boundary. Anything that can select a node runs during
+            # that frame (pin clicks come from an item handler registry), so a
+            # second selection can start and finish inside this split_frame.
+            # The newest one owns the panel; older ones bow out rather than
+            # creating a second set of widgets under the same tags.
+            self._attributes_epoch += 1
+            epoch = self._attributes_epoch
+
             dpg.split_frame()
+            if epoch != self._attributes_epoch:
+                return
+
             create_node_widgets(
                 self.bnk,
                 node,
@@ -1742,7 +1758,15 @@ class BanksOfYonder(DpgItem):
             return
 
         if not isinstance(node, HIRCNode):
-            node = self.bnk[node]
+            # A pin or a graph link can outlive the node it points at
+            resolved = self.bnk.get(node)
+            if not resolved:
+                logger.error(
+                    µ("Node {node} no longer exists", "log").format(node=node)
+                )
+                return
+
+            node = resolved
 
         node_id = node.id
 
@@ -1779,11 +1803,22 @@ class BanksOfYonder(DpgItem):
                 if not selected_graph:
                     # Find the first tree containing the node to select
                     evt = next(self.bnk.find_events_for(node), None)
-                    selected_graph = self.bnk.get_subtree(evt, False)
+                    if evt:
+                        selected_graph = self.bnk.get_subtree(evt, False)
 
-                if evt:
-                    path = nx.shortest_path(selected_graph, evt.id, node_id)
+                # Globals and orphans have no event above them, and a filtered
+                # or paged-out global never made it into globals_map, so it
+                # lands here. get_subtree(None) used to raise before the branch
+                # below could report it
+                path = None
+                if evt and selected_graph:
+                    try:
+                        path = nx.shortest_path(selected_graph, evt.id, node_id)
+                    except nx.NetworkXException:
+                        # The subtree reaches the node, but not from this event
+                        path = None
 
+                if path:
                     # Unfold the structure
                     for n in path:
                         if n == node_id:
