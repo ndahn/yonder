@@ -5,7 +5,6 @@ from dearpygui import dearpygui as dpg
 from yonder import HIRCNode
 from yonder.types import Soundbank, ActorMixer, MusicSwitchContainer
 from yonder.hash import lookup_name
-from yonder.game import get_selected_game
 from yonder.game.data import AmxData, build_bank_actormixer_summary
 from yonder.gui import style
 from yonder.gui.icons import Icons

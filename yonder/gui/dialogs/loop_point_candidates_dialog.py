@@ -116,7 +116,6 @@ class loop_point_candidates_dialog(DpgItem):
         with loading_indicator(µ("Searching")):
             seed_points = None
             if refine:
-                # find_loops works in seconds, the dialog in ms
                 seed_points = [p / 1000 for p in self._current_loop_points]
 
             min_len = 0.6 * len(self._signal) / self._framerate
@@ -331,7 +330,7 @@ class loop_point_candidates_dialog(DpgItem):
             dpg.add_table_column(label="", width_fixed=True, init_width_or_weight=26)
 
     def _build_row(self, index: int, candidate: _Candidate) -> None:
-        with dpg.table_row():
+        with dpg.table_row(parent=self._t("candidates_table")):
             candidate.check = dpg.add_checkbox(
                 callback=self._on_row_selected, user_data=index
             )

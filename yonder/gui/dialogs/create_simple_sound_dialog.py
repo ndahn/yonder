@@ -14,6 +14,7 @@ from yonder.convenience import (
 from yonder.types import Event
 from yonder.enums import PropID, PlaybackMode, RandomMode
 from yonder.wem import wav2wem
+from yonder.util import is_event_name_valid
 from yonder.game.data import AmxData
 from yonder.gui import style
 from yonder.gui.config import get_config
@@ -69,6 +70,7 @@ class create_simple_sound_dialog(DpgItem):
         self._properties: dict[PropID, float] = {}
         self._soundfiles: list[Path] = []
         self._window: int | str = None
+        self._amx_selector: add_select_actormixer = None
 
         self._build(title, default_name)
 
@@ -90,6 +92,14 @@ class create_simple_sound_dialog(DpgItem):
                 callback=self._update_name_and_id,
                 tag=self._t("name"),
             )
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text(
+                    default_value=µ(
+                        "Must follow the pattern CXXXXXXXXX, where C is one of 'acfopsmvxbiyzegd' and X is an 8 to 9 digits number'"
+                    ),
+                    wrap=200,
+                )
+
             dpg.add_input_text(
                 label=µ("Hash"),
                 default_value=str(calc_hash(default_name)),
@@ -99,7 +109,7 @@ class create_simple_sound_dialog(DpgItem):
             )
 
             # Actor mixer selector
-            add_select_actormixer(
+            self._amx_selector = add_select_actormixer(
                 self._bnk,
                 µ("ActorMixer", "hirc"),
                 self._on_amx_selected,
@@ -204,12 +214,16 @@ class create_simple_sound_dialog(DpgItem):
             self.show_message(µ("Name not specified", "msg"))
             return
 
+        if not is_event_name_valid(name):
+            self.show_message(µ("Invalid name"))
+            return
+
         if f"Play_{name}" in self._bnk or f"Stop_{name}" in self._bnk:
             self.show_message(µ("An event with this name already exists", "msg"))
             return
 
-        amx = int(dpg.get_value(self._t("actor_mixer")))
-        if amx <= 0:
+        amx = self._amx_selector.selected_node
+        if not amx:
             self.show_message(µ("ActorMixer not specified", "msg"))
             return
 
