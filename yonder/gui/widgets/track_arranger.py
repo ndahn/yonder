@@ -1,10 +1,10 @@
 from __future__ import annotations
+from typing import Any, Callable, Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
 from pathlib import Path
-import wave
 import numpy as np
+import wave
 
 from dearpygui import dearpygui as dpg
 

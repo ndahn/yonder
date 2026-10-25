@@ -1635,10 +1635,6 @@ class BanksOfYonder(DpgItem):
     ) -> None:
         item, node = user_data
 
-        if sender and dpg.get_item_type(sender) == "mvSelectable":
-            # Keep sender selected
-            dpg.set_value(sender, True)
-
         if item != self._selected_root:
             # Don't regenerate when the node is already selected
             self._on_node_selected(item, app_data, node)
@@ -1678,9 +1674,6 @@ class BanksOfYonder(DpgItem):
         # Deselect previous selectable
         if self._selected_root and dpg.does_item_exist(self._selected_root):
             dpg.set_value(self._selected_root, False)
-
-        if sender is not None:
-            dpg.set_value(sender, True)
 
         self._selected_root = sender
 
@@ -2068,6 +2061,8 @@ class BanksOfYonder(DpgItem):
 
     def _do_delete_node(self, node: HIRCNode, cascade: bool) -> None:
         def do_delete(nodes: list[HIRCNode]):
+            self._hirc_player.release_current_player()
+
             if cascade:
                 for n in nodes:
                     self.bnk.delete_subtree(n)
@@ -2094,7 +2089,7 @@ class BanksOfYonder(DpgItem):
                 )
                 return
 
-        do_delete(node)
+        do_delete([node])
 
     def node_delete(self) -> None:
         if not self._selected_node:

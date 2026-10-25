@@ -54,7 +54,7 @@ class add_hirc_player(DpgItem):
             if "button" in dpg.get_item_type(child).lower():
                 dpg.configure_item(child, enabled=enabled)
 
-    def set_entrypoint(self, bnk: Soundbank, entrypoint: HIRCNode) -> None:
+    def release_current_player(self) -> None:
         self.set_enabled(False)
         self._set_play_button_state(False)
 
@@ -71,6 +71,8 @@ class add_hirc_player(DpgItem):
         self._states.clear()
         self._rtpcs.clear()
 
+    def set_entrypoint(self, bnk: Soundbank, entrypoint: HIRCNode) -> None:
+        self.release_current_player()
         cfg = get_config()
 
         if self._vgmstream_requested:
