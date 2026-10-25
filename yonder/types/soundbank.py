@@ -118,13 +118,14 @@ class Soundbank:
 
     @property
     def name(self) -> str:
-        return self.bkhd.bank_name
+        name = self.bkhd.bank_name
 
-    def get_name(self, default: str = None) -> str:
-        if default is None:
-            default = f"#{self.bank_id}"
+        if not name:
+            name = self.bnk_dir.name
+            if calc_hash(name) != self.bank_id:
+                logger.warning("Bank folder name does not match bank_id")
 
-        return self.bkhd.get_bank_name(default)
+        return name
 
     def rename_bank(self, new_id: str | int, rename_dir: bool) -> None:
         old_id = self.bank_id

@@ -39,7 +39,7 @@ class AmxData:
     def from_actormixer(cls, bnk: Soundbank, amx: ActorMixer) -> AmxData:
         data = AmxData(
             amx.id,
-            bnk.get_name(),
+            bnk.name,
             amx.parent,
             amx.node_base_params.override_bus_id,
             amx.node_base_params.aux_params.aux1,

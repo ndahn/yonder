@@ -236,9 +236,7 @@ def get_bank_lookup_table_path(bnk: "str | Soundbank") -> Path:
     from yonder import Soundbank
 
     if isinstance(bnk, Soundbank):
-        name = bnk.get_name("")
-        if not name:
-            name = bnk.bnk_dir.name
+        name = bnk.name
     else:
         name = str(bnk)
 
