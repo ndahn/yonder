@@ -1,4 +1,5 @@
 from __future__ import annotations
+import atexit
 import time
 import pyo
 
@@ -6,11 +7,9 @@ import pyo
 # pyo keeps a single global "current server", and a second one pulls the rug
 # out from under the first: objects created afterwards attach to the newcomer,
 # and shutting either down leaves the other booted but silent, raising
-# PyoServerStateException on the next object it tries to build. Players
-# therefore share one server, booted with the first of them and shut down with
-# the last. Closing the marker dialog must not kill the preview that opened it.
+# PyoServerStateException on the next object it tries to build. So there is
+# exactly one, booted on first use and kept until the process exits.
 _server: pyo.Server = None
-_users = 0
 
 # Chains waiting for the server to move past them before they are dropped.
 # Module level so a chain can outlive the player that built it
@@ -19,8 +18,12 @@ _retire_token = 0
 
 
 def acquire_server() -> pyo.Server:
-    """Claim the shared server, booting and starting it on the first claim."""
-    global _server, _users
+    """The pyo server, booted and started on the first call.
+
+    There is nothing to give back: it stays up until the process exits, see
+    the note at the top of this module.
+    """
+    global _server
 
     if _server is None:
         # NOTE crashes on some systems with input enabled, but we don't need it
@@ -29,26 +32,21 @@ def acquire_server() -> pyo.Server:
         _server.boot()
         _server.start()
 
-    _users += 1
+        # Registered after booting, so it only runs if there is one to stop.
+        # atexit is LIFO and every player registers its own close later, which
+        # therefore runs first - their objects are released while the server is
+        # still up, exactly as during normal operation
+        atexit.register(_shutdown)
+
     return _server
 
 
-def release_server() -> bool:
-    """Give up one claim on the shared server.
+def _shutdown() -> None:
+    """Stop the server on the way out, once nothing can still be using it."""
+    global _server
 
-    Returns
-    -------
-    bool
-        True if this was the last claim and the server actually went down, in
-        which case nothing is processing any more and pyo objects can be
-        dropped on the spot. False means other players are still running on
-        it, so anything being released has to go through `retire`.
-    """
-    global _server, _users
-
-    _users = max(0, _users - 1)
-    if _users or _server is None:
-        return False
+    if _server is None:
+        return
 
     server, _server = _server, None
     if server.getIsStarted():
@@ -61,8 +59,6 @@ def release_server() -> bool:
 
     if server.getIsBooted():
         server.shutdown()
-
-    return True
 
 
 def is_running() -> bool:

@@ -337,11 +337,13 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
 
         return True
 
-    def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
+    def release_pyo(
+        self, ctx: PlayContext, delay: float = 0.1, wait: bool = False
+    ) -> bool:
         if self.is_pyo_initialized():
             my_pyo = self.pyo(ctx)
             for cb_objects in my_pyo.cache.get("triggers", {}).values():
                 for obj in cb_objects:
                     obj.stop()
 
-        super().release_pyo(ctx, delay)
+        return super().release_pyo(ctx, delay, wait)

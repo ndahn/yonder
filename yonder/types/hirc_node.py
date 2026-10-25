@@ -1,9 +1,12 @@
 from __future__ import annotations
 from typing import Any, ClassVar, Callable, TYPE_CHECKING
+import time
 import networkx as nx
 from dataclasses import InitVar, dataclass, field, fields, is_dataclass
 import pyo
 
+from yonder.util import logger
+from yonder.audio.audio_server import is_running as is_server_running
 from yonder.audio.playback_state import PlaybackState
 from .mixins.data_node import DataNode
 from .serialization import _serialize_value, _deserialize_fields
@@ -46,6 +49,8 @@ class _FieldMeta(type):
 class HIRCNode(DataNode, metaclass=_FieldMeta):
     # Expected to be set on class definition
     body_type: ClassVar[int] = 0
+    # Grace on top of the release delay before a waited-on release gives up
+    _RELEASE_TIMEOUT: ClassVar[float] = 1.0
     id: InitVar[int]
     _header: HIRCNodeHeader = field(init=False)
 
@@ -184,11 +189,21 @@ class HIRCNode(DataNode, metaclass=_FieldMeta):
         """Return this node's playback state without merging a context or initializing the audio backend. Prefer this over `pyo` for read-only access, since `pyo` overwrites the stored context with a fresh merge of whatever context is passed in."""
         return getattr(self, "_pyo", None)
 
-    def release_pyo(self, ctx: PlayContext, delay: float = 0.1) -> None:
-        """Release all pyo objects created by this node, if any. With a positive delay this happens asynchronously after that many seconds, giving pyo enough time to finish processing the object. A delay of 0 releases synchronously, which is required when the server is stopped or about to stop, since the scheduled callback would never fire."""
-        if hasattr(self, "_release_cb"):
-            from yonder.util import logger
+    def release_pyo(
+        self, ctx: PlayContext, delay: float = 0.1, wait: bool = False
+    ) -> bool:
+        """Release all pyo objects created by this node, if any.
 
+        With a positive delay this happens asynchronously after that many seconds, giving pyo enough time to finish processing the object. A delay of 0 releases synchronously, which is required when the server is stopped or about to stop, since the scheduled callback would never fire.
+
+        Pass `wait` to make a delayed release synchronous anyway: the call then returns only once the objects are really gone.
+
+        Returns
+        -------
+        bool
+            Whether the objects are gone by the time this returns. Always True for a synchronous release, and False only if a waited-on release timed out, which means the server never ran the callback.
+        """
+        if hasattr(self, "_release_cb"):
             logger.warning(f"Double free of {self}")
             return
 
@@ -217,10 +232,28 @@ class HIRCNode(DataNode, metaclass=_FieldMeta):
             if hasattr(self, "_release_cb"):
                 del self._release_cb
 
-        if delay > 0:
-            self._release_cb = pyo.CallAfter(release, delay)
-        else:
+        # Nothing can be mid-processing without a running server, so there is
+        # nothing to wait for
+        if delay <= 0 or not is_server_running():
             release()
+            return True
+
+        self._release_cb = pyo.CallAfter(release, delay)
+        if not wait:
+            return False
+
+        # The callback runs on pyo's own thread
+        deadline = time.monotonic() + delay + self._RELEASE_TIMEOUT
+        while self.is_pyo_initialized():
+            if time.monotonic() > deadline:
+                logger.warning(
+                    f"Timed out waiting for {self} to be released, is the server running?"
+                )
+                return False
+
+            time.sleep(0.005)
+
+        return True
 
     def describe_playback_structure(self, bnk: Soundbank) -> nx.DiGraph:
         g = nx.DiGraph()

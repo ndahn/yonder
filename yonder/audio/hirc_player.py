@@ -8,7 +8,7 @@ import pyo
 
 from yonder.types import HIRCNode, Sound, MusicTrack
 from yonder.util import logger
-from .audio_server import acquire_server, release_server
+from .audio_server import acquire_server
 from .audiomath import db_to_amp
 from .equalizer import Equalizer
 from .play_context import PlayContext
@@ -64,14 +64,9 @@ class HIRCPlayer:
         self.stop()
         self._master.stop()
 
-        if release_server():
-            # Processing has ended, so deleting the objects is safe right away
-            self.entrypoint.release_pyo(self.context, 0)
-        else:
-            # Preview players are still running on the shared server, so the
-            # nodes have to wait their grace period out like everything else
-            self.entrypoint.release_pyo(self.context)
-
+        # The server keeps running, so the nodes always have to wait their
+        # grace period out
+        self.entrypoint.release_pyo(self.context, wait=True)
         atexit.unregister(self.close)
 
     @property

@@ -7,7 +7,7 @@ import numpy as np
 import pyo
 
 from yonder.util import logger
-from .audio_server import acquire_server, release_server, retire
+from .audio_server import acquire_server, retire
 from .audiomath import (
     db_to_amp,
     amp_to_db,
@@ -54,8 +54,8 @@ class SimplePlayer:
     `yonder.types.HIRCNode.release_pyo` takes.
 
     Several players can be alive at once - a signal preview and the marker
-    dialog it opened, say - so they share one pyo server rather than booting
-    one each, see `yonder.audio.audio_server`.
+    dialog it opened, say - so they share the one pyo server, which stays up
+    for the life of the process. See `yonder.audio.audio_server`.
 
     All times are in seconds.
     """
@@ -114,9 +114,8 @@ class SimplePlayer:
 
         self._closed = True
 
-        # Everything this player owns goes to the graveyard while the server
-        # is still up, since other players may well be keeping it there. It
-        # outlives us either way, so none of it can be dropped from here
+        # Everything this player owns goes to the graveyard. The server is
+        # still running - it always is - so none of it can be dropped here
         source, self._source = self._source, None
         self._retire(source)
         retire(
@@ -132,7 +131,6 @@ class SimplePlayer:
             delay=self._fade_time + 0.1,
         )
 
-        release_server()
         atexit.unregister(self.close)
 
     def set_finished_callback(self, callback: Callable[[], None]) -> None:
