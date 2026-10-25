@@ -35,6 +35,7 @@ class SoundType(StrEnum):
     Sfx = "s"
     Bgm = "m"
     Voice = "v"
+    Voice2 = "w"  # apparently used for DLC voices to avoid collisions
     FloorMaterialDetermined = "x"
     ArmorMaterialDetermined = "b"
     Phantom = "i"
