@@ -1,5 +1,5 @@
 __author__ = "Nikolas Dahn"
-__version__ = "2.1.0-rc5"
+__version__ = "2.1.0-rc6"
 
 # suppress pyo warning about wxpython
 import os
