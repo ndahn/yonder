@@ -9,7 +9,7 @@ dpg_demo.py
 yonder_v*
 *.*lock*
 !Cargo.lock
-export/
+projects/
 resources/wwise_effects
 
 # Byte-compiled / optimized / DLL files

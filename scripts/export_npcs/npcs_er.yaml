@@ -1,0 +1,97 @@
+# Maps the ID of ESD scripts to the NPC name.
+#
+# A 3-digit ID is the prefix after the `t` in the ESD file names (t301006000 -> "301")
+# and covers all scripts of that NPC. A 9-digit ID is a single script, used where the
+# prefix is shared by multiple NPCs or where a script deviates from its prefix.
+# Keys must be quoted, otherwise YAML reads them as numbers.
+#
+# Not included: sites of grace, rebirth monuments, and other non-NPC scripts.
+
+# --- single scripts ---
+"000003000": Melina
+"307106000": Pidia, Carian Servant
+"705061203": Wandering Noble Ghost
+"705081203": Noble Ghost
+
+# --- NPCs ---
+"101": Finger Reader Crone  # also Keeper of Forbidden Lands (101506000), Godwyn's Wet Nurse (101601203)
+"102": Finger Reader Enia
+"106": Ranni the Witch  # also Renna
+"110": Primeval Sorcerer Lusat
+"111": Primeval Sorcerer Azur
+"112": Goldmask
+"200": Rennala, Queen of the Full Moon
+"202": Beast Clergyman  # also Maliketh, Gurrang
+"203": Malenia, Blade of Miquella
+"204": Morgott, the Omen King  # also Margit, the Fell Omen
+"206": Godfrey, First Elden Lord  # also Hoarah Loux, Warrior
+"207": Godrick the Grafted
+"209": Mohg, Lord of Blood
+"213": Smithing Master Hewg
+"214": Rykard, Lord of Blasphemy
+"216": Blaidd the Half-Wolf
+"218": Asimi
+"219": Old Albus
+"220": Alexander, Warrior Jar
+"221": Large Living Jar
+"223": Boc the Seamster  # also Demi-Human Boc
+"224": War Counselor Iji
+"226": Jar Bairn
+"227": Aurelia
+"300": Tanith, Volcano Manor Proprietress
+"301": White Mask Varré
+"302": Gatekeeper Gostoc
+"307": Preceptor Seluvis
+"309": Patches the Untethered
+"310": Finger Maiden Hyetta  # also Lightseeker Hyetta
+"311": Morne Castellan Edgar
+"312": Witch-Hunter Jerren  # also Castellan Jerren
+"313": Rya the Scout
+"314": Knight Diallos
+"316": Sorceress Sellen
+"318": Yura, Hunter of Bloody Fingers
+"319": D, Hunter of the Dead  # also D, Beholder of Death
+"320": Roderika, Spirit Tuner
+"321": Kenneth Haight
+"322": Fia, Deathbed Companion
+"323": Dung Eater
+"324": Sir Gideon Ofnir, the All-Knowing
+"325": Sorcerer Rogier
+"326": Recusant Bernahl  # also Knight Bernahl, Sword of Bernahl
+"330": Miriel, Pastor of Vows
+"331": Blackguard Big Boggart
+"332": Rykard-Hating Ghost
+"333": Sorcerer Thops
+"334": Nepheli Loux, Warrior
+"335": Rico
+"339": Ensha of the Royal Remains
+"348": Millicent
+"349": Sage Gowry
+"351": Scribe Corhyn
+"363": Finger Maiden Therolina
+"401": Messmer
+"402": Hornsent Grandam
+"403": Drake Warrior Igon
+"404": Midra
+"405": St. Trina
+"406": Dragon Communion Priestess
+"407": Miquella
+"409": Swordhand of Night Jolan
+"413": Fire Knight Queelign
+"414": Hornsent
+"415": Moore
+"416": Sir Ansbach
+"417": Redmane Freyja
+"418": Needle Knight Leda
+"419": Thiollier
+"420": Count Ymir
+"425": Dryleaf Dane
+"600": Twin Maiden Husks
+"603": Walking Mausoleum
+"607": Corpse of Radagon/Marika
+"700": Commoner Ghost
+"701": Wandering Noble Ghost
+"705": Commoner Ghost
+"706": Commoner Ghost
+"800": Merchant Kalé
+"801": Nomadic Merchant  # also Isolated, Hermit, Abandoned, and Imprisoned Merchants
