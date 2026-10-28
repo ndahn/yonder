@@ -21,6 +21,7 @@ from yonder.gui.designer import (
     GraphDesignerNode,
     designer_node_categories,
     get_templates,
+    default_nodes,
 )
 
 
@@ -113,6 +114,8 @@ class graph_designer_dialog(DpgItem):
         Called as ``callback(nodes)`` with all created nodes on success.
     title : str
         Window title bar label.
+    add_default_nodes : bool
+        Add a simple default nodes setup.
     tag : int or str, optional
         Explicit tag; auto-generated if None. Existing item is deleted first.
     """
@@ -123,6 +126,7 @@ class graph_designer_dialog(DpgItem):
         callback: Callable[[list[HIRCNode]], None],
         *,
         title: str = "Graph Designer",
+        add_default_nodes: bool = True,
         tag: str = None,
     ) -> None:
         if tag and dpg.does_item_exist(tag):
@@ -138,6 +142,10 @@ class graph_designer_dialog(DpgItem):
         self._palette: add_node_palette = None
         self._palette_shown: bool = True
         self._build(title)
+
+        if add_default_nodes:
+            default_nodes(self, self._bnk)
+            self.auto_layout()
 
     def destroy(self):
         if self._palette:

@@ -27,6 +27,12 @@ def get_templates() -> dict[str, Callable[[], None]]:
     return dict(_templates)
 
 
+def default_nodes(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
+    dlg.chain().node(EventNode(bnk)).to("Play/Stop", RSCNode(bnk), "Event").merge(
+        lambda b: b.node(AMXNode(bnk)), "Child 0", "Playback"
+    )
+
+
 def simple_sound(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
     dlg.chain().node(EventNode(bnk)).to("Play/Stop", RSCNode(bnk), "Event").merge(
         lambda b: b.node(AMXNode(bnk)), "Child 0", "Playback"
@@ -66,6 +72,7 @@ def music_playlist(dlg: graph_designer_dialog, bnk: Soundbank) -> None:
     )
 
 
+_templates["Default"] = default_nodes
 _templates["Simple Sound"] = simple_sound
 _templates["Layered Sound"] = layered_sound
 _templates["Switchable Sound"] = switchable_sound
