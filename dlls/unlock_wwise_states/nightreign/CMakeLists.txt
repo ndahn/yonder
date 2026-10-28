@@ -33,6 +33,8 @@ FetchContent_MakeAvailable(elden-x yaml-cpp)
 
 add_library(unlock_wwise_states_nr SHARED
   src/dllmain.cpp)
+set_property(TARGET unlock_wwise_states_nr PROPERTY
+  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 target_include_directories(unlock_wwise_states_nr PRIVATE src)
 
