@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.5.0)
 
+# Link MSVC statically for linux support
+cmake_policy(SET CMP0091 NEW)
+set(MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 set(CMAKE_GENERATOR_PLATFORM x64)
 
 project(unlock_wwise_states_nr
@@ -33,8 +37,6 @@ FetchContent_MakeAvailable(elden-x yaml-cpp)
 
 add_library(unlock_wwise_states_nr SHARED
   src/dllmain.cpp)
-set_property(TARGET unlock_wwise_states_nr PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 target_include_directories(unlock_wwise_states_nr PRIVATE src)
 
