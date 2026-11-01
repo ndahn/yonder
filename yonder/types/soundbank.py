@@ -511,26 +511,38 @@ class Soundbank:
         return upchain
 
     def query(
-        self, query: str = None, node_type: str | type = None
+        self,
+        query: str = None,
+        node_type: str | type = None,
+        start_from: int | HIRCNode = None,
     ) -> Generator[HIRCNode, None, None]:
+        if start_from:
+            nodes = [self[n] for n in self.get_subtree(start_from).nodes]
+        else:
+            nodes = self.hirc.objects
+
         if node_type:
             if isinstance(node_type, type):
                 node_type = node_type.__name__
 
             node_type = node_type.lower()
-            candidates = [
-                n for n in self.hirc.objects if n.type_name.lower() == node_type
-            ]
+            candidates = [n for n in nodes if n.type_name.lower() == node_type]
         else:
-            candidates = self.hirc.objects
+            candidates = nodes
 
         if query:
             yield from query_nodes(candidates, query)
         else:
             yield from candidates
 
-    def query_one(self, query: str, default: Any = None) -> HIRCNode:
-        return next(self.query(query), default)
+    def query_one(
+        self,
+        query: str,
+        node_type: str | type = None,
+        start_from: int | HIRCNode = None,
+        default: Any = None,
+    ) -> HIRCNode:
+        return next(self.query(query, node_type, start_from), default)
 
     def find_orphans(self) -> list[HIRCNode]:
         from yonder.types import (
