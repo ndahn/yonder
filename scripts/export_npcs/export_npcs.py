@@ -31,21 +31,22 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 from yonder import Soundbank
 from yonder.export import collect_sources, export_wems
-from yonder.util import logger, unpack_soundbank
+from yonder.util import logger, unpack_soundbank, externals_dir
 
 
 # === settings ===
 
-vgmstream = Path("E:/Games/Elden Ring/Modding/Tools/vgmstream-win64/vgmstream-cli.exe")
-bnk2json = Path(__file__).parent.parent / "external" / "rewwise" / "bnk2json.exe"
+vgmstream = externals_dir() / "vgmstream" / "vgmstream-cli.exe"
+bnk2json = externals_dir() / "rewwise" / "bnk2json.exe"
 game_dir = Path("E:/SteamLibrary/steamapps/common/ELDEN RING/Game/sd")
 
 mod = "star0everyone"
 
 # === helpers ===
 
+mod_root_dir = Path(__file__).parent.parent.parent / "projects" / mod
 npcs_file = Path(__file__).parent / "npcs_er.yaml"
-data_dir = Path(__file__).parent / mod / "data"
+data_dir = mod_root_dir / "data"
 esd_dir = data_dir / "esd"
 audio_dir = data_dir / "export"
 
