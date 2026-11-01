@@ -92,6 +92,7 @@ class add_properties_table(DpgItem):
         return [k for k in PropID if k not in used]
 
     def _get_prop_range(self, prop: PropID) -> tuple[float, float, str, float]:
+        """Returns min value, max value, number format, and change rate."""
         unit = prop.unit
 
         if unit == Units.Count:

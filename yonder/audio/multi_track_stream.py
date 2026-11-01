@@ -1,5 +1,6 @@
 from typing import Callable
 from pathlib import Path
+import math
 import pyo
 from pyo import sndinfo
 
@@ -92,15 +93,23 @@ class MultiTrackStream(pyo.PyoObject):
         )
 
     """
-    Plays a track built from one or more clips laid out on a timeline. Two players alternate and crossfade at clip boundaries.
+    Plays a track built from one or more clips laid out on a timeline. Two players alternate and crossfade at clip boundaries and loop points.
 
-    Two clocks track time because a track's clips can have different
-    lengths and gaps between them:
-      - clip clock: progress through the *current* clip, fires the swap
-        to the next clip shortly before it ends
-      - overall clock: progress through the whole track/loop region,
-        used for reporting position and unaffected by per-clip timing
+    Everything that changes the playing material is a handover to the idle
+    player (see `_cue`): starting or seeking, the next clip taking over, and
+    jumping from the loop end back to the loop start. Only the next handover
+    is ever armed, see `_arm`. Its trigger fires `_LEAD` seconds early to give
+    pyo's callback time to cue the idle player; the handover itself is timed
+    sample-accurately by envelopes and delays. The intro before the loop start
+    plays once, the loop region repeats.
     """
+
+    # How far ahead of a handover its trigger fires, in timeline seconds. Has
+    # to cover a couple of audio buffers
+    _LEAD = 0.05
+
+    # Shortest ramp an envelope makes, so hard switches don't click
+    _DECLICK = 0.002
 
     def __init__(
         self,
@@ -128,48 +137,57 @@ class MultiTrackStream(pyo.PyoObject):
         self._resolve_source = resolve_source
         self._track_duration = max(self._clip_end(c) for c in self._playlist)
 
-        if loop_end == 0.0:
-            loop_end = self._track_duration
-
-        self._loop_start = loop_start
-        self._loop_end = loop_end
-        self._xfade = xfade
+        self._loop_start = 0.0
+        self._loop_end = self._track_duration
+        self._xfade = 0.0
         self._paused_pos = 0.0
         self._loops_played = 0
         self.loop_count = loop_count
 
+        # The handover the clock's trigger is armed for, see _arm
+        self._pending: tuple = None
+
         # wwise implements pitch as a playback speed change (resampling).
-        # Our clocks are driven from this signal and follow automatically
+        # Our clock is driven from this signal and follows automatically
         speed = cents_to_speed(pitch_cents)
         self._speed_ctrl = pyo.SigTo(speed, 0.05, init=speed)
 
         # two players alternate clips and crossfade at the boundary
-        # needed for looping at arbitrary points
+        # needed for looping at arbitrary points. Linseg envelopes rather than
+        # SigTo, since a handover needs a ramp that starts at a precise moment.
+        # pyo only delays play() by whole audio buffers, the short delay line
+        # behind each player makes up the remainder, see _cue
         first_path = str(resolve_source(self._playlist[0].source_id))
-        self._envs = [pyo.SigTo(0, xfade), pyo.SigTo(0, xfade)]
+        self._envs = [pyo.Linseg([(0, 0), (1, 0)]) for _ in range(2)]
         self._players = [
-            pyo.SfPlayer(
-                first_path, speed=self._speed_ctrl, loop=False, mul=self._envs[i]
-            )
+            pyo.SfPlayer(first_path, speed=self._speed_ctrl, loop=False)
+            for _ in range(2)
+        ]
+        self._voices = [
+            pyo.SDelay(self._players[i], delay=0, maxdelay=0.2, mul=self._envs[i])
             for i in range(2)
         ]
         self._active_player = 0
         self._clip_index = 0
 
-        # clip clock: fires just before the current clip ends
-        self._clip_clock = pyo.Phasor()
-        self._pre_wrap = pyo.Thresh(self._clip_clock)
-        self._swapper = pyo.TrigFunc(self._pre_wrap, self._advance)
+        # Position on the track's timeline in seconds: the time since the last
+        # jump plus where that jump went to. Its span only has to outlast the
+        # longest stretch without a jump, i.e. the whole track
+        span = self._track_duration + 1.0
+        self._origin = pyo.Sig(0.0)
+        self._clock = pyo.Phasor(
+            freq=self._speed_ctrl / span, mul=span, add=self._origin
+        )
+        self._event_thresh = pyo.Thresh(self._clock, threshold=span)
+        self._event_func = pyo.TrigFunc(self._event_thresh, self._on_event)
         self._trig = pyo.Trig().stop()  # discard auto-play trigger
+        self._clock.stop()
 
-        # overall clock: constant-rate progress across the whole track
-        self._overall_clock = pyo.Phasor()
-
-        self._update_clip_clock()
-        self._update_overall_clock()
+        self.set_loop_points(loop_start, loop_end)
+        self.xfade = xfade
 
         # always stereo, something like 7.1 would add a huge cpu cost otherwise
-        self._mix = (self._players[0] + self._players[1]).mix(2)
+        self._mix = (self._voices[0] + self._voices[1]).mix(2)
 
         # Main controls, usually for properties
         self._master_gain_ctrl = pyo.SigTo(1.0, time=0.05)
@@ -329,15 +347,6 @@ class MultiTrackStream(pyo.PyoObject):
         offset = clip.source_duration - clip.end_trim_offset
         return (last, offset)
 
-    def _update_clip_clock(self) -> None:
-        dur = max(self._clip_duration(self.current_clip), 1e-6)
-        self._clip_clock.freq = self._speed_ctrl / dur
-        self._pre_wrap.threshold = 1.0 - self._xfade / dur
-
-    def _update_overall_clock(self) -> None:
-        span = max(self._loop_end - self._loop_start, 1e-6)
-        self._overall_clock.freq = self._speed_ctrl / span
-
     @property
     def duration(self) -> float:
         return self._track_duration
@@ -351,30 +360,16 @@ class MultiTrackStream(pyo.PyoObject):
         return self._loop_end
 
     def set_loop_points(self, start: float, end: float) -> None:
-        if start < 0.0:
+        if start < 0.0 or end < 0.0:
             raise ValueError("loop points must be >= 0")
 
-        if end <= start:
-            raise ValueError("start must be < end")
+        # 0 is how wwise says "the end of the track"
+        if end == 0.0 or end > self._track_duration:
+            end = self._track_duration
 
-        self._loop_start = start
+        self._loop_start = min(start, end)
         self._loop_end = end
-        self._update_overall_clock()
-
-    @property
-    def play_duration(self) -> float:
-        if self.loop_count < 0:
-            return self.duration
-
-        return self.play_end - self.play_begin
-
-    @property
-    def play_begin(self) -> float:
-        return self._loop_start
-
-    @property
-    def play_end(self) -> float:
-        return min(self._loop_end, self.duration)
+        self._rearm()
 
     @property
     def xfade(self) -> float:
@@ -382,118 +377,35 @@ class MultiTrackStream(pyo.PyoObject):
 
     @xfade.setter
     def xfade(self, val: float) -> None:
-        self._xfade = val
-        self._update_clip_clock()
+        self._xfade = max(val, 0.0)
+        self._rearm()
 
-    def _advance(self) -> None:
-        """move on to the next clip, or loop back, or stop at the end"""
-        current_item = self._playlist[self._clip_index]
-        next_idx = self._clip_index + 1
-
-        if next_idx < len(self._playlist):
-            next_item = self._playlist[next_idx]
-            offset = next_item.begin_trim_offset
-            # silence for any gap left between clips, no crossfade needed
-            delay = max(0.0, next_item.play_at - self._clip_end(current_item))
-        elif self.loop_count == 0 or self.loop_count > self._loops_played:
-            next_idx, offset = self._clip_for_position(self._loop_start)
-            delay = 0.0
-            self._loops_played += 1
-        else:
-            # end of playlist
-            self.stop()
-            self._trig.play()
-            return
-
-        player = 1 - self._active_player
-        path = self._resolve_source(self._playlist[next_idx].source_id)
-        self._players[player].setSound(str(path))
-        self._players[player].setOffset(offset)
-        self._players[player].play(delay=delay * 1000)
-
-        self._envs[player].value = 1
-        self._envs[self._active_player].value = 0
-        self._active_player = player
-        self._clip_index = next_idx
-        self._update_clip_clock()
+    # === Position ======================================================
 
     @property
     def progress(self) -> float:
-        if not self.isPlaying():
-            # Clocks will return 0 while stopped
-            return self._paused_pos / self.play_duration
-
-        return self._overall_clock.get()
-
-    @property
-    def clip_progress(self) -> float:
-        if not self.isPlaying():
-            # Clocks will return 0 while stopped
-            idx, offset = self._clip_for_position(self._paused_pos)
-            return offset / self._clip_duration(self._playlist[idx])
-
-        return self._clip_clock.get()
+        return self.pos / max(self._track_duration, 1e-6)
 
     @property
     def pos(self) -> float:
-        return self._loop_start + self.progress * (self._loop_end - self._loop_start)
+        """Position on the track's timeline, in seconds."""
+        if not self.isPlaying():
+            # The clock reads 0 while stopped
+            return self._paused_pos
+
+        return self._clock.get()
 
     def seek(self, pos: float) -> None:
-        span = self._loop_end - self._loop_start
-        clamped = max(self._loop_start, min(pos, self._loop_start + span - 1e-6))
-        self._paused_pos = clamped
+        pos = min(max(0.0, pos), max(0.0, self._track_duration - 1e-6))
+        self._paused_pos = pos
 
-        if not self.isPlaying():
-            # only store position for next playback
-            return
-
-        idx, offset = self._clip_for_position(clamped)
-        clip = self._playlist[idx]
-
-        if idx != self._clip_index:
-            path = self._resolve_source(clip.source_id)
-            self._players[self._active_player].setSound(str(path))
-            self._clip_index = idx
-            self._update_clip_clock()
-
-        player = self._players[self._active_player]
-        player.setOffset(offset)
-        player.play()
-
-        clip_dur = max(self._clip_duration(clip), 1e-6)
-        self._clip_clock.reset()
-        self._clip_clock.phase = (offset - clip.begin_trim_offset) / clip_dur
-
-        self._overall_clock.reset()
-        self._overall_clock.phase = (clamped - self._loop_start) / span
+        if self.isPlaying():
+            self._start_at(pos)
 
     def play(self, dur: int = 0, delay: int = 0) -> None:
-        idx, offset = self._clip_for_position(self._paused_pos)
-        clip = self._playlist[idx]
-        path = str(self._resolve_source(clip.source_id))
-
-        self._players[0].setSound(path)
-        self._players[0].setOffset(offset)
-        self._players[0].play()
-        self._players[1].stop()
-        self._envs[0].value = 1
-        self._envs[1].value = 0
-
-        self._active_player = 0
-        self._clip_index = idx
         self._loops_played = 0
-        self._update_clip_clock()
-        self._update_overall_clock()
-
-        clip_dur = max(self._clip_duration(clip), 1e-6)
-        self._clip_clock.reset()
-        self._clip_clock.phase = (offset - clip.begin_trim_offset) / clip_dur
-        self._clip_clock.play()
-
-        span = self._loop_end - self._loop_start
-        self._overall_clock.reset()
-        self._overall_clock.phase = (self._paused_pos - self._loop_start) / span
-        self._overall_clock.play()
+        self._clock.play()
+        self._start_at(self._paused_pos)
 
         for o in self._chain:
             o.play(dur, delay)
@@ -502,18 +414,142 @@ class MultiTrackStream(pyo.PyoObject):
 
     def stop(self, wait: int = 0) -> None:
         self._paused_pos = self.pos
+        self._pending = None
 
         for i in range(2):
             self._players[i].stop()
-            self._envs[i].value = 0
+            self._envs[i].stop()
 
-        self._clip_clock.stop()
-        self._overall_clock.stop()
+        self._clock.stop()
 
         for o in self._chain:
             o.stop(wait)
 
         return pyo.PyoObject.stop(self, wait)
+
+    def pos_trigger(self, pos: float) -> pyo.Thresh:
+        """A trigger that fires whenever playback passes a timeline position."""
+        return pyo.Thresh(self._clock, threshold=min(max(0.0, pos), self.duration))
+
+    # === Scheduling ====================================================
+
+    def _start_at(self, pos: float) -> None:
+        idx, _ = self._clip_for_position(pos)
+        self._cue(idx, pos, 0.0, 0.0)
+
+    def _arm(self, pos: float) -> None:
+        """Aim the clock's trigger at the first handover after `pos`."""
+        clip_end = self._clip_end(self.current_clip)
+        looping = self._loop_end > self._loop_start + self._DECLICK and (
+            self.loop_count == 0 or self.loop_count > self._loops_played
+        )
+
+        if looping and pos < self._loop_end <= clip_end + 1e-6:
+            at, target = self._loop_end, self._loop_start
+            fade = min(self._xfade, (at - target) / 2)
+            idx, _ = self._clip_for_position(target)
+            lead = self._LEAD + fade
+        elif self._clip_index + 1 < len(self._playlist):
+            # Consecutive clips are spliced, their own fade automations take
+            # care of any smoothing
+            at = target = clip_end
+            idx, fade, lead = self._clip_index + 1, 0.0, self._LEAD
+        else:
+            # The end needs no preparation. Firing right on time keeps the
+            # tail from being cut
+            at, idx, target, fade, lead = clip_end, None, None, 0.0, 0.0
+
+        self._pending = (at, idx, target, fade)
+
+        # Never arm behind the clock, it would never cross
+        self._event_thresh.threshold = max(at - lead, pos + 1e-6)
+
+    def _rearm(self) -> None:
+        if self._pending is not None and self.isPlaying():
+            self._arm(self.pos)
+
+    def _on_event(self) -> None:
+        """Called from pyo's callback thread when the armed handover is near."""
+        if self._pending is None:
+            return
+
+        at, idx, target, fade = self._pending
+        if idx is None:
+            self.stop()
+            self._trig.play()
+            return
+
+        if target != at:
+            self._loops_played += 1
+
+        # Measured rather than assumed, as the trigger only fires at the end of
+        # an audio buffer and any lateness would otherwise add up
+        self._cue(idx, target, max(0.0, at - self._clock.get()), fade)
+
+    def _cue(self, idx: int, target: float, left: float, fade: float) -> None:
+        """Hand playback over to the idle player.
+
+        It is lined up to reach timeline position `target` in `left` seconds,
+        when the active one would reach the handover point, and the two
+        crossfade over the last `fade` seconds before that.
+        """
+        clip = self._playlist[idx]
+
+        # Ideally the fade in is the material right before the target, which
+        # keeps the loop length intact. Whatever the clip doesn't have there
+        # (always the case for a loop starting at 0) comes from after the
+        # target instead: the start of the loop then overlaps its end
+        fade = max(0.0, min(fade, left))
+        target += max(0.0, fade - max(0.0, target - clip.play_at))
+
+        # Timeline seconds pass at the playback speed, envelopes and delays
+        # run on wall clock time
+        speed = max(self._speed_ctrl.value, 1e-6)
+
+        # The incoming player starts right away and stays silent until its
+        # fade in, unless its clip only begins later (a gap, or a loop start
+        # too close to the clip's beginning). Then it waits rather than play
+        # trimmed material
+        start = max(target - left, clip.play_at)
+        wait = (start - (target - left)) / speed
+
+        # pyo rounds play delays to whole audio buffers, so the player waits
+        # for those and its delay line for the rest
+        bufdur = self.getBufferSize() / self.getSamplingRate()
+        whole = math.floor(wait / bufdur + 1e-9) * bufdur
+
+        old, new = self._active_player, 1 - self._active_player
+        self._ramp(old, 1.0, 0.0, (left - fade) / speed, left / speed)
+        self._ramp(new, 0.0, 1.0, max((left - fade) / speed, wait), left / speed)
+
+        player = self._players[new]
+        player.setSound(str(self._resolve_source(clip.source_id)))
+        player.setOffset(clip.begin_trim_offset + start - clip.play_at)
+        player.play(delay=whole)
+        self._voices[new].delay = wait - whole
+
+        self._active_player = new
+        self._clip_index = idx
+
+        # The clock follows the incoming player from here on. Positions before
+        # the target are fine, `add` can be negative
+        self._clock.reset()
+        self._origin.value = target - left
+        self._arm(target - left)
+
+    def _ramp(
+        self, idx: int, start: float, end: float, t_from: float, t_to: float
+    ) -> None:
+        """Hold `start` until `t_from` seconds from now, then ramp to `end`."""
+        points = [(0.0, start)]
+        if t_from > 0:
+            points.append((t_from, start))
+
+        points.append((max(t_to, t_from + self._DECLICK), end))
+
+        env = self._envs[idx]
+        env.setList(points)
+        env.play()
 
     def out(
         self, chnl: int = 0, inc: int = 1, dur: int = 0, delay: int = 0

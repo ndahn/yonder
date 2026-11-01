@@ -242,9 +242,9 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             hpf_cents=ctx.get_effective_hpf(),
             lpf_cents=ctx.get_effective_lpf(),
             pitch_cents=props.get(PropID.Pitch, 0.0),
-            loop_start=props.get(PropID.LoopStart, 0.0),
-            loop_end=props.get(PropID.LoopEnd, 0.0),
-            xfade=props.get(PropID.LoopCrossfadeDuration, 0.05),
+            loop_start=props.get(PropID.LoopStart, 0.0) / 1000,
+            loop_end=props.get(PropID.LoopEnd, 0.0) / 1000,
+            xfade=props.get(PropID.LoopCrossfadeDuration, 50.0) / 1000,
         )
 
     def play(self, ctx: PlayContext) -> None:
@@ -271,16 +271,13 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
         props = ctx.properties
 
         stream.loop_count = props.get(PropID.Loop, -1)
-        loop_start = props.get(PropID.LoopStart, stream.loop_start)
-        loop_end = props.get(PropID.LoopEnd, stream.loop_end)
+        loop_start = props.get(PropID.LoopStart, 0) / 1000
+        loop_end = props.get(PropID.LoopEnd, 0) / 1000
         stream.set_loop_points(loop_start, loop_end)
 
-        # Property trims are ignored for now
+        # TODO not sure how to handle property trims on music tracks
 
-        xfade = props.get(PropID.LoopCrossfadeDuration)
-        if xfade is not None:
-            stream.xfade = xfade
-
+        stream.xfade = props.get(PropID.LoopCrossfadeDuration, 0) / 1000
         stream.volume = ctx.get_effective_volume()
         stream.hpf = ctx.get_effective_hpf()
         stream.lpf = ctx.get_effective_lpf()
@@ -325,8 +322,7 @@ class MusicTrack(StateMixin, RtpcMixin, PropertyMixin, HIRCNode):
             trigger_signal = stream["trig"]
         else:
             # Trigger when the stream is only x seconds away from its end
-            th = (stream.duration - abs(before)) / stream.duration
-            trigger_signal = pyo.Thresh(stream._overall_clock, threshold=th)
+            trigger_signal = stream.pos_trigger(stream.duration - abs(before))
             cb_objects.append(trigger_signal)
 
         cb_objects.append(pyo.TrigFunc(trigger_signal, on_trigger, ctx))
