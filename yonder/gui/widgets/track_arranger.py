@@ -10,7 +10,7 @@ from dearpygui import dearpygui as dpg
 
 from yonder.hash import calc_hash, lookup_name, Hash
 from yonder.types import Soundbank, MusicSegment, MusicTrack
-from yonder.enums import MarkerId, SourceType
+from yonder.enums import MarkerId, SourceType, PropID
 from yonder.util import logger, get_temp_dir
 from yonder.wem import wav2wem, wem2wav
 from yonder.audio.wavesignal import read_wav, minmax_envelope
@@ -223,6 +223,7 @@ class add_track_arranger(DpgItem):
         on_track_changed: Callable[[str, MusicTrack, Any], None] = None,
         on_markers_changed: Callable[[str, dict[int, float], Any], None] = None,
         label: str = "",
+        enable_track_properties: bool = False,
         snap_enabled: bool = True,
         snap_pixels: int = 8,
         row_height: int = 90,
@@ -304,6 +305,21 @@ class add_track_arranger(DpgItem):
             if on_segment_changed:
                 on_segment_changed(tag, segment, user_data)
 
+        def on_track_properties_changed(
+            sender: str, info: tuple[int, dict[PropID, float]], cb_user_data: Any
+        ) -> None:
+            idx, properties = info
+            track = tracks[idx]
+
+            for prop, val in properties.items():
+                if val == 0.0:
+                    track.remove_property(prop)
+                else:
+                    track.set_property(prop, val)
+
+            if on_track_changed:
+                on_track_changed(tag, tracks[idx], user_data)
+
         markers = {m.id: m.position for m in segment.markers}
         loop_start = markers.pop(int(MarkerId.LoopStart), None)
         loop_end = markers.pop(int(MarkerId.LoopEnd), None)
@@ -341,6 +357,9 @@ class add_track_arranger(DpgItem):
             on_track_toggled=None,
             on_track_added=on_track_added,
             on_track_removed=on_track_removed,
+            on_track_properties_changed=(
+                on_track_properties_changed if enable_track_properties else None
+            ),
             snap_enabled=snap_enabled,
             snap_pixels=snap_pixels,
             row_height=row_height,
@@ -361,6 +380,9 @@ class add_track_arranger(DpgItem):
         on_loop_changed: Callable[[str, tuple[float, float], Any], None] = None,
         on_trims_changed: Callable[
             [str, tuple[int, tuple[float, float]], Any], None
+        ] = None,
+        on_track_properties_changed: Callable[
+            [str, tuple[int, dict[PropID, float]], Any], None
         ] = None,
         user_markers: dict[Hash, float] = None,
         on_user_markers_changed: Callable[[str, dict[Hash, float], Any], None] = None,
@@ -401,6 +423,7 @@ class add_track_arranger(DpgItem):
         self._on_track_toggled = on_track_toggled
         self._on_track_added = on_track_added
         self._on_track_removed = on_track_removed
+        self._on_track_properties_changed = on_track_properties_changed
 
         self._user_data = user_data
 
