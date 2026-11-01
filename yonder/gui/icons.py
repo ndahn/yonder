@@ -30,6 +30,7 @@ class Icons:
     game_sync_once = "tex_icon_game_sync_once"
     hash = "tex_icon_hash"
     help = "tex_icon_help"
+    hide = "tex_icon_hide"
     info = "tex_icon_info"
     jump16 = "tex_icon_jump16"
     keyframe = "tex_icon_keyframe"  # TODO size 18 seems good for in-line icons, organize
@@ -57,6 +58,7 @@ class Icons:
     seek_end = "tex_icon_seek_end"
     seek_zero = "tex_icon_seek_zero"
     settings = "tex_icon_settings"
+    show = "tex_icon_show"
     sliders = "tex_icon_sliders"
     skip = "tex_icon_skip"
     sound = "tex_icon_sound"

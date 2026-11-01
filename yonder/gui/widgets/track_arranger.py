@@ -47,6 +47,11 @@ class AudioTrack:
     enabled : bool
         Disabled tracks are greyed out, cannot be dragged, and are ignored
         for timeline length and snapping.
+    muted : bool
+        Muted tracks are left out of the mix, but otherwise behave as usual.
+    properties : dict of PropID to float
+        Values for the track header's sliders, see ``_TRACK_PROPS``. Missing
+        ones are 0.
     """
 
     path: Path
@@ -55,6 +60,18 @@ class AudioTrack:
     begin_trim: float = 0.0
     end_trim: float = 0.0
     enabled: bool = True
+    muted: bool = False
+    properties: dict[PropID, float] = field(default_factory=dict)
+
+
+# The track header's sliders: short label, name, unit and slider range. The
+# range only limits dragging, ctrl+click still takes any value
+_TRACK_PROPS: dict[PropID, tuple[str, str, str, float, style.RGBA]] = {
+    PropID.Volume: ("Volume", "dB", -12.0, 12.0, style.light_red),
+    PropID.HPF: ("Highpass", "", 0.0, 100.0, style.light_blue),
+    PropID.LPF: ("Lowpass", "", 0.0, 100.0, style.light_green),
+    PropID.Pitch: ("Pitch", "cents", -1200.0, 1200.0, style.light_orange.mix(style.white, 0.3)),
+}
 
 
 @dataclass
@@ -81,6 +98,10 @@ class _Row:
     begin_trim: float = 0.0
     end_trim: float = 0.0
     enabled: bool = True
+    muted: bool = False
+    # Collapsed to a thin, inert strip, see _apply_row_state
+    minimized: bool = False
+    properties: dict[PropID, float] = field(default_factory=dict)
     duration: float = 0.0
     error: str = ""
     mono: bool = False
@@ -102,6 +123,16 @@ class _Row:
     offset_input: int = 0
     begin_trim_input: int = 0
     end_trim_input: int = 0
+    # The header beside the row, see _build_row_header
+    header: int = 0
+    slider_panel: int = 0  # the sliders and their separator, hidden together
+    sliders: int = 0  # group of the property sliders
+    prop_sliders: dict[PropID, int] = field(default_factory=dict)
+    prop_tooltips: dict[PropID, int] = field(default_factory=dict)
+    buttons: int = 0
+    mute_button: int = 0
+    minimize_button: int = 0
+    header_label: int = 0  # stands in for the plot title while minimized
 
     @property
     def start(self) -> float:
@@ -134,6 +165,11 @@ class add_track_arranger(DpgItem):
     Loop points and named user markers are global to the timeline and live on
     a thin marker strip above the rows, mirrored read-only into every waveform
     row. Right-clicking a row opens its options menu.
+
+    Every row has a header to its left with sliders for the track's
+    properties and buttons to mute or minimize it. ``subplots`` only takes
+    plots, so the headers live in a column of their own beside it and are
+    sized to the rows once those have been drawn, see ``_align_headers``.
 
     The transport above the rows plays the arrangement back so marker edits
     can be heard. What it plays is the same mixdown the loop point search
@@ -175,6 +211,10 @@ class add_track_arranger(DpgItem):
     on_track_removed : callable, optional
         Fired as ``on_track_removed(tag, index, user_data)``. Also decides
         whether the row menu offers a remove entry.
+    on_track_properties_changed : callable, optional
+        Fired as ``on_track_properties_changed(tag, (index, {prop: value}),
+        user_data)`` with just the property that changed. Also decides
+        whether the row headers offer property sliders.
     snap_enabled : bool
         Initial state of the snapping toggle.
     snap_pixels : int
@@ -212,6 +252,15 @@ class add_track_arranger(DpgItem):
     # Pixel widths of the marker table's name and position columns. The table
     # is compact, so these are fixed rather than stretch weights
     _MARKER_COLUMNS = (150, 110)
+    # Pixel height of a minimized row
+    _MINIMIZED_HEIGHT = 25
+    # Extra height for a minimized bottom row, whose time axis labels would
+    # otherwise eat all of it
+    _TICK_ROOM = 20
+    _SLIDER_WIDTH = 18
+    _ICON_SIZE = 14
+    # Narrowest the header column gets, so a minimized row's label has room
+    _MIN_HEADER_WIDTH = 80
 
     @classmethod
     def from_music_segment(
@@ -226,7 +275,7 @@ class add_track_arranger(DpgItem):
         enable_track_properties: bool = False,
         snap_enabled: bool = True,
         snap_pixels: int = 8,
-        row_height: int = 90,
+        row_height: int = 100,
         marker_height: int = 34,
         max_points: int = 5000,
         markers_in_ms: bool = True,
@@ -342,6 +391,9 @@ class add_track_arranger(DpgItem):
                     offset=playback.play_at,
                     begin_trim=playback.begin_trim_offset,
                     end_trim=playback.end_trim_offset,
+                    properties={
+                        prop: child.get_property(prop, 0.0) for prop in _TRACK_PROPS
+                    },
                 )
             )
 
@@ -436,10 +488,20 @@ class add_track_arranger(DpgItem):
         # The markers popup's table, and a guard for while it drives a change
         self._marker_table: add_widget_table = None
         self._in_table_edit = False
+        # The header column and the subplots side by side
+        self._lanes: int = 0
+        self._header_col: int = 0
+        self._strip_cell: int = 0  # header cell beside the marker strip
+        # Only ever grows, so the column does not jump as rows are minimized
+        self._header_width: int = self._MIN_HEADER_WIDTH
+        # Bumped on every layout change so stale alignment passes give up
+        self._align_gen = 0
         self._subplots: int = 0
         self._marker_plot: int = 0
         self._marker_axis: int = 0
         self._handlers: int = 0
+        # Shared by every property slider, so rebuilds have nothing to clean up
+        self._slider_handlers: int = 0
         self._snap_enabled: bool = snap_enabled
         # (row, anchor time, offset at press) while a clip is being dragged
         self._drag: tuple[_Row, float, float] | None = None
@@ -477,6 +539,8 @@ class add_track_arranger(DpgItem):
         self._destroy_plots()
         self._drop(self._handlers)
         self._handlers = 0
+        self._drop(self._slider_handlers)
+        self._slider_handlers = 0
         self._delete_item(self._t("markers_popup"))
 
     # === Tracks ========================================================
@@ -498,6 +562,8 @@ class add_track_arranger(DpgItem):
                 self._out(r.begin_trim),
                 self._out(r.end_trim),
                 r.enabled,
+                r.muted,
+                dict(r.properties),
             )
             for r in self._rows
         ]
@@ -528,9 +594,9 @@ class add_track_arranger(DpgItem):
 
         # All rows share one x axis, so fitting the first fits them all.
         xaxis = self._rows[0].xaxis
-        duration = max(self.duration, 0.1)
-        padding = 0.02 * duration
-        dpg.set_axis_limits(xaxis, -padding, duration + padding)
+        lo, hi = self._source_bounds()
+        padding = 0.02 * max(hi - lo, 0.1)
+        dpg.set_axis_limits(xaxis, lo - padding, hi + padding)
 
         # set_axis_limits locks the axis - release it once the range landed,
         # otherwise the user can no longer zoom or pan.
@@ -555,8 +621,23 @@ class add_track_arranger(DpgItem):
             return
 
         row.enabled = enabled
-        self._apply_row_enabled(row)
+        self._apply_row_state(row)
         self._refresh_timeline()
+
+    def set_track_muted(self, index: int, muted: bool) -> None:
+        """Mute or unmute a track."""
+        self._set_row_muted(self._rows[index], muted)
+
+    def set_track_minimized(self, index: int, minimized: bool) -> None:
+        """Collapse a track's row to a thin strip, or restore it."""
+        self._set_row_minimized(self._rows[index], minimized)
+
+    def set_track_property(self, index: int, prop: PropID, value: float) -> None:
+        """Set one of a track's header properties without firing a callback."""
+        row = self._rows[index]
+        row.properties[prop] = value
+        self._set_value(row.prop_sliders.get(prop), value)
+        self._update_prop_tooltip(row, prop)
 
     def is_snap_enabled(self) -> bool:
         return self._snap_enabled
@@ -584,6 +665,8 @@ class add_track_arranger(DpgItem):
             label=track.label or (path.stem if path else µ("<empty>")),
             offset=self._into(track.offset),
             enabled=track.enabled,
+            muted=track.muted,
+            properties=dict(track.properties),
         )
         self._load_row(row)
         # Clamping needs the duration, so trims are applied after loading
@@ -702,6 +785,7 @@ class add_track_arranger(DpgItem):
         for row in self._rows:
             if (
                 row.plot
+                and not row.minimized
                 and dpg.does_item_exist(row.plot)
                 and dpg.is_item_hovered(row.plot)
             ):
@@ -828,11 +912,10 @@ class add_track_arranger(DpgItem):
         since they do not change a single sample.
         """
         self._mix_dirty = True
-        duration = self.duration
-        padding = max(0.05 * duration, 0.1)
-        # Keep trimmed-away heads in view so they can be dragged back out
-        lo = min([0.0] + [r.offset for r in self._rows if not r.error]) - padding
-        hi = duration + padding
+        lo, hi = self._source_bounds()
+        padding = max(0.05 * (hi - lo), 0.1)
+        lo -= padding
+        hi += padding
 
         for row in self._rows:
             if dpg.does_item_exist(row.xaxis):
@@ -843,6 +926,18 @@ class add_track_arranger(DpgItem):
 
         self._sync_markers()
 
+    def _source_bounds(self) -> tuple[float, float]:
+        """First source start to last source end, the range the view covers.
+
+        Untrimmed on purpose: trimmed-away audio stays drawn so it can be
+        dragged back out, so it has to stay reachable as well.
+        """
+        rows = [r for r in self._rows if not r.error]
+        if not rows:
+            return 0.0, 0.0
+
+        return min(r.offset for r in rows), max(r.src_end for r in rows)
+
     @staticmethod
     def _unlock_axis(axis: int) -> None:
         if dpg.does_item_exist(axis):
@@ -852,7 +947,7 @@ class add_track_arranger(DpgItem):
 
     def _on_row_enabled_toggled(self, sender: str, value: bool, row: _Row) -> None:
         row.enabled = value
-        self._apply_row_enabled(row)
+        self._apply_row_state(row)
         self._refresh_timeline()
 
         if self._on_track_toggled:
@@ -860,20 +955,50 @@ class add_track_arranger(DpgItem):
                 self._tag, (self._rows.index(row), value), self._user_data
             )
 
-    def _apply_row_enabled(self, row: _Row) -> None:
+    def _apply_row_state(self, row: _Row) -> None:
+        """Push a row's enabled, muted and minimized flags into its items."""
         if not dpg.does_item_exist(row.plot):
             return
 
         suffix = "" if row.enabled else f"  ({µ('disabled', 'track')})"
-        dpg.configure_item(row.plot, label=f"{row.label}{suffix}")
+        # A minimized row is too thin for a title, its header shows the
+        # label instead. Pan and zoom go dead with no_inputs, the shared
+        # time axis still follows the other rows
+        dpg.configure_item(
+            row.plot,
+            label=f"{row.label}{suffix}",
+            no_title=row.minimized,
+            no_inputs=row.minimized,
+        )
         dpg.configure_item(row.clip, color=self._clip_color(row))
 
         for handle in (row.trim_lo, row.trim_hi):
             if handle:
-                dpg.configure_item(handle, no_inputs=not row.enabled)
+                dpg.configure_item(handle, no_inputs=not self._handles_live(row))
 
         for i, series in enumerate(row.series):
             dpg.bind_item_theme(series, self._series_theme(row, i))
+
+        if row.slider_panel:
+            dpg.configure_item(row.slider_panel, show=not row.minimized)
+        if row.header_label:
+            dpg.configure_item(
+                row.header_label, default_value=row.label, show=row.minimized
+            )
+        if row.mute_button:
+            dpg.configure_item(
+                row.mute_button,
+                texture_tag=Icons.mute if row.muted else Icons.volume_up,
+            )
+        if row.minimize_button:
+            dpg.configure_item(
+                row.minimize_button,
+                texture_tag=Icons.show if row.minimized else Icons.hide,
+            )
+
+    @staticmethod
+    def _handles_live(row: _Row) -> bool:
+        return row.enabled and not row.minimized
 
     def _on_row_offset_input(self, sender: str, value: float, row: _Row) -> None:
         row.offset = max(-row.begin_trim, self._into(value))
@@ -909,6 +1034,72 @@ class add_track_arranger(DpgItem):
 
         if self._on_track_removed:
             self._on_track_removed(self._tag, index, self._user_data)
+
+    def _on_row_right_clicked(self, sender: str, app_data: Any, row: _Row) -> None:
+        if not row.minimized:
+            dpg.configure_item(row.popup, show=True)
+
+    # === Row header ====================================================
+
+    def _on_row_mute_clicked(self, sender: str, app_data: Any, row: _Row) -> None:
+        self._set_row_muted(row, not row.muted)
+
+    def _set_row_muted(self, row: _Row, muted: bool) -> None:
+        if row.muted == muted:
+            return
+
+        row.muted = muted
+        self._apply_row_state(row)
+        self._mix_dirty = True
+
+        if self._want_playing:
+            # Remix right away rather than on the next play, a mute that
+            # only takes effect later is no use for listening
+            self.stop()
+            self.play()
+
+    def _on_row_minimize_clicked(self, sender: str, app_data: Any, row: _Row) -> None:
+        self._set_row_minimized(row, not row.minimized)
+
+    def _set_row_minimized(self, row: _Row, minimized: bool) -> None:
+        if row.minimized == minimized:
+            return
+
+        row.minimized = minimized
+        if self._drag and self._drag[0] is row:
+            self._drag = None
+
+        self._apply_row_state(row)
+        self._apply_row_heights()
+
+    def _on_row_property_changed(
+        self, sender: str, value: float, ud: tuple[_Row, PropID]
+    ) -> None:
+        row, prop = ud
+        row.properties[prop] = value
+        self._update_prop_tooltip(row, prop)
+
+        if self._on_track_properties_changed:
+            self._on_track_properties_changed(
+                self._tag, (self._rows.index(row), {prop: value}), self._user_data
+            )
+
+    def _on_slider_right_clicked(self, sender: str, app_data: tuple, ud: Any) -> None:
+        # One registry serves every slider, the clicked one comes with the event
+        slider = app_data[1]
+        if not dpg.does_item_exist(slider):
+            return
+
+        dpg.set_value(slider, 0.0)
+        self._on_row_property_changed(slider, 0.0, dpg.get_item_user_data(slider))
+
+    def _update_prop_tooltip(self, row: _Row, prop: PropID) -> None:
+        # The sliders are too narrow to print their value, so it goes here
+        name, unit, _, _, _ = _TRACK_PROPS[prop]
+        text = µ("{name}: {value:.1f} {unit}", "track").format(
+            name=µ(name, "track"), value=row.properties.get(prop, 0.0), unit=unit
+        )
+        self._set_value(row.prop_tooltips.get(prop), text.strip())
 
     # === Loop markers ==================================================
 
@@ -972,6 +1163,8 @@ class add_track_arranger(DpgItem):
     ) -> tuple[np.ndarray, int]:
         """Mix every audible track into one signal on the timeline.
 
+        Disabled and muted tracks are left out.
+
         Reads every track off disk, so this is far too slow to redo while a
         clip is being dragged. Playback mixes once and marks the result stale
         instead, see ``_mix_dirty``.
@@ -999,7 +1192,7 @@ class add_track_arranger(DpgItem):
         framerates = []
 
         for row in rows:
-            if not row.enabled or row.error:
+            if not row.enabled or row.muted or row.error:
                 continue
 
             signal, framerate = read_wav(row.path)
@@ -1538,6 +1731,8 @@ class add_track_arranger(DpgItem):
             return style.themes.make_series_theme(style.light_grey.but(a=110))
 
         color = style.blue if row.mono or channel == 0 else style.orange
+        if row.muted:
+            color = color.mix(style.white).but(a=90)
         return style.themes.make_series_theme(color)
 
     def _destroy_plots(self) -> None:
@@ -1549,10 +1744,17 @@ class add_track_arranger(DpgItem):
             row.trim_lo = row.trim_hi = row.head = row.tail = 0
             row.popup = row.popup_handlers = row.offset_input = 0
             row.begin_trim_input = row.end_trim_input = 0
+            row.header = row.slider_panel = row.sliders = 0
+            row.buttons = row.header_label = 0
+            row.mute_button = row.minimize_button = 0
             row.series = []
             row.mirrors = {}
+            row.prop_sliders = {}
+            row.prop_tooltips = {}
 
-        self._drop(self._subplots)
+        # Takes the header column and the subplots with it
+        self._drop(self._lanes)
+        self._lanes = self._header_col = self._strip_cell = 0
         self._subplots = 0
         self._marker_plot = 0
         self._marker_axis = 0
@@ -1578,28 +1780,35 @@ class add_track_arranger(DpgItem):
 
         dpg.show_item(self._t("plot_group"))
 
-        # The marker strip is just another subplot row, sized via the ratios so
-        # the drag tools on it stay grabbable.
-        n_rows = len(playable) + 1
-        marker_ratio = self._marker_height / self._row_height
-        height = self._marker_height + len(playable) * self._row_height
+        heights = self._row_heights(playable)
+        ratios, height = self._subplot_layout(heights)
 
-        with dpg.subplots(
-            n_rows,
-            1,
-            link_all_x=True,
-            link_all_y=True,
-            row_ratios=[marker_ratio] + [1.0] * len(playable),
-            width=self._width,
-            height=height,
-            no_resize=True,
-            no_menus=True,
-            no_title=True,
-            parent=self._t("plot_group"),
-        ) as self._subplots:
-            self._build_marker_strip()
-            for i, row in enumerate(playable):
-                self._build_row(row, is_last=i == len(playable) - 1)
+        with dpg.group(horizontal=True, parent=self._t("plot_group")) as self._lanes:
+            # Cells start out at a guess and are fitted to the rows once
+            # those have been drawn
+            with dpg.group() as self._header_col:
+                with self._header_cell(self._marker_height) as self._strip_cell:
+                    pass
+                for row, row_height in zip(playable, heights):
+                    self._build_row_header(row, row_height)
+
+            # The marker strip is just another subplot row, sized via the
+            # ratios so the drag tools on it stay grabbable.
+            with dpg.subplots(
+                len(playable) + 1,
+                1,
+                link_all_x=True,
+                link_all_y=True,
+                row_ratios=ratios,
+                width=self._width,
+                height=height,
+                no_resize=True,
+                no_menus=True,
+                no_title=True,
+            ) as self._subplots:
+                self._build_marker_strip()
+                for i, row in enumerate(playable):
+                    self._build_row(row, is_last=i == len(playable) - 1)
 
         # Popups are windows, so they have to be built outside the subplots
         for row in playable:
@@ -1608,10 +1817,175 @@ class add_track_arranger(DpgItem):
         for row in playable:
             dpg.set_axis_limits(row.yaxis, -self._Y_LIMIT, self._Y_LIMIT)
             self._update_row_geometry(row)
-            self._apply_row_enabled(row)
+            self._apply_row_state(row)
 
         self._refresh_timeline()
         self.fit()
+        self._schedule_align()
+
+    def _row_heights(self, rows: list[_Row]) -> list[int]:
+        """Pixel height of every row, minimized ones included."""
+        heights = []
+        for i, row in enumerate(rows):
+            if not row.minimized:
+                heights.append(self._row_height)
+            elif i == len(rows) - 1:
+                heights.append(self._MINIMIZED_HEIGHT + self._TICK_ROOM)
+            else:
+                heights.append(self._MINIMIZED_HEIGHT)
+
+        return heights
+
+    def _subplot_layout(self, heights: list[int]) -> tuple[list[float], int]:
+        """Row ratios and total height of the subplots, marker strip first."""
+        ratios = [h / self._row_height for h in [self._marker_height] + heights]
+        return ratios, self._marker_height + sum(heights)
+
+    def _apply_row_heights(self) -> None:
+        """Resize the rows in place after one was minimized or restored.
+
+        Unlike adding rows this works without a rebuild, which would reset
+        the zoom along with everything else.
+        """
+        if not dpg.does_item_exist(self._subplots):
+            return
+
+        ratios, height = self._subplot_layout(
+            self._row_heights([r for r in self._rows if r.header])
+        )
+        dpg.configure_item(self._subplots, row_ratios=ratios, height=height)
+        self._schedule_align()
+
+    def _schedule_align(self) -> None:
+        self._align_gen += 1
+        gen = self._align_gen
+        call_in_frames(lambda: self._align_headers(gen))
+
+    def _align_headers(self, gen: int) -> None:
+        """Fit the header cells to the rows they sit beside.
+
+        ImPlot decides the row heights from the ratios, its padding and the
+        axis labels, so rather than redoing that maths the rows are measured
+        once they have been drawn. The column and the subplots start at the
+        same height, so every cell runs from its row's top to the next one's.
+        """
+        if gen != self._align_gen or not dpg.does_item_exist(self._header_col):
+            return  # superseded by a later layout change, or torn down
+
+        rows = [r for r in self._rows if r.header]
+        if not rows:
+            return
+
+        plots = [r.plot for r in rows]
+        if any(dpg.get_item_rect_size(p)[1] <= 0 for p in plots):
+            # Not drawn yet, e.g. sitting in a hidden tab
+            call_in_frames(lambda: self._align_headers(gen), 10)
+            return
+
+        cells = [self._strip_cell] + [r.header for r in rows]
+
+        # Cells are stacked with the item spacing between them, which is
+        # easiest read off the first two
+        first, second = (dpg.get_item_state(c) for c in cells[:2])
+        spacing = second["pos"][1] - first["pos"][1] - first["rect_size"][1]
+
+        tops = [dpg.get_item_rect_min(self._header_col)[1] - 6]
+        tops.extend(dpg.get_item_rect_min(p)[1] for p in plots)
+        # The last cell stops short by the spacing too, so all rows of the
+        # same height get sliders of the same height
+        bottom = tops[-1] + dpg.get_item_rect_size(plots[-1])[1]
+        ends = [t - spacing for t in tops[1:] + [bottom]]
+
+        width = self._header_width
+        for row in rows:
+            if row.sliders and not row.minimized:
+                width = max(width, dpg.get_item_rect_size(row.sliders)[0])
+            width = max(width, dpg.get_item_rect_size(row.buttons)[0])
+        self._header_width = width
+
+        for cell, top, end in zip(cells, tops, ends):
+            dpg.configure_item(cell, width=width, height=max(1, end - top))
+
+        # The sliders take whatever the buttons leave of their cell
+        for row, top, end in zip(rows, tops[1:], ends[1:]):
+            if not row.prop_sliders:
+                continue
+
+            buttons = dpg.get_item_rect_size(row.buttons)[1]
+            slider_height = max(10, end - top - buttons - spacing - 8)
+            for slider in row.prop_sliders.values():
+                dpg.configure_item(slider, height=slider_height)
+
+    def _header_cell(self, height: int):
+        return dpg.child_window(
+            width=self._header_width,
+            height=height,
+            border=False,
+            no_scrollbar=True,
+            # Hand the wheel to the window around the arranger
+            no_scroll_with_mouse=True,
+        )
+
+    def _build_row_header(self, row: _Row, height: int) -> None:
+        """Property sliders above a mute and a minimize button."""
+        with self._header_cell(height) as row.header:
+            if self._on_track_properties_changed:
+                # The separator goes with the sliders, a minimized row has no
+                # room for it above its buttons
+                with dpg.group(show=not row.minimized) as row.slider_panel:
+                    dpg.add_separator()
+                    dpg.add_spacer(height=1)
+                    with dpg.group(horizontal=True) as row.sliders:
+                        for prop, (_, _, lo, hi, color) in _TRACK_PROPS.items():
+                            slider = dpg.add_slider_float(
+                                vertical=True,
+                                width=self._SLIDER_WIDTH,
+                                height=max(10, height - 25),
+                                default_value=row.properties.get(prop, 0.0),
+                                min_value=lo,
+                                max_value=hi,
+                                format="",
+                                callback=self._on_row_property_changed,
+                                user_data=(row, prop),
+                            )
+                            with dpg.tooltip(slider):
+                                row.prop_tooltips[prop] = dpg.add_text("")
+
+                            theme = style.themes.make_slider_theme(color)
+                            dpg.bind_item_theme(slider, theme)
+                            dpg.bind_item_handler_registry(
+                                slider, self._slider_handlers
+                            )
+
+                            row.prop_sliders[prop] = slider
+                            self._update_prop_tooltip(row, prop)
+
+            with dpg.group(horizontal=True):
+                with dpg.group(horizontal=True) as row.buttons:
+                    row.mute_button = dpg.add_image_button(
+                        Icons.mute if row.muted else Icons.volume_up,
+                        width=self._ICON_SIZE,
+                        height=self._ICON_SIZE,
+                        callback=self._on_row_mute_clicked,
+                        user_data=row,
+                    )
+                    with dpg.tooltip(row.mute_button):
+                        dpg.add_text(µ("Mute", "track"))
+
+                    row.minimize_button = dpg.add_image_button(
+                        Icons.hide,
+                        width=self._ICON_SIZE,
+                        height=self._ICON_SIZE,
+                        callback=self._on_row_minimize_clicked,
+                        user_data=row,
+                    )
+                    with dpg.tooltip(row.minimize_button):
+                        dpg.add_text(µ("Minimize", "track"))
+
+                # Not part of the buttons group, which sizes the column
+                row.header_label = dpg.add_text(row.label, show=row.minimized)
+                with dpg.tooltip(row.header_label):
+                    dpg.add_text(row.label)
 
     def _build_marker_strip(self) -> None:
         with dpg.plot(
@@ -1774,7 +2148,7 @@ class add_track_arranger(DpgItem):
             thickness=2,
             show_label=False,
             no_fit=True,
-            no_inputs=not row.enabled,
+            no_inputs=not self._handles_live(row),
             callback=self._on_trim_handle_dragged,
             user_data=(row, which),
         )
@@ -1834,8 +2208,8 @@ class add_track_arranger(DpgItem):
         with dpg.item_handler_registry() as row.popup_handlers:
             dpg.add_item_clicked_handler(
                 dpg.mvMouseButton_Right,
-                callback=lambda s, a, u: dpg.configure_item(u, show=True),
-                user_data=row.popup,
+                callback=self._on_row_right_clicked,
+                user_data=row,
             )
         dpg.bind_item_handler_registry(row.plot, row.popup_handlers)
 
@@ -1933,6 +2307,12 @@ class add_track_arranger(DpgItem):
     # === Build =========================================================
 
     def _setup_content(self) -> None:
+        # Right-clicking a property slider resets it
+        with dpg.item_handler_registry() as self._slider_handlers:
+            dpg.add_item_clicked_handler(
+                dpg.mvMouseButton_Right, callback=self._on_slider_right_clicked
+            )
+
         with dpg.group(tag=self._tag, parent=self._parent):
             if self._label:
                 dpg.add_text(self._label, color=style.pink.mix(style.white))
@@ -2253,6 +2633,7 @@ def _demo() -> None:
             on_track_toggled=report("toggled"),
             on_track_added=report("added"),
             on_track_removed=report("removed"),
+            on_track_properties_changed=report("properties"),
         )
 
         with dpg.group(horizontal=True):
