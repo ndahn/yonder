@@ -1284,14 +1284,20 @@ class BanksOfYonder(DpgItem):
                     on_game_choice,
                 )
 
-            # NOTE: don't translate to avoid bakemoji on some windows configurations
-            dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
+            self._update_window_title()
             self.config.add_recent_file(path)
             self.config.save()
             self._regenerate_recent_files_menu()
 
             self.regenerate()
             self._set_bnk_menus_enabled(True)
+
+    def _update_window_title(self) -> None:
+        # NOTE: don't translate to avoid bakemoji on some windows configurations
+        if self.bnk:
+            dpg.set_viewport_title(f"Banks of Yonder - {self.bnk.name}")
+        else:
+            dpg.set_viewport_title("Banks of Yonder")
 
     def _create_root_entry(self, node: HIRCNode, table: str) -> str:
         bnk = self.bnk
@@ -2262,6 +2268,7 @@ class BanksOfYonder(DpgItem):
 
         def on_bank_renamed(bnk: Soundbank) -> None:
             # TODO copy streamed wems to new location
+            self._update_window_title()
             self.regenerate()
 
         rename_bank_dialog(self.bnk, on_bank_renamed, tag=tag)
